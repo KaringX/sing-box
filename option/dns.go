@@ -8,6 +8,7 @@ type DNSOptions struct {
 	Final          string             `json:"final,omitempty"`
 	ReverseMapping bool               `json:"reverse_mapping,omitempty"`
 	FakeIP         *DNSFakeIPOptions  `json:"fakeip,omitempty"`
+	StaticIPs      map[string][]string `json:"static_ips,omitempty"` //hiddify
 	DNSClientOptions
 }
 

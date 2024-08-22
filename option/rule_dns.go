@@ -102,6 +102,7 @@ type DefaultDNSRule struct {
 	DisableCache             bool                   `json:"disable_cache,omitempty"`
 	RewriteTTL               *uint32                `json:"rewrite_ttl,omitempty"`
 	ClientSubnet             *AddrPrefix            `json:"client_subnet,omitempty"`
+	Name                     string                 `json:"name,omitempty"` //karing
 }
 
 func (r DefaultDNSRule) IsValid() bool {
@@ -122,6 +123,7 @@ type LogicalDNSRule struct {
 	DisableCache bool        `json:"disable_cache,omitempty"`
 	RewriteTTL   *uint32     `json:"rewrite_ttl,omitempty"`
 	ClientSubnet *AddrPrefix `json:"client_subnet,omitempty"`
+	Name         string      `json:"name,omitempty"` //karing
 }
 
 func (r LogicalDNSRule) IsValid() bool {

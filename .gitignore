@@ -14,3 +14,7 @@
 /*.xcframework/
 .DS_Store
 /config.d/
+cache.db
+/*.log
+*.exe
+/experimental/libbox/sentry_private.go

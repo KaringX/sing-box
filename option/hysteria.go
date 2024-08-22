@@ -36,4 +36,5 @@ type HysteriaOutboundOptions struct {
 	DisableMTUDiscovery bool        `json:"disable_mtu_discovery,omitempty"`
 	Network             NetworkList `json:"network,omitempty"`
 	OutboundTLSOptionsContainer
+	TurnRelay *TurnRelayOptions `json:"turn_relay,omitempty"` //hiddify
 }

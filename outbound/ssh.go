@@ -20,6 +20,7 @@ import (
 	E "github.com/sagernet/sing/common/exceptions"
 	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
+	"github.com/sagernet/sing/common/uot" //hiddify
 
 	"golang.org/x/crypto/ssh"
 )
@@ -42,12 +43,24 @@ type SSH struct {
 	clientAccess      sync.Mutex
 	clientConn        net.Conn
 	client            *ssh.Client
+	uotClient         *uot.Client //hiddify
+	parseErr          error                //karing
 }
 
 func NewSSH(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.SSHOutboundOptions) (*SSH, error) {
+	empty := &SSH{  //karing
+		myOutboundAdapter: myOutboundAdapter{
+			protocol:     C.TypeSSH,
+			network:      []string{N.NetworkTCP},
+			router:       router,
+			logger:       logger,
+			tag:          tag,
+			dependencies: withDialerDependency(options.DialerOptions),
+		},
+	}
 	outboundDialer, err := dialer.New(router, options.DialerOptions)
 	if err != nil {
-		return nil, err
+		return empty, err
 	}
 	outbound := &SSH{
 		myOutboundAdapter: myOutboundAdapter{
@@ -85,7 +98,7 @@ func NewSSH(ctx context.Context, router adapter.Router, logger log.ContextLogger
 			var err error
 			privateKey, err = os.ReadFile(os.ExpandEnv(options.PrivateKeyPath))
 			if err != nil {
-				return nil, E.Cause(err, "read private key")
+				return empty, E.Cause(err, "read private key") //karing
 			}
 		}
 		var signer ssh.Signer
@@ -96,7 +109,7 @@ func NewSSH(ctx context.Context, router adapter.Router, logger log.ContextLogger
 			signer, err = ssh.ParsePrivateKeyWithPassphrase(privateKey, []byte(options.PrivateKeyPassphrase))
 		}
 		if err != nil {
-			return nil, E.Cause(err, "parse private key")
+			return empty, E.Cause(err, "parse private key") //karing
 		}
 		outbound.authMethod = append(outbound.authMethod, ssh.PublicKeys(signer))
 	}
@@ -104,9 +117,16 @@ func NewSSH(ctx context.Context, router adapter.Router, logger log.ContextLogger
 		for _, hostKey := range options.HostKey {
 			key, _, _, _, err := ssh.ParseAuthorizedKey([]byte(hostKey))
 			if err != nil {
-				return nil, E.New("parse host key ", key)
+				return empty, E.New("parse host key ", key) //karing
 			}
 			outbound.hostKey = append(outbound.hostKey, key)
+		}
+	}
+	uotOptions := common.PtrValueOrDefault(options.UDPOverTCP) //hiddify
+	if uotOptions.Enabled {                                    //hiddify
+		outbound.uotClient = &uot.Client{
+			Dialer:  outbound,
+			Version: uotOptions.Version,
 		}
 	}
 	return outbound, nil
@@ -189,21 +209,45 @@ func (s *SSH) Close() error {
 }
 
 func (s *SSH) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
+	if(s.parseErr != nil){ //karing
+		return nil, s.parseErr
+	}
 	client, err := s.connect()
 	if err != nil {
 		return nil, err
+	}
+	switch N.NetworkName(network) { //hiddify
+	case N.NetworkTCP:
+		s.logger.InfoContext(ctx, "outbound connection to ", destination)
+	case N.NetworkUDP:
+		if s.uotClient != nil {
+			s.logger.InfoContext(ctx, "outbound UoT connect packet connection to ", destination)
+			return s.uotClient.DialContext(ctx, network, destination)
+		}
+		s.logger.InfoContext(ctx, "outbound packet connection to ", destination)
+	default:
+		return nil, E.Extend(N.ErrUnknownNetwork, network)
 	}
 	return client.Dial(network, destination.String())
 }
 
 func (s *SSH) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
+	if(s.parseErr != nil){ //karing
+		return nil, s.parseErr
+	}
 	return nil, os.ErrInvalid
 }
 
 func (s *SSH) NewConnection(ctx context.Context, conn net.Conn, metadata adapter.InboundContext) error {
+	if(s.parseErr != nil){ //karing
+		return s.parseErr
+	}
 	return NewConnection(ctx, s, conn, metadata)
 }
 
 func (s *SSH) NewPacketConnection(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext) error {
 	return os.ErrInvalid
+}
+func (s *SSH) SetParseErr(err error){ //karing
+	s.parseErr = err
 }

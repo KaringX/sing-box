@@ -31,13 +31,24 @@ type Direct struct {
 	overrideOption      int
 	overrideDestination M.Socksaddr
 	loopBack            *loopBackDetector
+	parseErr            error   //karing
 }
 
 func NewDirect(router adapter.Router, logger log.ContextLogger, tag string, options option.DirectOutboundOptions) (*Direct, error) {
+	empty := &Direct{ //karing
+		myOutboundAdapter: myOutboundAdapter{
+			protocol:     C.TypeDirect,
+			network:      []string{N.NetworkTCP, N.NetworkUDP},
+			router:       router,
+			logger:       logger,
+			tag:          tag,
+			dependencies: withDialerDependency(options.DialerOptions),
+		},
+	}
 	options.UDPFragmentDefault = true
 	outboundDialer, err := dialer.New(router, options.DialerOptions)
 	if err != nil {
-		return nil, err
+		return empty, err  //karing
 	}
 	outbound := &Direct{
 		myOutboundAdapter: myOutboundAdapter{
@@ -54,7 +65,7 @@ func NewDirect(router adapter.Router, logger log.ContextLogger, tag string, opti
 		loopBack:       newLoopBackDetector(router),
 	}
 	if options.ProxyProtocol != 0 {
-		return nil, E.New("Proxy Protocol is deprecated and removed in sing-box 1.6.0")
+		return empty, E.New("Proxy Protocol is deprecated and removed in sing-box 1.6.0") //karing
 	}
 	if options.OverrideAddress != "" && options.OverridePort != 0 {
 		outbound.overrideOption = 1
@@ -167,4 +178,7 @@ func (h *Direct) NewPacketConnection(ctx context.Context, conn N.PacketConn, met
 		return E.New("reject loopback packet connection to ", metadata.Destination)
 	}
 	return NewPacketConnection(ctx, h, conn, metadata)
+}
+func (w *Direct) SetParseErr(err error){ //karing
+	w.parseErr = err
 }

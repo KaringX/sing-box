@@ -35,9 +35,20 @@ type Tor struct {
 	events      chan control.Event
 	instance    *tor.Tor
 	socksClient *socks.Client
+	parseErr     error                //karing
 }
 
 func NewTor(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.TorOutboundOptions) (*Tor, error) {
+	empty := &Tor{ //karing
+		myOutboundAdapter: myOutboundAdapter{
+			protocol:     C.TypeTor,
+			network:      []string{N.NetworkTCP},
+			router:       router,
+			logger:       logger,
+			tag:          tag,
+			dependencies: withDialerDependency(options.DialerOptions),
+		},
+	}
 	startConf := newConfig()
 	startConf.DataDir = os.ExpandEnv(options.DataDirectory)
 	startConf.TempDataDirBase = os.TempDir()
@@ -61,14 +72,14 @@ func NewTor(ctx context.Context, router adapter.Router, logger log.ContextLogger
 		if !rw.FileExists(torrcFile) {
 			err := rw.WriteFile(torrcFile, []byte(""))
 			if err != nil {
-				return nil, err
+				return empty, err  //karing
 			}
 		}
 		startConf.TorrcFile = torrcFile
 	}
 	outboundDialer, err := dialer.New(router, options.DialerOptions)
 	if err != nil {
-		return nil, err
+		return empty, err  //karing
 	}
 	return &Tor{
 		myOutboundAdapter: myOutboundAdapter{
@@ -103,6 +114,9 @@ var torLogEvents = []control.EventCode{
 }
 
 func (t *Tor) start() error {
+	if(t.parseErr != nil){ //karing
+		return t.parseErr
+	}
 	torInstance, err := tor.Start(t.ctx, t.startConf)
 	if err != nil {
 		return E.New(strings.ToLower(err.Error()))
@@ -200,6 +214,9 @@ func (t *Tor) Close() error {
 }
 
 func (t *Tor) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
+	if(t.parseErr != nil){ //karing
+		return nil, t.parseErr
+	}
 	t.logger.InfoContext(ctx, "outbound connection to ", destination)
 	return t.socksClient.DialContext(ctx, network, destination)
 }
@@ -209,9 +226,18 @@ func (t *Tor) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.Pa
 }
 
 func (t *Tor) NewConnection(ctx context.Context, conn net.Conn, metadata adapter.InboundContext) error {
+	if(t.parseErr != nil){ //karing
+		return t.parseErr
+	}
 	return NewConnection(ctx, t, conn, metadata)
 }
 
 func (t *Tor) NewPacketConnection(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext) error {
+	if(t.parseErr != nil){ //karing
+		return t.parseErr
+	}
 	return os.ErrInvalid
+}
+func (t *Tor) SetParseErr(err error){ //karing
+	t.parseErr = err
 }

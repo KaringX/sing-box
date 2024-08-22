@@ -6,7 +6,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/sagernet/sing-dns"
+	dns "github.com/sagernet/sing-dns"
 	"github.com/sagernet/sing/common"
 	E "github.com/sagernet/sing/common/exceptions"
 	M "github.com/sagernet/sing/common/metadata"
@@ -65,6 +65,7 @@ func (p *platformLocalDNSTransport) Exchange(ctx context.Context, message *mDNS.
 	if err != nil {
 		return nil, err
 	}
+
 	response := &ExchangeContext{
 		context: ctx,
 	}
@@ -92,6 +93,7 @@ func (p *platformLocalDNSTransport) Lookup(ctx context.Context, domain string, s
 	default:
 		network = "ip"
 	}
+
 	response := &ExchangeContext{
 		context: ctx,
 	}

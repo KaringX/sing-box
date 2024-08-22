@@ -8,6 +8,7 @@ import (
 	"runtime/debug"
 	"time"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/common/taskmonitor"
 	C "github.com/sagernet/sing-box/constant"
@@ -39,6 +40,7 @@ type Box struct {
 	preServices2 map[string]adapter.Service
 	postServices map[string]adapter.Service
 	done         chan struct{}
+	QuitSig      chan struct{} //karing
 }
 
 type Options struct {
@@ -49,6 +51,7 @@ type Options struct {
 }
 
 func New(options Options) (*Box, error) {
+	quitSig := make(chan struct{}) //karing
 	createdAt := time.Now()
 	ctx := options.Context
 	if ctx == nil {
@@ -85,6 +88,17 @@ func New(options Options) (*Box, error) {
 	if err != nil {
 		return nil, E.Cause(err, "create log factory")
 	}
+	if needCacheFile { //karing
+		cacheFile := service.FromContext[adapter.CacheFile](ctx)
+		if cacheFile == nil {
+			cacheFile = cachefile.New(ctx, common.PtrValueOrDefault(experimentalOptions.CacheFile))
+			service.MustRegister[adapter.CacheFile](ctx, cacheFile)
+		}
+		err = cacheFile.BeforePreStart()
+		if err != nil {
+			return nil, E.Cause(err, "cacheFile load failed")
+		}
+	}
 	router, err := route.NewRouter(
 		ctx,
 		logFactory,
@@ -93,6 +107,9 @@ func New(options Options) (*Box, error) {
 		common.PtrValueOrDefault(options.NTP),
 		options.Inbounds,
 		options.PlatformInterface,
+		func (){
+			quitSig <- struct{}{}
+		},
 	)
 	if err != nil {
 		return nil, E.Cause(err, "parse route options")
@@ -115,7 +132,7 @@ func New(options Options) (*Box, error) {
 			options.PlatformInterface,
 		)
 		if err != nil {
-			return nil, E.Cause(err, "parse inbound[", i, "]")
+			return nil, E.Cause(err, "parse inbound[", i, "][", tag, "]") //karing
 		}
 		inbounds = append(inbounds, in)
 	}
@@ -134,7 +151,8 @@ func New(options Options) (*Box, error) {
 			tag,
 			outboundOptions)
 		if err != nil {
-			return nil, E.Cause(err, "parse outbound[", i, "]")
+			out.SetParseErr(E.Cause(err, "parse outbound")) //karing
+			//return nil, E.Cause(err, "parse outbound[", i, "][", tag, "]") //karing
 		}
 		outbounds = append(outbounds, out)
 	}
@@ -193,12 +211,14 @@ func New(options Options) (*Box, error) {
 		preServices2: preServices2,
 		postServices: postServices,
 		done:         make(chan struct{}),
+		QuitSig:      quitSig,
 	}, nil
 }
 
 func (s *Box) PreStart() error {
 	err := s.preStart()
 	if err != nil {
+		sentry.CaptureException(err) //karing
 		// TODO: remove catch error
 		defer func() {
 			v := recover()
@@ -218,6 +238,8 @@ func (s *Box) PreStart() error {
 func (s *Box) Start() error {
 	err := s.start()
 	if err != nil {
+		sentry.CaptureException(err) //karing
+
 		// TODO: remove catch error
 		defer func() {
 			v := recover()
@@ -230,7 +252,7 @@ func (s *Box) Start() error {
 		s.Close()
 		return err
 	}
-	s.logger.Info("sing-box started (", F.Seconds(time.Since(s.createdAt).Seconds()), "s)")
+	s.logger.Info("started (", F.Seconds(time.Since(s.createdAt).Seconds()), "s)") //karing
 	return nil
 }
 
@@ -341,14 +363,14 @@ func (s *Box) Close() error {
 		monitor.Finish()
 	}
 	for i, in := range s.inbounds {
-		monitor.Start("close inbound/", in.Type(), "[", i, "]")
+		monitor.Start("close inbound/", in.Type(), "[", in.Tag(), "]")  //karing
 		errors = E.Append(errors, in.Close(), func(err error) error {
 			return E.Cause(err, "close inbound/", in.Type(), "[", i, "]")
 		})
 		monitor.Finish()
 	}
 	for i, out := range s.outbounds {
-		monitor.Start("close outbound/", out.Type(), "[", i, "]")
+		monitor.Start("close outbound/", out.Type(), "[", out.Tag(), "]")  //karing
 		errors = E.Append(errors, common.Close(out), func(err error) error {
 			return E.Cause(err, "close outbound/", out.Type(), "[", i, "]")
 		})
@@ -380,6 +402,7 @@ func (s *Box) Close() error {
 			return E.Cause(err, "close logger")
 		})
 	}
+	close(s.QuitSig) //karing
 	return errors
 }
 

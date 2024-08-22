@@ -186,44 +186,52 @@ func updateProxy(w http.ResponseWriter, r *http.Request) {
 
 func getProxyDelay(server *Server) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		proxy := r.Context().Value(CtxKeyProxy).(adapter.Outbound)
 		query := r.URL.Query()
 		url := query.Get("url")
 		if strings.HasPrefix(url, "http://") {
 			url = ""
 		}
-		timeout, err := strconv.ParseInt(query.Get("timeout"), 10, 16)
+		timeout, err := strconv.ParseInt(query.Get("timeout"), 10, 32)
 		if err != nil {
 			render.Status(r, http.StatusBadRequest)
 			render.JSON(w, r, ErrBadRequest)
 			return
 		}
 
-		proxy := r.Context().Value(CtxKeyProxy).(adapter.Outbound)
-		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*time.Duration(timeout))
+		ctx, cancel := context.WithTimeout(r.Context(), time.Millisecond*time.Duration(timeout))
 		defer cancel()
 
 		delay, err := urltest.URLTest(ctx, url, proxy)
 		defer func() {
 			realTag := outbound.RealTag(proxy)
 			if err != nil {
-				server.urlTestHistory.DeleteURLTestHistory(realTag)
+				//server.urlTestHistory.DeleteURLTestHistory(realTag)
+				server.urlTestHistory.StoreURLTestHistory(realTag, &urltest.History{ //karing
+					Time:  time.Now(),
+					Delay: 0,
+					Err:   err.Error(),
+				})
 			} else {
 				server.urlTestHistory.StoreURLTestHistory(realTag, &urltest.History{
 					Time:  time.Now(),
 					Delay: delay,
+					Err:   "", //karing
 				})
 			}
 		}()
 
 		if ctx.Err() != nil {
-			render.Status(r, http.StatusGatewayTimeout)
-			render.JSON(w, r, ErrRequestTimeout)
+			//render.Status(r, http.StatusGatewayTimeout) //karing
+			//render.JSON(w, r, ErrRequestTimeout) //karing
+			render.JSON(w, r, newError(ctx.Err().Error())) //karing
 			return
 		}
 
 		if err != nil || delay == 0 {
-			render.Status(r, http.StatusServiceUnavailable)
-			render.JSON(w, r, newError("An error occurred in the delay test"))
+			//render.Status(r, http.StatusServiceUnavailable) //karing
+			//render.JSON(w, r, newError("An error occurred in the delay test")) //karing
+			render.JSON(w, r, newError(err.Error())) //karing
 			return
 		}
 

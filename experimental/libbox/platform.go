@@ -22,6 +22,7 @@ type PlatformInterface interface {
 	IncludeAllNetworks() bool
 	ReadWIFIState() *WIFIState
 	ClearDNSCache()
+	GetAssetContent(path string)([]byte, error) //karing
 }
 
 type TunInterface interface {

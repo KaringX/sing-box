@@ -69,8 +69,10 @@ type Router struct {
 	geositeCache                       map[string]adapter.Rule
 	needFindProcess                    bool
 	dnsClient                          *dns.Client
+	staticDns                          map[string]StaticDNSEntry //hiddify
 	defaultDomainStrategy              dns.DomainStrategy
 	dnsRules                           []adapter.DNSRule
+	ruleSetsRemoteWithLocal            []adapter.RuleSet //karing
 	ruleSets                           []adapter.RuleSet
 	ruleSetMap                         map[string]adapter.RuleSet
 	defaultTransport                   dns.Transport
@@ -97,6 +99,7 @@ type Router struct {
 	needPackageManager                 bool
 	wifiState                          adapter.WIFIState
 	started                            bool
+	quitSig                            func()   //karing
 }
 
 func NewRouter(
@@ -107,6 +110,7 @@ func NewRouter(
 	ntpOptions option.NTPOptions,
 	inbounds []option.Inbound,
 	platformInterface platform.Interface,
+	quitSig func(), //karing
 ) (*Router, error) {
 	router := &Router{
 		ctx:                   ctx,
@@ -134,6 +138,8 @@ func NewRouter(
 		needPackageManager: C.IsAndroid && platformInterface == nil && common.Any(inbounds, func(inbound option.Inbound) bool {
 			return len(inbound.TunOptions.IncludePackage) > 0 || len(inbound.TunOptions.ExcludePackage) > 0
 		}),
+		staticDns: createEntries(dnsOptions.StaticIPs), //hiddify
+		quitSig: quitSig, //karing
 	}
 	router.dnsClient = dns.NewClient(dns.ClientOptions{
 		DisableCache:     dnsOptions.DNSClientOptions.DisableCache,
@@ -168,6 +174,18 @@ func NewRouter(
 	for i, ruleSetOptions := range options.RuleSet {
 		if _, exists := router.ruleSetMap[ruleSetOptions.Tag]; exists {
 			return nil, E.New("duplicate rule-set tag: ", ruleSetOptions.Tag)
+		}
+		if ruleSetOptions.Type == C.RuleSetTypeRemote { //karing
+			if len(ruleSetOptions.LocalOptions.Path) != 0 {
+				cacheFile := service.FromContext[adapter.CacheFile](ctx)
+				if cacheFile != nil {
+					if !cacheFile.HasRuleSet(ruleSetOptions.RemoteOptions.URL) {   //karing
+						ruleSet := NewRemoteRuleSet(ctx, router, router.logger, ruleSetOptions)
+						router.ruleSetsRemoteWithLocal = append(router.ruleSetsRemoteWithLocal, ruleSet)
+						ruleSetOptions.Type = C.RuleSetTypeLocal
+					}
+				}
+			}
 		}
 		ruleSet, err := NewRuleSet(ctx, router, router.logger, ruleSetOptions)
 		if err != nil {
@@ -568,7 +586,15 @@ func (r *Router) Start() error {
 		err := r.timeService.Start()
 		monitor.Finish()
 		if err != nil {
-			return E.Cause(err, "initialize time service")
+			//return E.Cause(err, "initialize time service") // karing
+			r.logger.ErrorContext(r.ctx, "initialize time service: ", err) // karing
+			go func(){ // karing
+				time.Sleep(time.Second * 3)
+				err := r.timeService.Start()
+				if err != nil {
+					r.logger.ErrorContext(r.ctx, "initialize time service: ", err)
+				}
+			}()
 		}
 	}
 	return nil
@@ -675,6 +701,27 @@ func (r *Router) PostStart() error {
 		}
 		ruleSetStartContext.Close()
 	}
+	if len(r.ruleSetsRemoteWithLocal) > 0 { //karing
+		go func() {
+			ruleSetStartContext := NewRuleSetStartContext()
+			var ruleSetStartGroup task.Group
+			for i, ruleSet := range r.ruleSetsRemoteWithLocal {
+				ruleSetInPlace := ruleSet
+				ruleSetStartGroup.Append0(func(ctx context.Context) error {
+					err := ruleSetInPlace.StartContext(ctx, ruleSetStartContext)
+					if err != nil {
+						return E.Cause(err, "initialize rule-set-remote[", i, "]")
+					}
+					return nil
+				})
+			}
+			ruleSetStartGroup.Concurrency(5)
+			ruleSetStartGroup.FastFail()
+			ruleSetStartGroup.Run(r.ctx)
+
+			ruleSetStartContext.Close()
+		}()
+	}
 	var (
 		needProcessFromRuleSet   bool
 		needWIFIStateFromRuleSet bool
@@ -754,6 +801,16 @@ func (r *Router) FakeIPStore() adapter.FakeIPStore {
 func (r *Router) RuleSet(tag string) (adapter.RuleSet, bool) {
 	ruleSet, loaded := r.ruleSetMap[tag]
 	return ruleSet, loaded
+}
+
+func (r *Router) GetRemoteRuleSetRulesCount() map[string]int{  //karing
+	counts :=  make( map[string]int)
+	for _, ruleSet := range r.ruleSets {
+		if ruleset, isRemote := ruleSet.(*RemoteRuleSet); isRemote {
+			counts[ruleset.options.RemoteOptions.URL]= len(ruleset.rules)
+		}
+	}
+	return counts
 }
 
 func (r *Router) NeedWIFIState() bool {
@@ -876,7 +933,7 @@ func (r *Router) RouteConnection(ctx context.Context, conn net.Conn, metadata ad
 		return E.New("missing supported outbound, closing connection")
 	}
 	if r.clashServer != nil {
-		trackerConn, tracker := r.clashServer.RoutedConnection(ctx, conn, metadata, matchedRule)
+		trackerConn, tracker := r.clashServer.RoutedConnection(ctx, conn, metadata, matchedRule, detour.Type(), detour.Tag()) //karing
 		defer tracker.Leave()
 		conn = trackerConn
 	}
@@ -996,7 +1053,7 @@ func (r *Router) RoutePacketConnection(ctx context.Context, conn N.PacketConn, m
 		return E.New("missing supported outbound, closing packet connection")
 	}
 	if r.clashServer != nil {
-		trackerConn, tracker := r.clashServer.RoutedPacketConnection(ctx, conn, metadata, matchedRule)
+		trackerConn, tracker := r.clashServer.RoutedPacketConnection(ctx, conn, metadata, matchedRule, detour.Type(), detour.Tag()) //karing
 		defer tracker.Leave()
 		conn = trackerConn
 	}
@@ -1010,7 +1067,47 @@ func (r *Router) RoutePacketConnection(ctx context.Context, conn N.PacketConn, m
 	}
 	return detour.NewPacketConnection(ctx, conn, metadata)
 }
+func (r *Router) GetMatchRuleChain(rule adapter.Rule) []string { //karing
+	var chain []string
+	var next string
+	if rule == nil {
+		if defaultOutbound, err := r.DefaultOutbound(N.NetworkTCP); err == nil {
+			next = defaultOutbound.Tag()
+		}
+	} else {
+		next = rule.Outbound()
+	}
+	for {
+		chain = append(chain, next)
+		detour, loaded := r.Outbound(next)
+		if !loaded {
+			break
+		}
+		group, isGroup := detour.(adapter.OutboundGroup)
+		if !isGroup {
+			break
+		}
+		next = group.Now()
+	}
+	return chain
+}
+func (r *Router) GetMatchRule(ctx context.Context, metadata *adapter.InboundContext) (adapter.Rule, string, error) { //karing
+	_, rule, detour, err := r.match(ctx, metadata, r.defaultOutboundForConnection)
+	if err != nil {
+		return nil, "", err
+	}
 
+	return rule, detour.Tag(), err
+}
+func (r *Router) GetAssetContent(path string)([]byte, error) {//karing
+	if r.platformInterface == nil{
+		return nil, errors.New("platform interface not set")
+	}
+	return r.platformInterface.GetAssetContent(path)
+}
+func (r *Router) SingalQuit(){ //karing
+	r.quitSig()
+}
 func (r *Router) match(ctx context.Context, metadata *adapter.InboundContext, defaultOutbound adapter.Outbound) (context.Context, adapter.Rule, adapter.Outbound, error) {
 	matchRule, matchOutbound := r.match0(ctx, metadata, defaultOutbound)
 	if contextOutbound, loaded := outbound.TagFromContext(ctx); loaded {
@@ -1058,7 +1155,7 @@ func (r *Router) match0(ctx context.Context, metadata *adapter.InboundContext, d
 		metadata.ResetRuleCache()
 		if rule.Match(metadata) {
 			detour := rule.Outbound()
-			r.logger.DebugContext(ctx, "match[", i, "] ", rule.String(), " => ", detour)
+			r.logger.DebugContext(ctx, metadata.Destination.String(), " match[", i, "] ", rule.String(), " => ", detour) //karing
 			if outbound, loaded := r.Outbound(detour); loaded {
 				return rule, outbound
 			}

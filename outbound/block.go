@@ -50,3 +50,5 @@ func (h *Block) NewPacketConnection(ctx context.Context, conn N.PacketConn, meta
 	h.logger.InfoContext(ctx, "blocked packet connection to ", metadata.Destination)
 	return nil
 }
+func (w *Block) SetParseErr(err error){ //karing
+}

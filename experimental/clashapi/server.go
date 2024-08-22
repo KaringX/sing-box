@@ -112,6 +112,7 @@ func NewServer(ctx context.Context, router adapter.Router, logFactory log.Observ
 		r.Mount("/profile", profileRouter())
 		r.Mount("/cache", cacheRouter(ctx))
 		r.Mount("/dns", dnsRouter(router))
+		r.Mount("/karing", karingRouter(router, logFactory)) //karing
 
 		server.setupMetaAPI(r)
 	})
@@ -217,13 +218,13 @@ func (s *Server) TrafficManager() *trafficontrol.Manager {
 	return s.trafficManager
 }
 
-func (s *Server) RoutedConnection(ctx context.Context, conn net.Conn, metadata adapter.InboundContext, matchedRule adapter.Rule) (net.Conn, adapter.Tracker) {
-	tracker := trafficontrol.NewTCPTracker(conn, s.trafficManager, castMetadata(metadata), s.router, matchedRule)
+func (s *Server) RoutedConnection(ctx context.Context, conn net.Conn, metadata adapter.InboundContext, matchedRule adapter.Rule, protocol string, outbound string) (net.Conn, adapter.Tracker) { //karing
+	tracker := trafficontrol.NewTCPTracker(conn, s.trafficManager, castMetadata(metadata), s.router, matchedRule, protocol, outbound) //karing
 	return tracker, tracker
 }
 
-func (s *Server) RoutedPacketConnection(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext, matchedRule adapter.Rule) (N.PacketConn, adapter.Tracker) {
-	tracker := trafficontrol.NewUDPTracker(conn, s.trafficManager, castMetadata(metadata), s.router, matchedRule)
+func (s *Server) RoutedPacketConnection(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext, matchedRule adapter.Rule, protocol string, outbound string) (N.PacketConn, adapter.Tracker) { //karing
+	tracker := trafficontrol.NewUDPTracker(conn, s.trafficManager, castMetadata(metadata), s.router, matchedRule, protocol, outbound) //karing
 	return tracker, tracker
 }
 
@@ -241,11 +242,13 @@ func castMetadata(metadata adapter.InboundContext) trafficontrol.Metadata {
 		domain = metadata.Destination.Fqdn
 	}
 	var processPath string
+	var packageName string //karing
 	if metadata.ProcessInfo != nil {
 		if metadata.ProcessInfo.ProcessPath != "" {
 			processPath = metadata.ProcessInfo.ProcessPath
-		} else if metadata.ProcessInfo.PackageName != "" {
-			processPath = metadata.ProcessInfo.PackageName
+		}
+		if metadata.ProcessInfo.PackageName != "" { //karing
+			packageName = metadata.ProcessInfo.PackageName //karing
 		}
 		if processPath == "" {
 			if metadata.ProcessInfo.UserId != -1 {
@@ -267,13 +270,16 @@ func castMetadata(metadata adapter.InboundContext) trafficontrol.Metadata {
 		Host:        domain,
 		DNSMode:     "normal",
 		ProcessPath: processPath,
+		PackageName: packageName,       //karing
+		User:        metadata.User,     //karing
+		Protocol:    metadata.Protocol, //karing
 	}
 }
 
 func authentication(serverSecret string) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
-			if serverSecret == "" {
+			if serverSecret == "" || strings.Index(r.URL.Path, "/karing/") == 0 { //karing
 				next.ServeHTTP(w, r)
 				return
 			}

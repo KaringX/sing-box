@@ -98,6 +98,9 @@ func ParsePeers(options option.WireGuardOutboundOptions) ([]PeerConfig, error) {
 			peer.destination = destination
 			peer.domainStrategy = dns.DomainStrategy(options.DomainStrategy)
 		} else {
+			if len(destination.Fqdn) != 0 { //karing bug:options.ServerOptions.Build()
+				return nil, E.New("invalid server ip:", destination.Fqdn)
+			}
 			peer.Endpoint = destination.AddrPort()
 		}
 		{
@@ -133,9 +136,9 @@ func ResolvePeers(ctx context.Context, router adapter.Router, peers []PeerConfig
 		destinationAddresses, err := router.Lookup(ctx, peer.destination.Fqdn, peer.domainStrategy)
 		if err != nil {
 			if len(peers) == 1 {
-				return E.Cause(err, "resolve endpoint domain")
+				return E.Cause(err, "resolve endpoint domain", "[", peer.destination.Fqdn, "]") //karing
 			} else {
-				return E.Cause(err, "resolve endpoint domain for peer ", peerIndex)
+				return E.Cause(err, "resolve endpoint domain", "[", peer.destination.Fqdn, "]", "for peer ", peerIndex) //karing
 			}
 		}
 		if len(destinationAddresses) == 0 {

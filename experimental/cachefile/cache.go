@@ -119,11 +119,11 @@ func (c *CacheFile) start() error {
 	if err != nil {
 		return err
 	}
-	err = filemanager.Chown(c.ctx, c.path)
+	/*err = filemanager.Chown(c.ctx, c.path)//karing ios,mac打开后会报错
 	if err != nil {
 		db.Close()
 		return E.Cause(err, "platform chown")
-	}
+	}*/
 	err = db.Batch(func(tx *bbolt.Tx) error {
 		return tx.ForEach(func(name []byte, b *bbolt.Bucket) error {
 			if name[0] == 0 {
@@ -151,8 +151,12 @@ func (c *CacheFile) start() error {
 	return nil
 }
 
-func (c *CacheFile) PreStart() error {
+func (c *CacheFile) BeforePreStart() error { //karing
 	return c.start()
+}
+
+func (c *CacheFile) PreStart() error {
+	return nil //c.start()//karing
 }
 
 func (c *CacheFile) Start() error {
@@ -312,4 +316,35 @@ func (c *CacheFile) SaveRuleSet(tag string, set *adapter.SavedRuleSet) error {
 		}
 		return bucket.Put([]byte(tag), setBinary)
 	})
+}
+func (c *CacheFile) HasRuleSet(tag string) bool { //karing
+	err := c.DB.View(func(t *bbolt.Tx) error {
+		bucket := c.bucket(t, bucketRuleSet)
+		if bucket == nil {
+			return os.ErrNotExist
+		}
+		setBinary := bucket.Get([]byte(tag))
+		if len(setBinary) == 0 {
+			return os.ErrInvalid
+		}
+		return nil
+	})
+	return err == nil
+}
+func (c *CacheFile) GetAllRuleSetKeys() map[string]bool { //karing
+	keys :=  make( map[string]bool)
+	c.DB.View(func(t *bbolt.Tx) error {
+		bucket := c.bucket(t, bucketRuleSet)
+		if bucket == nil {
+			return os.ErrNotExist
+		}
+		bucket.ForEach(func(name []byte, setBinary []byte) error {
+			if len(name) != 0 {
+				keys[string(name)] = len(setBinary) != 0
+			}
+			return nil
+		})
+		return nil
+	})
+	return keys
 }

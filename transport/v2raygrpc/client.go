@@ -78,7 +78,7 @@ func (c *Client) Close() error {
 	)
 }
 
-func (c *Client) connect() (*grpc.ClientConn, error) {
+func (c *Client) connect(ctx context.Context) (*grpc.ClientConn, error) { //karing
 	conn := c.conn
 	if conn != nil && conn.GetState() != connectivity.Shutdown {
 		return conn, nil
@@ -91,7 +91,7 @@ func (c *Client) connect() (*grpc.ClientConn, error) {
 	}
 	//nolint:staticcheck
 	//goland:noinspection GoDeprecation
-	conn, err := grpc.DialContext(c.ctx, c.serverAddr, c.dialOptions...)
+	conn, err := grpc.DialContext(ctx, c.serverAddr, c.dialOptions...) //karing
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +100,7 @@ func (c *Client) connect() (*grpc.ClientConn, error) {
 }
 
 func (c *Client) DialContext(ctx context.Context) (net.Conn, error) {
-	clientConn, err := c.connect()
+	clientConn, err := c.connect(ctx) //karing
 	if err != nil {
 		return nil, err
 	}

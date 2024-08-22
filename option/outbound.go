@@ -27,6 +27,8 @@ type _Outbound struct {
 	Hysteria2Options    Hysteria2OutboundOptions    `json:"-"`
 	SelectorOptions     SelectorOutboundOptions     `json:"-"`
 	URLTestOptions      URLTestOutboundOptions      `json:"-"`
+	XrayOptions         XrayOutboundOptions         `json:"-"` //hiddify
+	CustomOptions       map[string]interface{}      `json:"-"` //hiddify
 }
 
 type Outbound _Outbound
@@ -70,6 +72,10 @@ func (h *Outbound) RawOptions() (any, error) {
 		rawOptionsPtr = &h.SelectorOptions
 	case C.TypeURLTest:
 		rawOptionsPtr = &h.URLTestOptions
+	case C.TypeCustom: //hiddify
+		rawOptionsPtr = &h.CustomOptions //hiddify
+	case C.TypeXray:   //hiddify
+		rawOptionsPtr = &h.XrayOptions   //hiddify
 	case "":
 		return nil, E.New("missing outbound type")
 	default:
@@ -108,21 +114,22 @@ type DialerOptionsWrapper interface {
 }
 
 type DialerOptions struct {
-	Detour              string         `json:"detour,omitempty"`
-	BindInterface       string         `json:"bind_interface,omitempty"`
-	Inet4BindAddress    *ListenAddress `json:"inet4_bind_address,omitempty"`
-	Inet6BindAddress    *ListenAddress `json:"inet6_bind_address,omitempty"`
-	ProtectPath         string         `json:"protect_path,omitempty"`
-	RoutingMark         int            `json:"routing_mark,omitempty"`
-	ReuseAddr           bool           `json:"reuse_addr,omitempty"`
-	ConnectTimeout      Duration       `json:"connect_timeout,omitempty"`
-	TCPFastOpen         bool           `json:"tcp_fast_open,omitempty"`
-	TCPMultiPath        bool           `json:"tcp_multi_path,omitempty"`
-	UDPFragment         *bool          `json:"udp_fragment,omitempty"`
-	UDPFragmentDefault  bool           `json:"-"`
-	DomainStrategy      DomainStrategy `json:"domain_strategy,omitempty"`
-	FallbackDelay       Duration       `json:"fallback_delay,omitempty"`
-	IsWireGuardListener bool           `json:"-"`
+	Detour              string              `json:"detour,omitempty"`
+	BindInterface       string              `json:"bind_interface,omitempty"`
+	Inet4BindAddress    *ListenAddress      `json:"inet4_bind_address,omitempty"`
+	Inet6BindAddress    *ListenAddress      `json:"inet6_bind_address,omitempty"`
+	ProtectPath         string              `json:"protect_path,omitempty"`
+	RoutingMark         int                 `json:"routing_mark,omitempty"`
+	ReuseAddr           bool                `json:"reuse_addr,omitempty"`
+	ConnectTimeout      Duration            `json:"connect_timeout,omitempty"`
+	TCPFastOpen         bool                `json:"tcp_fast_open,omitempty"`
+	TCPMultiPath        bool                `json:"tcp_multi_path,omitempty"`
+	UDPFragment         *bool               `json:"udp_fragment,omitempty"`
+	UDPFragmentDefault  bool                `json:"-"`
+	DomainStrategy      DomainStrategy      `json:"domain_strategy,omitempty"`
+	FallbackDelay       Duration            `json:"fallback_delay,omitempty"`
+	IsWireGuardListener bool                `json:"-"`
+	TLSFragment         *TLSFragmentOptions `json:"tls_fragment,omitempty"` //hiddify
 }
 
 func (o *DialerOptions) TakeDialerOptions() DialerOptions {

@@ -13,7 +13,7 @@ import (
 	"github.com/sagernet/sing-box/experimental/libbox/platform"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
-	"github.com/sagernet/sing-tun"
+	tun "github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common"
 	E "github.com/sagernet/sing/common/exceptions"
 	M "github.com/sagernet/sing/common/metadata"
@@ -218,7 +218,7 @@ func (t *Tun) NewConnection(ctx context.Context, conn net.Conn, upstreamMetadata
 	t.logger.InfoContext(ctx, "inbound connection to ", metadata.Destination)
 	err := t.router.RouteConnection(ctx, conn, metadata)
 	if err != nil {
-		t.NewError(ctx, err)
+		t.NewError(ctx, E.New(err.Error(), ", connection from [", metadata.Source, "] to: [", metadata.Destination, "]")) //karing
 	}
 	return nil
 }
@@ -235,7 +235,7 @@ func (t *Tun) NewPacketConnection(ctx context.Context, conn N.PacketConn, upstre
 	t.logger.InfoContext(ctx, "inbound packet connection to ", metadata.Destination)
 	err := t.router.RoutePacketConnection(ctx, conn, metadata)
 	if err != nil {
-		t.NewError(ctx, err)
+		t.NewError(ctx, E.New(err.Error(), ", packet connection from [", metadata.Source, "] to: [", metadata.Destination, "]")) //karing
 	}
 	return nil
 }

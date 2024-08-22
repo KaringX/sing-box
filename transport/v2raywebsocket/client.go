@@ -93,6 +93,7 @@ func (c *Client) dialContext(ctx context.Context, requestURL *url.URL, headers h
 	}
 	err = deadlineConn.SetDeadline(time.Now().Add(C.TCPTimeout))
 	if err != nil {
+		conn.Close() //karing fix conn leaks
 		return nil, E.Cause(err, "set read deadline")
 	}
 	var protocols []string
@@ -103,12 +104,14 @@ func (c *Client) dialContext(ctx context.Context, requestURL *url.URL, headers h
 	reader, _, err := ws.Dialer{Header: ws.HandshakeHeaderHTTP(headers), Protocols: protocols}.Upgrade(deadlineConn, requestURL)
 	deadlineConn.SetDeadline(time.Time{})
 	if err != nil {
+		conn.Close() //karing fix conn leaks
 		return nil, err
 	}
 	if reader != nil {
 		buffer := buf.NewSize(reader.Buffered())
 		_, err = buffer.ReadFullFrom(reader, buffer.Len())
 		if err != nil {
+			conn.Close() //karing fix conn leaks
 			return nil, err
 		}
 		conn = bufio.NewCachedConn(conn, buffer)

@@ -13,9 +13,15 @@ import (
 	N "github.com/sagernet/sing/common/network"
 )
 
+type URLTestResult struct { // karing
+	Delay uint16 `json:"delay,omitempty"`
+	Err   string `json:"err,omitempty"`
+}
+
 type History struct {
 	Time  time.Time `json:"time"`
 	Delay uint16    `json:"delay"`
+	Err   string    `json:"err"` //karing
 }
 
 type HistoryStorage struct {
@@ -55,6 +61,16 @@ func (s *HistoryStorage) StoreURLTestHistory(tag string, history *History) {
 	s.delayHistory[tag] = history
 	s.access.Unlock()
 	s.notifyUpdated()
+}
+
+func (s *HistoryStorage) GetURLTestHistory() map[string]*History { // karing
+	history := make(map[string]*History)
+	s.access.Lock()
+	for k, v := range s.delayHistory {
+		history[k] = v
+	}
+	s.access.Unlock()
+	return history
 }
 
 func (s *HistoryStorage) notifyUpdated() {
@@ -109,6 +125,8 @@ func URLTest(ctx context.Context, link string, detour N.Dialer) (t uint16, err e
 			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
 				return instance, nil
 			},
+			//DisableKeepAlives:   true,// karing
+			//TLSHandshakeTimeout: C.TCPTimeout,// karing
 		},
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
@@ -120,6 +138,15 @@ func URLTest(ctx context.Context, link string, detour N.Dialer) (t uint16, err e
 		return
 	}
 	resp.Body.Close()
-	t = uint16(time.Since(start) / time.Millisecond)
+	{ //karing
+		start = time.Now()
+		resp, err = client.Do(req.WithContext(ctx))
+		if err != nil {
+			return 0, err
+		}
+		resp.Body.Close()
+	}
+
+	t = uint16(time.Since(start).Milliseconds())
 	return
 }

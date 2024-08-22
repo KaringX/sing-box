@@ -33,12 +33,23 @@ type VLESS struct {
 	transport       adapter.V2RayClientTransport
 	packetAddr      bool
 	xudp            bool
+	parseErr        error                //karing
 }
 
 func NewVLESS(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.VLESSOutboundOptions) (*VLESS, error) {
+	empty := &VLESS{  //karing
+		myOutboundAdapter: myOutboundAdapter{
+			protocol:     C.TypeVLESS,
+			network:      options.Network.Build(),
+			router:       router,
+			logger:       logger,
+			tag:          tag,
+			dependencies: withDialerDependency(options.DialerOptions),
+		},
+	}
 	outboundDialer, err := dialer.New(router, options.DialerOptions)
 	if err != nil {
-		return nil, err
+		return empty, err   //karing
 	}
 	outbound := &VLESS{
 		myOutboundAdapter: myOutboundAdapter{
@@ -55,13 +66,13 @@ func NewVLESS(ctx context.Context, router adapter.Router, logger log.ContextLogg
 	if options.TLS != nil {
 		outbound.tlsConfig, err = tls.NewClient(ctx, options.Server, common.PtrValueOrDefault(options.TLS))
 		if err != nil {
-			return nil, err
+			return empty, err  //karing
 		}
 	}
 	if options.Transport != nil {
 		outbound.transport, err = v2ray.NewClientTransport(ctx, outbound.dialer, outbound.serverAddr, common.PtrValueOrDefault(options.Transport), outbound.tlsConfig)
 		if err != nil {
-			return nil, E.Cause(err, "create client transport: ", options.Transport.Type)
+			return empty, E.Cause(err, "create client transport: ", options.Transport.Type)  //karing
 		}
 	}
 	if options.PacketEncoding == nil {
@@ -74,16 +85,16 @@ func NewVLESS(ctx context.Context, router adapter.Router, logger log.ContextLogg
 		case "xudp":
 			outbound.xudp = true
 		default:
-			return nil, E.New("unknown packet encoding: ", options.PacketEncoding)
+			return empty, E.New("unknown packet encoding: ", options.PacketEncoding)  //karing
 		}
 	}
 	outbound.client, err = vless.NewClient(options.UUID, options.Flow, logger)
 	if err != nil {
-		return nil, err
+		return empty, err  //karing
 	}
 	outbound.multiplexDialer, err = mux.NewClientWithOptions((*vlessDialer)(outbound), logger, common.PtrValueOrDefault(options.Multiplex))
 	if err != nil {
-		return nil, err
+		return empty, err  //karing
 	}
 	return outbound, nil
 }
@@ -119,10 +130,16 @@ func (h *VLESS) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.
 }
 
 func (h *VLESS) NewConnection(ctx context.Context, conn net.Conn, metadata adapter.InboundContext) error {
+	if(h.parseErr != nil){ //karing
+		return h.parseErr
+	}
 	return NewConnection(ctx, h, conn, metadata)
 }
 
 func (h *VLESS) NewPacketConnection(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext) error {
+	if(h.parseErr != nil){ //karing
+		return h.parseErr
+	}
 	return NewPacketConnection(ctx, h, conn, metadata)
 }
 
@@ -136,10 +153,15 @@ func (h *VLESS) InterfaceUpdated() {
 func (h *VLESS) Close() error {
 	return common.Close(common.PtrOrNil(h.multiplexDialer), h.transport)
 }
-
+func (h *VLESS) SetParseErr(err error){ //karing
+	h.parseErr = err
+}
 type vlessDialer VLESS
 
 func (h *vlessDialer) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
+	if(h.parseErr != nil){ //karing
+		return nil, h.parseErr
+	}
 	ctx, metadata := adapter.AppendContext(ctx)
 	metadata.Outbound = h.tag
 	metadata.Destination = destination
@@ -182,6 +204,9 @@ func (h *vlessDialer) DialContext(ctx context.Context, network string, destinati
 }
 
 func (h *vlessDialer) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
+	if(h.parseErr != nil){ //karing
+		return nil, h.parseErr
+	}
 	h.logger.InfoContext(ctx, "outbound packet connection to ", destination)
 	ctx, metadata := adapter.AppendContext(ctx)
 	metadata.Outbound = h.tag
