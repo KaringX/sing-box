@@ -10,6 +10,7 @@ import (
 	"github.com/sagernet/sing/common/auth"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/valyala/fastjson"
+	"github.com/xtls/xray-core/infra/conf"
 )
 
 func unmarshalFastJSONDuration(interval string) Duration {
@@ -55,7 +56,7 @@ func unmarshalFastJSONMapHTTPHeader(fj *fastjson.Object) HTTPHeader {
 
 // clash.go
 func (o *ClashAPIOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.ExternalController = stringNotNil(fj.GetStringBytes("external_controller"))
@@ -67,7 +68,7 @@ func (o *ClashAPIOptions) unmarshalFastJSON(fj *fastjson.Value) {
 }
 
 func (o *SelectorOutboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -77,7 +78,7 @@ func (o *SelectorOutboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
 }
 
 func (o *URLTestOutboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.Outbounds = unmarshalFastJSONArrayStringWithName(fj, "outbounds")
@@ -133,7 +134,7 @@ func (o *Options) unmarshalFastJSON(fj *fastjson.Value) {
 }
 
 func (o *LogOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.Disabled = fj.GetBool("disabled")
@@ -382,7 +383,7 @@ func unmarshalFastJSONArrayStringWithName(fj *fastjson.Value, name string) []str
 
 // debug.go
 func (o *DebugOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.Listen = stringNotNil(fj.GetStringBytes("listen"))
@@ -417,7 +418,7 @@ func (o *DebugOptions) unmarshalFastJSON(fj *fastjson.Value) {
 
 // direct.go
 func (o *DirectInboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -427,7 +428,7 @@ func (o *DirectInboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
 	o.OverridePort = uint16(fj.GetUint("override_port"))
 }
 func (o *DirectOutboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -439,7 +440,7 @@ func (o *DirectOutboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
 
 // dns.go
 func (o *DNSOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.Servers = unmarshalFastJSONArrayDNSServerOptions(fj.Get("servers"))
@@ -457,7 +458,7 @@ func (o *DNSOptions) unmarshalFastJSON(fj *fastjson.Value) {
 }
 
 func (o *DNSServerOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -471,7 +472,7 @@ func (o *DNSServerOptions) unmarshalFastJSON(fj *fastjson.Value) {
 }
 
 func (o *DNSClientOptions) unmarshalJSONClient(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.Strategy = unmarshalFastJSONDomainStrategy(stringNotNil(fj.GetStringBytes("strategy")))
@@ -481,7 +482,7 @@ func (o *DNSClientOptions) unmarshalJSONClient(fj *fastjson.Value) {
 }
 
 func (o *DNSFakeIPOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.Enabled = fj.GetBool("enabled")
@@ -547,7 +548,7 @@ func unmarshalFastJSONArrayDNSRule(fj *fastjson.Value) []DNSRule {
 
 // experimental.go
 func (o *ExperimentalOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	clash_api := fj.Get("clash_api")
@@ -574,7 +575,7 @@ func (o *ExperimentalOptions) unmarshalFastJSON(fj *fastjson.Value) {
 
 // hysteria.go
 func (o *HysteriaInboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -596,7 +597,7 @@ func (o *HysteriaInboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
 	}
 }
 func (o *HysteriaUser) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -605,7 +606,7 @@ func (o *HysteriaUser) unmarshalFastJSON(fj *fastjson.Value) {
 	o.AuthString = stringNotNil(fj.GetStringBytes("auth_str"))
 }
 func (o *HysteriaOutboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -661,7 +662,7 @@ func unmarshalFastJSONArrayHysteriaUser(fj *fastjson.Value) []HysteriaUser {
 
 // hysteria2.go
 func (o *Hysteria2InboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -685,7 +686,7 @@ func (o *Hysteria2InboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
 	o.BrutalDebug = fj.GetBool("brutal_debug")
 }
 func (o *Hysteria2Obfs) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -693,7 +694,7 @@ func (o *Hysteria2Obfs) unmarshalFastJSON(fj *fastjson.Value) {
 	o.Password = stringNotNil(fj.GetStringBytes("password"))
 }
 func (o *Hysteria2User) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -701,7 +702,7 @@ func (o *Hysteria2User) unmarshalFastJSON(fj *fastjson.Value) {
 	o.Password = stringNotNil(fj.GetStringBytes("password"))
 }
 func (o *Hysteria2OutboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -755,7 +756,7 @@ func unmarshalFastJSONArrayHysteria2User(fj *fastjson.Value) []Hysteria2User {
 
 // inbound.go
 func (h *Inbound) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	h.Type = stringNotNil(fj.GetStringBytes("type"))
@@ -799,7 +800,7 @@ func (h *Inbound) unmarshalFastJSON(fj *fastjson.Value) {
 }
 
 func (o *InboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.SniffEnabled = fj.GetBool("sniff")
@@ -809,7 +810,7 @@ func (o *InboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
 }
 
 func (o *ListenOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -862,7 +863,7 @@ func unmarshalFastJSONArrayInbound(fj *fastjson.Value) []Inbound {
 
 // naive.go
 func (o *NaiveInboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -878,7 +879,7 @@ func (o *NaiveInboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
 
 // ntp.go
 func (o *NTPOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.Enabled = fj.GetBool("enabled")
@@ -891,7 +892,7 @@ func (o *NTPOptions) unmarshalFastJSON(fj *fastjson.Value) {
 
 // outbound.go
 func (h *Outbound) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	h.Type = stringNotNil(fj.GetStringBytes("type"))
@@ -928,6 +929,8 @@ func (h *Outbound) unmarshalFastJSON(fj *fastjson.Value) {
 		h.TUICOptions.unmarshalFastJSON(fj)
 	case C.TypeHysteria2:
 		h.Hysteria2Options.unmarshalFastJSON(fj)
+	case C.TypeXray:
+		h.XrayOptions.unmarshalFastJSON(fj)
 	case C.TypeSelector:
 		h.SelectorOptions.unmarshalFastJSON(fj)
 	case C.TypeURLTest:
@@ -938,7 +941,7 @@ func (h *Outbound) unmarshalFastJSON(fj *fastjson.Value) {
 }
 
 func (o *DialerOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.Detour = stringNotNil(fj.GetStringBytes("detour"))
@@ -975,7 +978,7 @@ func (o *DialerOptions) unmarshalFastJSON(fj *fastjson.Value) {
 }
 
 func (o *ServerOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.Server = stringNotNil(fj.GetStringBytes("server"))
@@ -983,7 +986,7 @@ func (o *ServerOptions) unmarshalFastJSON(fj *fastjson.Value) {
 }
 
 func (o *OutboundMultiplexOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.Enabled = fj.GetBool("enabled")
@@ -1020,7 +1023,7 @@ func unmarshalFastJSONArrayOutbound(fj *fastjson.Value) []Outbound {
 }
 
 func unmarshalFastJSONUser(o *auth.User, fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -1055,7 +1058,7 @@ func unmarshalFastJSONArrayAuthUser(fj *fastjson.Value) []auth.User {
 
 // platform.go
 func (o *OnDemandOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -1063,7 +1066,7 @@ func (o *OnDemandOptions) unmarshalFastJSON(fj *fastjson.Value) {
 	o.Rules = unmarshalFastJSONArrayOnDemandRule(fj.Get("rules"))
 }
 func (o *OnDemandRule) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -1111,14 +1114,14 @@ func unmarshalFastJSONArrayOnDemandRule(fj *fastjson.Value) []OnDemandRule {
 
 // redir.go
 func (o *RedirectInboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.ListenOptions.unmarshalFastJSON(fj)
 }
 
 func (o *TProxyInboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.ListenOptions.unmarshalFastJSON(fj)
@@ -1127,7 +1130,7 @@ func (o *TProxyInboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
 
 // route.go
 func (o *RouteOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	geoip := fj.Get("geoip")
@@ -1152,7 +1155,7 @@ func (o *RouteOptions) unmarshalFastJSON(fj *fastjson.Value) {
 }
 
 func (o *GeoIPOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -1162,7 +1165,7 @@ func (o *GeoIPOptions) unmarshalFastJSON(fj *fastjson.Value) {
 }
 
 func (o *GeositeOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -1173,7 +1176,7 @@ func (o *GeositeOptions) unmarshalFastJSON(fj *fastjson.Value) {
 
 // rule_dns.go
 func (o *DNSRule) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.Type = stringNotNil(fj.GetStringBytes("type"))
@@ -1187,7 +1190,7 @@ func (o *DNSRule) unmarshalFastJSON(fj *fastjson.Value) {
 }
 
 func (o *DefaultDNSRule) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.Inbound = unmarshalFastJSONListableString(fj.Get("inbound"))
@@ -1234,7 +1237,7 @@ func (o *DefaultDNSRule) unmarshalFastJSON(fj *fastjson.Value) {
 }
 
 func (o *LogicalDNSRule) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.Mode = stringNotNil(fj.GetStringBytes("mode"))
@@ -1251,7 +1254,7 @@ func (o *LogicalDNSRule) unmarshalFastJSON(fj *fastjson.Value) {
 }
 
 func (o *RuleSet) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -1343,7 +1346,7 @@ func unmarshalFastJSONArrayDefaultDNSRule(fj *fastjson.Value) []DefaultDNSRule {
 
 // rule.go
 func (o *Rule) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -1360,7 +1363,7 @@ func (o *Rule) unmarshalFastJSON(fj *fastjson.Value) {
 }
 
 func (o *DefaultRule) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -1400,7 +1403,7 @@ func (o *DefaultRule) unmarshalFastJSON(fj *fastjson.Value) {
 }
 
 func (o *LogicalRule) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -1413,7 +1416,7 @@ func (o *LogicalRule) unmarshalFastJSON(fj *fastjson.Value) {
 
 // shadowsocks.go
 func (o *ShadowsocksInboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.ListenOptions.unmarshalFastJSON(fj)
@@ -1424,14 +1427,14 @@ func (o *ShadowsocksInboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
 	o.Destinations = unmarshalFastJSONArrayShadowsocksDestination(fj.Get("destinations"))
 }
 func (o *ShadowsocksUser) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.Name = stringNotNil(fj.GetStringBytes("name"))
 	o.Password = stringNotNil(fj.GetStringBytes("password"))
 }
 func (o *ShadowsocksDestination) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.Name = stringNotNil(fj.GetStringBytes("name"))
@@ -1439,7 +1442,7 @@ func (o *ShadowsocksDestination) unmarshalFastJSON(fj *fastjson.Value) {
 	o.ServerOptions.unmarshalFastJSON(fj)
 }
 func (o *ShadowsocksOutboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -1463,7 +1466,7 @@ func (o *ShadowsocksOutboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
 
 }
 func unmarshalFastJSONArrayShadowsocksUser(fj *fastjson.Value) []ShadowsocksUser {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return nil
 	}
 	arr := fj.GetArray()
@@ -1511,7 +1514,7 @@ func unmarshalFastJSONArrayShadowsocksDestination(fj *fastjson.Value) []Shadowso
 
 // shadowsocksr.go
 func (o *ShadowsocksROutboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.DialerOptions.unmarshalFastJSON(fj)
@@ -1527,7 +1530,7 @@ func (o *ShadowsocksROutboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
 
 // shadowtls.go
 func (o *ShadowTLSInboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -1540,7 +1543,7 @@ func (o *ShadowTLSInboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
 	o.StrictMode = fj.GetBool("strict_mode")
 }
 func (o *ShadowTLSUser) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -1548,7 +1551,7 @@ func (o *ShadowTLSUser) unmarshalFastJSON(fj *fastjson.Value) {
 	o.Password = stringNotNil(fj.GetStringBytes("password"))
 }
 func (o *ShadowTLSHandshakeOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -1556,7 +1559,7 @@ func (o *ShadowTLSHandshakeOptions) unmarshalFastJSON(fj *fastjson.Value) {
 	o.DialerOptions.unmarshalFastJSON(fj)
 }
 func (o *ShadowTLSOutboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -1610,7 +1613,7 @@ func unmarshalFastJSONMapShadowTLSHandshakeOptions(fj []*fastjson.Value) map[str
 
 // simple.go
 func (o *SocksInboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.ListenOptions.unmarshalFastJSON(fj)
@@ -1618,7 +1621,7 @@ func (o *SocksInboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
 }
 
 func (o *HTTPMixedInboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.ListenOptions.unmarshalFastJSON(fj)
@@ -1632,7 +1635,7 @@ func (o *HTTPMixedInboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
 }
 
 func (o *SocksOutboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.DialerOptions.unmarshalFastJSON(fj)
@@ -1643,7 +1646,7 @@ func (o *SocksOutboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
 }
 
 func (o *HTTPOutboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.DialerOptions.unmarshalFastJSON(fj)
@@ -1663,7 +1666,7 @@ func (o *HTTPOutboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
 
 // ssh.go
 func (o *SSHOutboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -1686,7 +1689,7 @@ func (o *SSHOutboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
 
 // tls_acme.go
 func (o *InboundACMEOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.Domain = unmarshalFastJSONListableString(fj.Get("domain"))
@@ -1711,7 +1714,7 @@ func (o *InboundACMEOptions) unmarshalFastJSON(fj *fastjson.Value) {
 }
 
 func (o *ACMEExternalAccountOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.KeyID = stringNotNil(fj.GetStringBytes("key_id"))
@@ -1719,7 +1722,7 @@ func (o *ACMEExternalAccountOptions) unmarshalFastJSON(fj *fastjson.Value) {
 }
 
 func (o *ACMEDNS01ChallengeOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.Provider = stringNotNil(fj.GetStringBytes("provider"))
@@ -1734,7 +1737,7 @@ func (o *ACMEDNS01ChallengeOptions) unmarshalFastJSON(fj *fastjson.Value) {
 }
 
 func (o *ACMEDNS01AliDNSOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.AccessKeyID = stringNotNil(fj.GetStringBytes("access_key_id"))
@@ -1743,7 +1746,7 @@ func (o *ACMEDNS01AliDNSOptions) unmarshalFastJSON(fj *fastjson.Value) {
 }
 
 func (o *ACMEDNS01CloudflareOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.APIToken = stringNotNil(fj.GetStringBytes("api_token"))
@@ -1751,7 +1754,7 @@ func (o *ACMEDNS01CloudflareOptions) unmarshalFastJSON(fj *fastjson.Value) {
 
 // tls.go
 func (o *InboundTLSOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.Enabled = fj.GetBool("enabled")
@@ -1783,7 +1786,7 @@ func (o *InboundTLSOptions) unmarshalFastJSON(fj *fastjson.Value) {
 }
 
 func (o *OutboundTLSOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.Enabled = fj.GetBool("enabled")
@@ -1819,7 +1822,7 @@ func (o *OutboundTLSOptions) unmarshalFastJSON(fj *fastjson.Value) {
 }
 
 func (o *InboundRealityOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.Enabled = fj.GetBool("enabled")
@@ -1830,14 +1833,14 @@ func (o *InboundRealityOptions) unmarshalFastJSON(fj *fastjson.Value) {
 }
 
 func (o *InboundRealityHandshakeOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.ServerOptions.unmarshalFastJSON(fj)
 	o.DialerOptions.unmarshalFastJSON(fj)
 }
 func (o *InboundECHOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.Enabled = fj.GetBool("enabled")
@@ -1847,7 +1850,7 @@ func (o *InboundECHOptions) unmarshalFastJSON(fj *fastjson.Value) {
 	o.KeyPath = stringNotNil(fj.GetStringBytes("key_path"))
 }
 func (o *OutboundECHOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.Enabled = fj.GetBool("enabled")
@@ -1858,14 +1861,14 @@ func (o *OutboundECHOptions) unmarshalFastJSON(fj *fastjson.Value) {
 
 }
 func (o *OutboundUTLSOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.Enabled = fj.GetBool("enabled")
 	o.Fingerprint = stringNotNil(fj.GetStringBytes("fingerprint"))
 }
 func (o *OutboundRealityOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.Enabled = fj.GetBool("enabled")
@@ -1875,7 +1878,7 @@ func (o *OutboundRealityOptions) unmarshalFastJSON(fj *fastjson.Value) {
 
 // tor.go
 func (o *TorOutboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -1902,7 +1905,7 @@ func unmarshalFastJSONMapString(fj []*fastjson.Value) map[string]string {
 
 // trojan.go
 func (o *TrojanInboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -1927,7 +1930,7 @@ func (o *TrojanInboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
 	}
 }
 func (o *TrojanUser) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -1935,7 +1938,7 @@ func (o *TrojanUser) unmarshalFastJSON(fj *fastjson.Value) {
 	o.Password = stringNotNil(fj.GetStringBytes("password"))
 }
 func (o *TrojanOutboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -1960,7 +1963,7 @@ func (o *TrojanOutboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
 	}
 }
 func unmarshalFastJSONArrayTrojanUser(fj *fastjson.Value) []TrojanUser {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return nil
 	}
 	arr := fj.GetArray()
@@ -1999,7 +2002,7 @@ func unmarshalFastJSONMapServerOptions(fj []*fastjson.Value) map[string]*ServerO
 
 // tuic.go
 func (o *TUICInboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -2016,7 +2019,7 @@ func (o *TUICInboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
 	}
 }
 func (o *TUICUser) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -2025,7 +2028,7 @@ func (o *TUICUser) unmarshalFastJSON(fj *fastjson.Value) {
 	o.Password = stringNotNil(fj.GetStringBytes("password"))
 }
 func (o *TUICOutboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -2076,7 +2079,7 @@ func unmarshalFastJSONArrayTUICUser(fj *fastjson.Value) []TUICUser {
 
 // tun_platform.go
 func (o *TunPlatformOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	http_proxy := fj.Get("http_proxy")
@@ -2087,7 +2090,7 @@ func (o *TunPlatformOptions) unmarshalFastJSON(fj *fastjson.Value) {
 	o.AllowBypass = fj.GetBool("allow_bypass")
 }
 func (o *HTTPProxyOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -2097,7 +2100,7 @@ func (o *HTTPProxyOptions) unmarshalFastJSON(fj *fastjson.Value) {
 
 // tun.go
 func (o *TunInboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.InterfaceName = stringNotNil(fj.GetStringBytes("interface_name"))
@@ -2134,7 +2137,7 @@ func (o *TunInboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
 
 // udp_over_tcp.go
 func (o *UDPOverTCPOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.Enabled = fj.GetBool("enabled")
@@ -2143,7 +2146,7 @@ func (o *UDPOverTCPOptions) unmarshalFastJSON(fj *fastjson.Value) {
 
 // v2ray_transport.go
 func (o *V2RayTransportOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.Type = stringNotNil(fj.GetStringBytes("type"))
@@ -2161,7 +2164,7 @@ func (o *V2RayTransportOptions) unmarshalFastJSON(fj *fastjson.Value) {
 	}
 }
 func (o *V2RayHTTPOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -2173,7 +2176,7 @@ func (o *V2RayHTTPOptions) unmarshalFastJSON(fj *fastjson.Value) {
 	o.PingTimeout = unmarshalFastJSONDuration(stringNotNil(fj.GetStringBytes("ping_timeout")))
 }
 func (o *V2RayWebsocketOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -2183,13 +2186,13 @@ func (o *V2RayWebsocketOptions) unmarshalFastJSON(fj *fastjson.Value) {
 	o.EarlyDataHeaderName = stringNotNil(fj.GetStringBytes("early_data_header_name"))
 }
 func (o *V2RayQUICOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
 }
 func (o *V2RayGRPCOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -2226,7 +2229,7 @@ func unmarshalFastJSONArrayVLESSUser(fj *fastjson.Value) []VLESSUser {
 }
 
 func (o *V2RayAPIOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.Listen = stringNotNil(fj.GetStringBytes("listen"))
@@ -2238,7 +2241,7 @@ func (o *V2RayAPIOptions) unmarshalFastJSON(fj *fastjson.Value) {
 }
 
 func (o *CacheFileOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.Enabled = fj.GetBool("enabled")
@@ -2248,7 +2251,7 @@ func (o *CacheFileOptions) unmarshalFastJSON(fj *fastjson.Value) {
 }
 
 func (o *V2RayStatsServiceOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.Enabled = fj.GetBool("enabled")
@@ -2259,7 +2262,7 @@ func (o *V2RayStatsServiceOptions) unmarshalFastJSON(fj *fastjson.Value) {
 
 // vless.go
 func (o *VLESSInboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -2278,7 +2281,7 @@ func (o *VLESSInboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
 
 }
 func (o *VLESSUser) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -2287,7 +2290,7 @@ func (o *VLESSUser) unmarshalFastJSON(fj *fastjson.Value) {
 	o.Flow = stringNotNil(fj.GetStringBytes("flow"))
 }
 func (o *VLESSOutboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -2321,7 +2324,7 @@ func (o *VLESSOutboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
 
 // vmess.go
 func (o *VMessOutboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 	o.DialerOptions.unmarshalFastJSON(fj)
@@ -2353,7 +2356,7 @@ func (o *VMessOutboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
 
 // wireguard.go
 func (o *WireGuardOutboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -2381,7 +2384,7 @@ func (o *WireGuardOutboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
 	o.FakePacketsDelay = stringNotNil(fj.GetStringBytes("fake_packets_delay"))
 }
 func (o *WireGuardPeer) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() == fastjson.TypeNull {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
 		return
 	}
 
@@ -2417,6 +2420,51 @@ func unmarshalFastJSONArrayWireGuardPeer(fj *fastjson.Value) []WireGuardPeer {
 	return list
 }
 
+// xray.go
+func unmarshalFastJSON(fj *fastjson.Value)*conf.Fragment {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
+		return nil
+	}
+	fragment :=  &conf.Fragment{}
+	fragment.Packets = stringNotNil(fj.GetStringBytes("packets"))
+	fragment.Length = stringNotNil(fj.GetStringBytes("length"))
+	fragment.Interval = stringNotNil(fj.GetStringBytes("interval"))
+	fragment.Host1_header = stringNotNil(fj.GetStringBytes("host1_header"))
+	fragment.Host1_domain = stringNotNil(fj.GetStringBytes("host1_domain"))
+	fragment.Host2_header = stringNotNil(fj.GetStringBytes("host2_header"))
+	fragment.Host2_domain = stringNotNil(fj.GetStringBytes("host2_domain"))
+	return fragment
+}
+
+func (o *XrayOutboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
+		return
+	}
+
+	o.DialerOptions.unmarshalFastJSON(fj)
+	o.Network = NetworkList(stringNotNil(fj.GetStringBytes("network")))
+	udp_over_tcp := fj.Get("udp_over_tcp")
+	xray_outbound_raw := fj.GetObject("xray_outbound_raw")
+	xray_fragment := fj.Get("xray_fragment")
+	if udp_over_tcp != nil && udp_over_tcp.Type() == fastjson.TypeObject {
+		o.UDPOverTCP = &UDPOverTCPOptions{}
+		o.UDPOverTCP.unmarshalFastJSON(udp_over_tcp)
+	}
+	if xray_outbound_raw != nil {
+		map_data := make(map[string]any)
+		xray_outbound_raw.Visit(func(key []byte, value *fastjson.Value) {
+			map_data[string(key)] = value
+		})
+		o.XrayOutboundJson = &map_data
+	}
+	if xray_fragment != nil && xray_fragment.Type() != fastjson.TypeNull {
+		o.Fragment = unmarshalFastJSON(xray_fragment)
+	}
+	o.LogLevel = stringNotNil(fj.GetStringBytes("xray_loglevel"))
+}
+
+
+ 
 func unmarshalFastJSONListableNetipPrefix(fj *fastjson.Value) Listable[netip.Prefix] {
 	if fj == nil || fj.Type() == fastjson.TypeNull {
 		return make(Listable[netip.Prefix], 0)
