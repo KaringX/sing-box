@@ -236,7 +236,9 @@ func (t *Transport) fetchServersResponse(iface *net.Interface, packetConn net.Pa
 
 		dns := dhcpPacket.DNS()
 		if len(dns) == 0 {
-			return nil
+			dns = make([]net.IP, 1)  //karing
+			dns[0] = dhcpPacket.ServerIdentifier() //karing
+			//return nil //karing
 		}
 
 		var addrs []netip.Addr
