@@ -228,31 +228,71 @@ func NewRouter(
 			} else {
 				detour = dialer.NewDetour(router, server.Detour)
 			}
-			switch server.Address {
-			case "local":
-			default:
-				serverURL, _ := url.Parse(server.Address)
-				var serverAddress string
-				if serverURL != nil {
-					serverAddress = serverURL.Hostname()
-				}
-				if serverAddress == "" {
-					serverAddress = server.Address
-				}
-				notIpAddress := !M.ParseSocksaddr(serverAddress).Addr.IsValid()
-				if server.AddressResolver != "" {
-					if !transportTagMap[server.AddressResolver] {
-						return nil, E.New("parse dns server[", tag, "]: address resolver not found: ", server.AddressResolver)
+			if len(server.Addresses) > 0 { //karing
+				var toContinue = false
+				var detoured = false
+				for _, address := range server.Addresses {
+					switch address {
+					case "local":
+					default:
+						serverURL, _ := url.Parse(address)
+						var serverAddress string
+						if serverURL != nil {
+							serverAddress = serverURL.Hostname()
+						}
+						if serverAddress == "" {
+							serverAddress = address
+						}
+						notIpAddress := !M.ParseSocksaddr(serverAddress).Addr.IsValid()
+						if server.AddressResolver != "" {
+							if !transportTagMap[server.AddressResolver] {
+								return nil, E.New("parse dns server[", tag, "]: address resolver not found: ", server.AddressResolver)
+							}
+							if upstream, exists := dummyTransportMap[server.AddressResolver]; exists {
+								if !detoured {
+									detoured = true
+									detour = dns.NewDialerWrapper(detour, router.dnsClient, upstream, dns.DomainStrategy(server.AddressStrategy), time.Duration(server.AddressFallbackDelay))
+								}
+							} else {
+								toContinue = true
+								break
+							}
+						} else if notIpAddress && strings.Contains(address, ".") {
+							return nil, E.New("parse dns server[", tag, "]: missing address_resolver")
+						}
 					}
-					if upstream, exists := dummyTransportMap[server.AddressResolver]; exists {
-						detour = dns.NewDialerWrapper(detour, router.dnsClient, upstream, dns.DomainStrategy(server.AddressStrategy), time.Duration(server.AddressFallbackDelay))
-					} else {
-						continue
+				}
+				if toContinue{
+					continue
+				}
+			} else {
+				switch server.Address {
+				case "local":
+				default:
+					serverURL, _ := url.Parse(server.Address)
+					var serverAddress string
+					if serverURL != nil {
+						serverAddress = serverURL.Hostname()
 					}
-				} else if notIpAddress && strings.Contains(server.Address, ".") {
-					return nil, E.New("parse dns server[", tag, "]: missing address_resolver")
+					if serverAddress == "" {
+						serverAddress = server.Address
+					}
+					notIpAddress := !M.ParseSocksaddr(serverAddress).Addr.IsValid()
+					if server.AddressResolver != "" {
+						if !transportTagMap[server.AddressResolver] {
+							return nil, E.New("parse dns server[", tag, "]: address resolver not found: ", server.AddressResolver)
+						}
+						if upstream, exists := dummyTransportMap[server.AddressResolver]; exists {
+							detour = dns.NewDialerWrapper(detour, router.dnsClient, upstream, dns.DomainStrategy(server.AddressStrategy), time.Duration(server.AddressFallbackDelay))
+						} else {
+							continue
+						}
+					} else if notIpAddress && strings.Contains(server.Address, ".") {
+						return nil, E.New("parse dns server[", tag, "]: missing address_resolver")
+					}
 				}
 			}
+			
 			var clientSubnet netip.Prefix
 			if server.ClientSubnet != nil {
 				clientSubnet = server.ClientSubnet.Build()
@@ -265,6 +305,7 @@ func NewRouter(
 				Name:         tag,
 				Dialer:       detour,
 				Address:      server.Address,
+				Addresses:    server.Addresses,//karing
 				ClientSubnet: clientSubnet,
 			})
 			if err != nil {
@@ -573,12 +614,12 @@ func (r *Router) Start() error {
 			return E.Cause(err, "initialize DNS rule[", i, "]")
 		}
 	}
-	for i, transport := range r.transports {
-		monitor.Start("initialize DNS transport[", i, "]")
+	for _, transport := range r.transports {  //karing
+		monitor.Start("initialize DNS transport[", transport.Name(), "]")  //karing
 		err := transport.Start()
 		monitor.Finish()
 		if err != nil {
-			return E.Cause(err, "initialize DNS server[", i, "]")
+			return E.Cause(err, "initialize DNS server[", transport.Name(), "]")//karing
 		}
 	}
 	if r.timeService != nil {

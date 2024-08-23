@@ -23,10 +23,10 @@ var (
 )
 
 type DNSServer struct {
-	Tag      string `json:"tag"`
-	Address  string `json:"address"`
-	Strategy string `json:"strategy"`
-	Detour   string `json:"detour"`
+	Tag       string `json:"tag"`
+	Addresses []string `json:"addresses"`
+	Strategy  string `json:"strategy"`
+	Detour    string `json:"detour"`
 }
 type DNSQueryRequest struct {
 	Resolver DNSServer `json:"resolver"`
@@ -66,7 +66,7 @@ func Lookup(router adapter.Router, logFactory log.Factory, req DNSQueryRequest) 
 	ctx = adapter.ContextWithRouter(ctx, router)
 	var resolverTransport dns.Transport
 
-	if req.Resolver.Address != "" {
+	if len(req.Resolver.Addresses) != 0 {
 		tag := req.Resolver.Tag + "_" + req.Resolver.Detour
 		var detour N.Dialer
 		if req.Resolver.Detour == "" {
@@ -84,7 +84,7 @@ func Lookup(router adapter.Router, logFactory log.Factory, req DNSQueryRequest) 
 			Logger:  logFactory.NewLogger(F.ToString("dns_query_resolver/transport[", tag, "]")),
 			Name:    req.Resolver.Tag,
 			Dialer:  detour,
-			Address: req.Resolver.Address,
+			Addresses: req.Resolver.Addresses,
 		})
 		if err != nil {
 			return 0, nil, err
@@ -103,7 +103,7 @@ func Lookup(router adapter.Router, logFactory log.Factory, req DNSQueryRequest) 
 		}
 		detour = dialer.NewDetour(router, req.Query.Detour)
 	}
-	if req.Resolver.Address != "" {
+	if len(req.Resolver.Addresses) != 0 {
 		detour = dns.NewDialerWrapper(detour, dnsClient, resolverTransport, transStrategy(req.Query.Strategy), time.Duration(0))
 	}
 
@@ -112,7 +112,7 @@ func Lookup(router adapter.Router, logFactory log.Factory, req DNSQueryRequest) 
 		Logger:  logFactory.NewLogger(F.ToString("dns_query/transport[", tag, "]")),
 		Name:    req.Query.Tag,
 		Dialer:  detour,
-		Address: req.Query.Address,
+		Addresses: req.Query.Addresses,
 	})
 
 	if err != nil {

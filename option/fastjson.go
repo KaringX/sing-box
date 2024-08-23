@@ -464,6 +464,7 @@ func (o *DNSServerOptions) unmarshalFastJSON(fj *fastjson.Value) {
 
 	o.Tag = stringNotNil(fj.GetStringBytes("tag"))
 	o.Address = stringNotNil(fj.GetStringBytes("address"))
+	o.Addresses = unmarshalFastJSONArrayStringWithName(fj, "addresses")
 	o.AddressResolver = stringNotNil(fj.GetStringBytes("address_resolver"))
 	o.AddressStrategy = unmarshalFastJSONDomainStrategy(stringNotNil(fj.GetStringBytes("address_strategy")))
 	o.AddressFallbackDelay = unmarshalFastJSONDuration(stringNotNil(fj.GetStringBytes("address_fallback_delay")))
