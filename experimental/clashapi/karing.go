@@ -5,6 +5,7 @@ import (
 	"context"
 	"net/http"
 	"net/netip"
+	"os"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -149,8 +150,9 @@ func karingRouter(router adapter.Router, logFactory log.Factory) http.Handler {
 func stop(router adapter.Router, logFactory log.Factory) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 	    router.SingalQuit()
-		//go os.Exit(0)
-		render.NoContent(w, r)
+		render.JSON(w, r, render.M{
+			"pid": os.Getpid(),
+		})
 	}
 }
 
