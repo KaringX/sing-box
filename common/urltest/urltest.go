@@ -139,11 +139,13 @@ func URLTest(ctx context.Context, link string, detour N.Dialer) (t uint16, err e
 	}
 	resp.Body.Close()
 	{ //karing
-		start = time.Now()
+		start2 := time.Now()
 		resp, err = client.Do(req.WithContext(ctx))
 		if err != nil {
-			return 0, err
+			t = uint16(time.Since(start).Milliseconds())
+			return t, nil
 		}
+		start = start2
 		resp.Body.Close()
 	}
 

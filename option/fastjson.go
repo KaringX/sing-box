@@ -2160,6 +2160,8 @@ func (o *V2RayTransportOptions) unmarshalFastJSON(fj *fastjson.Value) {
 		o.QUICOptions.unmarshalFastJSON(fj)
 	case C.V2RayTransportTypeGRPC:
 		o.GRPCOptions.unmarshalFastJSON(fj)
+	case C.V2RayTransportTypeHTTPUpgrade:
+		o.HTTPUpgradeOptions.unmarshalFastJSON(fj)
 	default:
 		E.New("unknown transport type: " + o.Type)
 	}
@@ -2202,6 +2204,15 @@ func (o *V2RayGRPCOptions) unmarshalFastJSON(fj *fastjson.Value) {
 	o.PingTimeout = unmarshalFastJSONDuration(stringNotNil(fj.GetStringBytes("ping_timeout")))
 	o.PermitWithoutStream = fj.GetBool("permit_without_stream")
 	//o.ForceLite        = fj.GetBool(""-")
+}
+func (o *V2RayHTTPUpgradeOptions) unmarshalFastJSON(fj *fastjson.Value) {
+	if fj == nil || fj.Type() != fastjson.TypeObject {
+		return
+	}
+
+	o.Host = stringNotNil(fj.GetStringBytes("host"))
+	o.Path = stringNotNil(fj.GetStringBytes("path"))
+	o.Headers = unmarshalFastJSONMapHTTPHeader(fj.GetObject("headers"))
 }
 
 // v2ray.go
