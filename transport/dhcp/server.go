@@ -70,6 +70,10 @@ func (t *Transport) Name() string {
 	return t.options.Name
 }
 
+func (t *Transport) Address() string { //karing
+	return t.options.Address
+}
+
 func (t *Transport) Start() error {
 	err := t.fetchServers()
 	if err != nil {
