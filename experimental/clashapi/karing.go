@@ -25,6 +25,7 @@ var (
 
 type DNSServer struct {
 	Tag       string `json:"tag"`
+	Address   string `json:"address"`
 	Addresses []string `json:"addresses"`
 	Strategy  string `json:"strategy"`
 	Detour    string `json:"detour"`
@@ -85,6 +86,7 @@ func Lookup(router adapter.Router, logFactory log.Factory, req DNSQueryRequest) 
 			Logger:  logFactory.NewLogger(F.ToString("dns_query_resolver/transport[", tag, "]")),
 			Name:    req.Resolver.Tag,
 			Dialer:  detour,
+			Address:  req.Resolver.Address,
 			Addresses: req.Resolver.Addresses,
 		})
 		if err != nil {
@@ -113,6 +115,7 @@ func Lookup(router adapter.Router, logFactory log.Factory, req DNSQueryRequest) 
 		Logger:  logFactory.NewLogger(F.ToString("dns_query/transport[", tag, "]")),
 		Name:    req.Query.Tag,
 		Dialer:  detour,
+		Address:  req.Query.Address,
 		Addresses: req.Query.Addresses,
 	})
 
