@@ -75,10 +75,13 @@ func (t *Transport) Address() string { //karing
 }
 
 func (t *Transport) Start() error {
-	err := t.fetchServers()
+	go func( ) { //karing
+		t.fetchServers()
+	}()
+	/*err := t.fetchServers() //karing
 	if err != nil {
 		return err
-	}
+	}*/
 	if t.autoInterface {
 		t.interfaceCallback = t.router.InterfaceMonitor().RegisterCallback(t.interfaceUpdated)
 	}
