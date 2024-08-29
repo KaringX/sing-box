@@ -16,6 +16,10 @@ github.com/Dreamacro/protobytes v0.0.0-20230911123819-0bbf144b9b9a h1:1AtE37gqot
 github.com/Dreamacro/protobytes v0.0.0-20230911123819-0bbf144b9b9a/go.mod h1:ESt8LLs50hyrYzfb7NRh3cDm8W1/r/9+CEAKWV+gc38=
 github.com/KaringX/sing v0.4.2-0.20240626045944-164e86c6147b h1:V57fWP11yeYhuYKXFc1FBz8KFQlIUzbjC4jItPU+lk8=
 github.com/KaringX/sing v0.4.2-0.20240626045944-164e86c6147b/go.mod h1:ieZHA/+Y9YZfXs2I3WtuwgyCZ6GPsIR7HdKb1SdEnls=
+github.com/KaringX/sing-dns v0.2.0 h1:UOQHB5XSPaiPwQLfdfxym3o8lwCsqVevASAXAFm0ObQ=
+github.com/KaringX/sing-dns v0.2.0/go.mod h1:BJpJv6XLnrUbSyIntOT6DG9FW0f4fETmPAHvNjOprLg=
+github.com/KaringX/sing-dns v0.2.1-0.20240827073856-b03ef42260a0 h1:9U7ewWzPmLjPUC1OiX0CDQdqCiGW9M/qrMuO6uY7EHY=
+github.com/KaringX/sing-dns v0.2.1-0.20240827073856-b03ef42260a0/go.mod h1:BJpJv6XLnrUbSyIntOT6DG9FW0f4fETmPAHvNjOprLg=
 github.com/KaringX/sing-quic v0.2.0-beta.5.0.20240711040007-50fcb06915ac h1:E3fBviG/G0O6Zp4CIPm2MCZfj8wCRmMij0CnkoQGF88=
 github.com/KaringX/sing-quic v0.2.0-beta.5.0.20240711040007-50fcb06915ac/go.mod h1:lfad61lScAZhAxZ0DHZWvEIcAaT38O6zPTR4vLsHeP0=
 github.com/KaringX/sing-quic v0.2.0-beta.5.0.20240711071332-d84b80fd6e35 h1:Scb4R/cMO2Im9Q4vs7PFv1f4JAq8opow5NKmV2SX458=
