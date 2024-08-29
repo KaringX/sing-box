@@ -20,6 +20,8 @@ github.com/KaringX/sing-dns v0.2.0 h1:UOQHB5XSPaiPwQLfdfxym3o8lwCsqVevASAXAFm0Ob
 github.com/KaringX/sing-dns v0.2.0/go.mod h1:BJpJv6XLnrUbSyIntOT6DG9FW0f4fETmPAHvNjOprLg=
 github.com/KaringX/sing-dns v0.2.1-0.20240827073856-b03ef42260a0 h1:9U7ewWzPmLjPUC1OiX0CDQdqCiGW9M/qrMuO6uY7EHY=
 github.com/KaringX/sing-dns v0.2.1-0.20240827073856-b03ef42260a0/go.mod h1:BJpJv6XLnrUbSyIntOT6DG9FW0f4fETmPAHvNjOprLg=
+github.com/KaringX/sing-dns v0.2.1-0.20240829080745-dd5943408ec8 h1:BLcB2d8KlmND/iC8yDVs1RolgI1T+LsEcERp9Ij8My8=
+github.com/KaringX/sing-dns v0.2.1-0.20240829080745-dd5943408ec8/go.mod h1:BJpJv6XLnrUbSyIntOT6DG9FW0f4fETmPAHvNjOprLg=
 github.com/KaringX/sing-quic v0.2.0-beta.5.0.20240711040007-50fcb06915ac h1:E3fBviG/G0O6Zp4CIPm2MCZfj8wCRmMij0CnkoQGF88=
 github.com/KaringX/sing-quic v0.2.0-beta.5.0.20240711040007-50fcb06915ac/go.mod h1:lfad61lScAZhAxZ0DHZWvEIcAaT38O6zPTR4vLsHeP0=
 github.com/KaringX/sing-quic v0.2.0-beta.5.0.20240711071332-d84b80fd6e35 h1:Scb4R/cMO2Im9Q4vs7PFv1f4JAq8opow5NKmV2SX458=
