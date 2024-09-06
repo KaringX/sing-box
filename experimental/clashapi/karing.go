@@ -258,7 +258,7 @@ func directDelay(router adapter.Router, logFactory log.Factory) func(w http.Resp
 		delay, err := httpDirectDelay(url)
 		if err != nil {
 			render.JSON(w, r, render.M{
-				"err": err,
+				"err": err.Error(),
 			})
 			return
 		}
