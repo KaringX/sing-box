@@ -16,6 +16,7 @@ import (
 	dns "github.com/sagernet/sing-dns"
 	E "github.com/sagernet/sing/common/exceptions"
 	F "github.com/sagernet/sing/common/format"
+	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
 )
 
@@ -212,9 +213,10 @@ func dnsQuery(router adapter.Router, logFactory log.Factory) func(w http.Respons
 func outboundQuery(router adapter.Router, logFactory log.Factory) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		domain := r.URL.Query().Get("domain")
+		ip := r.URL.Query().Get("ip")
 		ctx := context.Background()
 		ctx = adapter.ContextWithRouter(ctx, router)
-		meta := adapter.InboundContext{Domain: domain}
+		meta := adapter.InboundContext{Domain: domain, Destination: M.ParseSocksaddr(ip)}
 		rule, outbound, err := router.GetMatchRule(ctx, &meta)
 		rulechain := router.GetMatchRuleChain(rule)
 		if err != nil {
