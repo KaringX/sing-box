@@ -2394,6 +2394,7 @@ func (o *WireGuardOutboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
 	o.FakePackets = stringNotNil(fj.GetStringBytes("fake_packets"))
 	o.FakePacketsSize = stringNotNil(fj.GetStringBytes("fake_packets_size"))
 	o.FakePacketsDelay = stringNotNil(fj.GetStringBytes("fake_packets_delay"))
+	o.FakePacketsMode = stringNotNil(fj.GetStringBytes("fake_packets_mode"))
 }
 func (o *WireGuardPeer) unmarshalFastJSON(fj *fastjson.Value) {
 	if fj == nil || fj.Type() != fastjson.TypeObject {
