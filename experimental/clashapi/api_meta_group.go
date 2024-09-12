@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/sagernet/sing-box/adapter"
+	"github.com/sagernet/sing-box/common/gofree" //karing
 	"github.com/sagernet/sing-box/common/urltest"
 	"github.com/sagernet/sing-box/outbound"
 	"github.com/sagernet/sing/common"
@@ -26,7 +27,9 @@ func groupRouter(server *Server) http.Handler {
 		r.Use(parseProxyName, findProxyByName(server.router))
 		r.Get("/", getGroup(server))
 		r.Get("/delay", getGroupDelay(server))
+		r.Get("/delayUpdateCheck", updateGroupDelayCheck(server)) //karing
 	})
+	r.Get("/delayhistory", getProxyDelayHistory(server)) //karing
 	return r
 }
 
@@ -81,7 +84,7 @@ func getGroupDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 		ctx, cancel := context.WithTimeout(r.Context(), time.Millisecond*time.Duration(timeout))
 		defer cancel()
 
-		var result map[string]uint16
+		var result map[string]urltest.URLTestResult //karing
 		if urlTestGroup, isURLTestGroup := group.(adapter.URLTestGroup); isURLTestGroup {
 			result, err = urlTestGroup.URLTest(ctx)
 		} else {
@@ -91,7 +94,7 @@ func getGroupDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 			}))
 			b, _ := batch.New(ctx, batch.WithConcurrencyNum[any](10))
 			checked := make(map[string]bool)
-			result = make(map[string]uint16)
+			result = make(map[string]urltest.URLTestResult) //karing
 			var resultAccess sync.Mutex
 			for _, detour := range outbounds {
 				tag := detour.Tag()
@@ -108,21 +111,32 @@ func getGroupDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 					t, err := urltest.URLTest(ctx, url, p)
 					if err != nil {
 						server.logger.Debug("outbound ", tag, " unavailable: ", err)
-						server.urlTestHistory.DeleteURLTestHistory(realTag)
+						//server.urlTestHistory.DeleteURLTestHistory(realTag)
+						server.urlTestHistory.StoreURLTestHistory(realTag, &urltest.History{ //karing
+							Time:  time.Now(),
+							Delay: 0,
+							Err:   err.Error(),
+						})
 					} else {
 						server.logger.Debug("outbound ", tag, " available: ", t, "ms")
 						server.urlTestHistory.StoreURLTestHistory(realTag, &urltest.History{
 							Time:  time.Now(),
 							Delay: t,
+							Err:   "",
 						})
-						resultAccess.Lock()
-						result[tag] = t
-						resultAccess.Unlock()
 					}
+					resultAccess.Lock() //karing
+					if err == nil {
+						result[tag] = urltest.URLTestResult{Delay: t, Err: ""}
+					} else {
+						result[tag] = urltest.URLTestResult{Delay: t, Err: err.Error()}
+					}
+					resultAccess.Unlock() //karing
 					return nil, nil
 				})
 			}
 			b.Wait()
+			gofree.FreeIdleThread()
 		}
 
 		if err != nil {
@@ -132,5 +146,34 @@ func getGroupDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 		}
 
 		render.JSON(w, r, result)
+	}
+}
+
+// karing
+func updateGroupDelayCheck(server *Server) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		proxy := r.Context().Value(CtxKeyProxy).(adapter.Outbound)
+		group, ok := proxy.(adapter.OutboundGroup)
+		if !ok {
+			render.Status(r, http.StatusNotFound)
+			render.JSON(w, r, ErrNotFound)
+			return
+		}
+
+		if urlTestGroup, isURLTestGroup := group.(adapter.URLTestGroup); isURLTestGroup {
+			urlTestGroup.UpdateCheck()
+		}
+
+		render.JSON(w, r, "")
+	}
+}
+
+// karing
+func getProxyDelayHistory(server *Server) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		delayHistory := server.urlTestHistory.GetURLTestHistory()
+		render.JSON(w, r, render.M{
+			"history": delayHistory,
+		})
 	}
 }

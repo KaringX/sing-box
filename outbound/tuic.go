@@ -23,6 +23,8 @@ import (
 	"github.com/sagernet/sing/common/uot"
 
 	"github.com/gofrs/uuid/v5"
+
+	"github.com/sagernet/sing-box/outbound/houtbound" //hiddify
 )
 
 var (
@@ -32,26 +34,39 @@ var (
 
 type TUIC struct {
 	myOutboundAdapter
-	client    *tuic.Client
-	udpStream bool
+	client     *tuic.Client
+	udpStream  bool
+	hforwarder *houtbound.Forwarder //hiddify
+	parseErr   error                //karing
 }
 
 func NewTUIC(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.TUICOutboundOptions) (*TUIC, error) {
+	empty := &TUIC{ //karing
+		myOutboundAdapter: myOutboundAdapter{
+			protocol:     C.TypeTUIC,
+			network:      options.Network.Build(),
+			router:       router,
+			logger:       logger,
+			tag:          tag,
+			dependencies: withDialerDependency(options.DialerOptions),
+		},
+	}
 	options.UDPFragmentDefault = true
 	if options.TLS == nil || !options.TLS.Enabled {
-		return nil, C.ErrTLSRequired
+		return empty, C.ErrTLSRequired //karing
 	}
+	hforwarder := houtbound.ApplyTurnRelay(houtbound.CommonTurnRelayOptions{ServerOptions: options.ServerOptions, TurnRelayOptions: options.TurnRelay}) //hiddify
 	tlsConfig, err := tls.NewClient(ctx, options.Server, common.PtrValueOrDefault(options.TLS))
 	if err != nil {
-		return nil, err
+		return empty, err //karing
 	}
 	userUUID, err := uuid.FromString(options.UUID)
 	if err != nil {
-		return nil, E.Cause(err, "invalid uuid")
+		return empty, E.Cause(err, "invalid uuid") //karing
 	}
 	var tuicUDPStream bool
 	if options.UDPOverStream && options.UDPRelayMode != "" {
-		return nil, E.New("udp_over_stream is conflict with udp_relay_mode")
+		return empty, E.New("udp_over_stream is conflict with udp_relay_mode") //karing
 	}
 	switch options.UDPRelayMode {
 	case "native":
@@ -60,7 +75,7 @@ func NewTUIC(ctx context.Context, router adapter.Router, logger log.ContextLogge
 	}
 	outboundDialer, err := dialer.New(router, options.DialerOptions)
 	if err != nil {
-		return nil, err
+		return empty, err //karing
 	}
 	client, err := tuic.NewClient(tuic.ClientOptions{
 		Context:           ctx,
@@ -75,7 +90,7 @@ func NewTUIC(ctx context.Context, router adapter.Router, logger log.ContextLogge
 		Heartbeat:         time.Duration(options.Heartbeat),
 	})
 	if err != nil {
-		return nil, err
+		return empty, err //karing
 	}
 	return &TUIC{
 		myOutboundAdapter: myOutboundAdapter{
@@ -86,12 +101,16 @@ func NewTUIC(ctx context.Context, router adapter.Router, logger log.ContextLogge
 			tag:          tag,
 			dependencies: withDialerDependency(options.DialerOptions),
 		},
-		client:    client,
-		udpStream: options.UDPOverStream,
+		client:     client,
+		udpStream:  options.UDPOverStream,
+		hforwarder: hforwarder, //hiddify
 	}, nil
 }
 
 func (h *TUIC) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
+	if(h.parseErr != nil){ //karing
+		return nil, h.parseErr
+	}
 	switch N.NetworkName(network) {
 	case N.NetworkTCP:
 		h.logger.InfoContext(ctx, "outbound connection to ", destination)
@@ -120,6 +139,9 @@ func (h *TUIC) DialContext(ctx context.Context, network string, destination M.So
 }
 
 func (h *TUIC) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
+	if(h.parseErr != nil){ //karing
+		return nil, h.parseErr
+	}
 	if h.udpStream {
 		h.logger.InfoContext(ctx, "outbound stream packet connection to ", destination)
 		streamConn, err := h.client.DialConn(ctx, uot.RequestDestination(uot.Version))
@@ -137,10 +159,16 @@ func (h *TUIC) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.P
 }
 
 func (h *TUIC) NewConnection(ctx context.Context, conn net.Conn, metadata adapter.InboundContext) error {
+	if(h.parseErr != nil){ //karing
+		return h.parseErr
+	}
 	return NewConnection(ctx, h, conn, metadata)
 }
 
 func (h *TUIC) NewPacketConnection(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext) error {
+	if(h.parseErr != nil){ //karing
+		return h.parseErr
+	}
 	return NewPacketConnection(ctx, h, conn, metadata)
 }
 
@@ -149,5 +177,11 @@ func (h *TUIC) InterfaceUpdated() {
 }
 
 func (h *TUIC) Close() error {
+	if h.hforwarder != nil { //hiddify
+		h.hforwarder.Close()
+	}
 	return h.client.CloseWithError(os.ErrClosed)
+}
+func (h *TUIC) SetParseErr(err error){ //karing
+	h.parseErr = err
 }

@@ -25,6 +25,9 @@ type Metadata struct {
 	Host        string     `json:"host"`
 	DNSMode     string     `json:"dnsMode"`
 	ProcessPath string     `json:"processPath"`
+	PackageName string     `json:"packageName"` //karing
+	User        string     `json:"user"`     //karing
+	Protocol    string     `json:"protocol"` //karing
 }
 
 type tracker interface {
@@ -88,30 +91,10 @@ func (tt *tcpTracker) WriterReplaceable() bool {
 	return true
 }
 
-func NewTCPTracker(conn net.Conn, manager *Manager, metadata Metadata, router adapter.Router, rule adapter.Rule) *tcpTracker {
+func NewTCPTracker(conn net.Conn, manager *Manager, metadata Metadata, router adapter.Router, rule adapter.Rule, protocol string, outbound string) *tcpTracker { //karing
 	uuid, _ := uuid.NewV4()
 
-	var chain []string
-	var next string
-	if rule == nil {
-		if defaultOutbound, err := router.DefaultOutbound(N.NetworkTCP); err == nil {
-			next = defaultOutbound.Tag()
-		}
-	} else {
-		next = rule.Outbound()
-	}
-	for {
-		chain = append(chain, next)
-		detour, loaded := router.Outbound(next)
-		if !loaded {
-			break
-		}
-		group, isGroup := detour.(adapter.OutboundGroup)
-		if !isGroup {
-			break
-		}
-		next = group.Now()
-	}
+	chain := router.GetMatchRuleChain(rule) //karing
 
 	upload := new(atomic.Int64)
 	download := new(atomic.Int64)
@@ -119,10 +102,10 @@ func NewTCPTracker(conn net.Conn, manager *Manager, metadata Metadata, router ad
 	t := &tcpTracker{
 		ExtendedConn: bufio.NewCounterConn(conn, []N.CountFunc{func(n int64) {
 			upload.Add(n)
-			manager.PushUploaded(n)
+			manager.PushUploaded(n, protocol, outbound) //karing
 		}}, []N.CountFunc{func(n int64) {
 			download.Add(n)
-			manager.PushDownloaded(n)
+			manager.PushDownloaded(n, protocol, outbound) //karing
 		}}),
 		manager: manager,
 		trackerInfo: &trackerInfo{
@@ -177,7 +160,7 @@ func (ut *udpTracker) WriterReplaceable() bool {
 	return true
 }
 
-func NewUDPTracker(conn N.PacketConn, manager *Manager, metadata Metadata, router adapter.Router, rule adapter.Rule) *udpTracker {
+func NewUDPTracker(conn N.PacketConn, manager *Manager, metadata Metadata, router adapter.Router, rule adapter.Rule, protocol string, outbound string) *udpTracker { //karing
 	uuid, _ := uuid.NewV4()
 
 	var chain []string
@@ -208,10 +191,10 @@ func NewUDPTracker(conn N.PacketConn, manager *Manager, metadata Metadata, route
 	ut := &udpTracker{
 		PacketConn: bufio.NewCounterPacketConn(conn, []N.CountFunc{func(n int64) {
 			upload.Add(n)
-			manager.PushUploaded(n)
+			manager.PushUploaded(n, protocol, outbound) //karing
 		}}, []N.CountFunc{func(n int64) {
 			download.Add(n)
-			manager.PushDownloaded(n)
+			manager.PushDownloaded(n, protocol, outbound) //karing
 		}}),
 		manager: manager,
 		trackerInfo: &trackerInfo{

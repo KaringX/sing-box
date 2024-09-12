@@ -26,6 +26,7 @@ func init() {
 
 type Transport struct {
 	name   string
+	address string //karing
 	router adapter.Router
 	store  adapter.FakeIPStore
 	logger logger.ContextLogger
@@ -38,6 +39,7 @@ func NewTransport(options dns.TransportOptions) (*Transport, error) {
 	}
 	return &Transport{
 		name:   options.Name,
+		address: options.Address, //karing
 		router: router,
 		logger: options.Logger,
 	}, nil
@@ -45,6 +47,10 @@ func NewTransport(options dns.TransportOptions) (*Transport, error) {
 
 func (s *Transport) Name() string {
 	return s.name
+}
+
+func (s *Transport) Address() string { //karing
+	return s.address
 }
 
 func (s *Transport) Start() error {

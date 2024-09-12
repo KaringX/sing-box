@@ -8,12 +8,14 @@ type DNSOptions struct {
 	Final          string             `json:"final,omitempty"`
 	ReverseMapping bool               `json:"reverse_mapping,omitempty"`
 	FakeIP         *DNSFakeIPOptions  `json:"fakeip,omitempty"`
+	StaticIPs      map[string][]string `json:"static_ips,omitempty"` //hiddify
 	DNSClientOptions
 }
 
 type DNSServerOptions struct {
 	Tag                  string         `json:"tag,omitempty"`
 	Address              string         `json:"address"`
+	Addresses            []string       `json:"addresses"`  //karing
 	AddressResolver      string         `json:"address_resolver,omitempty"`
 	AddressStrategy      DomainStrategy `json:"address_strategy,omitempty"`
 	AddressFallbackDelay Duration       `json:"address_fallback_delay,omitempty"`

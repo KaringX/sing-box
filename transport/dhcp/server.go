@@ -70,11 +70,18 @@ func (t *Transport) Name() string {
 	return t.options.Name
 }
 
+func (t *Transport) Address() string { //karing
+	return t.options.Address
+}
+
 func (t *Transport) Start() error {
-	err := t.fetchServers()
+	go func( ) { //karing
+		t.fetchServers()
+	}()
+	/*err := t.fetchServers() //karing
 	if err != nil {
 		return err
-	}
+	}*/
 	if t.autoInterface {
 		t.interfaceCallback = t.router.InterfaceMonitor().RegisterCallback(t.interfaceUpdated)
 	}
@@ -236,7 +243,9 @@ func (t *Transport) fetchServersResponse(iface *net.Interface, packetConn net.Pa
 
 		dns := dhcpPacket.DNS()
 		if len(dns) == 0 {
-			return nil
+			dns = make([]net.IP, 1)  //karing
+			dns[0] = dhcpPacket.ServerIdentifier() //karing
+			//return nil //karing
 		}
 
 		var addrs []netip.Addr

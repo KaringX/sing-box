@@ -6,7 +6,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/sagernet/sing-dns"
+	dns "github.com/sagernet/sing-dns"
 	"github.com/sagernet/sing/common"
 	E "github.com/sagernet/sing/common/exceptions"
 	M "github.com/sagernet/sing/common/metadata"
@@ -42,6 +42,10 @@ type platformLocalDNSTransport struct {
 }
 
 func (p *platformLocalDNSTransport) Name() string {
+	return "local"
+}
+
+func (t *platformLocalDNSTransport) Address() string { //karing
 	return "local"
 }
 

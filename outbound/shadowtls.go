@@ -11,7 +11,7 @@ import (
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
-	"github.com/sagernet/sing-shadowtls"
+	shadowtls "github.com/sagernet/sing-shadowtls"
 	"github.com/sagernet/sing/common"
 	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
@@ -22,6 +22,7 @@ var _ adapter.Outbound = (*ShadowTLS)(nil)
 type ShadowTLS struct {
 	myOutboundAdapter
 	client *shadowtls.Client
+	parseErr error                //karing
 }
 
 func NewShadowTLS(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.ShadowTLSOutboundOptions) (*ShadowTLS, error) {
@@ -36,7 +37,7 @@ func NewShadowTLS(ctx context.Context, router adapter.Router, logger log.Context
 		},
 	}
 	if options.TLS == nil || !options.TLS.Enabled {
-		return nil, C.ErrTLSRequired
+		return outbound, C.ErrTLSRequired //karing
 	}
 
 	if options.Version == 0 {
@@ -49,7 +50,7 @@ func NewShadowTLS(ctx context.Context, router adapter.Router, logger log.Context
 	}
 	tlsConfig, err := tls.NewClient(ctx, options.Server, common.PtrValueOrDefault(options.TLS))
 	if err != nil {
-		return nil, err
+		return outbound, err //karing
 	}
 
 	var tlsHandshakeFunc shadowtls.TLSHandshakeFunc
@@ -74,7 +75,7 @@ func NewShadowTLS(ctx context.Context, router adapter.Router, logger log.Context
 	}
 	outboundDialer, err := dialer.New(router, options.DialerOptions)
 	if err != nil {
-		return nil, err
+		return outbound, err //karing
 	}
 	client, err := shadowtls.NewClient(shadowtls.ClientConfig{
 		Version:      options.Version,
@@ -85,13 +86,16 @@ func NewShadowTLS(ctx context.Context, router adapter.Router, logger log.Context
 		Logger:       logger,
 	})
 	if err != nil {
-		return nil, err
+		return outbound, err //karing
 	}
 	outbound.client = client
 	return outbound, nil
 }
 
 func (h *ShadowTLS) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
+	if(h.parseErr != nil){ //karing
+		return nil, h.parseErr
+	}
 	ctx, metadata := adapter.AppendContext(ctx)
 	metadata.Outbound = h.tag
 	metadata.Destination = destination
@@ -108,9 +112,18 @@ func (h *ShadowTLS) ListenPacket(ctx context.Context, destination M.Socksaddr) (
 }
 
 func (h *ShadowTLS) NewConnection(ctx context.Context, conn net.Conn, metadata adapter.InboundContext) error {
+	if(h.parseErr != nil){ //karing
+		return h.parseErr
+	}
 	return NewConnection(ctx, h, conn, metadata)
 }
 
 func (h *ShadowTLS) NewPacketConnection(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext) error {
+	if(h.parseErr != nil){ //karing
+		return h.parseErr
+	}
 	return os.ErrInvalid
+}
+func (w *ShadowTLS) SetParseErr(err error){ //karing
+	w.parseErr = err
 }

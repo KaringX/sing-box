@@ -25,9 +25,20 @@ type Socks struct {
 	client    *socks.Client
 	resolve   bool
 	uotClient *uot.Client
+	parseErr  error                //karing
 }
 
 func NewSocks(router adapter.Router, logger log.ContextLogger, tag string, options option.SocksOutboundOptions) (*Socks, error) {
+	empty := &Socks{ //karing
+		myOutboundAdapter: myOutboundAdapter{
+			protocol:     C.TypeSOCKS,
+			network:      options.Network.Build(),
+			router:       router,
+			logger:       logger,
+			tag:          tag,
+			dependencies: withDialerDependency(options.DialerOptions),
+		},
+	}
 	var version socks.Version
 	var err error
 	if options.Version != "" {
@@ -36,11 +47,11 @@ func NewSocks(router adapter.Router, logger log.ContextLogger, tag string, optio
 		version = socks.Version5
 	}
 	if err != nil {
-		return nil, err
+		return empty, err  //karing
 	}
 	outboundDialer, err := dialer.New(router, options.DialerOptions)
 	if err != nil {
-		return nil, err
+		return empty, err //karing
 	}
 	outbound := &Socks{
 		myOutboundAdapter: myOutboundAdapter{
@@ -65,6 +76,9 @@ func NewSocks(router adapter.Router, logger log.ContextLogger, tag string, optio
 }
 
 func (h *Socks) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
+	if(h.parseErr != nil){ //karing
+		return nil, h.parseErr
+	}
 	ctx, metadata := adapter.AppendContext(ctx)
 	metadata.Outbound = h.tag
 	metadata.Destination = destination
@@ -91,6 +105,9 @@ func (h *Socks) DialContext(ctx context.Context, network string, destination M.S
 }
 
 func (h *Socks) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
+	if(h.parseErr != nil){ //karing
+		return nil, h.parseErr
+	}
 	ctx, metadata := adapter.AppendContext(ctx)
 	metadata.Outbound = h.tag
 	metadata.Destination = destination
@@ -114,6 +131,9 @@ func (h *Socks) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.
 }
 
 func (h *Socks) NewConnection(ctx context.Context, conn net.Conn, metadata adapter.InboundContext) error {
+	if(h.parseErr != nil){  //karing
+		return h.parseErr
+	}
 	if h.resolve {
 		return NewDirectConnection(ctx, h.router, h, conn, metadata, dns.DomainStrategyUseIPv4)
 	} else {
@@ -122,9 +142,15 @@ func (h *Socks) NewConnection(ctx context.Context, conn net.Conn, metadata adapt
 }
 
 func (h *Socks) NewPacketConnection(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext) error {
+	if(h.parseErr != nil){ //karing
+		return h.parseErr
+	}
 	if h.resolve {
 		return NewDirectPacketConnection(ctx, h.router, h, conn, metadata, dns.DomainStrategyUseIPv4)
 	} else {
 		return NewPacketConnection(ctx, h, conn, metadata)
 	}
+}
+func (h *Socks) SetParseErr(err error){ //karing
+	h.parseErr = err
 }

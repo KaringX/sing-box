@@ -36,4 +36,7 @@ type HysteriaOutboundOptions struct {
 	DisableMTUDiscovery bool        `json:"disable_mtu_discovery,omitempty"`
 	Network             NetworkList `json:"network,omitempty"`
 	OutboundTLSOptionsContainer
+	TurnRelay           *TurnRelayOptions `json:"turn_relay,omitempty"` //hiddify
+	HopPorts            string            `json:"hop_ports,omitempty"`  //https://github.com/morgenanno/sing-box
+	HopInterval         int               `json:"hop_interval,omitempty"`  //https://github.com/morgenanno/sing-box
 }

@@ -9,7 +9,7 @@ import (
 
 	"github.com/sagernet/sing-box/adapter"
 	C "github.com/sagernet/sing-box/constant"
-	"github.com/sagernet/sing-dns"
+	dns "github.com/sagernet/sing-dns"
 	"github.com/sagernet/sing/common/cache"
 	E "github.com/sagernet/sing/common/exceptions"
 	F "github.com/sagernet/sing/common/format"
@@ -67,7 +67,7 @@ func (r *Router) matchDNS(ctx context.Context, allowFakeIP bool, index int, isAd
 				if index != -1 {
 					ruleIndex += index + 1
 				}
-				r.dnsLogger.DebugContext(ctx, "match[", ruleIndex, "] ", rule.String(), " => ", detour)
+				r.dnsLogger.DebugContext(ctx, metadata.Domain, " match[", ruleIndex, "] ", rule.String(), " => ", detour) //karing
 				if isFakeIP || rule.DisableCache() {
 					ctx = dns.ContextWithDisableCache(ctx, true)
 				}
@@ -146,14 +146,14 @@ func (r *Router) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS.Msg, er
 			if err != nil {
 				if errors.Is(err, dns.ErrResponseRejectedCached) {
 					rejected = true
-					r.dnsLogger.DebugContext(ctx, E.Cause(err, "response rejected for ", formatQuestion(message.Question[0].String())), " (cached)")
+					r.dnsLogger.DebugContext(ctx, E.Cause(err, "[", transport.Name(), "]", "response rejected for ", formatQuestion(message.Question[0].String())), " (cached)") //karing
 				} else if errors.Is(err, dns.ErrResponseRejected) {
 					rejected = true
-					r.dnsLogger.DebugContext(ctx, E.Cause(err, "response rejected for ", formatQuestion(message.Question[0].String())))
+					r.dnsLogger.DebugContext(ctx, E.Cause(err, "[", transport.Name(), "]", "response rejected for ", formatQuestion(message.Question[0].String()))) //karing
 				} else if len(message.Question) > 0 {
-					r.dnsLogger.ErrorContext(ctx, E.Cause(err, "exchange failed for ", formatQuestion(message.Question[0].String())))
+					r.dnsLogger.ErrorContext(ctx, E.Cause(err, "[", transport.Name(), "]", "exchange failed for ", formatQuestion(message.Question[0].String()))) //karing
 				} else {
-					r.dnsLogger.ErrorContext(ctx, E.Cause(err, "exchange failed for <empty query>"))
+					r.dnsLogger.ErrorContext(ctx, E.Cause(err, "[", transport.Name(), "]", "exchange failed for <empty query>")) //karing
 				}
 			}
 			if addressLimit && rejected {
@@ -213,7 +213,11 @@ func (r *Router) Lookup(ctx context.Context, domain string, strategy dns.DomainS
 			strategy = transportStrategy
 		}
 		dnsCtx, cancel = context.WithTimeout(dnsCtx, C.DNSTimeout)
-		if rule != nil && rule.WithAddressLimit() {
+		responseAddrs, err = r.lookupStaticIP(domain, strategy) //hiddify
+
+		if err == nil && responseAddrs != nil && len(responseAddrs) > 0 { //hiddify
+			r.dnsLogger.DebugContext(ctx, "Static IP responsefor ", domain, " ", responseAddrs[0])
+		} else if rule != nil && rule.WithAddressLimit() { //hiddify
 			addressLimit = true
 			responseAddrs, err = r.dnsClient.LookupWithResponseCheck(dnsCtx, transport, domain, strategy, func(responseAddrs []netip.Addr) bool {
 				metadata.DestinationAddresses = responseAddrs
@@ -241,9 +245,79 @@ func (r *Router) Lookup(ctx context.Context, domain string, strategy dns.DomainS
 		}
 	}
 	if len(responseAddrs) > 0 {
-		r.dnsLogger.InfoContext(ctx, "lookup succeed for ", domain, ": ", strings.Join(F.MapToString(responseAddrs), " "))
+		r.dnsLogger.InfoContext(ctx, "[", transport.Name(), "]", "lookup succeed for ", domain, ": ", strings.Join(F.MapToString(responseAddrs), " ")) //karing
 	}
 	return responseAddrs, err
+}
+
+func (r *Router) LookupTag(ctx context.Context, domain string, strategy dns.DomainStrategy) ([]netip.Addr, string, error) { //karing
+	var (
+		responseAddrs []netip.Addr
+		cached        bool
+		err           error
+	)
+	responseAddrs, cached = r.dnsClient.LookupCache(ctx, domain, strategy)
+	if cached {
+		return responseAddrs, "", nil
+	}
+	r.dnsLogger.DebugContext(ctx, "lookup domain ", domain)
+	ctx, metadata := adapter.AppendContext(ctx)
+	metadata.Domain = domain
+	var (
+		transport         dns.Transport
+		transportStrategy dns.DomainStrategy
+		rule              adapter.DNSRule
+		ruleIndex         int
+	)
+	ruleIndex = -1
+	for {
+		var (
+			dnsCtx       context.Context
+			cancel       context.CancelFunc
+			addressLimit bool
+		)
+		metadata.ResetRuleCache()
+		metadata.DestinationAddresses = nil
+		dnsCtx, transport, transportStrategy, rule, ruleIndex = r.matchDNS(ctx, false, ruleIndex, true)
+		if strategy == dns.DomainStrategyAsIS {
+			strategy = transportStrategy
+		}
+		dnsCtx, cancel = context.WithTimeout(dnsCtx, C.DNSTimeout)
+		responseAddrs, err = r.lookupStaticIP(domain, strategy) //hiddify
+
+		if err == nil && responseAddrs != nil && len(responseAddrs) > 0 { //hiddify
+			r.dnsLogger.DebugContext(ctx, "Static IP responsefor ", domain, " ", responseAddrs[0])
+		} else if rule != nil && rule.WithAddressLimit() { //hiddify
+			addressLimit = true
+			responseAddrs, err = r.dnsClient.LookupWithResponseCheck(dnsCtx, transport, domain, strategy, func(responseAddrs []netip.Addr) bool {
+				metadata.DestinationAddresses = responseAddrs
+				return rule.MatchAddressLimit(metadata)
+			})
+		} else {
+			addressLimit = false
+			responseAddrs, err = r.dnsClient.Lookup(dnsCtx, transport, domain, strategy)
+		}
+		cancel()
+		if err != nil {
+			if errors.Is(err, dns.ErrResponseRejectedCached) {
+				r.dnsLogger.DebugContext(ctx, "response rejected for ", domain, " (cached)")
+			} else if errors.Is(err, dns.ErrResponseRejected) {
+				r.dnsLogger.DebugContext(ctx, "response rejected for ", domain)
+			} else {
+				r.dnsLogger.ErrorContext(ctx, E.Cause(err, "lookup failed for ", domain))
+			}
+		} else if len(responseAddrs) == 0 {
+			r.dnsLogger.ErrorContext(ctx, "lookup failed for ", domain, ": empty result")
+			err = dns.RCodeNameError
+		}
+		if !addressLimit || err == nil {
+			break
+		}
+	}
+	if len(responseAddrs) > 0 {
+		r.dnsLogger.InfoContext(ctx, "[", transport.Name(), "]", "lookup succeed for ", domain, ": ", strings.Join(F.MapToString(responseAddrs), " ")) //karing
+	}
+	return responseAddrs, transport.Name(), err
 }
 
 func (r *Router) LookupDefault(ctx context.Context, domain string) ([]netip.Addr, error) {

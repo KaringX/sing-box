@@ -32,6 +32,7 @@ type Router interface {
 	LoadGeosite(code string) (Rule, error)
 
 	RuleSet(tag string) (RuleSet, bool)
+	GetRemoteRuleSetRulesCount() map[string]int  //karing
 
 	NeedWIFIState() bool
 
@@ -40,6 +41,11 @@ type Router interface {
 	LookupDefault(ctx context.Context, domain string) ([]netip.Addr, error)
 	ClearDNSCache()
 
+	LookupTag(ctx context.Context, domain string, strategy dns.DomainStrategy) ([]netip.Addr, string, error) //karing
+	GetMatchRuleChain(rule Rule) []string                                                                    //karing
+	GetMatchRule(ctx context.Context, metadata *InboundContext) (Rule, string, error)                        //karing
+	GetAssetContent(path string)([]byte, error) //karing
+	SingalQuit() //karing
 	InterfaceFinder() control.InterfaceFinder
 	UpdateInterfaces() error
 	DefaultInterface() string

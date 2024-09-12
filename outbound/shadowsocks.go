@@ -30,18 +30,29 @@ type Shadowsocks struct {
 	plugin          sip003.Plugin
 	uotClient       *uot.Client
 	multiplexDialer *mux.Client
+	parseErr         error                //karing
 }
 
 func NewShadowsocks(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.ShadowsocksOutboundOptions) (*Shadowsocks, error) {
+	empty := &Shadowsocks{ //karing
+		myOutboundAdapter: myOutboundAdapter{
+			protocol:     C.TypeShadowsocks,
+			network:      options.Network.Build(),
+			router:       router,
+			logger:       logger,
+			tag:          tag,
+			dependencies: withDialerDependency(options.DialerOptions),
+		},
+	}
 	method, err := shadowsocks.CreateMethod(ctx, options.Method, shadowsocks.MethodOptions{
 		Password: options.Password,
 	})
 	if err != nil {
-		return nil, err
+		return empty, err //karing
 	}
 	outboundDialer, err := dialer.New(router, options.DialerOptions)
 	if err != nil {
-		return nil, err
+		return empty, err //karing
 	}
 	outbound := &Shadowsocks{
 		myOutboundAdapter: myOutboundAdapter{
@@ -59,14 +70,14 @@ func NewShadowsocks(ctx context.Context, router adapter.Router, logger log.Conte
 	if options.Plugin != "" {
 		outbound.plugin, err = sip003.CreatePlugin(ctx, options.Plugin, options.PluginOptions, router, outbound.dialer, outbound.serverAddr)
 		if err != nil {
-			return nil, err
+			return empty, err //karing
 		}
 	}
 	uotOptions := common.PtrValueOrDefault(options.UDPOverTCP)
 	if !uotOptions.Enabled {
 		outbound.multiplexDialer, err = mux.NewClientWithOptions((*shadowsocksDialer)(outbound), logger, common.PtrValueOrDefault(options.Multiplex))
 		if err != nil {
-			return nil, err
+			return empty, err //karing
 		}
 	}
 	if uotOptions.Enabled {
@@ -79,6 +90,9 @@ func NewShadowsocks(ctx context.Context, router adapter.Router, logger log.Conte
 }
 
 func (h *Shadowsocks) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
+	if(h.parseErr != nil){ //karing
+		return nil, h.parseErr
+	}
 	ctx, metadata := adapter.AppendContext(ctx)
 	metadata.Outbound = h.tag
 	metadata.Destination = destination
@@ -107,6 +121,9 @@ func (h *Shadowsocks) DialContext(ctx context.Context, network string, destinati
 }
 
 func (h *Shadowsocks) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
+	if(h.parseErr != nil){ //karing
+		return nil, h.parseErr
+	}
 	ctx, metadata := adapter.AppendContext(ctx)
 	metadata.Outbound = h.tag
 	metadata.Destination = destination
@@ -126,10 +143,16 @@ func (h *Shadowsocks) ListenPacket(ctx context.Context, destination M.Socksaddr)
 }
 
 func (h *Shadowsocks) NewConnection(ctx context.Context, conn net.Conn, metadata adapter.InboundContext) error {
+	if(h.parseErr != nil){ //karing
+		return h.parseErr
+	}
 	return NewConnection(ctx, h, conn, metadata)
 }
 
 func (h *Shadowsocks) NewPacketConnection(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext) error {
+	if(h.parseErr != nil){ //karing
+		return h.parseErr
+	}
 	return NewPacketConnection(ctx, h, conn, metadata)
 }
 
@@ -143,7 +166,9 @@ func (h *Shadowsocks) InterfaceUpdated() {
 func (h *Shadowsocks) Close() error {
 	return common.Close(common.PtrOrNil(h.multiplexDialer))
 }
-
+func (h *Shadowsocks) SetParseErr(err error){ //karing
+	h.parseErr = err
+}
 var _ N.Dialer = (*shadowsocksDialer)(nil)
 
 type shadowsocksDialer Shadowsocks

@@ -1,6 +1,7 @@
 package route
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"strings"
@@ -25,7 +26,13 @@ func NewLocalRuleSet(router adapter.Router, options option.RuleSet) (*LocalRuleS
 	var plainRuleSet option.PlainRuleSet
 	switch options.Format {
 	case C.RuleSetFormatSource, "":
-		content, err := os.ReadFile(options.LocalOptions.Path)
+		var content []byte
+		var err error
+		if(options.LocalOptions.IsAsset){ //karing
+			content, err = router.GetAssetContent(options.LocalOptions.Path)
+		} else {
+			content, err = os.ReadFile(options.LocalOptions.Path)
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -35,13 +42,25 @@ func NewLocalRuleSet(router adapter.Router, options option.RuleSet) (*LocalRuleS
 		}
 		plainRuleSet = compat.Upgrade()
 	case C.RuleSetFormatBinary:
-		setFile, err := os.Open(options.LocalOptions.Path)
-		if err != nil {
-			return nil, err
-		}
-		plainRuleSet, err = srs.Read(setFile, false)
-		if err != nil {
-			return nil, err
+		if(options.LocalOptions.IsAsset){ //karing
+			content, err := router.GetAssetContent(options.LocalOptions.Path)
+			if err != nil {
+				return nil, err
+			}
+			reader := bytes.NewReader(content)
+			plainRuleSet, err = srs.Read(reader, false)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			setFile, err := os.Open(options.LocalOptions.Path)
+			if err != nil {
+				return nil, err
+			}
+			plainRuleSet, err = srs.Read(setFile, false)
+			if err != nil {
+				return nil, err
+			}
 		}
 	default:
 		return nil, E.New("unknown rule set format: ", options.Format)

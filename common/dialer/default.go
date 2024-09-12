@@ -70,8 +70,8 @@ func NewDefault(router adapter.Router, options option.DialerOptions) (*DefaultDi
 		dialer.Timeout = C.TCPTimeout
 	}
 	// TODO: Add an option to customize the keep alive period
-	dialer.KeepAlive = C.TCPKeepAliveInitial
-	dialer.Control = control.Append(dialer.Control, control.SetKeepAlivePeriod(C.TCPKeepAliveInitial, C.TCPKeepAliveInterval))
+	dialer.KeepAlive = C.TCPTimeout                                                                                 // karing 这个数值过长会导致大量tcp连接可能一直处于close_wait状态而不释放
+	dialer.Control = control.Append(dialer.Control, control.SetKeepAlivePeriod(dialer.KeepAlive, dialer.KeepAlive)) // karing
 	var udpFragment bool
 	if options.UDPFragment != nil {
 		udpFragment = *options.UDPFragment
@@ -110,16 +110,39 @@ func NewDefault(router adapter.Router, options option.DialerOptions) (*DefaultDi
 		}
 		setMultiPathTCP(&dialer4)
 	}
+
+	var tlsFragment *TLSFragment = nil                             //hiddify
+	if options.TLSFragment != nil && options.TLSFragment.Enabled { //hiddify
+		tlsFragment = &TLSFragment{}
+		if options.TCPFastOpen {
+			return nil, E.New("TLS Fragmentation is not compatible with TCP Fast Open, set `tcp_fast_open` to `false` in your outbound if you intend to enable TLS fragmentation.")
+		}
+		tlsFragment.Enabled = true
+
+		sleep, err := option.Parse2IntRange(options.TLSFragment.Sleep)
+
+		if err != nil {
+			return nil, E.Cause(err, "invalid TLS fragment sleep period supplied")
+		}
+		tlsFragment.Sleep = sleep
+
+		size, err := option.Parse2IntRange(options.TLSFragment.Size)
+		if err != nil {
+			return nil, E.Cause(err, "invalid TLS fragment size supplied")
+		}
+		tlsFragment.Size = size
+
+	}
 	if options.IsWireGuardListener {
 		for _, controlFn := range wgControlFns {
 			listener.Control = control.Append(listener.Control, controlFn)
 		}
 	}
-	tcpDialer4, err := newTCPDialer(dialer4, options.TCPFastOpen)
+	tcpDialer4, err := newTCPDialer(dialer4, options.TCPFastOpen, tlsFragment) //hiddify
 	if err != nil {
 		return nil, err
 	}
-	tcpDialer6, err := newTCPDialer(dialer6, options.TCPFastOpen)
+	tcpDialer6, err := newTCPDialer(dialer6, options.TCPFastOpen, tlsFragment) //hiddify
 	if err != nil {
 		return nil, err
 	}
@@ -148,9 +171,9 @@ func (d *DefaultDialer) DialContext(ctx context.Context, network string, address
 		}
 	}
 	if !address.IsIPv6() {
-		return trackConn(DialSlowContext(&d.dialer4, ctx, network, address))
+		return trackConn(d.dialer4.DialContext(ctx, network, address)) //hiddify
 	} else {
-		return trackConn(DialSlowContext(&d.dialer6, ctx, network, address))
+		return trackConn(d.dialer6.DialContext(ctx, network, address)) //hiddify
 	}
 }
 

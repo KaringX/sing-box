@@ -221,6 +221,10 @@ func (w *platformInterfaceWrapper) ClearDNSCache() {
 	w.iif.ClearDNSCache()
 }
 
+func (w *platformInterfaceWrapper) GetAssetContent(path string)([]byte, error) {//karing
+	return w.iif.GetAssetContent(path)
+}
+
 func (w *platformInterfaceWrapper) ReadWIFIState() adapter.WIFIState {
 	wifiState := w.iif.ReadWIFIState()
 	if wifiState == nil {

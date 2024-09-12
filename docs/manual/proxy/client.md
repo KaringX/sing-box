@@ -70,7 +70,7 @@ flowchart TB
     assemble --> conn[TCP and UDP connections]
     conn --> router[sing-box Router]
     router --> direct[Direct outbound]
-    router --> proxy[Proxy outbounds]
+    router -->  proxy[Proxy outbounds]
     router -- DNS hijack --> dns_out[DNS outbound]
     dns_out --> dns_router[DNS router]
     dns_router --> router

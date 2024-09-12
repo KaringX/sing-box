@@ -97,6 +97,7 @@ type DefaultRule struct {
 	RuleSetIPCIDRMatchSource bool             `json:"rule_set_ipcidr_match_source,omitempty"`
 	Invert                   bool             `json:"invert,omitempty"`
 	Outbound                 string           `json:"outbound,omitempty"`
+	Name                     string           `json:"name,omitempty"` //karing
 }
 
 func (r DefaultRule) IsValid() bool {
@@ -111,6 +112,7 @@ type LogicalRule struct {
 	Rules    []Rule `json:"rules,omitempty"`
 	Invert   bool   `json:"invert,omitempty"`
 	Outbound string `json:"outbound,omitempty"`
+	Name     string `json:"name,omitempty"` //karing
 }
 
 func (r LogicalRule) IsValid() bool {

@@ -18,7 +18,7 @@ import (
 	"github.com/sagernet/gvisor/pkg/tcpip/transport/icmp"
 	"github.com/sagernet/gvisor/pkg/tcpip/transport/tcp"
 	"github.com/sagernet/gvisor/pkg/tcpip/transport/udp"
-	"github.com/sagernet/sing-tun"
+	tun "github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common/buf"
 	E "github.com/sagernet/sing/common/exceptions"
 	M "github.com/sagernet/sing/common/metadata"
@@ -206,7 +206,9 @@ func (w *StackDevice) Write(bufs [][]byte, offset int) (count int, err error) {
 		packetBuffer := stack.NewPacketBuffer(stack.PacketBufferOptions{
 			Payload: buffer.MakeWithData(b),
 		})
-		w.dispatcher.DeliverNetworkPacket(networkProtocol, packetBuffer)
+		if w.dispatcher != nil { //hiddify
+			w.dispatcher.DeliverNetworkPacket(networkProtocol, packetBuffer)
+		}
 		packetBuffer.DecRef()
 		count++
 	}

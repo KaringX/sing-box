@@ -47,6 +47,7 @@ func NewDefaultRule(router adapter.Router, logger log.ContextLogger, options opt
 		abstractDefaultRule{
 			invert:   options.Invert,
 			outbound: options.Outbound,
+			name:     options.Name,  //karing
 		},
 	}
 	if len(options.Inbound) > 0 {
@@ -224,6 +225,7 @@ func NewLogicalRule(router adapter.Router, logger log.ContextLogger, options opt
 			rules:    make([]adapter.HeadlessRule, len(options.Rules)),
 			invert:   options.Invert,
 			outbound: options.Outbound,
+			name:     options.Name,  //karing
 		},
 	}
 	switch options.Mode {

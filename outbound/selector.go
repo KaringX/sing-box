@@ -29,6 +29,7 @@ type Selector struct {
 	selected                     adapter.Outbound
 	interruptGroup               *interrupt.Group
 	interruptExternalConnections bool
+	parseErr                     error                //karing
 }
 
 func NewSelector(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.SelectorOutboundOptions) (*Selector, error) {
@@ -48,7 +49,7 @@ func NewSelector(ctx context.Context, router adapter.Router, logger log.ContextL
 		interruptExternalConnections: options.InterruptExistConnections,
 	}
 	if len(outbound.tags) == 0 {
-		return nil, E.New("missing tags")
+		return outbound, E.New("missing tags") //karing
 	}
 	return outbound, nil
 }
@@ -127,6 +128,9 @@ func (s *Selector) SelectOutbound(tag string) bool {
 }
 
 func (s *Selector) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
+	if(s.parseErr != nil){ //karing
+		return nil, s.parseErr
+	}
 	conn, err := s.selected.DialContext(ctx, network, destination)
 	if err != nil {
 		return nil, err
@@ -135,6 +139,9 @@ func (s *Selector) DialContext(ctx context.Context, network string, destination 
 }
 
 func (s *Selector) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
+	if(s.parseErr != nil){ //karing
+		return nil, s.parseErr
+	}
 	conn, err := s.selected.ListenPacket(ctx, destination)
 	if err != nil {
 		return nil, err
@@ -143,11 +150,17 @@ func (s *Selector) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
 }
 
 func (s *Selector) NewConnection(ctx context.Context, conn net.Conn, metadata adapter.InboundContext) error {
+	if(s.parseErr != nil){ //karing
+		return s.parseErr
+	}
 	ctx = interrupt.ContextWithIsExternalConnection(ctx)
 	return s.selected.NewConnection(ctx, conn, metadata)
 }
 
 func (s *Selector) NewPacketConnection(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext) error {
+	if(s.parseErr != nil){ //karing
+		return s.parseErr
+	}
 	ctx = interrupt.ContextWithIsExternalConnection(ctx)
 	return s.selected.NewPacketConnection(ctx, conn, metadata)
 }
@@ -157,4 +170,7 @@ func RealTag(detour adapter.Outbound) string {
 		return group.Now()
 	}
 	return detour.Tag()
+}
+func (s *Selector) SetParseErr(err error){ //karing
+	s.parseErr = err
 }

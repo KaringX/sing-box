@@ -48,6 +48,7 @@ func NewDefaultDNSRule(router adapter.Router, logger log.ContextLogger, options 
 		abstractDefaultRule: abstractDefaultRule{
 			invert:   options.Invert,
 			outbound: options.Server,
+			name:     options.Name,  //karing
 		},
 		disableCache: options.DisableCache,
 		rewriteTTL:   options.RewriteTTL,
@@ -281,6 +282,7 @@ func NewLogicalDNSRule(router adapter.Router, logger log.ContextLogger, options 
 			rules:    make([]adapter.HeadlessRule, len(options.Rules)),
 			invert:   options.Invert,
 			outbound: options.Server,
+			name:     options.Name,  //karing
 		},
 		disableCache: options.DisableCache,
 		rewriteTTL:   options.RewriteTTL,

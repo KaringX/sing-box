@@ -1,3 +1,5 @@
+//go:build !with_karing
+
 package main
 
 import (

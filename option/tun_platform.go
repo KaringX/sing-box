@@ -1,7 +1,8 @@
 package option
 
 type TunPlatformOptions struct {
-	HTTPProxy *HTTPProxyOptions `json:"http_proxy,omitempty"`
+	HTTPProxy   *HTTPProxyOptions `json:"http_proxy,omitempty"`
+	AllowBypass bool              `json:"allow_bypass,omitempty"` //karing
 }
 
 type HTTPProxyOptions struct {

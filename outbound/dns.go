@@ -253,3 +253,5 @@ func (d *DNS) newPacketConnection(ctx context.Context, conn N.PacketConn, readWa
 	})
 	return group.Run(fastClose)
 }
+func (w *DNS) SetParseErr(err error){ //karing
+}

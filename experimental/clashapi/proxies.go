@@ -191,7 +191,7 @@ func getProxyDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 		if strings.HasPrefix(url, "http://") {
 			url = ""
 		}
-		timeout, err := strconv.ParseInt(query.Get("timeout"), 10, 16)
+		timeout, err := strconv.ParseInt(query.Get("timeout"), 10, 32) //karing
 		if err != nil {
 			render.Status(r, http.StatusBadRequest)
 			render.JSON(w, r, ErrBadRequest)
@@ -206,24 +206,32 @@ func getProxyDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 		defer func() {
 			realTag := outbound.RealTag(proxy)
 			if err != nil {
-				server.urlTestHistory.DeleteURLTestHistory(realTag)
+				//server.urlTestHistory.DeleteURLTestHistory(realTag)
+				server.urlTestHistory.StoreURLTestHistory(realTag, &urltest.History{ //karing
+					Time:  time.Now(),
+					Delay: 0,
+					Err:   err.Error(),
+				})
 			} else {
 				server.urlTestHistory.StoreURLTestHistory(realTag, &urltest.History{
 					Time:  time.Now(),
 					Delay: delay,
+					Err:   "", //karing
 				})
 			}
 		}()
 
 		if ctx.Err() != nil {
-			render.Status(r, http.StatusGatewayTimeout)
-			render.JSON(w, r, ErrRequestTimeout)
+			//render.Status(r, http.StatusGatewayTimeout) //karing
+			//render.JSON(w, r, ErrRequestTimeout) //karing
+			render.JSON(w, r, newError(ctx.Err().Error())) //karing
 			return
 		}
 
 		if err != nil || delay == 0 {
-			render.Status(r, http.StatusServiceUnavailable)
-			render.JSON(w, r, newError("An error occurred in the delay test"))
+			//render.Status(r, http.StatusServiceUnavailable) //karing
+			//render.JSON(w, r, newError("An error occurred in the delay test")) //karing
+			render.JSON(w, r, newError(err.Error())) //karing
 			return
 		}
 

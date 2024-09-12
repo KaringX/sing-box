@@ -1,11 +1,13 @@
 module github.com/sagernet/sing-box
 
-go 1.20
+go 1.21.4
+
+toolchain go1.22.2
 
 require (
 	berty.tech/go-libtor v1.0.385
 	github.com/caddyserver/certmagic v0.20.0
-	github.com/cloudflare/circl v1.3.7
+	github.com/cloudflare/circl v1.3.9
 	github.com/cretz/bine v0.2.0
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-chi/chi/v5 v5.0.12
@@ -17,7 +19,7 @@ require (
 	github.com/libdns/cloudflare v0.1.1
 	github.com/logrusorgru/aurora v2.0.3+incompatible
 	github.com/mholt/acmez v1.2.0
-	github.com/miekg/dns v1.1.59
+	github.com/miekg/dns v1.1.61
 	github.com/ooni/go-libtor v1.1.8
 	github.com/oschwald/maxminddb-golang v1.12.0
 	github.com/sagernet/bbolt v0.0.0-20231014093535-ea5cb2fe9f0a
@@ -44,53 +46,101 @@ require (
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/zap v1.27.0
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba
-	golang.org/x/crypto v0.23.0
-	golang.org/x/net v0.25.0
-	golang.org/x/sys v0.21.0
+	golang.org/x/crypto v0.25.0
+	golang.org/x/net v0.27.0
+	golang.org/x/sys v0.22.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20230429144221-925a1e7659e6
-	google.golang.org/grpc v1.63.2
-	google.golang.org/protobuf v1.33.0
+	google.golang.org/grpc v1.65.0
+	google.golang.org/protobuf v1.34.2
 	howett.net/plist v1.0.1
 )
 
-//replace github.com/sagernet/sing => ../sing
+require ( //hiddify
+	github.com/pion/logging v0.2.2
+	github.com/pion/turn/v3 v3.0.1
+	github.com/pires/go-proxyproto v0.7.0
+	github.com/xtls/xray-core v1.8.23
+)
 
 require (
+	github.com/dgryski/go-metro v0.0.0-20211217172704-adc40b04c140 // indirect
+	github.com/francoispqt/gojay v1.2.13 // indirect
+	github.com/ghodss/yaml v1.0.1-0.20220118164431-d8423dcdf344 // indirect
+	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
+	github.com/gorilla/websocket v1.5.3 // indirect
+	github.com/pelletier/go-toml v1.9.5 // indirect
+	github.com/quic-go/quic-go v0.45.1 // indirect
+	github.com/refraction-networking/utls v1.6.7 // indirect
+	github.com/riobard/go-bloom v0.0.0-20200614022211-cdc8013cb5b3 // indirect
+	github.com/seiflotfy/cuckoofilter v0.0.0-20240715131351-a2f2c23f1771 // indirect
+	github.com/v2fly/ss-bloomring v0.0.0-20210312155135-28617310f63e // indirect
+	github.com/xtls/reality v0.0.0-20240712055506-48f0b2d5ed6d // indirect
+	go.uber.org/mock v0.4.0 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
+)
+
+replace github.com/sagernet/wireguard-go => github.com/hiddify/wireguard-go v0.0.0-20240727191222-383c1da14ff1
+
+replace github.com/xtls/xray-core => github.com/hiddify/xray-core v0.0.0-20240729110224-c3df022f042a
+
+//replace github.com/sagernet/sing => github.com/KaringX/sing v0.4.2-0.20240626045944-164e86c6147b
+
+//go get github.com/KaringX/sing-quic@de3999b0837577a99a891562c776914c8aed3bc1
+//replace github.com/sagernet/sing-tun => ../../KaringX/sing-tun
+//replace github.com/sagernet/sing-quic => ../../KaringX/sing-quic
+//replace github.com/sagernet/sing-dns => ../../KaringX/sing-dns
+//replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.3.3-0.20240808075023-e16a492e752c
+replace github.com/sagernet/sing-dns => github.com/KaringX/sing-dns v0.2.1-0.20240829080745-dd5943408ec8
+replace github.com/sagernet/sing-quic => github.com/KaringX/sing-quic v0.2.0-beta.12.0.20240912075141-e76855c8573c
+
+require (
+	github.com/Dreamacro/clash v1.18.0 //karing
+	github.com/alitto/pond v1.8.3
+	github.com/getsentry/sentry-go v0.25.0
+	github.com/valyala/fastjson v1.6.4
+)
+
+require (
+	github.com/Dreamacro/protobytes v0.0.0-20230911123819-0bbf144b9b9a // indirect
 	github.com/ajg/form v1.5.1 // indirect
-	github.com/andybalholm/brotli v1.0.6 // indirect
+	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/gaukas/godicttls v0.0.4 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
-	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
 	github.com/google/btree v1.1.2 // indirect
-	github.com/google/pprof v0.0.0-20231101202521-4ca4178f5c7a // indirect
+	github.com/google/pprof v0.0.0-20240528025155-186aa0362fba // indirect
 	github.com/hashicorp/yamux v0.1.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/josharian/native v1.1.0 // indirect
-	github.com/klauspost/compress v1.17.4 // indirect
-	github.com/klauspost/cpuid/v2 v2.2.5 // indirect
+	github.com/klauspost/compress v1.17.8 // indirect
+	github.com/klauspost/cpuid/v2 v2.2.7 // indirect
 	github.com/libdns/libdns v0.2.2 // indirect
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
-	github.com/onsi/ginkgo/v2 v2.9.7 // indirect
+	github.com/onsi/ginkgo/v2 v2.19.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.14 // indirect
+	github.com/pion/dtls/v2 v2.2.7 // indirect
+	github.com/pion/randutil v0.1.0 // indirect
+	github.com/pion/stun/v2 v2.0.0 // indirect
+	github.com/pion/transport/v2 v2.2.1 // indirect
+	github.com/pion/transport/v3 v3.0.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/quic-go/qpack v0.4.0 // indirect
 	github.com/quic-go/qtls-go1-20 v0.4.1 // indirect
 	github.com/sagernet/netlink v0.0.0-20240523065131-45e60152f9ba // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/u-root/uio v0.0.0-20230220225925-ffce2a382923 // indirect
-	github.com/vishvananda/netns v0.0.0-20211101163701-50045581ed74 // indirect
+	github.com/vishvananda/netns v0.0.4 // indirect
 	github.com/zeebo/blake3 v0.2.3 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f // indirect
+	golang.org/x/exp v0.0.0-20240531132922-fd00a4e0eefc // indirect; indirectdirect
 	golang.org/x/mod v0.18.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
 	golang.org/x/text v0.16.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
-	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240227224415-6ceb2ff114de // indirect
+	golang.org/x/tools v0.22.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240528184218-531527333157 // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	lukechampine.com/blake3 v1.3.0 // indirect
