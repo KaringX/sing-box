@@ -95,7 +95,7 @@ replace github.com/xtls/xray-core => github.com/hiddify/xray-core v0.0.0-2024072
 //replace github.com/sagernet/sing-dns => ../../KaringX/sing-dns
 //replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.3.3-0.20240808075023-e16a492e752c
 replace github.com/sagernet/sing-dns => github.com/KaringX/sing-dns v0.2.1-0.20240829080745-dd5943408ec8
-replace github.com/sagernet/sing-quic => github.com/KaringX/sing-quic v0.2.0-beta.5.0.20240806032106-033a04ee88fe
+replace github.com/sagernet/sing-quic => github.com/KaringX/sing-quic v0.2.0-beta.5.0.20240912042840-5449cf51629d
 
 require (
 	github.com/Dreamacro/clash v1.18.0 //karing

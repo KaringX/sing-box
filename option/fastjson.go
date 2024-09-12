@@ -624,17 +624,18 @@ func (o *HysteriaOutboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
 	o.ReceiveWindow = fj.GetUint64("recv_window")
 	o.DisableMTUDiscovery = fj.GetBool("disable_mtu_discovery")
 	o.Network = NetworkList(stringNotNil(fj.GetStringBytes("network")))
-	turn_relay := fj.Get("turn_relay")
-	if turn_relay != nil && turn_relay.Type() != fastjson.TypeNull {
-		o.TurnRelay = &TurnRelayOptions{}
-		o.TurnRelay.unmarshalFastJSON(turn_relay)
-	}
-
 	tls := fj.Get("tls")
 	if tls != nil && tls.Type() != fastjson.TypeNull {
 		o.TLS = &OutboundTLSOptions{}
 		o.TLS.unmarshalFastJSON(tls)
 	}
+	turn_relay := fj.Get("turn_relay")
+	if turn_relay != nil && turn_relay.Type() != fastjson.TypeNull {
+		o.TurnRelay = &TurnRelayOptions{}
+		o.TurnRelay.unmarshalFastJSON(turn_relay)
+	}
+	o.HopPorts = stringNotNil(fj.GetStringBytes("hop_ports"))
+	o.HopInterval = fj.GetInt("hop_interval")
 }
 func unmarshalFastJSONArrayHysteriaUser(fj *fastjson.Value) []HysteriaUser {
 	if fj == nil || fj.Type() == fastjson.TypeNull {
@@ -729,6 +730,8 @@ func (o *Hysteria2OutboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
 		o.TurnRelay = &TurnRelayOptions{}
 		o.TurnRelay.unmarshalFastJSON(turn_relay)
 	}
+	o.HopPorts = stringNotNil(fj.GetStringBytes("hop_ports"))
+	o.HopInterval = fj.GetInt("hop_interval")
 }
 func unmarshalFastJSONArrayHysteria2User(fj *fastjson.Value) []Hysteria2User {
 	if fj == nil || fj.Type() == fastjson.TypeNull {

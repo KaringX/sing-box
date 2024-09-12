@@ -30,6 +30,8 @@ github.com/KaringX/sing-quic v0.2.0-beta.5.0.20240712035836-de3999b08375 h1:WRTd
 github.com/KaringX/sing-quic v0.2.0-beta.5.0.20240712035836-de3999b08375/go.mod h1:lfad61lScAZhAxZ0DHZWvEIcAaT38O6zPTR4vLsHeP0=
 github.com/KaringX/sing-quic v0.2.0-beta.5.0.20240806032106-033a04ee88fe h1:jCuYJGsttgb4ju/4YL7Pfnw/DZNQrrY6HfQDrfYhmRA=
 github.com/KaringX/sing-quic v0.2.0-beta.5.0.20240806032106-033a04ee88fe/go.mod h1:lfad61lScAZhAxZ0DHZWvEIcAaT38O6zPTR4vLsHeP0=
+github.com/KaringX/sing-quic v0.2.0-beta.5.0.20240912042840-5449cf51629d h1:Hlg6PJL9n7tg2Q5ZtLQ9O/aTAE4M2A2k5mC3EJkrj9I=
+github.com/KaringX/sing-quic v0.2.0-beta.5.0.20240912042840-5449cf51629d/go.mod h1:lfad61lScAZhAxZ0DHZWvEIcAaT38O6zPTR4vLsHeP0=
 github.com/KaringX/sing-tun v0.3.3-0.20240808075023-e16a492e752c h1:HlWW97ac9e9nleena1M2LtZlSfa87OyJAi0wSVp/3KI=
 github.com/KaringX/sing-tun v0.3.3-0.20240808075023-e16a492e752c/go.mod h1:DxLIyhjWU/HwGYoX0vNGg2c5QgTQIakphU1MuERR5tQ=
 github.com/ajg/form v1.5.1 h1:t9c7v8JUKu/XxOGBU0yjNpaMloxGEJhUkqFRq0ibGeU=

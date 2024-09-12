@@ -60,6 +60,9 @@ func NewHysteria(ctx context.Context, router adapter.Router, logger log.ContextL
 		return empty, err //karing
 	}
 	networkList := options.Network.Build()
+	if options.HopInterval < 5 { //https://github.com/morgenanno/sing-box
+		options.HopInterval = 5
+	}
 	var password string
 	if options.AuthString != "" {
 		password = options.AuthString
@@ -94,6 +97,8 @@ func NewHysteria(ctx context.Context, router adapter.Router, logger log.ContextL
 		Password:      password,
 		TLSConfig:     tlsConfig,
 		UDPDisabled:   !common.Contains(networkList, N.NetworkUDP),
+		HopPorts:      options.HopPorts, //https://github.com/morgenanno/sing-box
+		HopInterval:   options.HopInterval, //https://github.com/morgenanno/sing-box
 
 		ConnReceiveWindow:   options.ReceiveWindowConn,
 		StreamReceiveWindow: options.ReceiveWindow,
