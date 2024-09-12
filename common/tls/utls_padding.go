@@ -9,7 +9,6 @@ import (
 	"net"
 	"strings"
 
-	"github.com/sagernet/sing-box/option"
 	utls "github.com/sagernet/utls"
 )
 
@@ -116,7 +115,7 @@ func (e *FakePaddingExtension) Read(b []byte) (n int, err error) {
 
 // makeTLSHelloPacketWithPadding creates a TLS hello packet with padding.
 func makeTLSHelloPacketWithPadding(conn net.Conn, e *UTLSClientConfig, sni string) (*utls.UConn, error) {
-	paddingSize := option.RandBetween(e.paddingSize[0], e.paddingSize[1])
+	paddingSize := int(e.paddingSize.UniformRand())
 	if paddingSize <= 0 {
 		paddingSize = 1
 	}

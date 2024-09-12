@@ -24,7 +24,7 @@ import (
 )
 
 const TimeoutDelay = 65535   //hiddify
-const MinFailureToReset = 10 //hiddify
+const MinFailureToReset = 15 //hiddify
 
 var (
 	_ adapter.Outbound                = (*URLTest)(nil)

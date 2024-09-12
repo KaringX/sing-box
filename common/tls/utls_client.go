@@ -22,8 +22,8 @@ import (
 
 type UTLSClientConfig struct {
 	config      *utls.Config
+	paddingSize option.IntRange //hiddify 
 	id          utls.ClientHelloID
-	paddingSize []int //hiddify 
 }
 
 func (e *UTLSClientConfig) ServerName() string {
@@ -70,8 +70,8 @@ func (e *UTLSClientConfig) SetSessionIDGenerator(generator func(clientHello []by
 func (e *UTLSClientConfig) Clone() Config {
 	return &UTLSClientConfig{
 		config:      e.config.Clone(),
+		paddingSize: e.paddingSize, //hiddify 
 		id:          e.id,
-		paddingSize: e.paddingSize, //hiddify
 	}
 }
 
@@ -208,7 +208,7 @@ func NewUTLSClient(ctx context.Context, serverAddress string, options option.Out
 	if options.TLSTricks != nil { //hiddify
 		switch options.TLSTricks.PaddingMode {
 		case "random":
-			paddingSize, err := option.ParseIntRange(options.TLSTricks.PaddingSize)
+			paddingSize, err := option.Parse2IntRange(options.TLSTricks.PaddingSize) //hiddify 
 			if err != nil {
 				return nil, E.Cause(err, "invalid Padding Size supplied")
 			}
