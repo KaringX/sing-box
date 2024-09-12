@@ -852,7 +852,7 @@ func (r *Router) RouteConnection(ctx context.Context, conn net.Conn, metadata ad
 		conn = deadline.NewConn(conn)
 	}
 
-	if metadata.InboundOptions.SniffEnabled {
+	if metadata.InboundOptions.SniffEnabled && !sniff.Skip(metadata) {
 		buffer := buf.NewPacket()
 		err := sniff.PeekStream(
 			ctx,
@@ -1056,7 +1056,9 @@ func (r *Router) RoutePacketConnection(ctx context.Context, conn N.PacketConn, m
 					}
 				}
 			}
-			conn = bufio.NewCachedPacketConn(conn, buffer, destination)
+			if err == nil {
+				conn = bufio.NewCachedPacketConn(conn, buffer, destination)
+			}
 			for _, cachedBuffer := range common.Reverse(bufferList) {
 				conn = bufio.NewCachedPacketConn(conn, cachedBuffer, destination)
 			}

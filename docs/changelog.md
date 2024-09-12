@@ -2,11 +2,36 @@
 icon: material/alert-decagram
 ---
 
-!!! failure "Help needed"
+#### 1.10.0-beta.8
 
-    Due to problems with our Apple developer account, sing-box apps on Apple platforms are temporarily unavailable for download or update.
+* Fixes and improvements
 
-    If your company or organization is willing to help us return to the App Store, please [contact us](mailto:contact@sagernet.org).
+_With the help of a netizen, we are in the process of relisting sing-box apps to the App Store, which is expected to be done within a month._
+
+#### 1.10.0-beta.7
+
+* Update quic-go to v0.47.0
+* Fixes and improvements
+
+#### 1.10.0-beta.6
+
+* Add RDP sniffer
+* Fixes and improvements
+
+#### 1.10.0-beta.5
+
+* Add PNA support for [Clash API](/configuration/experimental/clash-api/)
+* Fixes and improvements
+
+#### 1.10.0-beta.3
+
+* Add SSH sniffer
+* Fixes and improvements
+
+#### 1.10.0-beta.2
+
+* Build with go1.23
+* Fixes and improvements
 
 #### 1.10.0-beta.4
 
