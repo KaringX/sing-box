@@ -76,19 +76,19 @@ func (a *myInboundAdapter) loopTCPIn() {
 func (a *myInboundAdapter) injectTCP(conn net.Conn, metadata adapter.InboundContext) {
 	ctx := log.ContextWithNewID(a.ctx)
 	metadata = a.createMetadata(conn, metadata)
-	a.logger.InfoContext(ctx, "inbound connection from ", metadata.Source)
+	a.logger.InfoContext(ctx, "inbound connection from ", metadata.Source, " to ", metadata.Destination) //karing
 	hErr := a.connHandler.NewConnection(ctx, conn, metadata)
 	if hErr != nil {
 		conn.Close()
-		a.NewError(ctx, E.Cause(hErr, "process connection from ", metadata.Source))
+		a.NewError(ctx, E.Cause(hErr, "process connection from ", metadata.Source, " to ", metadata.Destination)) //karing
 	}
 }
 
 func (a *myInboundAdapter) routeTCP(ctx context.Context, conn net.Conn, metadata adapter.InboundContext) {
-	a.logger.InfoContext(ctx, "inbound connection from ", metadata.Source)
+	a.logger.InfoContext(ctx, "inbound connection from ", metadata.Source, " to ", metadata.Destination) //karing
 	hErr := a.newConnection(ctx, conn, metadata)
 	if hErr != nil {
 		conn.Close()
-		a.NewError(ctx, E.Cause(hErr, "process connection from ", metadata.Source))
+		a.NewError(ctx, E.Cause(hErr, "process connection from ", metadata.Source, " to ", metadata.Destination)) //karing
 	}
 }
