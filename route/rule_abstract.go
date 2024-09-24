@@ -45,6 +45,15 @@ func (r *abstractDefaultRule) Close() error {
 			return err
 		}
 	}
+	//karing
+	r.items = make([]RuleItem, 0)
+	r.sourceAddressItems = make([]RuleItem, 0)
+	r.sourcePortItems = make([]RuleItem, 0)
+	r.destinationAddressItems = make([]RuleItem, 0)
+	r.destinationIPCIDRItems = make([]RuleItem, 0)
+	r.destinationPortItems = make([]RuleItem, 0)
+	r.allItems = make([]RuleItem, 0)
+	//karing
 	return nil
 }
 

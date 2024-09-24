@@ -102,5 +102,6 @@ func (s *LocalRuleSet) Metadata() adapter.RuleSetMetadata {
 }
 
 func (s *LocalRuleSet) Close() error {
+	s.rules = make([]adapter.HeadlessRule, 0)  //karing
 	return nil
 }

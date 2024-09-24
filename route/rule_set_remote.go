@@ -265,5 +265,6 @@ func (s *RemoteRuleSet) fetchOnce(ctx context.Context, startContext adapter.Rule
 func (s *RemoteRuleSet) Close() error {
 	s.updateTicker.Stop()
 	s.cancel()
+	s.rules = make([]adapter.HeadlessRule, 0)  //karing
 	return nil
 }

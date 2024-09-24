@@ -716,6 +716,26 @@ func (r *Router) Close() error {
 		})
 		monitor.Finish()
 	}
+	//karing
+	r.inboundByTag = make(map[string]adapter.Inbound) 
+	r.outbounds = make([]adapter.Outbound, 0)
+	r.outboundByTag =make(map[string]adapter.Outbound) 
+	r.rules = make([]adapter.Rule, 0)
+	r.geositeCache = make(map[string]adapter.Rule)
+	r.staticDns = make(map[string]StaticDNSEntry)
+	r.defaultDomainStrategy = dns.DomainStrategyAsIS 
+	r.dnsRules = make([]adapter.DNSRule, 0)
+	r.ruleSetsRemoteWithLocal = make([]adapter.RuleSet, 0)
+	for _, ruleSet := range r.ruleSets {
+		ruleSet.Close()
+	}
+	r.ruleSets = make([]adapter.RuleSet, 0)
+	r.ruleSetMap = make(map[string]adapter.RuleSet)
+	r.transports = make([]dns.Transport, 0)
+	r.transportMap = make(map[string]dns.Transport)
+	r.transportDomainStrategy = make(map[dns.Transport]dns.DomainStrategy)
+	//karing
+
 	return err
 }
 

@@ -135,6 +135,8 @@ func (m *Manager) handle() {
 func (m *Manager) Close() error {
 	m.ticker.Stop()
 	close(m.done)
+	m.ResetStatistic()  //karing
+	m.connections.Clear()  //karing
 	return nil
 }
 
