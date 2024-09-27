@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/sagernet/sing-box/adapter"
+	"github.com/sagernet/sing-box/common/conntrack"
 	"github.com/sagernet/sing-box/common/dialer"
 	"github.com/sagernet/sing-box/log"
 	dns "github.com/sagernet/sing-dns"
@@ -25,11 +26,11 @@ var (
 )
 
 type DNSServer struct {
-	Tag       string `json:"tag"`
-	Address   string `json:"address"`
+	Tag       string   `json:"tag"`
+	Address   string   `json:"address"`
 	Addresses []string `json:"addresses"`
-	Strategy  string `json:"strategy"`
-	Detour    string `json:"detour"`
+	Strategy  string   `json:"strategy"`
+	Detour    string   `json:"detour"`
 }
 type DNSQueryRequest struct {
 	Resolver DNSServer `json:"resolver"`
@@ -83,11 +84,11 @@ func Lookup(router adapter.Router, logFactory log.Factory, req DNSQueryRequest) 
 		}
 
 		transport, err := dns.CreateTransport(dns.TransportOptions{
-			Context: ctx,
-			Logger:  logFactory.NewLogger(F.ToString("dns_query_resolver/transport[", tag, "]")),
-			Name:    req.Resolver.Tag,
-			Dialer:  detour,
-			Address:  req.Resolver.Address,
+			Context:   ctx,
+			Logger:    logFactory.NewLogger(F.ToString("dns_query_resolver/transport[", tag, "]")),
+			Name:      req.Resolver.Tag,
+			Dialer:    detour,
+			Address:   req.Resolver.Address,
 			Addresses: req.Resolver.Addresses,
 		})
 		if err != nil {
@@ -112,11 +113,11 @@ func Lookup(router adapter.Router, logFactory log.Factory, req DNSQueryRequest) 
 	}
 
 	transport, err := dns.CreateTransport(dns.TransportOptions{
-		Context: ctx,
-		Logger:  logFactory.NewLogger(F.ToString("dns_query/transport[", tag, "]")),
-		Name:    req.Query.Tag,
-		Dialer:  detour,
-		Address:  req.Query.Address,
+		Context:   ctx,
+		Logger:    logFactory.NewLogger(F.ToString("dns_query/transport[", tag, "]")),
+		Name:      req.Query.Tag,
+		Dialer:    detour,
+		Address:   req.Query.Address,
 		Addresses: req.Query.Addresses,
 	})
 
@@ -148,12 +149,13 @@ func karingRouter(router adapter.Router, logFactory log.Factory) http.Handler {
 	r.Get("/outboundQuery", outboundQuery(router, logFactory))
 	r.Get("/directDelay", directDelay(router, logFactory))
 	r.Get("/remoteRuleSetRulesCount", remoteRuleSetRulesCount(router, logFactory))
+	r.Get("/resetOutboundConnections", resetOutboundConnections(router, logFactory))
 	return r
 }
 
 func stop(router adapter.Router, logFactory log.Factory) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-	    router.SingalQuit()
+		router.SingalQuit()
 		render.JSON(w, r, render.M{
 			"pid": os.Getpid(),
 		})
@@ -272,6 +274,12 @@ func remoteRuleSetRulesCount(router adapter.Router, logFactory log.Factory) func
 		render.JSON(w, r, render.M{
 			"result": router.GetRemoteRuleSetRulesCount(),
 		})
+	}
+}
+func resetOutboundConnections(router adapter.Router, logFactory log.Factory) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		conntrack.Close()
+		render.JSON(w, r, render.M{})
 	}
 }
 func httpDirectDelay(url string) (uint16, error) {
