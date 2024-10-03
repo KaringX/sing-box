@@ -24,7 +24,7 @@ import (
 )
 
 const TimeoutDelay = 65535   //hiddify
-const MinFailureToReset = 15 //hiddify
+const MinFailureToReset = 5 //hiddify
 
 var (
 	_ adapter.Outbound                = (*URLTest)(nil)
@@ -173,9 +173,9 @@ func (s *URLTest) DialContext(ctx context.Context, network string, destination M
 	realTag := RealTag(outbound) //karing
 	if err == nil {
 		if outbound == s.group.selectedOutboundUDP { //karing
-			s.group.udpConnectionFailureCount.Decrement(false)
+			s.group.udpConnectionFailureCount.Reset()
 		} else if outbound == s.group.selectedOutboundTCP { //karing
-			s.group.tcpConnectionFailureCount.Decrement(false)
+			s.group.tcpConnectionFailureCount.Reset()
 		}
 		history := s.group.history.LoadURLTestHistory(realTag) //karing
 		if history != nil && len(history.Err) != 0 {           //karing
@@ -238,7 +238,7 @@ func (s *URLTest) ListenPacket(ctx context.Context, destination M.Socksaddr) (ne
 	}
 	conn, err := outbound.ListenPacket(ctx, destination)
 	if err == nil {
-		s.group.udpConnectionFailureCount.Decrement(false)
+		s.group.udpConnectionFailureCount.Reset()
 		return s.group.interruptGroup.NewPacketConn(conn, interrupt.IsExternalConnectionFromContext(ctx)), nil
 	}
 	tag := "[" + outbound.Tag() + "] "
