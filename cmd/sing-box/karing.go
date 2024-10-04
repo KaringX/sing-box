@@ -43,6 +43,7 @@ func init() {
 
 func main() {
 	if err := mainCommand.Execute(); err != nil {
+		os.Stderr.WriteString(err.Error())
 		log.Fatal(err)
 	}
 }
