@@ -5,6 +5,7 @@ import (
 	"net/netip"
 	"time"
 
+	mDNS "github.com/miekg/dns"
 	C "github.com/sagernet/sing-box/constant"
 	dns "github.com/sagernet/sing-dns"
 	"github.com/sagernet/sing/common/auth"
@@ -316,21 +317,29 @@ func unmarshalFastJSONListableDNSQueryType(fj *fastjson.Value) Listable[DNSQuery
 
 	arr := fj.GetArray()
 	if arr != nil {
-		list := make(Listable[DNSQueryType], len(arr))
-		for i, v := range arr {
-			vv, err := v.Int()
+		list := make(Listable[DNSQueryType], 0)
+		for _, v := range arr {
+			by, err := v.StringBytes()
 			if err == nil {
-				list[i] = DNSQueryType(vv)
+				queryType, loaded := mDNS.StringToType[stringNotNil(by)]
+				if loaded {
+					list = append(list, DNSQueryType(queryType))
+				}
 			}
 		}
 		return list
 	}
-	if fj.Type() != fastjson.TypeNumber {
+	if fj.Type() != fastjson.TypeString {
 		return nil
 	}
-	list := make(Listable[DNSQueryType], 1)
-	vv, _ := fj.Int()
-	list[0] = DNSQueryType(vv)
+	list := make(Listable[DNSQueryType], 0)
+	by, err := fj.StringBytes()
+	if err == nil {
+		queryType, loaded := mDNS.StringToType[stringNotNil(by)]
+		if loaded {
+			list = append(list, DNSQueryType(queryType))
+		}
+	}
 	return list
 }
 func unmarshalFastJSONArrayString(fj *fastjson.Value) []string {
