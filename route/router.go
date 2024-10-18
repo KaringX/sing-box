@@ -26,10 +26,10 @@ import (
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing-box/outbound"
 	"github.com/sagernet/sing-box/transport/fakeip"
-	"github.com/sagernet/sing-dns"
-	"github.com/sagernet/sing-mux"
-	"github.com/sagernet/sing-tun"
-	"github.com/sagernet/sing-vmess"
+	dns "github.com/sagernet/sing-dns"
+	mux "github.com/sagernet/sing-mux"
+	tun "github.com/sagernet/sing-tun"
+	vmess "github.com/sagernet/sing-vmess"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/buf"
 	"github.com/sagernet/sing/common/bufio"
@@ -625,20 +625,27 @@ func (r *Router) Start() error {
 		}
 	}
 	if r.timeService != nil {
+		/* // karing
 		monitor.Start("initialize time service")
 		err := r.timeService.Start()
 		monitor.Finish()
 		if err != nil {
-			//return E.Cause(err, "initialize time service") // karing
-			r.logger.ErrorContext(r.ctx, "initialize time service: ", err) // karing
-			go func(){ // karing
+			return E.Cause(err, "initialize time service")
+		}
+		*/
+		go func(){ // karing
+			monitor := taskmonitor.New(r.logger, C.StartTimeout)
+			monitor.Start("initialize time service")
+			err := r.timeService.Start()
+			monitor.Finish()
+			if err != nil {
 				time.Sleep(time.Second * 3)
 				err := r.timeService.Start()
 				if err != nil {
 					r.logger.ErrorContext(r.ctx, "initialize time service: ", err)
 				}
-			}()
-		}
+			}
+		}()
 	}
 	return nil
 }
