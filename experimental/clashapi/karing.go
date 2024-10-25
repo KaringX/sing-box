@@ -147,7 +147,6 @@ func karingRouter(router adapter.Router, logFactory log.Factory) http.Handler {
 	r.Get("/dnsQueryWithDefaultRouter", dnsQueryWithDefaultRouter(router, logFactory))
 	r.Post("/dnsQuery", dnsQuery(router, logFactory))
 	r.Get("/outboundQuery", outboundQuery(router, logFactory))
-	r.Get("/directDelay", directDelay(router, logFactory))
 	r.Get("/remoteRuleSetRulesCount", remoteRuleSetRulesCount(router, logFactory))
 	r.Get("/resetOutboundConnections", resetOutboundConnections(router, logFactory))
 	return r
@@ -247,28 +246,7 @@ func outboundQuery(router adapter.Router, logFactory log.Factory) func(w http.Re
 		}
 	}
 }
-func directDelay(router adapter.Router, logFactory log.Factory) func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		url := r.URL.Query().Get("url")
-		if len(url) == 0 {
-			render.JSON(w, r, render.M{
-				"err": "invalid url",
-			})
-			return
-		}
 
-		delay, err := httpDirectDelay(url)
-		if err != nil {
-			render.JSON(w, r, render.M{
-				"err": err.Error(),
-			})
-			return
-		}
-		render.JSON(w, r, render.M{
-			"delay": delay,
-		})
-	}
-}
 func remoteRuleSetRulesCount(router adapter.Router, logFactory log.Factory) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		render.JSON(w, r, render.M{
@@ -282,23 +260,4 @@ func resetOutboundConnections(router adapter.Router, logFactory log.Factory) fun
 		render.JSON(w, r, render.M{})
 	}
 }
-func httpDirectDelay(url string) (uint16, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	client := &http.Client{
-		Transport: &http.Transport{
-			DisableKeepAlives: true,
-		},
-	}
-	start := time.Now()
-	req, _ := http.NewRequest("HEAD", url, nil)
-	response, err := client.Do(req.WithContext(ctx))
-	if err != nil {
-		return 0, err
-	}
-
-	response.Body.Close()
-	delay := uint16(time.Since(start).Milliseconds())
-	return delay, nil
-}
+ 
