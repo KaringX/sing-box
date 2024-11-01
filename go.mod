@@ -80,16 +80,12 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
-require (
-	github.com/Dreamacro/clash v1.18.0 //karing
+require (//karing
+	github.com/Dreamacro/clash v1.18.0
 	github.com/alitto/pond v1.8.3
 	github.com/getsentry/sentry-go v0.25.0
 	github.com/valyala/fastjson v1.6.4
 )
-
-replace github.com/sagernet/wireguard-go => github.com/hiddify/wireguard-go v0.0.0-20240727191222-383c1da14ff1
-
-replace github.com/xtls/xray-core => github.com/hiddify/xray-core v0.0.0-20240902024714-0fcb0895bb4b
 
 //go get github.com/KaringX/sing-quic@de3999b0837577a99a891562c776914c8aed3bc1
 //replace github.com/sagernet/sing => github.com/KaringX/sing v0.4.2-0.20240626045944-164e86c6147b
@@ -98,8 +94,10 @@ replace github.com/xtls/xray-core => github.com/hiddify/xray-core v0.0.0-2024090
 //replace github.com/sagernet/sing-dns => ../../KaringX/sing-dns
 //replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.3.3-0.20240808075023-e16a492e752c
 replace github.com/sagernet/sing-dns => github.com/KaringX/sing-dns v0.2.4-0.20240912090223-8c33bbae1bb5
-
 replace github.com/sagernet/sing-quic => github.com/KaringX/sing-quic v0.2.0-beta.12.0.20240912075141-e76855c8573c
+
+replace github.com/sagernet/wireguard-go => github.com/hiddify/wireguard-go v0.0.0-20240727191222-383c1da14ff1 //hiddify
+replace github.com/xtls/xray-core => github.com/hiddify/xray-core v0.0.0-20240902024714-0fcb0895bb4b //hiddify
 
 require (
 	github.com/Dreamacro/protobytes v0.0.0-20230911123819-0bbf144b9b9a // indirect
