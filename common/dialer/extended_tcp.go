@@ -9,7 +9,7 @@ import (
 
 	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
-	"github.com/sagernet/tfo-go"
+	"github.com/metacubex/tfo-go"
 )
 
 // Custom TCP dialer with extra features such as "TCP Fast Open" or "TLS Fragmentation"

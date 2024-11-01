@@ -59,7 +59,7 @@ func New(ctx context.Context, router adapter.Router, logger log.ContextLogger, t
 		return NewSelector(ctx, router, logger, tag, options.SelectorOptions)
 	case C.TypeURLTest:
 		return NewURLTest(ctx, router, logger, tag, options.URLTestOptions)
-	case C.TypeXray:
+	case C.TypeXray: //hiddify
 		return NewXray(ctx, router, logger, tag, options.XrayOptions)
 	default:
 		return nil, E.New("unknown outbound type: ", options.Type)

@@ -2,11 +2,35 @@
 icon: material/alert-decagram
 ---
 
-!!! failure "Help needed"
+### 1.9.7
 
-    Due to problems with our Apple developer account, sing-box apps on Apple platforms are temporarily unavailable for download or update.
+* Fixes and improvements
 
-    If your company or organization is willing to help us return to the App Store, please [contact us](mailto:contact@sagernet.org).
+### 1.9.6
+
+* Fixes and improvements
+
+### 1.9.5
+
+* Update quic-go to v0.47.0
+* Fix direct dialer not resolving domain
+* Fix no error return when empty DNS cache retrieved
+* Fix build with go1.23
+* Fix stream sniffer
+* Fix bad redirect in clash-api
+* Fix wireguard events chan leak
+* Fix cached conn eats up read deadlines
+* Fix disconnected interface selected as default in windows
+* Update Bundle Identifiers for Apple platform clients **1**
+
+**1**:
+
+See [Migration](/migration/#bundle-identifier-updates-in-apple-platform-clients).
+
+We are still working on getting all sing-box apps back on the App Store.
+
+This work is expected to be completed within a week
+(SFI on the App Store and others on TestFlight are already available).
 
 ### 1.9.4
 
@@ -22,6 +46,11 @@ icon: material/alert-decagram
 * Fix panic caused by rule-set generation of duplicate keys for `domain_suffix`
 * Fix UDP connnection leak when sniffing
 * Fixes and improvements
+
+_Due to problems with our Apple developer account,
+sing-box apps on Apple platforms are temporarily unavailable for download or update.
+If your company or organization is willing to help us return to the App Store,
+please [contact us](mailto:contact@sagernet.org)._
 
 ### 1.9.3
 

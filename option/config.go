@@ -14,7 +14,7 @@ type _Options struct {
 	Outbounds    []Outbound              `json:"outbounds,omitempty"`
 	Route        *RouteOptions           `json:"route,omitempty"`
 	Experimental *ExperimentalOptions    `json:"experimental,omitempty"`
-	Custom       *map[string]interface{} `json:"custom,omitempty"`
+	Custom       *map[string]interface{} `json:"custom,omitempty"` //hiddify
 }
 
 type Options _Options

@@ -7,13 +7,6 @@ icon: material/apple
 SFI/SFM/SFT allows users to manage and run local or remote sing-box configuration files, and provides
 platform-specific function implementation, such as TUN transparent proxy implementation.
 
-!!! failure "Unavailable"
-
-    Due to problems with our Apple developer account, sing-box apps on Apple platforms are temporarily unavailable for download or update.
-
-    If your company or organization is willing to help us return to the App Store, please [contact us](mailto:contact@sagernet.org).
-
-
 ## :material-graph: Requirements
 
 * iOS 15.0+ / macOS 13.0+ / Apple tvOS 17.0+
@@ -21,13 +14,13 @@ platform-specific function implementation, such as TUN transparent proxy impleme
 
 ## :material-download: Download
 
-* [App Store](https://apps.apple.com/us/app/sing-box/id6451272673)
-* ~~TestFlight (Beta)~~
+* [App Store](https://apps.apple.com/app/sing-box-vt/id6673731168)
+* TestFlight (Beta)
 
 TestFlight quota is only available to [sponsors](https://github.com/sponsors/nekohasekai)
 (one-time sponsorships are accepted).
-Once you donate, you can get an invitation by sending us your Apple ID [via email](mailto:contact@sagernet.org),
-or join our Telegram group for sponsors from [@yet_another_sponsor_bot](https://t.me/yet_another_sponsor_bot).
+Once you donate, you can get an invitation by join our Telegram group for sponsors from [@yet_another_sponsor_bot](https://t.me/yet_another_sponsor_bot)
+or sending us your Apple ID [via email](mailto:contact@sagernet.org).
 
 ## :material-file-download: Download (macOS standalone version)
 

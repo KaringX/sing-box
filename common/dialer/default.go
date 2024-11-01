@@ -70,7 +70,7 @@ func NewDefault(router adapter.Router, options option.DialerOptions) (*DefaultDi
 		dialer.Timeout = C.TCPTimeout
 	}
 	// TODO: Add an option to customize the keep alive period
-	dialer.KeepAlive = C.TCPTimeout                                                                                 // karing 这个数值过长会导致大量tcp连接可能一直处于close_wait状态而不释放
+	dialer.KeepAlive = C.TCPTimeout                                                                                 // karing close_wait
 	dialer.Control = control.Append(dialer.Control, control.SetKeepAlivePeriod(dialer.KeepAlive, dialer.KeepAlive)) // karing
 	var udpFragment bool
 	if options.UDPFragment != nil {

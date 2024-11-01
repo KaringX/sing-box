@@ -141,10 +141,6 @@ func NewPacketConnection(ctx context.Context, this N.Dialer, conn N.PacketConn, 
 		ctx, conn = canceler.NewPacketConn(ctx, conn, C.QUICTimeout)
 	case C.ProtocolDNS:
 		ctx, conn = canceler.NewPacketConn(ctx, conn, C.DNSTimeout)
-		//default:
-		//if len(metadata.Protocol) == 0 { //karing todo fix 大量udp连接导致内存爆掉的问题 bufio.CopyPacketConn
-		//ctx, conn = canceler.NewPacketConn(ctx, conn, C.STUNTimeout)
-		//}
 	}
 	return bufio.CopyPacketConn(ctx, conn, bufio.NewPacketConn(outConn))
 }

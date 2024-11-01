@@ -32,6 +32,9 @@ ci_build:
 	go build $(PARAMS) $(MAIN)
 	go build $(MAIN_PARAMS) $(MAIN)
 
+generate_completions:
+	go run -v --tags generate,generate_completions $(MAIN)
+
 install:
 	go build -o $(PREFIX)/bin/$(NAME) $(MAIN_PARAMS) $(MAIN)
 
@@ -71,7 +74,6 @@ release:
 		dist/*.deb \
 		dist/*.rpm \
 		dist/*_amd64.pkg.tar.zst \
-		dist/*_amd64v3.pkg.tar.zst \
 		dist/*_arm64.pkg.tar.zst \
 		dist/release
 	ghr --replace --draft --prerelease -p 3 "v${VERSION}" dist/release
@@ -104,10 +106,12 @@ publish_android:
 publish_android_appcenter:
 	cd ../sing-box-for-android && ./gradlew :app:appCenterAssembleAndUploadPlayRelease
 
+
+# TODO: find why and remove `-destination 'generic/platform=iOS'`
 build_ios:
 	cd ../sing-box-for-apple && \
 	rm -rf build/SFI.xcarchive && \
-	xcodebuild archive -scheme SFI -configuration Release -archivePath build/SFI.xcarchive
+	xcodebuild archive -scheme SFI -configuration Release -destination 'generic/platform=iOS' -archivePath build/SFI.xcarchive -allowProvisioningUpdates
 
 upload_ios_app_store:
 	cd ../sing-box-for-apple && \
@@ -118,55 +122,61 @@ release_ios: build_ios upload_ios_app_store
 build_macos:
 	cd ../sing-box-for-apple && \
 	rm -rf build/SFM.xcarchive && \
-	xcodebuild archive -scheme SFM -configuration Release -archivePath build/SFM.xcarchive
+	xcodebuild archive -scheme SFM -configuration Release -archivePath build/SFM.xcarchive -allowProvisioningUpdates
 
 upload_macos_app_store:
 	cd ../sing-box-for-apple && \
-	xcodebuild -exportArchive -archivePath build/SFM.xcarchive -exportOptionsPlist SFI/Upload.plist  -allowProvisioningUpdates
+	xcodebuild -exportArchive -archivePath build/SFM.xcarchive -exportOptionsPlist SFI/Upload.plist -allowProvisioningUpdates
 
 release_macos: build_macos upload_macos_app_store
 
-build_macos_independent:
+build_macos_standalone:
 	cd ../sing-box-for-apple && \
-	rm -rf build/SFT.System.xcarchive && \
-	xcodebuild archive -scheme SFM.System -configuration Release -archivePath build/SFM.System.xcarchive
+	rm -rf build/SFM.System.xcarchive && \
+	xcodebuild archive -scheme SFM.System -configuration Release -archivePath build/SFM.System.xcarchive -allowProvisioningUpdates
 
-notarize_macos_independent:
-	cd ../sing-box-for-apple && \
-	xcodebuild -exportArchive -archivePath "build/SFM.System.xcarchive" -exportOptionsPlist SFM.System/Upload.plist  -allowProvisioningUpdates
-
-wait_notarize_macos_independent:
-	sleep 60
-
-export_macos_independent:
+build_macos_dmg:
 	rm -rf dist/SFM
 	mkdir -p dist/SFM
 	cd ../sing-box-for-apple && \
-	xcodebuild -exportNotarizedApp -archivePath build/SFM.System.xcarchive -exportPath "../sing-box/dist/SFM"
+	rm -rf build/SFM.System && \
+	rm -rf build/SFM.dmg && \
+	xcodebuild -exportArchive \
+		-archivePath "build/SFM.System.xcarchive" \
+		-exportOptionsPlist SFM.System/Export.plist -allowProvisioningUpdates \
+		-exportPath "build/SFM.System" && \
+	create-dmg \
+		--volname "sing-box" \
+		--volicon "build/SFM.System/SFM.app/Contents/Resources/AppIcon.icns" \
+		--icon "SFM.app" 0 0 \
+ 		--hide-extension "SFM.app" \
+ 		--app-drop-link 0 0 \
+ 		--skip-jenkins \
+		--notarize "notarytool-password" \
+		"../sing-box/dist/SFM/SFM.dmg" "build/SFM.System/SFM.app"
 
-upload_macos_independent:
+upload_macos_dmg:
 	cd dist/SFM && \
-	rm -f *.zip && \
-	zip -ry "SFM-${VERSION}-universal.zip" SFM.app && \
-	ghr --replace --draft --prerelease "v${VERSION}" *.zip
+	cp SFM.dmg "SFM-${VERSION}-universal.dmg" && \
+	ghr --replace --draft --prerelease "v${VERSION}" "SFM-${VERSION}-universal.dmg"
 
-release_macos_independent: build_macos_independent notarize_macos_independent wait_notarize_macos_independent export_macos_independent upload_macos_independent
+release_macos_standalone: build_macos_standalone build_macos_dmg upload_macos_dmg
 
 build_tvos:
 	cd ../sing-box-for-apple && \
 	rm -rf build/SFT.xcarchive && \
-	xcodebuild archive -scheme SFT -configuration Release -archivePath build/SFT.xcarchive
+	xcodebuild archive -scheme SFT -configuration Release -archivePath build/SFT.xcarchive -allowProvisioningUpdates
 
 upload_tvos_app_store:
 	cd ../sing-box-for-apple && \
-	xcodebuild -exportArchive -archivePath "build/SFT.xcarchive" -exportOptionsPlist SFI/Upload.plist  -allowProvisioningUpdates
+	xcodebuild -exportArchive -archivePath "build/SFT.xcarchive" -exportOptionsPlist SFI/Upload.plist -allowProvisioningUpdates
 
 release_tvos: build_tvos upload_tvos_app_store
 
 update_apple_version:
 	go run ./cmd/internal/update_apple_version
 
-release_apple: lib_ios update_apple_version release_ios release_macos release_tvos release_macos_independent
+release_apple: lib_ios update_apple_version release_ios release_macos release_tvos release_macos_standalone
 
 release_apple_beta: update_apple_version release_ios release_macos release_tvos
 
@@ -193,8 +203,8 @@ lib:
 	go run ./cmd/internal/build_libbox -target ios
 
 lib_install:
-	go install -v github.com/sagernet/gomobile/cmd/gomobile@v0.1.3
-	go install -v github.com/sagernet/gomobile/cmd/gobind@v0.1.3
+	go install -v github.com/sagernet/gomobile/cmd/gomobile@v0.1.4
+	go install -v github.com/sagernet/gomobile/cmd/gobind@v0.1.4
 
 docs:
 	venv/bin/mkdocs serve

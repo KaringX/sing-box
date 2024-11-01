@@ -70,7 +70,7 @@ func (r *RuleSet) UnmarshalJSON(bytes []byte) error {
 }
 
 type LocalRuleSet struct {
-	IsAsset bool   `json:"is_asset,omitempty"`  //karing for android
+	IsAsset bool   `json:"is_asset,omitempty"`  //karing
 	Path    string `json:"path,omitempty"`
 }
 

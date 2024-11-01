@@ -119,7 +119,7 @@ func (c *CacheFile) start() error {
 	if err != nil {
 		return err
 	}
-	/*err = filemanager.Chown(c.ctx, c.path)//karing ios,mac打开后会报错
+	/*err = filemanager.Chown(c.ctx, c.path)//karing
 	if err != nil {
 		db.Close()
 		return E.Cause(err, "platform chown")
