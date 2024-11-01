@@ -4,7 +4,7 @@ go 1.23.2
 
 require (
 	berty.tech/go-libtor v1.0.385
-	github.com/caddyserver/certmagic v0.21.4
+	github.com/caddyserver/certmagic v0.20.0
 	github.com/cloudflare/circl v1.5.0
 	github.com/cretz/bine v0.2.0
 	github.com/fsnotify/fsnotify v1.8.0
@@ -24,10 +24,10 @@ require (
 	github.com/sagernet/bbolt v0.0.0-20231014093535-ea5cb2fe9f0a
 	github.com/sagernet/cloudflare-tls v0.0.0-20231208171750-a4483c1b7cd1
 	github.com/sagernet/gomobile v0.1.4
-	github.com/sagernet/gvisor v0.0.0-20241021032506-a4324256e4a3
+	github.com/sagernet/gvisor v0.0.0-20240428053021-e691de28565f
 	github.com/sagernet/quic-go v0.47.0
 	github.com/sagernet/reality v0.0.0-20230406110435-ee17307e7691
-	github.com/sagernet/sing v0.5.0-rc.4
+	github.com/sagernet/sing v0.4.3
 	github.com/sagernet/sing-dns v0.2.3
 	github.com/sagernet/sing-mux v0.2.0
 	github.com/sagernet/sing-quic v0.2.2
@@ -75,14 +75,14 @@ require (
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
-	github.com/quic-go/quic-go v0.48.1 // indirect
+	github.com/quic-go/quic-go v0.46.0 // indirect
 	github.com/refraction-networking/utls v1.6.7 // indirect
 	github.com/riobard/go-bloom v0.0.0-20200614022211-cdc8013cb5b3 // indirect
 	github.com/seiflotfy/cuckoofilter v0.0.0-20240715131351-a2f2c23f1771 // indirect
 	github.com/v2fly/ss-bloomring v0.0.0-20210312155135-28617310f63e // indirect
-	github.com/wlynxg/anet v0.0.5 // indirect
-	github.com/xtls/reality v0.0.0-20240909153216-e26ae2305463 // indirect
-	go.uber.org/mock v0.5.0 // indirect
+	github.com/wlynxg/anet v0.0.3 // indirect
+	github.com/xtls/reality v0.0.0-20240712055506-48f0b2d5ed6d // indirect
+	go.uber.org/mock v0.4.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
@@ -92,11 +92,9 @@ require (
 //replace github.com/sagernet/sing-quic => ../../KaringX/sing-quic
 //replace github.com/sagernet/sing-dns => ../../KaringX/sing-dns
 //replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.3.3-0.20240808075023-e16a492e752c
-replace github.com/caddyserver/certmagic => github.com/caddyserver/certmagic v0.20.0
-
-replace github.com/sagernet/sing => github.com/sagernet/sing v0.4.3
-
-replace github.com/sagernet/gvisor => github.com/sagernet/gvisor v0.0.0-20240428053021-e691de28565f
+//replace github.com/caddyserver/certmagic => github.com/caddyserver/certmagic v0.20.0
+//replace github.com/sagernet/sing => github.com/sagernet/sing v0.4.3
+//replace github.com/sagernet/gvisor => github.com/sagernet/gvisor v0.0.0-20240428053021-e691de28565f
 
 replace github.com/sagernet/sing-dns => github.com/KaringX/sing-dns v0.2.4-0.20240912090223-8c33bbae1bb5
 
