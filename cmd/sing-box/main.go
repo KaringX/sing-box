@@ -1,4 +1,4 @@
-//go:build !with_karing && !generate
+//go:build !generate
 
 package main
 
