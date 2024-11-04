@@ -13,6 +13,7 @@ import (
 	_ "github.com/sagernet/sing-box/include"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing/service/filemanager"
+	"github.com/valyala/fastjson"
 
 	"github.com/spf13/cobra"
 )
@@ -42,18 +43,11 @@ func init() {
 }
 
 func preRun(cmd *cobra.Command, args []string) {
-	/*content, err := os.ReadFile(serviceConfigPath)
-	if err != nil {
-		return
-	}
-	var parser fastjson.Parser
-	value, err1 := parser.ParseBytes(content)
-	if err1 != nil {
-		return
-	}
-	errPath := value.GetStringBytes("err_path")
-	libbox.RedirectStderr(errPath)*/
 	libbox.SentryInit(serviceConfigPath)
+	err := setUpDir()
+	if(err != nil){
+		log.Fatal(err)
+	}
 	globalCtx = context.Background()
 	sudoUser := os.Getenv("SUDO_USER")
 	sudoUID, _ := strconv.Atoi(os.Getenv("SUDO_UID"))
@@ -84,4 +78,30 @@ func preRun(cmd *cobra.Command, args []string) {
 	if len(configPaths) == 0 && len(configDirectories) == 0 {
 		configPaths = append(configPaths, "config.json")
 	}
+}
+
+func setUpDir() error {
+	content, err := os.ReadFile(serviceConfigPath)
+	if err != nil {
+		return err
+	}
+	var parser fastjson.Parser
+	value, err1 := parser.ParseBytes(content)
+	if err1 != nil {
+		return err1
+	}
+
+	base_dir := stringNotNil(value.GetStringBytes("base_dir"))
+	work_dir := stringNotNil(value.GetStringBytes("work_dir"))
+	cache_dir := stringNotNil(value.GetStringBytes("cache_dir"))
+	core_path := stringNotNil(value.GetStringBytes("core_path"))
+	libbox.Setup(base_dir, work_dir, cache_dir, false)
+	configPaths = append(configPaths, core_path)
+	return nil
+}
+func stringNotNil(v []byte) string {
+	if v == nil {
+		return ""
+	}
+	return string(v)
 }
