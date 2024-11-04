@@ -25,7 +25,7 @@ func main() {
 	fmt.Println(string(content))
 	libbox.Setup("./htest/", "./htest/", "./htest/tmp/", true)
 	ctx, cancel := context.WithCancel(context.Background())
-	ctx = filemanager.WithDefault(ctx, "./htest/", "./htest/tmp/", os.Getuid(), os.Getgid())
+	ctx = filemanager.WithDefault(ctx,"./htest/", "./htest/", "./htest/tmp/", os.Getuid(), os.Getgid())
 	urlTestHistoryStorage := urltest.NewHistoryStorage()
 	ctx = service.ContextWithPtr(ctx, urlTestHistoryStorage)
 

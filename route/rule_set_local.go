@@ -32,7 +32,7 @@ func NewLocalRuleSet(ctx context.Context, router adapter.Router, options option.
 		if(options.LocalOptions.IsAsset){ //karing
 			content, err = router.GetAssetContent(options.LocalOptions.Path)
 		} else {
-			content, err = os.ReadFile(filemanager.BasePath(ctx, options.LocalOptions.Path))
+			content, err = os.ReadFile(filemanager.WorkPath(ctx, options.LocalOptions.Path)) //karing
 		}
 		if err != nil {
 			return nil, err
@@ -54,7 +54,7 @@ func NewLocalRuleSet(ctx context.Context, router adapter.Router, options option.
 				return nil, err
 			}
 		} else {
-			setFile, err := os.Open(filemanager.BasePath(ctx, options.LocalOptions.Path))
+			setFile, err := os.Open(filemanager.WorkPath(ctx, options.LocalOptions.Path))  //karing
 			if err != nil {
 				return nil, err
 			}

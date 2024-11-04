@@ -60,7 +60,7 @@ func preRun(cmd *cobra.Command, args []string) {
 		}
 	}
 	if sudoUID > 0 && sudoGID > 0 {
-		globalCtx = filemanager.WithDefault(globalCtx, "", "", sudoUID, sudoGID)
+		globalCtx = filemanager.WithDefault(globalCtx, "", "", "", sudoUID, sudoGID)
 	}
 	if disableColor {
 		log.SetStdLogger(log.NewDefaultFactory(context.Background(), log.Formatter{BaseTime: time.Now(), DisableColors: true}, os.Stderr, "", nil, false).Logger())
