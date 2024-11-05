@@ -146,14 +146,14 @@ func (r *Router) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS.Msg, er
 			if err != nil {
 				if errors.Is(err, dns.ErrResponseRejectedCached) {
 					rejected = true
-					r.dnsLogger.DebugContext(ctx, E.Cause(err, "[", transport.Name(), "]", "response rejected for ", formatQuestion(message.Question[0].String())), " (cached)") //karing
+					r.dnsLogger.DebugContext(ctx, E.Cause(err, "response rejected for ", formatQuestion(message.Question[0].String())), " (cached)")
 				} else if errors.Is(err, dns.ErrResponseRejected) {
 					rejected = true
-					r.dnsLogger.DebugContext(ctx, E.Cause(err, "[", transport.Name(), "]", "response rejected for ", formatQuestion(message.Question[0].String()))) //karing
+					r.dnsLogger.DebugContext(ctx, E.Cause(err, "response rejected for ", formatQuestion(message.Question[0].String())))
 				} else if len(message.Question) > 0 {
-					r.dnsLogger.ErrorContext(ctx, E.Cause(err, "[", transport.Name(), "]", "exchange failed for ", formatQuestion(message.Question[0].String()))) //karing
+					r.dnsLogger.ErrorContext(ctx, E.Cause(err, "exchange failed for ", formatQuestion(message.Question[0].String())))
 				} else {
-					r.dnsLogger.ErrorContext(ctx, E.Cause(err, "[", transport.Name(), "]", "exchange failed for <empty query>")) //karing
+					r.dnsLogger.ErrorContext(ctx, E.Cause(err, "exchange failed for <empty query>"))
 				}
 			}
 			if addressLimit && rejected {
