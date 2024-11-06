@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	enableFreeIdleThread bool = true
+	enableFreeIdleThread bool = false
 	ticker               *time.Ticker
 )
 

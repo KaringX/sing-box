@@ -232,6 +232,11 @@ func (w *StackDevice) Events() <-chan wgTun.Event {
 }
 
 func (w *StackDevice) Close() error {
+	select {//karing
+	case <-w.done:
+		return os.ErrClosed
+	default:
+	}
 	close(w.done)
 	close(w.events)
 	w.stack.Close()
