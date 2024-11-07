@@ -72,7 +72,7 @@ func (s *CommandServer) handleURLTest(conn net.Conn) error {
 			outboundToTest := detour
 			outboundTag := outboundToTest.Tag()
 			b.Go(outboundTag, func() (any, error) {
-				t, err := urltest.URLTest(serviceNow.ctx, "", outboundToTest)
+				t, _, err := urltest.URLTest(serviceNow.ctx, "", outboundToTest)
 				if err != nil {
 					//historyStorage.DeleteURLTestHistory(outboundTag)
 					historyStorage.StoreURLTestHistory(outboundTag, &urltest.History{ //karing
