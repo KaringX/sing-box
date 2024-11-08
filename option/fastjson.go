@@ -11,7 +11,6 @@ import (
 	"github.com/sagernet/sing/common/auth"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/valyala/fastjson"
-	"github.com/xtls/xray-core/infra/conf"
 )
 
 func unmarshalFastJSONDuration(interval string) Duration {
@@ -942,8 +941,6 @@ func (h *Outbound) unmarshalFastJSON(fj *fastjson.Value) {
 		h.TUICOptions.unmarshalFastJSON(fj)
 	case C.TypeHysteria2:
 		h.Hysteria2Options.unmarshalFastJSON(fj)
-	case C.TypeXray:
-		h.XrayOptions.unmarshalFastJSON(fj)
 	case C.TypeSelector:
 		h.SelectorOptions.unmarshalFastJSON(fj)
 	case C.TypeURLTest:
@@ -2444,51 +2441,6 @@ func unmarshalFastJSONArrayWireGuardPeer(fj *fastjson.Value) []WireGuardPeer {
 	list[0] = vv
 	return list
 }
-
-// xray.go
-func unmarshalFastJSON(fj *fastjson.Value)*conf.Fragment {
-	if fj == nil || fj.Type() != fastjson.TypeObject {
-		return nil
-	}
-	fragment :=  &conf.Fragment{}
-	fragment.Packets = stringNotNil(fj.GetStringBytes("packets"))
-	fragment.Length = stringNotNil(fj.GetStringBytes("length"))
-	fragment.Interval = stringNotNil(fj.GetStringBytes("interval"))
-	fragment.Host1_header = stringNotNil(fj.GetStringBytes("host1_header"))
-	fragment.Host1_domain = stringNotNil(fj.GetStringBytes("host1_domain"))
-	fragment.Host2_header = stringNotNil(fj.GetStringBytes("host2_header"))
-	fragment.Host2_domain = stringNotNil(fj.GetStringBytes("host2_domain"))
-	return fragment
-}
-
-func (o *XrayOutboundOptions) unmarshalFastJSON(fj *fastjson.Value) {
-	if fj == nil || fj.Type() != fastjson.TypeObject {
-		return
-	}
-
-	o.DialerOptions.unmarshalFastJSON(fj)
-	o.Network = NetworkList(stringNotNil(fj.GetStringBytes("network")))
-	udp_over_tcp := fj.Get("udp_over_tcp")
-	xray_outbound_raw := fj.GetObject("xray_outbound_raw")
-	xray_fragment := fj.Get("xray_fragment")
-	if udp_over_tcp != nil && udp_over_tcp.Type() == fastjson.TypeObject {
-		o.UDPOverTCP = &UDPOverTCPOptions{}
-		o.UDPOverTCP.unmarshalFastJSON(udp_over_tcp)
-	}
-	if xray_outbound_raw != nil {
-		map_data := make(map[string]any)
-		xray_outbound_raw.Visit(func(key []byte, value *fastjson.Value) {
-			map_data[string(key)] = value
-		})
-		o.XrayOutboundJson = &map_data
-	}
-	if xray_fragment != nil && xray_fragment.Type() != fastjson.TypeNull {
-		o.Fragment = unmarshalFastJSON(xray_fragment)
-	}
-	o.LogLevel = stringNotNil(fj.GetStringBytes("xray_loglevel"))
-}
-
-
  
 func unmarshalFastJSONListableNetipPrefix(fj *fastjson.Value) Listable[netip.Prefix] {
 	if fj == nil || fj.Type() == fastjson.TypeNull {

@@ -57,8 +57,7 @@ require ( //hiddify
 	github.com/pion/logging v0.2.2
 	github.com/pion/turn/v3 v3.0.3
 	github.com/pires/go-proxyproto v0.8.0
-	//github.com/sagernet/tfo-go v0.0.0-20230816093905-5a5c285d44a6
-	github.com/xtls/xray-core v1.8.24
+    //github.com/sagernet/tfo-go v0.0.0-20230816093905-5a5c285d44a6
 )
 
 require ( //karing
@@ -68,23 +67,7 @@ require ( //karing
 	github.com/valyala/fastjson v1.6.4
 )
 
-require (
-	github.com/dgryski/go-metro v0.0.0-20211217172704-adc40b04c140 // indirect
-	github.com/francoispqt/gojay v1.2.13 // indirect
-	github.com/ghodss/yaml v1.0.1-0.20220118164431-d8423dcdf344 // indirect
-	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
-	github.com/gorilla/websocket v1.5.3 // indirect
-	github.com/pelletier/go-toml v1.9.5 // indirect
-	github.com/quic-go/quic-go v0.46.0 // indirect
-	github.com/refraction-networking/utls v1.6.7 // indirect
-	github.com/riobard/go-bloom v0.0.0-20200614022211-cdc8013cb5b3 // indirect
-	github.com/seiflotfy/cuckoofilter v0.0.0-20240715131351-a2f2c23f1771 // indirect
-	github.com/v2fly/ss-bloomring v0.0.0-20210312155135-28617310f63e // indirect
-	github.com/wlynxg/anet v0.0.3 // indirect
-	github.com/xtls/reality v0.0.0-20240712055506-48f0b2d5ed6d // indirect
-	go.uber.org/mock v0.4.0 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
-)
+require github.com/wlynxg/anet v0.0.3 // indirect
 
 //go get github.com/KaringX/sing-quic@de3999b0837577a99a891562c776914c8aed3bc1
 //replace github.com/sagernet/sing => github.com/KaringX/sing v0.4.2-0.20240626045944-164e86c6147b
@@ -94,6 +77,7 @@ require (
 //replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.3.3-0.20240808075023-e16a492e752c
 //replace github.com/caddyserver/certmagic => github.com/caddyserver/certmagic v0.20.0
 replace github.com/sagernet/sing => github.com/KaringX/sing v0.4.2-0.20241106071531-3533484124be
+
 //replace github.com/sagernet/gvisor => github.com/sagernet/gvisor v0.0.0-20240428053021-e691de28565f
 
 replace github.com/sagernet/sing-dns => github.com/KaringX/sing-dns v0.2.4-0.20240912090223-8c33bbae1bb5
@@ -101,8 +85,6 @@ replace github.com/sagernet/sing-dns => github.com/KaringX/sing-dns v0.2.4-0.202
 replace github.com/sagernet/sing-quic => github.com/KaringX/sing-quic v0.2.0-beta.12.0.20240912075141-e76855c8573c
 
 replace github.com/sagernet/wireguard-go => github.com/hiddify/wireguard-go v0.0.0-20240727191222-383c1da14ff1 //hiddify
-
-replace github.com/xtls/xray-core => github.com/hiddify/xray-core v0.0.0-20240902024714-0fcb0895bb4b //hiddify
 
 require (
 	github.com/Dreamacro/protobytes v0.0.0-20230911123819-0bbf144b9b9a // indirect
@@ -113,14 +95,12 @@ require (
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
 	github.com/google/btree v1.1.3 // indirect
-	github.com/google/pprof v0.0.0-20241029153458-d1b30febd7db // indirect
 	github.com/hashicorp/yamux v0.1.2 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/josharian/native v1.1.0 // indirect
 	github.com/klauspost/compress v1.17.11 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.8 // indirect
 	github.com/libdns/libdns v0.2.2 // indirect
-	github.com/onsi/ginkgo/v2 v2.21.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.18 // indirect
 	github.com/pion/dtls/v2 v2.2.12 // indirect
 	github.com/pion/randutil v0.1.0 // indirect
