@@ -8,12 +8,12 @@ import (
 )
 
 var (
-	enableFreeIdleThread bool = false
+	enableFreeIdleThread bool = true
 	ticker               *time.Ticker
 )
 
 func init() {
-	ticker = time.NewTicker(time.Second * 5)
+	ticker = time.NewTicker(time.Second * 10)
 	go func() {
 		for {
 			<-ticker.C
