@@ -75,6 +75,32 @@ func (m *Manager) Connections() int {
 	return m.connections.Len()
 }
 
+func (m *Manager) OutboundHasConnections(tag string) bool {
+	hasConn := false;
+	m.connections.Range(func(_ string, value tracker) bool {
+		if info, istrack := value.(*tcpTracker); istrack {
+			for _, data := range info.Chain{
+				if(data == tag){
+					hasConn = true
+					return false;
+				}
+			}
+			return true;
+		}
+		if info, istrack := value.(*udpTracker); istrack {
+			for _, data := range info.Chain{
+				if(data == tag){
+					hasConn = true
+					return false;
+				}
+			}
+			return true;
+		}
+
+		return true
+	})
+	return hasConn
+}
 func (m *Manager) Snapshot(includeConnections bool) *Snapshot { //karing
 	var connections []tracker
 	if includeConnections { //karing

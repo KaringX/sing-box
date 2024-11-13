@@ -8,8 +8,12 @@ github.com/KaringX/sing v0.4.2-0.20241106071531-3533484124be h1:LftbG4zfjMr8NnOj
 github.com/KaringX/sing v0.4.2-0.20241106071531-3533484124be/go.mod h1:ieZHA/+Y9YZfXs2I3WtuwgyCZ6GPsIR7HdKb1SdEnls=
 github.com/KaringX/sing-dns v0.2.4-0.20240912090223-8c33bbae1bb5 h1:6sTBHQmw6ImNdwnzSn/70OqivMTu+wqRp9vGCKzIyQY=
 github.com/KaringX/sing-dns v0.2.4-0.20240912090223-8c33bbae1bb5/go.mod h1:BJpJv6XLnrUbSyIntOT6DG9FW0f4fETmPAHvNjOprLg=
+github.com/KaringX/sing-quic v0.2.0-beta.12.0.20240818222341-caa7813f48bb h1:MFQzpVjBcUGEdnRoIz7KYszqiTEmnnFbPGror3dxXZQ=
+github.com/KaringX/sing-quic v0.2.0-beta.12.0.20240818222341-caa7813f48bb/go.mod h1:YLV1dUDv8Eyp/8e55O/EvfsrwxOgEDVgDCIoPqmDREE=
 github.com/KaringX/sing-quic v0.2.0-beta.12.0.20240912075141-e76855c8573c h1:PRW/EJP9XHsStYZDYtcHTeTt08TzQ/KqEugXRJLYUZc=
 github.com/KaringX/sing-quic v0.2.0-beta.12.0.20240912075141-e76855c8573c/go.mod h1:YLV1dUDv8Eyp/8e55O/EvfsrwxOgEDVgDCIoPqmDREE=
+github.com/KaringX/sing-quic v0.2.0-beta.12.0.20241113071321-878bb1288c7c h1:jGvioQwI9qUgCs34ZfOx7quHE/WIXHJ3uXaN3BLmvYo=
+github.com/KaringX/sing-quic v0.2.0-beta.12.0.20241113071321-878bb1288c7c/go.mod h1:YLV1dUDv8Eyp/8e55O/EvfsrwxOgEDVgDCIoPqmDREE=
 github.com/ajg/form v1.5.1 h1:t9c7v8JUKu/XxOGBU0yjNpaMloxGEJhUkqFRq0ibGeU=
 github.com/ajg/form v1.5.1/go.mod h1:uL1WgH+h2mgNtvBq0339dVnzXdBETtL2LeUXaIv25UY=
 github.com/alitto/pond v1.9.2 h1:9Qb75z/scEZVCoSU+osVmQ0I0JOeLfdTDafrbcJ8CLs=

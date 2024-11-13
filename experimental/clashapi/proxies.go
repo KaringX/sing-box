@@ -204,6 +204,8 @@ func getProxyDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 		}
 
 		proxy := r.Context().Value(CtxKeyProxy).(adapter.Outbound)
+		listener, isListener := proxy.(adapter.InterfaceUpdateListener)
+
 		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*time.Duration(timeout))
 		defer cancel()
 
@@ -223,6 +225,19 @@ func getProxyDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 					Delay: delay,
 					Err:   "", //karing
 				})
+				needUpdate := false
+				switch proxy.Type() {
+				case C.TypeHysteria:needUpdate = true
+				case C.TypeHysteria2:needUpdate = true
+				case C.TypeTUIC:needUpdate = true
+				}
+				if isListener && needUpdate {
+					if(outbound.OutboundHasConnections != nil){
+						if(!outbound.OutboundHasConnections(realTag)){
+							listener.InterfaceUpdated()
+						}
+					}
+				}
 			}
 		}()
 
@@ -239,7 +254,7 @@ func getProxyDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 			render.JSON(w, r, newError(err.Error())) //karing
 			return
 		}
-
+		
 		render.JSON(w, r, render.M{
 			"delay": delay,
 			"delay2": delay2,

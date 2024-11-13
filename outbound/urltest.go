@@ -509,6 +509,7 @@ func (g *URLTestGroup) urlTest(ctx context.Context, force bool) (map[string]urlt
 	checked := make(map[string]bool)
 	var resultAccess sync.Mutex
 	for _, detour := range g.outbounds {
+		listener, isListener := detour.(adapter.InterfaceUpdateListener)
 		tag := detour.Tag()
 		realTag := RealTag(detour)
 		if checked[realTag] {
@@ -543,6 +544,19 @@ func (g *URLTestGroup) urlTest(ctx context.Context, force bool) (map[string]urlt
 					Delay: t,
 					Err:   "",
 				})
+				needUpdate := false
+				switch detour.Type() {
+				case C.TypeHysteria:needUpdate = true
+				case C.TypeHysteria2:needUpdate = true
+				case C.TypeTUIC:needUpdate = true
+				}	
+				if isListener && needUpdate{
+					if(OutboundHasConnections != nil){
+						if(!OutboundHasConnections(realTag)){
+							listener.InterfaceUpdated()
+						}
+					}
+				}
 			}
 			resultAccess.Lock()
 			if err == nil { //karing

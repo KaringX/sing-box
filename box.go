@@ -14,6 +14,7 @@ import (
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/experimental"
 	"github.com/sagernet/sing-box/experimental/cachefile"
+	"github.com/sagernet/sing-box/experimental/clashapi"
 	"github.com/sagernet/sing-box/experimental/libbox/platform"
 	"github.com/sagernet/sing-box/inbound"
 	"github.com/sagernet/sing-box/log"
@@ -188,6 +189,12 @@ func New(options Options) (*Box, error) {
 		clashServer, err := experimental.NewClashServer(ctx, router, logFactory.(log.ObservableFactory), clashAPIOptions)
 		if err != nil {
 			return nil, E.Cause(err, "create clash api server")
+		}
+
+		outbound.OutboundHasConnections = func(tag string) bool { //karing
+			trafficManager := clashServer.(*clashapi.Server).TrafficManager()
+			hasConn := trafficManager.OutboundHasConnections(tag)
+			return hasConn
 		}
 		router.SetClashServer(clashServer)
 		preServices2["clash api"] = clashServer

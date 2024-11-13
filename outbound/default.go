@@ -21,6 +21,12 @@ import (
 	N "github.com/sagernet/sing/common/network"
 )
 
+type OutboundHasConnectionsFunc func(tag string) bool
+
+var (
+	OutboundHasConnections OutboundHasConnectionsFunc
+)
+
 type myOutboundAdapter struct {
 	protocol     string
 	network      []string
