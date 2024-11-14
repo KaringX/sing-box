@@ -66,6 +66,7 @@ func NewTun(ctx context.Context, router adapter.Router, logger log.ContextLogger
 			return nil, E.Cause(err, "parse exclude_uid_range")
 		}
 	}
+	SetTunnelType(options.InterfaceName) //karing
 	return &Tun{
 		tag:            tag,
 		ctx:            ctx,
@@ -155,7 +156,7 @@ func (t *Tun) Start() error {
 	)
 	monitor := taskmonitor.New(t.logger, C.StartTimeout)
 	monitor.Start("open tun interface")
-	tun.TunnelType = t.tunOptions.Name //karing
+	
 	if t.platformInterface != nil {
 		tunInterface, err = t.platformInterface.OpenTun(&t.tunOptions, t.platformOptions)
 	} else {
