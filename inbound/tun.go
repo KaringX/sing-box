@@ -155,6 +155,7 @@ func (t *Tun) Start() error {
 	)
 	monitor := taskmonitor.New(t.logger, C.StartTimeout)
 	monitor.Start("open tun interface")
+	tun.TunnelType = t.tunOptions.Name //karing
 	if t.platformInterface != nil {
 		tunInterface, err = t.platformInterface.OpenTun(&t.tunOptions, t.platformOptions)
 	} else {
