@@ -120,6 +120,9 @@ func (l *observableLogger) log(ctx context.Context, level Level, deep int, args 
 	if level > l.level {
 		return
 	}
+	if(l.writer == nil){ //karing
+		return
+	}
 	_, file, line, _ := runtime.Caller(deep)  // karing
 	tag := " " + path.Base(file) + ":" + strconv.Itoa(line) + " " + l.tag  // karing
 	nowTime := time.Now()

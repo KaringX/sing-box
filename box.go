@@ -259,7 +259,19 @@ func (s *Box) Start() error {
 		s.Close()
 		return err
 	}
-	s.logger.Info("started (", F.Seconds(time.Since(s.createdAt).Seconds()), "s)") //karing
+	for i, in := range s.inbounds {  //karing
+		var tag string
+		if in.Tag() == "" {
+			tag = F.ToString(i)
+		} else {
+			tag = in.Tag()
+		}
+		err = in.Start()
+		if err != nil {
+			return E.Cause(err, "initialize inbound/", in.Type(), "[", tag, "]")
+		}
+	}
+	s.logger.Info("started (", F.Seconds(time.Since(s.createdAt).Seconds()), "s) since ", s.createdAt) //karing
 	return nil
 }
 
@@ -319,7 +331,7 @@ func (s *Box) start() error {
 			return E.Cause(err, "start ", serviceName)
 		}
 	}
-	for i, in := range s.inbounds {
+	/*for i, in := range s.inbounds { //karing
 		var tag string
 		if in.Tag() == "" {
 			tag = F.ToString(i)
@@ -330,7 +342,7 @@ func (s *Box) start() error {
 		if err != nil {
 			return E.Cause(err, "initialize inbound/", in.Type(), "[", tag, "]")
 		}
-	}
+	}*/
 	return s.postStart()
 }
 

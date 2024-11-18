@@ -13,6 +13,7 @@ import (
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/common/conntrack"
 	"github.com/sagernet/sing-box/common/dialer"
+	"github.com/sagernet/sing-box/common/taskmonitor"
 	"github.com/sagernet/sing-box/log"
 	dns "github.com/sagernet/sing-dns"
 	E "github.com/sagernet/sing/common/exceptions"
@@ -149,6 +150,7 @@ func karingRouter(router adapter.Router, logFactory log.Factory) http.Handler {
 	r.Get("/outboundQuery", outboundQuery(router, logFactory))
 	r.Get("/remoteRuleSetRulesCount", remoteRuleSetRulesCount(router, logFactory))
 	r.Get("/resetOutboundConnections", resetOutboundConnections(router, logFactory))
+	r.Get("/currentStartBlockPoint", currentStartBlockPoint(router, logFactory))
 	return r
 }
 
@@ -260,4 +262,12 @@ func resetOutboundConnections(router adapter.Router, logFactory log.Factory) fun
 		render.JSON(w, r, render.M{})
 	}
 }
+func currentStartBlockPoint(router adapter.Router, logFactory log.Factory) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		render.JSON(w, r, render.M{
+			"result": taskmonitor.CurrentMonitorBlockPoint ,
+		})
+	}
+}
+ 
  

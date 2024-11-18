@@ -608,12 +608,12 @@ func (r *Router) Start() error {
 		r.packageManager = packageManager
 	}
 
-	for i, rule := range r.dnsRules {
-		monitor.Start("initialize DNS rule[", i, "]")
+	for _, rule := range r.dnsRules { //karing
+		monitor.Start("initialize DNS rule[", rule, "]") //karing
 		err := rule.Start()
 		monitor.Finish()
 		if err != nil {
-			return E.Cause(err, "initialize DNS rule[", i, "]")
+			return E.Cause(err, "initialize DNS rule[", rule, "]") //karing
 		}
 	}
 	for _, transport := range r.transports {  //karing
@@ -846,12 +846,12 @@ func (r *Router) PostStart() error {
 		r.updateWIFIState()
 		monitor.Finish()
 	}
-	for i, rule := range r.rules {
-		monitor.Start("initialize rule[", i, "]")
+	for _, rule := range r.rules { //karing
+		monitor.Start("initialize rule[", rule, "]") //karing
 		err := rule.Start()
 		monitor.Finish()
 		if err != nil {
-			return E.Cause(err, "initialize rule[", i, "]")
+			return E.Cause(err, "initialize rule[", rule, "]") //karing
 		}
 	}
 	r.started = true
