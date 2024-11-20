@@ -647,6 +647,60 @@ func (r *Router) Start() error {
 			}
 		}()
 	}
+	//karing begin
+	needFindProcess := r.needFindProcess
+	needWIFIState := r.needWIFIState
+
+	for _, ruleSet := range r.ruleSets {
+		metadata := ruleSet.Metadata()
+		if metadata.ContainsProcessRule {
+			needFindProcess = true
+		}
+		if metadata.ContainsWIFIRule {
+			needWIFIState = true
+		}
+	}
+	if C.IsAndroid && r.platformInterface == nil && !r.needPackageManager {
+		if needFindProcess {
+			monitor.Start("start package manager")
+			err := r.packageManager.Start()
+			monitor.Finish()
+			if err != nil {
+				return E.Cause(err, "start package manager")
+			}
+		} else {
+			r.packageManager = nil
+		}
+	}
+	if needFindProcess {
+		if r.platformInterface != nil {
+			r.processSearcher = r.platformInterface
+		} else {
+			monitor.Start("initialize process searcher")
+			searcher, err := process.NewSearcher(process.Config{
+				Logger:         r.logger,
+				PackageManager: r.packageManager,
+			})
+			monitor.Finish()
+			if err != nil {
+				if err != os.ErrInvalid {
+					r.logger.Warn(E.Cause(err, "create process searcher"))
+				}
+			} else {
+				r.processSearcher = searcher
+			}
+		}
+	}
+	if needWIFIState && r.platformInterface != nil {
+		monitor.Start("initialize WIFI state")
+		r.needWIFIState = true
+		r.interfaceMonitor.RegisterCallback(func(_ int) {
+			r.updateWIFIState()
+		})
+		r.updateWIFIState()
+		monitor.Finish()
+	}
+	//karing end
 	return nil
 }
 
@@ -794,7 +848,8 @@ func (r *Router) PostStart() error {
 		}()
 	}
 
-	needFindProcess := r.needFindProcess
+	/*//karing
+	needFindProcess := r.needFindProcess 
 	needWIFIState := r.needWIFIState
 
 	for _, ruleSet := range r.ruleSets {
@@ -845,7 +900,7 @@ func (r *Router) PostStart() error {
 		})
 		r.updateWIFIState()
 		monitor.Finish()
-	}
+	}*/
 	for _, rule := range r.rules { //karing
 		monitor.Start("initialize rule[", rule, "]") //karing
 		err := rule.Start()
@@ -1172,6 +1227,13 @@ func (r *Router) RoutePacketConnection(ctx context.Context, conn N.PacketConn, m
 		conn = bufio.NewNATPacketConn(bufio.NewNetPacketConn(conn), metadata.OriginDestination, metadata.Destination)
 	}
 	return detour.NewPacketConnection(ctx, conn, metadata)
+}
+func (r *Router) FindProcessInfo(ctx context.Context, network string, source netip.AddrPort)(*process.Info, error){ //karing
+	if r.processSearcher != nil {
+		var originDestination netip.AddrPort
+		return  process.FindProcessInfo(r.processSearcher, ctx, network, source, originDestination)
+	}
+	return nil, E.New("processSearcher not impl")
 }
 func (r *Router) GetMatchRuleChain(rule adapter.Rule) []string { //karing
 	var chain []string

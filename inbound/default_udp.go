@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/sagernet/sing-box/adapter"
+	"github.com/sagernet/sing-box/common/uot"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/buf"
 	"github.com/sagernet/sing/common/control"
@@ -30,6 +31,19 @@ func (a *myInboundAdapter) ListenUDP() (net.PacketConn, error) {
 	if err != nil {
 		return nil, err
 	}
+	
+	uotRouter, isUotRouter := a.router.(*uot.Router)  //karing
+	if isUotRouter{ //karing
+		router, isRouter := uotRouter.GetRouter().(adapter.Router)
+		if isRouter {
+			info, err1 := router.FindProcessInfo(a.ctx, N.NetworkTCP, bindAddr.AddrPort())
+			if(err1 == nil){
+				err = E.Cause(err, "port[", bindAddr.AddrPort().Port(), "] is occupied by[", info.ProcessPath, info.PackageName, "] ")
+			}
+		}
+	}
+
+	//hiddify
 	a.udpConn = udpConn.(*net.UDPConn)
 	a.udpAddr = bindAddr
 	a.logger.Info("udp server started at ", udpConn.LocalAddr())

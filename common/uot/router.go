@@ -51,3 +51,7 @@ func (r *Router) RouteConnection(ctx context.Context, conn net.Conn, metadata ad
 func (r *Router) RoutePacketConnection(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext) error {
 	return r.router.RoutePacketConnection(ctx, conn, metadata)
 }
+
+func (r *Router) GetRouter() adapter.ConnectionRouter { //karing
+	return r.router
+}

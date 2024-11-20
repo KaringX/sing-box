@@ -6,8 +6,9 @@ import (
 	"net/netip"
 
 	"github.com/sagernet/sing-box/common/geoip"
-	"github.com/sagernet/sing-dns"
-	"github.com/sagernet/sing-tun"
+	"github.com/sagernet/sing-box/common/process"
+	dns "github.com/sagernet/sing-dns"
+	tun "github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common/control"
 	N "github.com/sagernet/sing/common/network"
 	"github.com/sagernet/sing/service"
@@ -42,6 +43,7 @@ type Router interface {
 	ClearDNSCache()
 
 	LookupTag(ctx context.Context, domain string, strategy dns.DomainStrategy) ([]netip.Addr, string, error) //karing
+	FindProcessInfo(ctx context.Context, network string, source netip.AddrPort)(*process.Info, error)        //karing
 	GetMatchRuleChain(rule Rule) []string                                                                    //karing
 	GetMatchRule(ctx context.Context, metadata *InboundContext) (Rule, string, error)                        //karing
 	GetAssetContent(path string)([]byte, error) //karing

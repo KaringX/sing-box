@@ -5,6 +5,7 @@ import (
 	"net"
 
 	"github.com/sagernet/sing-box/common/proxyproto" //hiddify
+	"github.com/sagernet/sing-box/common/uot"
 
 	"github.com/sagernet/sing-box/adapter"
 	C "github.com/sagernet/sing-box/constant"
@@ -39,6 +40,17 @@ func (a *myInboundAdapter) ListenTCP() (net.Listener, error) {
 	}
 	if err == nil {
 		a.logger.Info("tcp server started at ", tcpListener.Addr())
+	} else { //karing
+		uotRouter, isUotRouter := a.router.(*uot.Router)
+		if isUotRouter{
+			router, isRouter := uotRouter.GetRouter().(adapter.Router)
+			if isRouter {
+				info, err1 := router.FindProcessInfo(a.ctx, N.NetworkTCP, bindAddr.AddrPort())
+				if(err1 == nil){
+					err = E.Cause(err, "port[", bindAddr.AddrPort().Port(), "] is occupied by[", info.ProcessPath, info.PackageName, "] ")
+				}
+			}
+		}
 	}
 	//hiddify
 	if a.listenOptions.ProxyProtocol || a.listenOptions.ProxyProtocolAcceptNoHeader {

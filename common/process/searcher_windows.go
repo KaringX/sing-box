@@ -78,7 +78,7 @@ func findProcessName(network string, ip netip.Addr, srcPort int) (string, error)
 	}
 
 	const (
-		tcpTablePidConn = 4
+		tcpTablePidAll = 5 //TCP_TABLE_OWNER_PID_ALL  //karing
 		udpTablePid     = 1
 	)
 
@@ -87,7 +87,7 @@ func findProcessName(network string, ip netip.Addr, srcPort int) (string, error)
 	switch network {
 	case N.NetworkTCP:
 		fn = procGetExtendedTcpTable.Addr()
-		class = tcpTablePidConn
+		class = tcpTablePidAll //karing
 	case N.NetworkUDP:
 		fn = procGetExtendedUdpTable.Addr()
 		class = udpTablePid
@@ -119,17 +119,19 @@ type searcher struct {
 }
 
 func (s *searcher) Search(b []byte, ip netip.Addr, port uint16) (uint32, error) {
+	if s.tcpState < 0 { //karing
+		return 0, ErrNotFound
+	}
 	n := int(readNativeUint32(b[:4]))
 	itemSize := s.itemSize
 	for i := 0; i < n; i++ {
 		row := b[4+itemSize*i : 4+itemSize*(i+1)]
 
-		if s.tcpState >= 0 {
-			tcpState := readNativeUint32(row[s.tcpState : s.tcpState+4])
-			// MIB_TCP_STATE_ESTAB, only check established connections for TCP
-			if tcpState != 5 {
-				continue
-			}
+		tcpState := readNativeUint32(row[s.tcpState : s.tcpState+4])
+		srcPort := syscall.Ntohs(uint16(readNativeUint32(row[s.port : s.port+4]))) //karing
+		// MIB_TCP_STATE_ESTAB, MIB_TCP_STATE_LISTEN only check listening or established connections for TCP
+		if tcpState != 5 && tcpState != 2{ //karing
+			continue
 		}
 
 		// according to MSDN, only the lower 16 bits of dwLocalPort are used and the port number is in network endian.
@@ -137,7 +139,7 @@ func (s *searcher) Search(b []byte, ip netip.Addr, port uint16) (uint32, error) 
 		//     little endian: [ MSB LSB  0   0  ]   interpret as native uint32 is ((LSB<<8)|MSB)
 		//       big  endian: [  0   0  MSB LSB ]   interpret as native uint32 is ((MSB<<8)|LSB)
 		// so we need an syscall.Ntohs on the lower 16 bits after read the port as native uint32
-		srcPort := syscall.Ntohs(uint16(readNativeUint32(row[s.port : s.port+4])))
+		//srcPort := syscall.Ntohs(uint16(readNativeUint32(row[s.port : s.port+4]))) //karing
 		if srcPort != port {
 			continue
 		}

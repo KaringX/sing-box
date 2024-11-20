@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net"
 	"net/http"
+	"net/netip"
 	"os"
 	"strings"
 	"time"
@@ -147,6 +148,14 @@ func (s *Server) Start() error {
 		s.checkAndDownloadExternalUI()
 		listener, err := net.Listen("tcp", s.httpServer.Addr)
 		if err != nil {
+			bindAddr, err1 := netip.ParseAddrPort(s.httpServer.Addr) //karing 
+			if err1 == nil{ //karing
+				info, err2 := s.router.FindProcessInfo(s.ctx, N.NetworkTCP, bindAddr)
+				if(err2 == nil){
+					return E.Cause(err, "external controller listen error, port[", bindAddr.Port(), "] is occupied by[", info.ProcessPath, info.PackageName, "] ")
+				}
+			}
+
 			return E.Cause(err, "external controller listen error")
 		}
 		s.logger.Info("restful api listening at ", listener.Addr())
