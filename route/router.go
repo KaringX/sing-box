@@ -673,7 +673,7 @@ func (r *Router) Start() error {
 		}
 	}
 	if needFindProcess {
-		if r.platformInterface != nil {
+		if r.platformInterface != nil && !C.IsDarwin{
 			r.processSearcher = r.platformInterface
 		} else {
 			monitor.Start("initialize process searcher")
