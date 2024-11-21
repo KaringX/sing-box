@@ -6,14 +6,15 @@ import (
 	"net/http"
 	"net/netip"
 	"os"
+	"sort"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/common/conntrack"
+	D "github.com/sagernet/sing-box/common/debug"
 	"github.com/sagernet/sing-box/common/dialer"
-	"github.com/sagernet/sing-box/common/taskmonitor"
 	"github.com/sagernet/sing-box/log"
 	dns "github.com/sagernet/sing-dns"
 	E "github.com/sagernet/sing/common/exceptions"
@@ -150,7 +151,7 @@ func karingRouter(router adapter.Router, logFactory log.Factory) http.Handler {
 	r.Get("/outboundQuery", outboundQuery(router, logFactory))
 	r.Get("/remoteRuleSetRulesCount", remoteRuleSetRulesCount(router, logFactory))
 	r.Get("/resetOutboundConnections", resetOutboundConnections(router, logFactory))
-	r.Get("/currentStartBlockPoint", currentStartBlockPoint(router, logFactory))
+	r.Get("/mainStack", mainStack(router, logFactory))
 	return r
 }
 
@@ -262,10 +263,20 @@ func resetOutboundConnections(router adapter.Router, logFactory log.Factory) fun
 		render.JSON(w, r, render.M{})
 	}
 }
-func currentStartBlockPoint(router adapter.Router, logFactory log.Factory) func(w http.ResponseWriter, r *http.Request) {
+func mainStack(router adapter.Router, logFactory log.Factory) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		stacks := D.Stacks(true, true)
+		keys := []int{}
+		for key := range stacks {
+			keys = append(keys, key)
+		}
+		sort.Ints(keys)
+		stack := ""
+		if(len(keys) > 0){
+			stack = stacks[keys[0]]
+		}
 		render.JSON(w, r, render.M{
-			"result": taskmonitor.CurrentMonitorBlockPoint ,
+			"result": stack,
 		})
 	}
 }
