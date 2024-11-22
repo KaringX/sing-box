@@ -173,12 +173,18 @@ func (h *TUIC) NewPacketConnection(ctx context.Context, conn N.PacketConn, metad
 }
 
 func (h *TUIC) InterfaceUpdated() {
+	if h.client == nil { //karing
+		return
+	}
 	_ = h.client.CloseWithError(E.New("network changed"))
 }
 
 func (h *TUIC) Close() error {
 	if h.hforwarder != nil { //hiddify
 		h.hforwarder.Close()
+	}
+	if h.client == nil { //karing
+		return nil
 	}
 	return h.client.CloseWithError(os.ErrClosed)
 }

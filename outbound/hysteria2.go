@@ -150,12 +150,18 @@ func (h *Hysteria2) NewPacketConnection(ctx context.Context, conn N.PacketConn, 
 }
 
 func (h *Hysteria2) InterfaceUpdated() {
+	if h.client == nil { //karing
+		return
+	}
 	h.client.CloseWithError(E.New("network changed"))
 }
 
 func (h *Hysteria2) Close() error {
 	if h.hforwarder != nil { //hiddify
 		h.hforwarder.Close()
+	}
+	if h.client == nil { //karing
+		return nil
 	}
 	return h.client.CloseWithError(os.ErrClosed)
 }

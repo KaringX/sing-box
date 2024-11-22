@@ -163,10 +163,16 @@ func (h *Hysteria) NewPacketConnection(ctx context.Context, conn N.PacketConn, m
 }
 
 func (h *Hysteria) InterfaceUpdated() {
+	if h.client == nil { //karing
+		return
+	}
 	h.client.CloseWithError(E.New("network changed"))
 }
 
 func (h *Hysteria) Close() error {
+	if h.client == nil { //karing
+		return nil
+	}
 	return h.client.CloseWithError(os.ErrClosed)
 }
 func (h *Hysteria) SetParseErr(err error){ //karing
