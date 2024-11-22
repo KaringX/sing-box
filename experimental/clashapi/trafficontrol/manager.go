@@ -120,13 +120,13 @@ func (m *Manager) Snapshot(includeConnections bool) *Snapshot { //karing
 		DownloadTotal:       m.downloadTotal.Load(),
 		UploadTotalDirect:   m.uploadTotalDirect.Load(),   //karing
 		DownloadSpeed:       m.downloadBlip.Load(),        //karing
-	    UploadSpeed:         m.uploadBlip.Load(),          //karing
+		UploadSpeed:         m.uploadBlip.Load(),          //karing
 		DownloadTotalDirect: m.downloadTotalDirect.Load(), //karing
 		ConnectionsOut:      int32(conntrack.Count()),     //karing
 		ConnectionsIn:       int32(m.connections.Len()),   //karing
-		Goroutines:          int32(runtime.NumGoroutine()),
+		Goroutines:          int32(runtime.NumGoroutine()),//karing
 		Connections:         connections,
-		ThreadCount:         int32(gofree.ThreadNum()),
+		ThreadCount:         int32(gofree.ThreadNum()),    //karing
 		Memory:              m.memory,
 	}
 }

@@ -30,7 +30,7 @@ type Trojan struct {
 	multiplexDialer *mux.Client
 	tlsConfig       tls.Config
 	transport       adapter.V2RayClientTransport
-	parseErr         error                //karing
+	parseErr        error                //karing
 }
 
 func NewTrojan(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.TrojanOutboundOptions) (*Trojan, error) {

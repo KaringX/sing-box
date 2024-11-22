@@ -851,7 +851,6 @@ func (r *Router) PostStart() error {
 	/*//karing
 	needFindProcess := r.needFindProcess 
 	needWIFIState := r.needWIFIState
-
 	for _, ruleSet := range r.ruleSets {
 		metadata := ruleSet.Metadata()
 		if metadata.ContainsProcessRule {
