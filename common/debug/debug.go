@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 )
+var MainGoId int
 func Stacks(all bool, includeStackBody bool) map[int] string {
     buf := make([]byte, 2048)
     for {

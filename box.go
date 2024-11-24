@@ -10,6 +10,7 @@ import (
 
 	"github.com/getsentry/sentry-go"
 	"github.com/sagernet/sing-box/adapter"
+	D "github.com/sagernet/sing-box/common/debug"
 	"github.com/sagernet/sing-box/common/taskmonitor"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/experimental"
@@ -52,6 +53,13 @@ type Options struct {
 }
 
 func New(options Options) (*Box, error) {
+	stacks := D.Stacks(false, false) //karing
+	if len(stacks) > 0 {  //karing
+		for key := range stacks {
+			D.MainGoId = key
+			break
+		}
+	}
 	quitSig := make(chan struct{}) //karing
 	createdAt := time.Now()
 	ctx := options.Context

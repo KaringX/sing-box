@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/netip"
 	"os"
-	"sort"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -266,16 +265,13 @@ func resetOutboundConnections(router adapter.Router, logFactory log.Factory) fun
 func mainStack(router adapter.Router, logFactory log.Factory) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		stacks := D.Stacks(true, true)
-		keys := []int{}
-		for key := range stacks {
-			keys = append(keys, key)
-		}
-		sort.Ints(keys)
+		stackBody, ok := stacks[D.MainGoId]
 		stack := ""
-		if(len(keys) > 0){
-			stack = stacks[keys[0]]
+		if ok {
+			stack = stackBody
 		}
 		render.JSON(w, r, render.M{
+			"mainGoId": D.MainGoId,
 			"result": stack,
 		})
 	}
