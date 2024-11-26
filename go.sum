@@ -6,6 +6,8 @@ github.com/Dreamacro/protobytes v0.0.0-20230911123819-0bbf144b9b9a h1:1AtE37gqot
 github.com/Dreamacro/protobytes v0.0.0-20230911123819-0bbf144b9b9a/go.mod h1:ESt8LLs50hyrYzfb7NRh3cDm8W1/r/9+CEAKWV+gc38=
 github.com/KaringX/sing v0.4.2-0.20241106071531-3533484124be h1:LftbG4zfjMr8NnOj9aMIbdfJ2ePrzwREj5O+biITtWY=
 github.com/KaringX/sing v0.4.2-0.20241106071531-3533484124be/go.mod h1:ieZHA/+Y9YZfXs2I3WtuwgyCZ6GPsIR7HdKb1SdEnls=
+github.com/KaringX/sing v0.4.2-0.20241126034411-6d198024edfc h1:V2fy+zH7FmVe0QEhQaX9hNwbo5n4psh+vgfe+s67TTE=
+github.com/KaringX/sing v0.4.2-0.20241126034411-6d198024edfc/go.mod h1:ieZHA/+Y9YZfXs2I3WtuwgyCZ6GPsIR7HdKb1SdEnls=
 github.com/KaringX/sing-dns v0.2.4-0.20240912090223-8c33bbae1bb5 h1:6sTBHQmw6ImNdwnzSn/70OqivMTu+wqRp9vGCKzIyQY=
 github.com/KaringX/sing-dns v0.2.4-0.20240912090223-8c33bbae1bb5/go.mod h1:BJpJv6XLnrUbSyIntOT6DG9FW0f4fETmPAHvNjOprLg=
 github.com/KaringX/sing-quic v0.2.0-beta.12.0.20240818222341-caa7813f48bb h1:MFQzpVjBcUGEdnRoIz7KYszqiTEmnnFbPGror3dxXZQ=

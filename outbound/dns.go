@@ -106,7 +106,7 @@ func (d *DNS) NewPacketConnection(ctx context.Context, conn N.PacketConn, metada
 		reader, counters = N.UnwrapCountPacketReader(reader, counters)
 		if cachedReader, isCached := reader.(N.CachedPacketReader); isCached {
 			packet := cachedReader.ReadCachedPacket()
-			if packet != nil {
+			if packet != nil && packet.Buffer != nil{ //karing
 				cachedPackets = append(cachedPackets, packet)
 				continue
 			}

@@ -76,7 +76,7 @@ require github.com/wlynxg/anet v0.0.3 // indirect
 //replace github.com/sagernet/sing-dns => ../../KaringX/sing-dns
 //replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.3.3-0.20240808075023-e16a492e752c
 //replace github.com/caddyserver/certmagic => github.com/caddyserver/certmagic v0.20.0
-replace github.com/sagernet/sing => github.com/KaringX/sing v0.4.2-0.20241106071531-3533484124be
+replace github.com/sagernet/sing => github.com/KaringX/sing v0.4.2-0.20241126034411-6d198024edfc
 
 //replace github.com/sagernet/gvisor => github.com/sagernet/gvisor v0.0.0-20240428053021-e691de28565f
 
