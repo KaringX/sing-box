@@ -29,25 +29,24 @@ func (a *myInboundAdapter) ListenUDP() (net.PacketConn, error) {
 	}
 	udpConn, err := lc.ListenPacket(a.ctx, M.NetworkFromNetAddr(N.NetworkUDP, bindAddr.Addr), bindAddr.String())
 	if err != nil {
+		uotRouter, isUotRouter := a.router.(*uot.Router)  //karing
+		if isUotRouter{ //karing
+			router, isRouter := uotRouter.GetRouter().(adapter.Router)
+			if isRouter {
+				info, err1 := router.FindProcessInfo(a.ctx, N.NetworkTCP, bindAddr.AddrPort())
+				if(err1 == nil){
+					err = E.Cause(err, "port[", bindAddr.AddrPort().Port(), "] is occupied by[", info.ProcessPath, info.PackageName, "] ")
+				}
+			}
+		}
 		return nil, err
 	}
 	
-	uotRouter, isUotRouter := a.router.(*uot.Router)  //karing
-	if isUotRouter{ //karing
-		router, isRouter := uotRouter.GetRouter().(adapter.Router)
-		if isRouter {
-			info, err1 := router.FindProcessInfo(a.ctx, N.NetworkTCP, bindAddr.AddrPort())
-			if(err1 == nil){
-				err = E.Cause(err, "port[", bindAddr.AddrPort().Port(), "] is occupied by[", info.ProcessPath, info.PackageName, "] ")
-			}
-		}
-	}
-
 	//hiddify
 	a.udpConn = udpConn.(*net.UDPConn)
 	a.udpAddr = bindAddr
 	a.logger.Info("udp server started at ", udpConn.LocalAddr())
-	return udpConn, err
+	return udpConn, nil
 }
 
 func (a *myInboundAdapter) loopUDPIn() {
