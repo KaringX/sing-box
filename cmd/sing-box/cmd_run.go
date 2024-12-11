@@ -208,6 +208,10 @@ func run() error {
 				cancel()
 				closeCtx, closed := context.WithCancel(context.Background())
 				go closeMonitor(closeCtx)
+				go func() {
+					time.Sleep(3 * time.Second)
+					os.Exit(2)
+				}()
 				instance.Close()
 				closed()
 				return nil
