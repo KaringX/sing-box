@@ -11,7 +11,7 @@ import (
 )
 
 type Manager struct {
-	StartTime           time.Time //karing
+	startTime           time.Time //karing
 	uploadTemp          atomic.Int64
 	downloadTemp        atomic.Int64
 	uploadBlip          atomic.Int64
@@ -30,7 +30,7 @@ type Manager struct {
 
 func NewManager() *Manager {
 	manager := &Manager{
-		StartTime: time.Now(), //karing
+		startTime: time.Now(), //karing
 		ticker:    time.NewTicker(time.Second),
 		done:      make(chan struct{}),
 		// process: &process.Process{Pid: int32(os.Getpid())},
@@ -115,7 +115,7 @@ func (m *Manager) Snapshot(includeConnections bool) *Snapshot { //karing
 	m.memory = memStats.StackInuse + memStats.HeapInuse + memStats.HeapIdle - memStats.HeapReleased
 
 	return &Snapshot{
-		StartTime:           m.StartTime, //karing
+		StartTime:           m.startTime, //karing
 		UploadTotal:         m.uploadTotal.Load(),
 		DownloadTotal:       m.downloadTotal.Load(),
 		UploadTotalDirect:   m.uploadTotalDirect.Load(),   //karing
@@ -161,6 +161,7 @@ func (m *Manager) handle() {
 func (m *Manager) Close() error {
 	m.ticker.Stop()
 	close(m.done)
+	m.startTime = time.Now()
 	m.ResetStatistic()  //karing
 	m.connections.Clear()  //karing
 	return nil
