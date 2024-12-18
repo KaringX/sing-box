@@ -307,7 +307,7 @@ func (r *Router) LookupTag(ctx context.Context, domain string, strategy dns.Doma
 			} else if errors.Is(err, dns.ErrResponseRejected) {
 				r.dnsLogger.DebugContext(ctx, "response rejected for ", domain)
 			} else {
-				r.dnsLogger.ErrorContext(ctx, E.Cause(err, "lookup failed for ", domain))
+				r.dnsLogger.WarnContext(ctx, E.Cause(err, "lookup failed for ", domain)) //karing
 			}
 		} else if len(responseAddrs) == 0 {
 			r.dnsLogger.ErrorContext(ctx, "lookup failed for ", domain, ": empty result")
