@@ -778,6 +778,13 @@ func (r *Router) Close() error {
 		monitor.Finish()
 	}
 	//karing
+	r.processSearcher = nil
+	r.interfaceMonitor = nil
+	r.networkMonitor = nil
+	r.packageManager = nil
+	r.powerListener = nil
+	r.timeService = nil
+	r.fakeIPStore = nil
 	r.inboundByTag = make(map[string]adapter.Inbound) 
 	r.outbounds = make([]adapter.Outbound, 0)
 	r.outboundByTag =make(map[string]adapter.Outbound) 

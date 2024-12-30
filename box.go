@@ -396,13 +396,7 @@ func (s *Box) Close() error {
 		})
 		monitor.Finish()
 	}
-	for i, out := range s.outbounds {
-		monitor.Start("close outbound/", out.Type(), "[", out.Tag(), "]")  //karing
-		errors = E.Append(errors, common.Close(out), func(err error) error {
-			return E.Cause(err, "close outbound/", out.Type(), "[", i, "]")
-		})
-		monitor.Finish()
-	}
+	//karing
 	monitor.Start("close router")
 	if err := common.Close(s.router); err != nil {
 		errors = E.Append(errors, err, func(err error) error {
@@ -410,6 +404,14 @@ func (s *Box) Close() error {
 		})
 	}
 	monitor.Finish()
+	for i, out := range s.outbounds {
+		monitor.Start("close outbound/", out.Type(), "[", out.Tag(), "]")  //karing
+		errors = E.Append(errors, common.Close(out), func(err error) error {
+			return E.Cause(err, "close outbound/", out.Type(), "[", i, "]")
+		})
+		monitor.Finish()
+	}
+	//karing
 	for serviceName, service := range s.preServices1 {
 		monitor.Start("close ", serviceName)
 		errors = E.Append(errors, service.Close(), func(err error) error {
