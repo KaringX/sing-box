@@ -233,7 +233,6 @@ func New(options Options) (*Box, error) {
 func (s *Box) PreStart() error {
 	err := s.preStart()
 	if err != nil {
-		sentry.CaptureException(err) //karing
 		// TODO: remove catch error
 		defer func() {
 			v := recover()
@@ -374,6 +373,7 @@ func (s *Box) postStart() error {
 }
 
 func (s *Box) Close() error {
+	begin := time.Now()
 	select {
 	case <-s.done:
 		return os.ErrClosed
@@ -426,6 +426,7 @@ func (s *Box) Close() error {
 		})
 		monitor.Finish()
 	}
+	s.logger.Info("closed (", F.Seconds(time.Since(begin).Seconds()), "s) since ", begin) //karing
 	if err := common.Close(s.logFactory); err != nil {
 		errors = E.Append(errors, err, func(err error) error {
 			return E.Cause(err, "close logger")
