@@ -432,6 +432,9 @@ func (s *Box) Close() error {
 		})
 	}
 	close(s.QuitSig) //karing
+	if errors != nil { //karing
+		sentry.CaptureException(errors)
+	}
 	return errors
 }
 

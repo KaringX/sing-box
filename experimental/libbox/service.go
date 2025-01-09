@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	sentry "github.com/getsentry/sentry-go"
 	box "github.com/sagernet/sing-box"
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/common/process"
@@ -42,6 +43,7 @@ type BoxService struct {
 func NewService(configContent string, platformInterface PlatformInterface) (*BoxService, error) {
 	options, err := parseConfig(configContent)
 	if err != nil {
+		sentry.CaptureException(err) //karing
 		return nil, err
 	}
 	runtimeDebug.FreeOSMemory()
@@ -58,6 +60,7 @@ func NewService(configContent string, platformInterface PlatformInterface) (*Box
 	})
 	if err != nil {
 		cancel()
+		sentry.CaptureException(err) //karing
 		return nil, E.Cause(err, "create service")
 	}
 	runtimeDebug.FreeOSMemory()
