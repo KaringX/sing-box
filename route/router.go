@@ -787,7 +787,7 @@ func (r *Router) Close() error {
 	r.fakeIPStore = nil
 	r.inboundByTag = make(map[string]adapter.Inbound) 
 	r.outbounds = make([]adapter.Outbound, 0)
-	r.outboundByTag =make(map[string]adapter.Outbound) 
+	r.outboundByTag = make(map[string]adapter.Outbound) 
 	r.rules = make([]adapter.Rule, 0)
 	r.geositeCache = make(map[string]adapter.Rule)
 	r.staticDns = make(map[string]StaticDNSEntry)
