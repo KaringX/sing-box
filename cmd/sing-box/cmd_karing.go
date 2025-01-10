@@ -12,6 +12,7 @@ import (
 	"github.com/sagernet/sing-box/experimental/libbox"
 	_ "github.com/sagernet/sing-box/include"
 	"github.com/sagernet/sing-box/log"
+	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/service/filemanager"
 	"github.com/valyala/fastjson"
 
@@ -95,6 +96,9 @@ func setUpDir() error {
 	work_dir := stringNotNil(value.GetStringBytes("work_dir"))
 	cache_dir := stringNotNil(value.GetStringBytes("cache_dir"))
 	core_path := stringNotNil(value.GetStringBytes("core_path"))
+	if len(core_path) == 0 {
+		return E.New(serviceConfigPath + " : core_path is empty")
+	}
 	libbox.Setup(base_dir, work_dir, cache_dir, false)
 	configPaths = append(configPaths, core_path)
 	return nil
