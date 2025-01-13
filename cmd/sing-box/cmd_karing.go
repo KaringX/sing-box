@@ -31,7 +31,7 @@ var (
 
 var mainCommand = &cobra.Command{
 	Use:              "karing",
-	PersistentPreRun: preRun,
+	PersistentPreRunE: preRun,
 }
 
 func init() {
@@ -43,11 +43,17 @@ func init() {
 	mainCommand.PersistentFlags().IntVarP(&servicePort, "service-port", "p", 0, "service-port")
 }
 
-func preRun(cmd *cobra.Command, args []string) {
-	libbox.SentryInit(serviceConfigPath)
-	err := setUpDir()
+func preRun(cmd *cobra.Command, args []string) error{
+	content, err := libbox.SentryInit(serviceConfigPath)
+	if(content == nil){
+		return err
+	}
+	if len(content) == 0{
+		return E.New(serviceConfigPath + " : file content is empty")
+	}
+	err = setUpDir(content)
 	if(err != nil){
-		log.Fatal(err)
+		return err
 	}
 	globalCtx = context.Background()
 	sudoUser := os.Getenv("SUDO_USER")
@@ -73,19 +79,16 @@ func preRun(cmd *cobra.Command, args []string) {
 		}
 		err = os.Chdir(workingDir)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 	}
 	if len(configPaths) == 0 && len(configDirectories) == 0 {
 		configPaths = append(configPaths, "config.json")
 	}
+	return nil
 }
 
-func setUpDir() error {
-	content, err := os.ReadFile(serviceConfigPath)
-	if err != nil {
-		return err
-	}
+func setUpDir(content []byte) error {
 	var parser fastjson.Parser
 	value, err1 := parser.ParseBytes(content)
 	if err1 != nil {

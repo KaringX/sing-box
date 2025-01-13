@@ -1,13 +1,15 @@
 // karing
 package libbox
 
-type SentryInitCallbackFunc func(configPath string)
+import "os"
+
+type SentryInitCallbackFunc func(configPath string) ([]byte, error)
 
 var (
 	SentryInitCallback SentryInitCallbackFunc
 	SentryDsn          string
 	SentryDid          string
-	SentryVersion      string
+	SentryRelease      string
 )
 
 func SentryGetDsn() string {
@@ -18,13 +20,13 @@ func SentryGetDid() string {
 	return SentryDid
 }
 
-func SentryGetVersion() string {
-	return SentryVersion
+func SentryGetRelease() string {
+	return SentryRelease
 }
 
-func SentryInit(configPath string) {
+func SentryInit(configPath string) ([]byte, error){
 	if SentryInitCallback == nil {
-		return
+		return os.ReadFile(configPath)
 	}
-	SentryInitCallback(configPath)
+	return SentryInitCallback(configPath)
 }
