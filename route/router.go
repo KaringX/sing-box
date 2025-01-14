@@ -1303,12 +1303,12 @@ func (r *Router) match0(ctx context.Context, metadata *adapter.InboundContext, d
 		}
 		processInfo, err := process.FindProcessInfo(r.processSearcher, ctx, metadata.Network, metadata.Source.AddrPort(), originDestination)
 		if err != nil {
-			r.logger.InfoContext(ctx, "failed to search process: ", err)
+			r.logger.InfoContext(ctx, "failed to search process: ", err, ",network: ", metadata.Network, ",src: ", metadata.Source.AddrPort(), ",dst: ", metadata.Destination, ",via: ", originDestination) //karing
 		} else {
 			if processInfo.ProcessPath != "" {
-				r.logger.InfoContext(ctx, "found process path: ", processInfo.ProcessPath)
+				r.logger.InfoContext(ctx, "found process path: ", processInfo.ProcessPath, ",network: ", metadata.Network, ",src: ", metadata.Source.AddrPort(), ",dst: ", metadata.Destination, ",via: ", originDestination) //karing
 			} else if processInfo.PackageName != "" {
-				r.logger.InfoContext(ctx, "found package name: ", processInfo.PackageName)
+				r.logger.InfoContext(ctx, "found package name: ", processInfo.PackageName, ",network: ", metadata.Network, ",src: ", metadata.Source.AddrPort(), ",dst: ", metadata.Destination, ",via: ", originDestination) //karing
 			} else if processInfo.UserId != -1 {
 				if /*needUserName &&*/ true {
 					osUser, _ := user.LookupId(F.ToString(processInfo.UserId))
@@ -1329,7 +1329,7 @@ func (r *Router) match0(ctx context.Context, metadata *adapter.InboundContext, d
 		metadata.ResetRuleCache()
 		if rule.Match(metadata) {
 			detour := rule.Outbound()
-			r.logger.DebugContext(ctx, metadata.Destination.String(), " match[", i, "] ", rule.String(), " => ", detour) //karing
+			r.logger.DebugContext(ctx, metadata.Destination.String(), " match[", i, "] ", rule.String(), " => ", detour, ",network: ", metadata.Network, ",src: ", metadata.Source.AddrPort()) //karing
 			if outbound, loaded := r.Outbound(detour); loaded {
 				return rule, outbound
 			}
