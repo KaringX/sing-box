@@ -145,6 +145,9 @@ func (s *URLTest) UpdateCheck() { //karing
 	s.group.performUpdateCheck()
 }
 
+func (s *URLTest) Checking() bool { //karing
+	return s.group.Checking()
+}
 func (s *URLTest) CheckOutbounds() {
 	s.group.CheckOutbounds(true)
 }
@@ -186,40 +189,47 @@ func (s *URLTest) DialContext(ctx context.Context, network string, destination M
 	}
 	//s.group.history.DeleteURLTestHistory(outbound.Tag())
 
-	if !s.group.pauseManager.IsNetworkPaused() { //karing
-		tag := "[" + outbound.Tag() + "] "
-		s.logger.ErrorContext(ctx, tag, err)
+	//karing
+	tag := "[" + outbound.Tag() + "] "
+	s.logger.ErrorContext(ctx, tag, err)
 
-		if outbound == s.group.selectedOutboundUDP {
-			if s.group.udpConnectionFailureCount.IncrementConditionReset(MinFailureToReset) {
-				s.logger.Warn("UDP URLTest Outbound ", s.tag, " (", outboundToString(s.group.selectedOutboundUDP), ") failed to connect for ", MinFailureToReset, " times==> test proxies again!")
-				s.group.history.StoreURLTestHistory(realTag, &urltest.History{
-					Time:  time.Now(),
-					Delay: 0,
-					Err:   err.Error(),
-				})
-				s.group.selectedOutboundUDP = nil
-				s.group.performUpdateCheck()
-				if outbound == s.group.selectedOutboundUDP {
+	if outbound == s.group.selectedOutboundUDP {
+		s.logger.Warn("UDP URLTest dial ", s.tag, " (", outboundToString(s.group.selectedOutboundUDP), ") failed to connect for ", s.group.udpConnectionFailureCount.count, " times")
+		if s.group.udpConnectionFailureCount.IncrementConditionReset(MinFailureToReset) {
+			s.group.history.StoreURLTestHistory(realTag, &urltest.History{
+				Time:  time.Now(),
+				Delay: 0,
+				Err:   err.Error(),
+			})
+			s.group.selectedOutboundUDP = nil
+			s.group.performUpdateCheck()
+			if !s.group.pauseManager.IsNetworkPaused() {
+				if outbound == s.group.selectedOutboundUDP && !s.Checking() {
+					s.logger.Warn("UDP URLTest dial ", s.tag, " (", outboundToString(s.group.selectedOutboundUDP), ") failed to connect for ", MinFailureToReset, " times -> recheck")
 					s.CheckOutbounds()
 				}
 			}
-		} else if outbound == s.group.selectedOutboundTCP {
-			if s.group.tcpConnectionFailureCount.IncrementConditionReset(MinFailureToReset) {
-				s.logger.Warn("TCP URLTest Outbound ", s.tag, " (", outboundToString(s.group.selectedOutboundTCP), ") failed to connect for ", MinFailureToReset, " times==> test proxies again!")
-				s.group.history.StoreURLTestHistory(realTag, &urltest.History{
-					Time:  time.Now(),
-					Delay: 0,
-					Err:   err.Error(),
-				})
-				s.group.selectedOutboundTCP = nil
-				s.group.performUpdateCheck()
-				if outbound == s.group.selectedOutboundTCP {
+		}
+	} else if outbound == s.group.selectedOutboundTCP {
+		s.logger.Warn("TCP URLTest dial ", s.tag, " (", outboundToString(s.group.selectedOutboundTCP), ") failed to connect for ", s.group.tcpConnectionFailureCount.count, " times")
+		if s.group.tcpConnectionFailureCount.IncrementConditionReset(MinFailureToReset) {
+			
+			s.group.history.StoreURLTestHistory(realTag, &urltest.History{
+				Time:  time.Now(),
+				Delay: 0,
+				Err:   err.Error(),
+			})
+			s.group.selectedOutboundTCP = nil
+			s.group.performUpdateCheck()
+			if !s.group.pauseManager.IsNetworkPaused() {
+				if outbound == s.group.selectedOutboundTCP && !s.Checking(){
+					s.logger.Warn("TCP URLTest dial ", s.tag, " (", outboundToString(s.group.selectedOutboundTCP), ") failed to connect for ", MinFailureToReset, " times -> recheck")
 					s.CheckOutbounds()
 				}
 			}
 		}
 	}
+	//karing 
 
 	return nil, err
 }
@@ -250,17 +260,22 @@ func (s *URLTest) ListenPacket(ctx context.Context, destination M.Socksaddr) (ne
 		Err:   err.Error(),
 	})
 	//s.group.history.DeleteURLTestHistory(outbound.Tag())
-	if !s.group.pauseManager.IsNetworkPaused() { //karing
-		if outbound == s.group.selectedOutboundUDP {
-			if s.group.udpConnectionFailureCount.IncrementConditionReset(MinFailureToReset) {
-				s.group.selectedOutboundUDP = nil
-				s.group.performUpdateCheck()
-				if outbound == s.group.selectedOutboundUDP {
+	//karing
+	if outbound == s.group.selectedOutboundUDP {
+		s.logger.Warn("TCP URLTest listen ", s.tag, " (", outboundToString(s.group.selectedOutboundUDP), ") failed to connect for ", s.group.udpConnectionFailureCount.count, " times")
+		if s.group.udpConnectionFailureCount.IncrementConditionReset(MinFailureToReset) {
+			s.group.selectedOutboundUDP = nil
+			s.group.performUpdateCheck()
+			if !s.group.pauseManager.IsNetworkPaused() { 
+				if outbound == s.group.selectedOutboundUDP && !s.Checking(){
+					s.logger.Warn("UDP URLTest listen ", s.tag, " (", outboundToString(s.group.selectedOutboundUDP), ") failed to connect for ", MinFailureToReset, " times -> recheck")
 					s.CheckOutbounds()
 				}
 			}
 		}
 	}
+	//karing
+
 	return nil, err
 }
 
@@ -483,7 +498,9 @@ func (g *URLTestGroup) loopCheck() {
 		g.CheckOutbounds(false)
 	}
 }
-
+func (g *URLTestGroup) Checking() bool { //karing
+	return g.checking.Load()
+}
 func (g *URLTestGroup) CheckOutbounds(force bool) {
 	_, _ = g.urlTest(g.ctx, force)
 }
@@ -568,7 +585,7 @@ func (g *URLTestGroup) urlTest(ctx context.Context, force bool) (map[string]urlt
 			//return nil, nil//karing
 		})
 		count++            //karing
-		if count%20 == 0 { //karing
+		if count%20 == 0 || count == len(g.outbounds) { //karing
 			group.Wait()           //karing
 			g.performUpdateCheck() //karing
 		} //karing
