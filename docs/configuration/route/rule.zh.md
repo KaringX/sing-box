@@ -1,12 +1,20 @@
 ---
-icon: material/alert-decagram
+icon: material/new-box
 ---
+
+!!! quote "sing-box 1.11.0 中的更改"
+
+    :material-plus: [action](#action)  
+    :material-alert: [outbound](#outbound)  
+    :material-plus: [network_type](#network_type)  
+    :material-plus: [network_is_expensive](#network_is_expensive)  
+    :material-plus: [network_is_constrained](#network_is_constrained)
 
 !!! quote "sing-box 1.10.0 中的更改"
 
     :material-plus: [client](#client)  
     :material-delete-clock: [rule_set_ipcidr_match_source](#rule_set_ipcidr_match_source)  
-    :material-plus: [rule_set_ip_cidr_match_source](#rule_set_ip_cidr_match_source)
+    :material-plus: [process_path_regex](#process_path_regex)
 
 !!! quote "sing-box 1.8.0 中的更改"
 
@@ -99,6 +107,9 @@ icon: material/alert-decagram
         "process_path": [
           "/usr/bin/curl"
         ],
+        "process_path_regex": [
+          "^/usr/bin/.+"
+        ],
         "package_name": [
           "com.termux"
         ],
@@ -109,6 +120,11 @@ icon: material/alert-decagram
           1000
         ],
         "clash_mode": "direct",
+        "network_type": [
+          "wifi"
+        ],
+        "network_is_expensive": false,
+        "network_is_constrained": false,
         "wifi_ssid": [
           "My WIFI"
         ],
@@ -123,6 +139,7 @@ icon: material/alert-decagram
         "rule_set_ipcidr_match_source": false,
         "rule_set_ip_cidr_match_source": false,
         "invert": false,
+        "action": "route",
         "outbound": "direct"
       },
       {
@@ -130,6 +147,7 @@ icon: material/alert-decagram
         "mode": "and",
         "rules": [],
         "invert": false,
+        "action": "route",
         "outbound": "direct"
       }
     ]
@@ -142,7 +160,7 @@ icon: material/alert-decagram
 
     当内容只有一项时，可以忽略 JSON 数组 [] 标签。
 
-### Default Fields
+### 默认字段
 
 !!! note ""
 
@@ -275,6 +293,16 @@ icon: material/alert-decagram
 
 匹配进程路径。
 
+#### process_path_regex
+
+!!! question "自 sing-box 1.10.0 起"
+
+!!! quote ""
+
+    仅支持 Linux、Windows 和 macOS.
+
+使用正则表达式匹配进程路径。
+
 #### package_name
 
 匹配 Android 应用包名。
@@ -298,6 +326,39 @@ icon: material/alert-decagram
 #### clash_mode
 
 匹配 Clash 模式。
+
+#### network_type
+
+!!! question "自 sing-box 1.11.0 起"
+
+!!! quote ""
+
+    仅在 Android 与 Apple 平台图形客户端中支持。
+
+匹配网络类型。
+
+Available values: `wifi`, `cellular`, `ethernet` and `other`.
+
+#### network_is_expensive
+
+!!! question "自 sing-box 1.11.0 起"
+
+!!! quote ""
+
+    仅在 Android 与 Apple 平台图形客户端中支持。
+
+匹配如果网络被视为计费 (在 Android) 或被视为昂贵，
+像蜂窝网络或个人热点 (在 Apple 平台)。
+
+#### network_is_constrained
+
+!!! question "自 sing-box 1.11.0 起"
+
+!!! quote ""
+
+    仅在 Apple 平台图形客户端中支持。
+
+匹配如果网络在低数据模式下。
 
 #### wifi_ssid
 
@@ -327,7 +388,7 @@ icon: material/alert-decagram
 
 !!! failure "已在 sing-box 1.10.0 废弃"
 
-    `rule_set_ipcidr_match_source` 已重命名为 `rule_set_ip_cidr_match_source` 且将在 sing-box 1.11.0 移除。
+    `rule_set_ipcidr_match_source` 已重命名为 `rule_set_ip_cidr_match_source` 且将在 sing-box 1.11.0 中被移除。
 
 使规则集中的 `ip_cidr` 规则匹配源 IP。
 
@@ -341,11 +402,17 @@ icon: material/alert-decagram
 
 反选匹配结果。
 
-#### outbound
+#### action
 
 ==必填==
 
-目标出站的标签。
+参阅 [规则动作](../rule_action/)。
+
+#### outbound
+
+!!! failure "已在 sing-box 1.11.0 废弃"
+
+    已移动到 [规则动作](../rule_action#route).
 
 ### 逻辑字段
 

@@ -18,6 +18,10 @@ func (c *CommandClient) CloseConnection(connId string) error {
 		return err
 	}
 	defer conn.Close()
+	err = binary.Write(conn, binary.BigEndian, uint8(CommandCloseConnection))
+	if err != nil {
+		return err
+	}
 	writer := bufio.NewWriter(conn)
 	err = varbin.Write(writer, binary.BigEndian, connId)
 	if err != nil {
@@ -41,11 +45,7 @@ func (s *CommandServer) handleCloseConnection(conn net.Conn) error {
 	if service == nil {
 		return writeError(conn, E.New("service not ready"))
 	}
-	clashServer := service.instance.Router().ClashServer()
-	if clashServer == nil {
-		return writeError(conn, E.New("Clash API disabled"))
-	}
-	targetConn := clashServer.(*clashapi.Server).TrafficManager().Connection(uuid.FromStringOrNil(connId))
+	targetConn := service.clashServer.(*clashapi.Server).TrafficManager().Connection(uuid.FromStringOrNil(connId))
 	if targetConn == nil {
 		return writeError(conn, E.New("connection already closed"))
 	}

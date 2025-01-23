@@ -25,6 +25,7 @@ func (c *CommandClient) handleConnectionsConn(conn net.Conn) {
 		connections    Connections
 	)
 	for {
+		rawConnections = nil
 		err := varbin.Read(reader, binary.BigEndian, &rawConnections)
 		if err != nil {
 			c.handler.Disconnected(err.Error())
@@ -48,11 +49,7 @@ func (s *CommandServer) handleConnectionsConn(conn net.Conn) error {
 	for {
 		service := s.service
 		if service != nil {
-			clashServer := service.instance.Router().ClashServer()
-			if clashServer == nil {
-				return E.New("Clash API disabled")
-			}
-			trafficManager = clashServer.(*clashapi.Server).TrafficManager()
+			trafficManager = service.clashServer.(*clashapi.Server).TrafficManager()
 			break
 		}
 		select {

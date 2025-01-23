@@ -2,6 +2,270 @@
 icon: material/arrange-bring-forward
 ---
 
+## 1.11.0
+
+### 迁移旧的特殊出站到规则动作
+
+旧的特殊出站已被弃用，且可以被规则动作替代。
+
+!!! info "参考"
+
+    [规则动作](/zh/configuration/route/rule_action/) /
+    [Block](/zh/configuration/outbound/block/) / 
+    [DNS](/zh/configuration/outbound/dns)
+
+=== "Block"
+
+    === ":material-card-remove: 弃用的"
+    
+        ```json
+        {
+          "outbounds": [
+            {
+              "type": "block",
+              "tag": "block"
+            }
+          ],
+          "route": {
+            "rules": [
+              {
+                ...,
+                
+                "outbound": "block"
+              }
+            ]
+          }
+        }
+        ```
+
+    === ":material-card-multiple: 新的"
+    
+        ```json
+        {
+          "route": {
+            "rules": [
+              {
+                ...,
+                
+                "action": "reject"
+              }
+            ]
+          }
+        }
+        ```
+
+=== "DNS"
+
+    === ":material-card-remove: 弃用的"
+    
+        ```json
+        {
+          "inbound": [
+            {
+              ...,
+              
+              "sniff": true
+            }
+          ],
+          "outbounds": [
+            {
+              "tag": "dns",
+              "type": "dns"
+            }
+          ],
+          "route": {
+            "rules": [
+              {
+                "protocol": "dns",
+                "outbound": "dns"
+              }
+            ]
+          }
+        }
+        ```
+    
+    === ":material-card-multiple: 新的"
+    
+        ```json
+        {
+          "route": {
+            "rules": [
+              {
+                "action": "sniff"
+              },
+              {
+                "protocol": "dns",
+                "action": "hijack-dns"
+              }
+            ]
+          }
+        }
+        ```
+
+### 迁移旧的入站字段到规则动作
+
+入站选项已被弃用，且可以被规则动作替代。
+
+!!! info "参考"
+
+    [监听字段](/zh/configuration/shared/listen/) /
+    [规则](/zh/configuration/route/rule/) /
+    [规则动作](/zh/configuration/route/rule_action/) /
+    [DNS 规则](/zh/configuration/dns/rule/) /
+    [DNS 规则动作](/zh/configuration/dns/rule_action/)
+
+=== ":material-card-remove: 弃用的"
+
+    ```json
+    {
+      "inbounds": [
+        {
+          "type": "mixed",
+          "sniff": true,
+          "sniff_timeout": "1s",
+          "domain_strategy": "prefer_ipv4"
+        }
+      ]
+    }
+    ```
+
+=== ":material-card-multiple: New"
+
+    ```json
+    {
+      "inbounds": [
+        {
+          "type": "mixed",
+          "tag": "in"
+        }
+      ],
+      "route": {
+        "rules": [
+          {
+            "inbound": "in",
+            "action": "resolve",
+            "strategy": "prefer_ipv4"
+          },
+          {
+            "inbound": "in",
+            "action": "sniff",
+            "timeout": "1s"
+          }
+        ]
+      }
+    }
+    ```
+
+### 迁移 direct 出站中的目标地址覆盖字段到路由字段
+
+direct 出站中的目标地址覆盖字段已废弃，且可以被路由字段替代。
+
+!!! info "参考"
+
+    [Rule Action](/zh/configuration/route/rule_action/) /
+    [Direct](/zh/configuration/outbound/direct/)
+
+=== ":material-card-remove: 弃用的"
+
+    ```json
+    {
+      "outbounds": [
+        {
+          "type": "direct",
+          "override_address": "1.1.1.1",
+          "override_port": 443
+        }
+      ]
+    }
+    ```
+
+=== ":material-card-multiple: 新的"
+
+    ```json
+    {
+      "route": {
+        "rules": [
+          {
+            "action": "route-options", // 或 route
+            "override_address": "1.1.1.1",
+            "override_port": 443
+          }
+        ]
+      }
+    }
+    ```
+
+### 迁移 WireGuard 出站到端点
+
+WireGuard 出站已被弃用，且可以被端点替代。
+
+!!! info "参考"
+
+    [端点](/zh/configuration/endpoint/) /
+    [WireGuard 端点](/zh/configuration/endpoint/wireguard/) / 
+    [WireGuard 出站](/zh/configuration/outbound/wireguard/)
+
+=== ":material-card-remove: 弃用的"
+
+    ```json
+    {
+      "outbounds": [
+        {
+          "type": "wireguard",
+          "tag": "wg-out",
+
+          "server": "127.0.0.1",
+          "server_port": 10001,
+          "system_interface": true,
+          "gso": true,
+          "interface_name": "wg0",
+          "local_address": [
+            "10.0.0.1/32"
+          ],
+          "private_key": "<private_key>",
+          "peer_public_key": "<peer_public_key>",
+          "pre_shared_key": "<pre_shared_key>",
+          "reserved": [0, 0, 0],
+          "mtu": 1408
+        }
+      ]
+    }
+    ```
+
+=== ":material-card-multiple: 新的"
+
+    ```json
+    {
+      "endpoints": [
+        {
+          "type": "wireguard",
+          "tag": "wg-ep",
+          "system": true,
+          "name": "wg0",
+          "mtu": 1408,
+          "address": [
+            "10.0.0.2/32"
+          ],
+          "private_key": "<private_key>",
+          "listen_port": 10000,
+          "peers": [
+            {
+              "address": "127.0.0.1",
+              "port": 10001,
+              "public_key": "<peer_public_key>",
+              "pre_shared_key": "<pre_shared_key>",
+              "allowed_ips": [
+                "0.0.0.0/0"
+              ],
+              "persistent_keepalive_interval": 30,
+              "reserved": [0, 0, 0]
+            }
+          ]
+        }
+      ]
+    }
+    ```
+
 ## 1.10.0
 
 ### TUN 地址字段已合并
@@ -9,8 +273,6 @@ icon: material/arrange-bring-forward
 `inet4_address` 和 `inet6_address` 已合并为 `address`，
 `inet4_route_address` 和 `inet6_route_address` 已合并为 `route_address`，
 `inet4_route_exclude_address` 和 `inet6_route_exclude_address` 已合并为 `route_exclude_address`。
-
-旧字段已废弃，且将在 sing-box 1.11.0 中移除。
 
 !!! info "参考"
 
@@ -69,6 +331,22 @@ icon: material/arrange-bring-forward
       ]
     }
     ```
+
+## 1.9.5
+
+### Apple 平台客户端的 Bundle Identifier 更新
+
+由于我们旧的苹果开发者账户存在问题，我们只能通过更新 Bundle Identifiers
+来重新上架 sing-box 应用， 这意味着数据不会自动继承。
+
+对于 iOS，您需要自行备份旧的数据（如果您仍然可以访问）；  
+对于 Apple tvOS，您需要从 iPhone 或 iPad 重新导入配置或者手动创建；  
+对于 macOS，您可以使用以下命令迁移数据文件夹：
+
+```bash
+cd ~/Library/Group\ Containers && \ 
+  mv group.io.nekohasekai.sfa group.io.nekohasekai.sfavt
+```
 
 ## 1.9.0
 

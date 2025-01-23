@@ -20,6 +20,11 @@ func ReadTag() (string, error) {
 	return version.String() + "-" + shortCommit, nil
 }
 
+func ReadTagVersionRev() (badversion.Version, error) {
+	currentTagRev := common.Must1(shell.Exec("git", "describe", "--tags", "--abbrev=0").ReadOutput())
+	return badversion.Parse(currentTagRev[1:]), nil
+}
+
 func ReadTagVersion() (badversion.Version, error) {
 	currentTag := common.Must1(shell.Exec("git", "describe", "--tags").ReadOutput())
 	currentTagRev := common.Must1(shell.Exec("git", "describe", "--tags", "--abbrev=0").ReadOutput())

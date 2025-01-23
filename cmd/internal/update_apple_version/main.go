@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -13,9 +14,22 @@ import (
 	"howett.net/plist"
 )
 
+var flagRunInCI bool
+
+func init() {
+	flag.BoolVar(&flagRunInCI, "ci", false, "Run in CI")
+}
+
 func main() {
+	flag.Parse()
 	newVersion := common.Must1(build_shared.ReadTagVersion())
-	applePath, err := filepath.Abs("../sing-box-for-apple")
+	var applePath string
+	if flagRunInCI {
+		applePath = "clients/apple"
+	} else {
+		applePath = "../sing-box-for-apple"
+	}
+	applePath, err := filepath.Abs(applePath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -27,7 +41,7 @@ func main() {
 	objectsMap := project["objects"].(map[string]any)
 	projectContent := string(common.Must1(os.ReadFile("sing-box.xcodeproj/project.pbxproj")))
 	newContent, updated0 := findAndReplace(objectsMap, projectContent, []string{"io.nekohasekai.sfavt"}, newVersion.VersionString())
-	newContent, updated1 := findAndReplace(objectsMap, newContent, []string{"io.nekohasekai.sfa.standalone", "io.nekohasekai.sfa.system"}, newVersion.String())
+	newContent, updated1 := findAndReplace(objectsMap, newContent, []string{"io.nekohasekai.sfavt.standalone", "io.nekohasekai.sfavt.system"}, newVersion.String())
 	if updated0 || updated1 {
 		log.Info("updated version to ", newVersion.VersionString(), " (", newVersion.String(), ")")
 	}

@@ -1,6 +1,7 @@
 package libbox
 
 import (
+	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/option"
 )
 
@@ -8,20 +9,20 @@ type PlatformInterface interface {
 	UsePlatformAutoDetectInterfaceControl() bool
 	AutoDetectInterfaceControl(fd int32) error
 	OpenTun(options TunOptions) (int32, error)
+	UpdateRouteOptions(options TunOptions) error
 	WriteLog(message string)
 	UseProcFS() bool
 	FindConnectionOwner(ipProtocol int32, sourceAddress string, sourcePort int32, destinationAddress string, destinationPort int32) (int32, error)
 	PackageNameByUid(uid int32) (string, error)
 	UIDByPackageName(packageName string) (int32, error)
-	UsePlatformDefaultInterfaceMonitor() bool
 	StartDefaultInterfaceMonitor(listener InterfaceUpdateListener) error
 	CloseDefaultInterfaceMonitor(listener InterfaceUpdateListener) error
-	UsePlatformInterfaceGetter() bool
 	GetInterfaces() (NetworkInterfaceIterator, error)
 	UnderNetworkExtension() bool
 	IncludeAllNetworks() bool
 	ReadWIFIState() *WIFIState
 	ClearDNSCache()
+	SendNotification(notification *Notification) error
 }
 
 type TunInterface interface {
@@ -30,14 +31,26 @@ type TunInterface interface {
 }
 
 type InterfaceUpdateListener interface {
-	UpdateDefaultInterface(interfaceName string, interfaceIndex int32)
+	UpdateDefaultInterface(interfaceName string, interfaceIndex int32, isExpensive bool, isConstrained bool)
 }
+
+const (
+	InterfaceTypeWIFI     = int32(C.InterfaceTypeWIFI)
+	InterfaceTypeCellular = int32(C.InterfaceTypeCellular)
+	InterfaceTypeEthernet = int32(C.InterfaceTypeEthernet)
+	InterfaceTypeOther    = int32(C.InterfaceTypeOther)
+)
 
 type NetworkInterface struct {
 	Index     int32
 	MTU       int32
 	Name      string
 	Addresses StringIterator
+	Flags     int32
+
+	Type      int32
+	DNSServer StringIterator
+	Metered   bool
 }
 
 type WIFIState struct {
@@ -52,6 +65,16 @@ func NewWIFIState(wifiSSID string, wifiBSSID string) *WIFIState {
 type NetworkInterfaceIterator interface {
 	Next() *NetworkInterface
 	HasNext() bool
+}
+
+type Notification struct {
+	Identifier string
+	TypeName   string
+	TypeID     int32
+	Title      string
+	Subtitle   string
+	Body       string
+	OpenURL    string
 }
 
 type OnDemandRule interface {

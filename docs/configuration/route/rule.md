@@ -1,12 +1,21 @@
 ---
-icon: material/alert-decagram
+icon: material/new-box
 ---
+
+!!! quote "Changes in sing-box 1.11.0"
+
+    :material-plus: [action](#action)  
+    :material-alert: [outbound](#outbound)  
+    :material-plus: [network_type](#network_type)  
+    :material-plus: [network_is_expensive](#network_is_expensive)  
+    :material-plus: [network_is_constrained](#network_is_constrained)
 
 !!! quote "Changes in sing-box 1.10.0"
 
-    :material-plus: [client](#client)
+    :material-plus: [client](#client)  
     :material-delete-clock: [rule_set_ipcidr_match_source](#rule_set_ipcidr_match_source)  
     :material-plus: [rule_set_ip_cidr_match_source](#rule_set_ip_cidr_match_source)  
+    :material-plus: [process_path_regex](#process_path_regex)
 
 !!! quote "Changes in sing-box 1.8.0"
 
@@ -101,6 +110,9 @@ icon: material/alert-decagram
         "process_path": [
           "/usr/bin/curl"
         ],
+        "process_path_regex": [
+          "^/usr/bin/.+"
+        ],
         "package_name": [
           "com.termux"
         ],
@@ -111,6 +123,11 @@ icon: material/alert-decagram
           1000
         ],
         "clash_mode": "direct",
+        "network_type": [
+          "wifi"
+        ],
+        "network_is_expensive": false,
+        "network_is_constrained": false,
         "wifi_ssid": [
           "My WIFI"
         ],
@@ -125,6 +142,7 @@ icon: material/alert-decagram
         "rule_set_ipcidr_match_source": false,
         "rule_set_ip_cidr_match_source": false,
         "invert": false,
+        "action": "route",
         "outbound": "direct"
       },
       {
@@ -132,6 +150,7 @@ icon: material/alert-decagram
         "mode": "and",
         "rules": [],
         "invert": false,
+        "action": "route",
         "outbound": "direct"
       }
     ]
@@ -205,7 +224,7 @@ Match domain using regular expression.
 
 !!! failure "Deprecated in sing-box 1.8.0"
 
-    Geosite is deprecated and may be removed in the future, check [Migration](/migration/#migrate-geosite-to-rule-sets).
+    Geosite is deprecated and will be removed in sing-box 1.12.0, check [Migration](/migration/#migrate-geosite-to-rule-sets).
 
 Match geosite.
 
@@ -213,7 +232,7 @@ Match geosite.
 
 !!! failure "Deprecated in sing-box 1.8.0"
 
-    GeoIP is deprecated and may be removed in the future, check [Migration](/migration/#migrate-geoip-to-rule-sets).
+    GeoIP is deprecated and will be removed in sing-box 1.12.0, check [Migration](/migration/#migrate-geoip-to-rule-sets).
 
 Match source geoip.
 
@@ -221,7 +240,7 @@ Match source geoip.
 
 !!! failure "Deprecated in sing-box 1.8.0"
 
-    GeoIP is deprecated and may be removed in the future, check [Migration](/migration/#migrate-geoip-to-rule-sets).
+    GeoIP is deprecated and will be removed in sing-box 1.12.0, check [Migration](/migration/#migrate-geoip-to-rule-sets).
 
 Match geoip.
 
@@ -277,6 +296,16 @@ Match process name.
 
 Match process path.
 
+#### process_path_regex
+
+!!! question "Since sing-box 1.10.0"
+
+!!! quote ""
+
+    Only supported on Linux, Windows, and macOS.
+
+Match process path using regular expression.
+
 #### package_name
 
 Match android package name.
@@ -300,6 +329,39 @@ Match user id.
 #### clash_mode
 
 Match Clash mode.
+
+#### network_type
+
+!!! question "Since sing-box 1.11.0"
+
+!!! quote ""
+
+    Only supported in graphical clients on Android and Apple platforms.
+
+Match network type.
+
+Available values: `wifi`, `cellular`, `ethernet` and `other`.
+
+#### network_is_expensive
+
+!!! question "Since sing-box 1.11.0"
+
+!!! quote ""
+
+    Only supported in graphical clients on Android and Apple platforms.
+
+Match if network is considered Metered (on Android) or considered expensive,
+such as Cellular or a Personal Hotspot (on Apple platforms).
+
+#### network_is_constrained
+
+!!! question "Since sing-box 1.11.0"
+
+!!! quote ""
+
+    Only supported in graphical clients on Apple platforms.
+
+Match if network is in Low Data Mode.
 
 #### wifi_ssid
 
@@ -343,11 +405,17 @@ Make `ip_cidr` in rule-sets match the source IP.
 
 Invert match result.
 
-#### outbound
+#### action
 
 ==Required==
 
-Tag of the target outbound.
+See [Rule Actions](../rule_action/) for details.
+
+#### outbound
+
+!!! failure "Deprecated in sing-box 1.11.0"
+
+    Moved to [Rule Action](../rule_action#route).
 
 ### Logical Fields
 

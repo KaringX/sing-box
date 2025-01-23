@@ -11,18 +11,22 @@ theme:
   logo: assets/icon.svg
   favicon: assets/icon.svg
   palette:
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/link
+        name: Switch to light mode
     - media: "(prefers-color-scheme: light)"
       scheme: default
       primary: white
       toggle:
-        icon: material/brightness-7
+        icon: material/toggle-switch
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
       primary: black
       toggle:
-        icon: material/brightness-4
-        name: Switch to light mode
+        icon: material/toggle-switch-off
+        name: Switch to system preference
   features:
     #    - navigation.instant
     - navigation.tracking
@@ -44,6 +48,7 @@ nav:
       - Migration: migration.md
       - Deprecated: deprecated.md
       - Support: support.md
+      - Sponsors: sponsors.md
   - Installation:
       - Package Manager: installation/package-manager.md
       - Docker: installation/docker.md
@@ -77,6 +82,7 @@ nav:
           - configuration/dns/index.md
           - DNS Server: configuration/dns/server.md
           - DNS Rule: configuration/dns/rule.md
+          - DNS Rule Action: configuration/dns/rule_action.md
           - FakeIP: configuration/dns/fakeip.md
       - NTP:
           - configuration/ntp/index.md
@@ -85,6 +91,7 @@ nav:
           - GeoIP: configuration/route/geoip.md
           - Geosite: configuration/route/geosite.md
           - Route Rule: configuration/route/rule.md
+          - Rule Action: configuration/route/rule_action.md
           - Protocol Sniff: configuration/route/sniff.md
       - Rule Set:
           - configuration/rule-set/index.md
@@ -105,6 +112,9 @@ nav:
           - V2Ray Transport: configuration/shared/v2ray-transport.md
           - UDP over TCP: configuration/shared/udp-over-tcp.md
           - TCP Brutal: configuration/shared/tcp-brutal.md
+      - Endpoint:
+          - configuration/endpoint/index.md
+          - WireGuard: configuration/endpoint/wireguard.md
       - Inbound:
           - configuration/inbound/index.md
           - Direct: configuration/inbound/direct.md
@@ -213,9 +223,11 @@ plugins:
             Log: 日志
             DNS Server: DNS 服务器
             DNS Rule: DNS 规则
+            DNS Rule Action: DNS 规则动作
 
             Route: 路由
             Route Rule: 路由规则
+            Rule Action: 规则动作
             Protocol Sniff: 协议探测
 
             Rule Set: 规则集
@@ -232,6 +244,7 @@ plugins:
             Multiplex: 多路复用
             V2Ray Transport: V2Ray 传输层
 
+            Endpoint: 端点
             Inbound: 入站
             Outbound: 出站
 

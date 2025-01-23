@@ -9,6 +9,8 @@ import (
 	"github.com/sagernet/sing-box"
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/common/process"
+	"github.com/sagernet/sing-box/experimental/libbox/platform"
+	"github.com/sagernet/sing-box/include"
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common/control"
@@ -16,10 +18,11 @@ import (
 	"github.com/sagernet/sing/common/json"
 	"github.com/sagernet/sing/common/logger"
 	"github.com/sagernet/sing/common/x/list"
+	"github.com/sagernet/sing/service"
 )
 
-func parseConfig(configContent string) (option.Options, error) {
-	options, err := json.UnmarshalExtended[option.Options]([]byte(configContent))
+func parseConfig(ctx context.Context, configContent string) (option.Options, error) {
+	options, err := json.UnmarshalExtendedContext[option.Options](ctx, []byte(configContent))
 	if err != nil {
 		return option.Options{}, E.Cause(err, "decode config")
 	}
@@ -27,16 +30,17 @@ func parseConfig(configContent string) (option.Options, error) {
 }
 
 func CheckConfig(configContent string) error {
-	options, err := parseConfig(configContent)
+	ctx := box.Context(context.Background(), include.InboundRegistry(), include.OutboundRegistry(), include.EndpointRegistry())
+	options, err := parseConfig(ctx, configContent)
 	if err != nil {
 		return err
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
+	ctx = service.ContextWith[platform.Interface](ctx, (*platformInterfaceStub)(nil))
 	instance, err := box.New(box.Options{
-		Context:           ctx,
-		Options:           options,
-		PlatformInterface: (*platformInterfaceStub)(nil),
+		Context: ctx,
+		Options: options,
 	})
 	if err == nil {
 		instance.Close()
@@ -46,7 +50,7 @@ func CheckConfig(configContent string) error {
 
 type platformInterfaceStub struct{}
 
-func (s *platformInterfaceStub) Initialize(ctx context.Context, router adapter.Router) error {
+func (s *platformInterfaceStub) Initialize(networkManager adapter.NetworkManager) error {
 	return nil
 }
 
@@ -54,12 +58,16 @@ func (s *platformInterfaceStub) UsePlatformAutoDetectInterfaceControl() bool {
 	return true
 }
 
-func (s *platformInterfaceStub) AutoDetectInterfaceControl() control.Func {
+func (s *platformInterfaceStub) AutoDetectInterfaceControl(fd int) error {
 	return nil
 }
 
 func (s *platformInterfaceStub) OpenTun(options *tun.Options, platformOptions option.TunPlatformOptions) (tun.Tun, error) {
 	return nil, os.ErrInvalid
+}
+
+func (s *platformInterfaceStub) UpdateRouteOptions(options *tun.Options, platformInterface option.TunPlatformOptions) error {
+	return os.ErrInvalid
 }
 
 func (s *platformInterfaceStub) UsePlatformDefaultInterfaceMonitor() bool {
@@ -70,11 +78,7 @@ func (s *platformInterfaceStub) CreateDefaultInterfaceMonitor(logger logger.Logg
 	return (*interfaceMonitorStub)(nil)
 }
 
-func (s *platformInterfaceStub) UsePlatformInterfaceGetter() bool {
-	return true
-}
-
-func (s *platformInterfaceStub) Interfaces() ([]control.Interface, error) {
+func (s *platformInterfaceStub) Interfaces() ([]adapter.NetworkInterface, error) {
 	return nil, os.ErrInvalid
 }
 
@@ -107,16 +111,8 @@ func (s *interfaceMonitorStub) Close() error {
 	return os.ErrInvalid
 }
 
-func (s *interfaceMonitorStub) DefaultInterfaceName(destination netip.Addr) string {
-	return ""
-}
-
-func (s *interfaceMonitorStub) DefaultInterfaceIndex(destination netip.Addr) int {
-	return -1
-}
-
-func (s *interfaceMonitorStub) DefaultInterface(destination netip.Addr) (string, int) {
-	return "", -1
+func (s *interfaceMonitorStub) DefaultInterface() *control.Interface {
+	return nil
 }
 
 func (s *interfaceMonitorStub) OverrideAndroidVPN() bool {
@@ -134,17 +130,21 @@ func (s *interfaceMonitorStub) RegisterCallback(callback tun.DefaultInterfaceUpd
 func (s *interfaceMonitorStub) UnregisterCallback(element *list.Element[tun.DefaultInterfaceUpdateCallback]) {
 }
 
-func FormatConfig(configContent string) (string, error) {
-	options, err := parseConfig(configContent)
+func (s *platformInterfaceStub) SendNotification(notification *platform.Notification) error {
+	return nil
+}
+
+func FormatConfig(configContent string) (*StringBox, error) {
+	options, err := parseConfig(box.Context(context.Background(), include.InboundRegistry(), include.OutboundRegistry(), include.EndpointRegistry()), configContent)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	var buffer bytes.Buffer
 	encoder := json.NewEncoder(&buffer)
 	encoder.SetIndent("", "  ")
 	err = encoder.Encode(options)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return buffer.String(), nil
+	return wrapString(buffer.String()), nil
 }
