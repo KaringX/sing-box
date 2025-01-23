@@ -25,7 +25,7 @@ func (s *BoxService) Wake() {
 	if s.pauseTimer != nil {
 		s.pauseTimer.Stop()
 	}
-	s.pauseTimer = time.AfterFunc(3*time.Minute, s.ResetNetwork)
+	s.pauseTimer = time.AfterFunc(3*time.Second, s.ResetNetwork) //karing
 }
 
 func (s *BoxService) ResetNetwork() {

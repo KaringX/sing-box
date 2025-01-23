@@ -70,7 +70,7 @@ func NewDNSPacketConnection(ctx context.Context, router adapter.Router, conn N.P
 		reader, counters = N.UnwrapCountPacketReader(reader, counters)
 		if cachedReader, isCached := reader.(N.CachedPacketReader); isCached {
 			packet := cachedReader.ReadCachedPacket()
-			if packet != nil {
+			if packet != nil && packet.Buffer != nil{ //karing
 				cachedPackets = append(cachedPackets, packet)
 				continue
 			}

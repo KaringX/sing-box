@@ -27,6 +27,22 @@ type TrackerMetadata struct {
 	Outbound     string
 	OutboundType string
 }
+/*=======
+type Metadata struct {
+	NetWork     string     `json:"network"`
+	Type        string     `json:"type"`
+	SrcIP       netip.Addr `json:"sourceIP"`
+	DstIP       netip.Addr `json:"destinationIP"`
+	SrcPort     string     `json:"sourcePort"`
+	DstPort     string     `json:"destinationPort"`
+	Host        string     `json:"host"`
+	DNSMode     string     `json:"dnsMode"`
+	ProcessPath string     `json:"processPath"`
+	PackageName string     `json:"packageName"` //karing
+	User        string     `json:"user"`     //karing
+	Protocol    string     `json:"protocol"` //karing
+>>>>>>> karing_v1.9.7*/
+
 
 func (t TrackerMetadata) MarshalJSON() ([]byte, error) {
 	var inbound string
@@ -150,10 +166,10 @@ func NewTCPTracker(conn net.Conn, manager *Manager, metadata adapter.InboundCont
 	tracker := &TCPConn{
 		ExtendedConn: bufio.NewCounterConn(conn, []N.CountFunc{func(n int64) {
 			upload.Add(n)
-			manager.PushUploaded(n)
+			manager.PushUploaded(n, protocol, outbound) //karing
 		}}, []N.CountFunc{func(n int64) {
 			download.Add(n)
-			manager.PushDownloaded(n)
+			manager.PushDownloaded(n, protocol, outbound) //karing
 		}}),
 		metadata: TrackerMetadata{
 			ID:           id,
@@ -231,10 +247,10 @@ func NewUDPTracker(conn N.PacketConn, manager *Manager, metadata adapter.Inbound
 	trackerConn := &UDPConn{
 		PacketConn: bufio.NewCounterPacketConn(conn, []N.CountFunc{func(n int64) {
 			upload.Add(n)
-			manager.PushUploaded(n)
+			manager.PushUploaded(n, protocol, outbound) //karing
 		}}, []N.CountFunc{func(n int64) {
 			download.Add(n)
-			manager.PushDownloaded(n)
+			manager.PushDownloaded(n, protocol, outbound) //karing
 		}}),
 		metadata: TrackerMetadata{
 			ID:           id,
@@ -252,3 +268,52 @@ func NewUDPTracker(conn N.PacketConn, manager *Manager, metadata adapter.Inbound
 	manager.Join(trackerConn)
 	return trackerConn
 }
+
+/*
+func castMetadata(metadata adapter.InboundContext) trafficontrol.Metadata {
+	var inbound string
+	if metadata.Inbound != "" {
+		inbound = metadata.InboundType + "/" + metadata.Inbound
+	} else {
+		inbound = metadata.InboundType
+	}
+	var domain string
+	if metadata.Domain != "" {
+		domain = metadata.Domain
+	} else {
+		domain = metadata.Destination.Fqdn
+	}
+	var processPath string
+	var packageName string //karing
+	if metadata.ProcessInfo != nil {
+		if metadata.ProcessInfo.ProcessPath != "" {
+			processPath = metadata.ProcessInfo.ProcessPath
+		}
+		if metadata.ProcessInfo.PackageName != "" { //karing
+			packageName = metadata.ProcessInfo.PackageName //karing
+		}
+		if processPath == "" {
+			if metadata.ProcessInfo.UserId != -1 {
+				processPath = F.ToString(metadata.ProcessInfo.UserId)
+			}
+		} else if metadata.ProcessInfo.User != "" {
+			processPath = F.ToString(processPath, " (", metadata.ProcessInfo.User, ")")
+		} else if metadata.ProcessInfo.UserId != -1 {
+			processPath = F.ToString(processPath, " (", metadata.ProcessInfo.UserId, ")")
+		}
+	}
+	return trafficontrol.Metadata{
+		NetWork:     metadata.Network,
+		Type:        inbound,
+		SrcIP:       metadata.Source.Addr,
+		DstIP:       metadata.Destination.Addr,
+		SrcPort:     F.ToString(metadata.Source.Port),
+		DstPort:     F.ToString(metadata.Destination.Port),
+		Host:        domain,
+		DNSMode:     "normal",
+		ProcessPath: processPath,
+		PackageName: packageName,       //karing
+		User:        metadata.User,     //karing
+		Protocol:    metadata.Protocol, //karing
+	}
+}*/

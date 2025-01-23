@@ -83,6 +83,7 @@ type DialerOptions struct {
 	FallbackNetworkType badoption.Listable[InterfaceType] `json:"fallback_network_type,omitempty"`
 	FallbackDelay       badoption.Duration                `json:"fallback_delay,omitempty"`
 	IsWireGuardListener bool                              `json:"-"`
+	TLSFragment         *TLSFragmentOptions               `json:"tls_fragment,omitempty"` //hiddify
 }
 
 func (o *DialerOptions) TakeDialerOptions() DialerOptions {

@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"net"
 	"time"
 
 	"github.com/sagernet/sing-box/common/urltest"
 	"github.com/sagernet/sing-dns"
+	N "github.com/sagernet/sing/common/network"
 	"github.com/sagernet/sing/common/varbin"
 )
 
@@ -26,6 +28,10 @@ type V2RayServer interface {
 
 type CacheFile interface {
 	LifecycleService
+	BeforePreStarter //karing
+
+	RoutedConnection(ctx context.Context, conn net.Conn, metadata InboundContext, matchedRule Rule, protocol string, outbound string) (net.Conn, Tracker)               //karing
+	RoutedPacketConnection(ctx context.Context, conn N.PacketConn, metadata InboundContext, matchedRule Rule, protocol string, outbound string) (N.PacketConn, Tracker) //karing
 
 	StoreFakeIP() bool
 	FakeIPStorage
@@ -41,6 +47,8 @@ type CacheFile interface {
 	StoreGroupExpand(group string, expand bool) error
 	LoadRuleSet(tag string) *SavedRuleSet
 	SaveRuleSet(tag string, set *SavedRuleSet) error
+	HasRuleSet(tag string) bool //karing
+	GetAllRuleSetKeys() map[string]bool //karing
 }
 
 type SavedRuleSet struct {
@@ -102,7 +110,8 @@ type OutboundGroup interface {
 
 type URLTestGroup interface {
 	OutboundGroup
-	URLTest(ctx context.Context) (map[string]uint16, error)
+	URLTest(ctx context.Context) (map[string]urltest.URLTestResult, error) //karing
+	UpdateCheck()                                                          //karing
 }
 
 func OutboundTag(detour Outbound) string {

@@ -6,7 +6,7 @@ import (
 
 const IsAndroid = goos.IsAndroid == 1
 
-const IsDarwin = goos.IsDarwin == 1 || goos.IsIos == 1
+const IsDarwin = goos.IsDarwin == 1 //|| goos.IsIos == 1 //karing
 
 const IsDragonfly = goos.IsDragonfly == 1
 

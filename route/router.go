@@ -52,8 +52,10 @@ type Router struct {
 	geositeCache            map[string]adapter.Rule
 	needFindProcess         bool
 	dnsClient               *dns.Client
+	staticDns               map[string]StaticDNSEntry //hiddify
 	defaultDomainStrategy   dns.DomainStrategy
 	dnsRules                []adapter.DNSRule
+	ruleSetsRemoteWithLocal []adapter.RuleSet //karing
 	ruleSets                []adapter.RuleSet
 	ruleSetMap              map[string]adapter.RuleSet
 	defaultTransport        dns.Transport
@@ -68,9 +70,10 @@ type Router struct {
 	platformInterface       platform.Interface
 	needWIFIState           bool
 	started                 bool
+	quitSig                 func()   //karing
 }
 
-func NewRouter(ctx context.Context, logFactory log.Factory, options option.RouteOptions, dnsOptions option.DNSOptions) (*Router, error) {
+func NewRouter(ctx context.Context, logFactory log.Factory, options option.RouteOptions, dnsOptions option.DNSOptions, quitSig func()) (*Router, error) { //karing
 	router := &Router{
 		ctx:                   ctx,
 		logger:                logFactory.NewLogger("router"),
@@ -92,6 +95,8 @@ func NewRouter(ctx context.Context, logFactory log.Factory, options option.Route
 		pauseManager:          service.FromContext[pause.Manager](ctx),
 		platformInterface:     service.FromContext[platform.Interface](ctx),
 		needWIFIState:         hasRule(options.Rules, isWIFIRule) || hasDNSRule(dnsOptions.Rules, isWIFIDNSRule),
+		staticDns:             createEntries(dnsOptions.StaticIPs), //hiddify
+		quitSig:               quitSig, //karing
 	}
 	service.MustRegister[adapter.Router](ctx, router)
 	router.dnsClient = dns.NewClient(dns.ClientOptions{
@@ -128,6 +133,18 @@ func NewRouter(ctx context.Context, logFactory log.Factory, options option.Route
 	for i, ruleSetOptions := range options.RuleSet {
 		if _, exists := router.ruleSetMap[ruleSetOptions.Tag]; exists {
 			return nil, E.New("duplicate rule-set tag: ", ruleSetOptions.Tag)
+		}
+		if ruleSetOptions.Type == C.RuleSetTypeRemote { //karing
+			if len(ruleSetOptions.LocalOptions.Path) != 0 {
+				cacheFile := service.FromContext[adapter.CacheFile](ctx)
+				if cacheFile != nil {
+					if !cacheFile.HasRuleSet(ruleSetOptions.RemoteOptions.URL) {   //karing
+						ruleSet := R.NewRemoteRuleSet(ctx, router, router.logger, ruleSetOptions)
+						router.ruleSetsRemoteWithLocal = append(router.ruleSetsRemoteWithLocal, ruleSet)
+						ruleSetOptions.Type = C.RuleSetTypeLocal
+					}
+				}
+			}
 		}
 		ruleSet, err := R.NewRuleSet(ctx, router.logger, ruleSetOptions)
 		if err != nil {
@@ -171,37 +188,78 @@ func NewRouter(ctx context.Context, logFactory log.Factory, options option.Route
 				detour = dialer.NewDetour(outboundManager, server.Detour)
 			}
 			var serverProtocol string
-			switch server.Address {
-			case "local":
-				serverProtocol = "local"
-			default:
-				serverURL, _ := url.Parse(server.Address)
-				var serverAddress string
-				if serverURL != nil {
-					if serverURL.Scheme == "" {
-						serverProtocol = "udp"
-					} else {
-						serverProtocol = serverURL.Scheme
+			if len(server.Addresses) > 0 { //karing
+				var toContinue = false
+				var detoured = false
+				for _, address := range server.Addresses {
+					switch address {
+					case "local":
+					default:
+						serverURL, _ := url.Parse(address)
+						var serverAddress string
+						if serverURL != nil {
+							serverAddress = serverURL.Hostname()
+						}
+						if serverAddress == "" {
+							serverAddress = address
+						}
+						notIpAddress := !M.ParseSocksaddr(serverAddress).Addr.IsValid()
+						if server.AddressResolver != "" {
+							if !transportTagMap[server.AddressResolver] {
+								return nil, E.New("parse dns server[", tag, "]: address resolver not found: ", server.AddressResolver)
+							}
+							if upstream, exists := dummyTransportMap[server.AddressResolver]; exists {
+								if !detoured {
+									detoured = true
+									detour = dns.NewDialerWrapper(detour, router.dnsClient, upstream, dns.DomainStrategy(server.AddressStrategy), time.Duration(server.AddressFallbackDelay))
+								}
+							} else {
+								toContinue = true
+								break
+							}
+						} else if notIpAddress && strings.Contains(address, ".") {
+							return nil, E.New("parse dns server[", tag, "]: missing address_resolver")
+						}
+
 					}
-					serverAddress = serverURL.Hostname()
 				}
-				if serverAddress == "" {
-					serverAddress = server.Address
+				if toContinue{
+					continue
 				}
-				notIpAddress := !M.ParseSocksaddr(serverAddress).Addr.IsValid()
-				if server.AddressResolver != "" {
-					if !transportTagMap[server.AddressResolver] {
-						return nil, E.New("parse dns server[", tag, "]: address resolver not found: ", server.AddressResolver)
+			} else {
+				switch server.Address {
+				case "local":
+					serverProtocol = "local"
+				default:
+					serverURL, _ := url.Parse(server.Address)
+					var serverAddress string
+					if serverURL != nil {
+						if serverURL.Scheme == "" {
+							serverProtocol = "udp"
+						} else {
+							serverProtocol = serverURL.Scheme
+						}
+						serverAddress = serverURL.Hostname()
 					}
-					if upstream, exists := dummyTransportMap[server.AddressResolver]; exists {
-						detour = dns.NewDialerWrapper(detour, router.dnsClient, upstream, dns.DomainStrategy(server.AddressStrategy), time.Duration(server.AddressFallbackDelay))
-					} else {
-						continue
+					if serverAddress == "" {
+						serverAddress = server.Address
 					}
-				} else if notIpAddress && strings.Contains(server.Address, ".") {
-					return nil, E.New("parse dns server[", tag, "]: missing address_resolver")
-				}
+					notIpAddress := !M.ParseSocksaddr(serverAddress).Addr.IsValid()
+					if server.AddressResolver != "" {
+						if !transportTagMap[server.AddressResolver] {
+							return nil, E.New("parse dns server[", tag, "]: address resolver not found: ", server.AddressResolver)
+							}
+							if upstream, exists := dummyTransportMap[server.AddressResolver]; exists {
+								detour = dns.NewDialerWrapper(detour, router.dnsClient, upstream, dns.DomainStrategy(server.AddressStrategy), time.Duration(server.AddressFallbackDelay))
+							} else {
+								continue
+							}
+						} else if notIpAddress && strings.Contains(server.Address, ".") {
+							return nil, E.New("parse dns server[", tag, "]: missing address_resolver")
+						}
+					}
 			}
+			
 			var clientSubnet netip.Prefix
 			if server.ClientSubnet != nil {
 				clientSubnet = netip.Prefix(common.PtrValueOrDefault(server.ClientSubnet))
@@ -217,6 +275,7 @@ func NewRouter(ctx context.Context, logFactory log.Factory, options option.Route
 				Name:         tag,
 				Dialer:       detour,
 				Address:      server.Address,
+				Addresses:    server.Addresses,//karing
 				ClientSubnet: clientSubnet,
 			})
 			if err != nil {
@@ -306,6 +365,21 @@ func (r *Router) Start(stage adapter.StartStage) error {
 			}
 		}
 	case adapter.StartStateStart:
+		/*if r.timeService != nil {// karing
+			go func(){ // karing
+				monitor := taskmonitor.New(r.logger, C.StartTimeout)
+				monitor.Start("initialize time service")
+				err := r.timeService.Start()
+				monitor.Finish()
+				if err != nil {
+					time.Sleep(time.Second * 3)
+					err := r.timeService.Start()
+					if err != nil {
+						r.logger.ErrorContext(r.ctx, "initialize time service: ", err)
+					}
+				}
+			}()
+		}*/
 		if r.needGeoIPDatabase {
 			monitor.Start("initialize geoip database")
 			err := r.prepareGeoIPDatabase()
@@ -347,20 +421,20 @@ func (r *Router) Start(stage adapter.StartStage) error {
 		r.dnsClient.Start()
 		monitor.Finish()
 
-		for i, rule := range r.dnsRules {
-			monitor.Start("initialize DNS rule[", i, "]")
+		for _, rule := range r.dnsRules { //karing
+			monitor.Start("initialize DNS rule[", rule, "]") //karing
 			err := rule.Start()
 			monitor.Finish()
 			if err != nil {
-				return E.Cause(err, "initialize DNS rule[", i, "]")
+				return E.Cause(err, "initialize DNS rule[", rule, "]") //karing
 			}
 		}
-		for i, transport := range r.transports {
-			monitor.Start("initialize DNS transport[", i, "]")
+		for _, transport := range r.transports { //karing
+			monitor.Start("initialize DNS transport[", transport.Name(), "]")  //karing
 			err := transport.Start()
 			monitor.Finish()
 			if err != nil {
-				return E.Cause(err, "initialize DNS server[", i, "]")
+				return E.Cause(err, "initialize DNS server[", transport.Name(), "]")//karing
 			}
 		}
 		var cacheContext *adapter.HTTPStartContext
@@ -400,7 +474,7 @@ func (r *Router) Start(stage adapter.StartStage) error {
 			}
 		}
 		if needFindProcess {
-			if r.platformInterface != nil {
+			if r.platformInterface != nil && !C.IsDarwin{ //karing
 				r.processSearcher = r.platformInterface
 			} else {
 				monitor.Start("initialize process searcher")
@@ -484,7 +558,86 @@ func (r *Router) Close() error {
 		})
 		monitor.Finish()
 	}
+	//karing
+	r.processSearcher = nil
+	r.fakeIPStore = nil
+	r.rules = make([]adapter.Rule, 0)
+	r.geositeCache = make(map[string]adapter.Rule)
+	r.staticDns = make(map[string]StaticDNSEntry)
+	r.defaultDomainStrategy = dns.DomainStrategyAsIS 
+	r.dnsRules = make([]adapter.DNSRule, 0)
+	r.ruleSetsRemoteWithLocal = make([]adapter.RuleSet, 0)
+	for _, ruleSet := range r.ruleSets {
+		ruleSet.Close()
+	}
+	r.ruleSets = make([]adapter.RuleSet, 0)
+	r.ruleSetMap = make(map[string]adapter.RuleSet)
+	r.transports = make([]dns.Transport, 0)
+	r.transportMap = make(map[string]dns.Transport)
+	r.transportDomainStrategy = make(map[dns.Transport]dns.DomainStrategy)
+	//karing
+
 	return err
+}
+
+func (r *Router) PostStart() error {
+	monitor := taskmonitor.New(r.logger, C.StopTimeout)
+	if len(r.ruleSets) > 0 {
+		monitor.Start("initialize rule-set")
+		ruleSetStartContext := NewRuleSetStartContext()
+		var ruleSetStartGroup task.Group
+		for i, ruleSet := range r.ruleSets {
+			ruleSetInPlace := ruleSet
+			ruleSetStartGroup.Append0(func(ctx context.Context) error {
+				err := ruleSetInPlace.StartContext(ctx, ruleSetStartContext)
+				if err != nil {
+					return E.Cause(err, "initialize rule-set[", i, "]")
+				}
+				return nil
+			})
+		}
+		ruleSetStartGroup.Concurrency(5)
+		ruleSetStartGroup.FastFail()
+		err := ruleSetStartGroup.Run(r.ctx)
+		monitor.Finish()
+		if err != nil {
+			return err
+		}
+		ruleSetStartContext.Close()
+	}
+
+	if len(r.ruleSetsRemoteWithLocal) > 0 { //karing
+		go func() {
+			ruleSetStartContext := NewRuleSetStartContext()
+			var ruleSetStartGroup task.Group
+			for i, ruleSet := range r.ruleSetsRemoteWithLocal {
+				ruleSetInPlace := ruleSet
+				ruleSetStartGroup.Append0(func(ctx context.Context) error {
+					err := ruleSetInPlace.StartContext(ctx, ruleSetStartContext)
+					if err != nil {
+						return E.Cause(err, "initialize rule-set-remote[", i, "]")
+					}
+					return nil
+				})
+			}
+			ruleSetStartGroup.Concurrency(5)
+			ruleSetStartGroup.FastFail()
+			ruleSetStartGroup.Run(r.ctx)
+
+			ruleSetStartContext.Close()
+		}()
+	}
+ 
+	for _, rule := range r.rules { //karing
+		monitor.Start("initialize rule[", rule, "]") //karing
+		err := rule.Start()
+		monitor.Finish()
+		if err != nil {
+			return E.Cause(err, "initialize rule[", rule, "]") //karing
+		}
+	}
+	r.started = true
+	return nil
 }
 
 func (r *Router) FakeIPStore() adapter.FakeIPStore {
@@ -494,6 +647,16 @@ func (r *Router) FakeIPStore() adapter.FakeIPStore {
 func (r *Router) RuleSet(tag string) (adapter.RuleSet, bool) {
 	ruleSet, loaded := r.ruleSetMap[tag]
 	return ruleSet, loaded
+}
+
+func (r *Router) GetRemoteRuleSetRulesCount() map[string]int{  //karing
+	counts :=  make( map[string]int)
+	for _, ruleSet := range r.ruleSets {
+		if ruleset, isRemote := ruleSet.(*R.RemoteRuleSet); isRemote {
+			counts[ruleset.options.RemoteOptions.URL]= len(ruleset.rules)
+		}
+	}
+	return counts
 }
 
 func (r *Router) NeedWIFIState() bool {
@@ -513,4 +676,52 @@ func (r *Router) ResetNetwork() {
 	for _, transport := range r.transports {
 		transport.Reset()
 	}
+}
+func (r *Router) FindProcessInfo(ctx context.Context, network string, source netip.AddrPort)(*process.Info, error){ //karing
+	if r.processSearcher != nil {
+		var originDestination netip.AddrPort
+		return  process.FindProcessInfo(r.processSearcher, ctx, network, source, originDestination)
+	}
+	return nil, E.New("processSearcher not impl")
+}
+func (r *Router) GetMatchRuleChain(rule adapter.Rule) []string { //karing
+	var chain []string
+	var next string
+	if rule == nil {
+		if defaultOutbound, err := r.DefaultOutbound(N.NetworkTCP); err == nil {
+			next = defaultOutbound.Tag()
+		}
+	} else {
+		next = rule.Outbound()
+	}
+	for {
+		chain = append(chain, next)
+		detour, loaded := r.Outbound(next)
+		if !loaded {
+			break
+		}
+		group, isGroup := detour.(adapter.OutboundGroup)
+		if !isGroup {
+			break
+		}
+		next = group.Now()
+	}
+	return chain
+}
+func (r *Router) GetMatchRule(ctx context.Context, metadata *adapter.InboundContext) (adapter.Rule, string, error) { //karing
+	_, rule, detour, err := r.match(ctx, metadata, r.defaultOutboundForConnection)
+	if err != nil {
+		return nil, "", err
+	}
+
+	return rule, detour.Tag(), err
+}
+func (r *Router) GetAssetContent(path string)([]byte, error) {//karing
+	if r.platformInterface == nil{
+		return nil, E.New("platform interface not set")
+	}
+	return r.platformInterface.GetAssetContent(path)
+}
+func (r *Router) SingalQuit(){ //karing
+	r.quitSig()
 }

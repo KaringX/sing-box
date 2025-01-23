@@ -3,9 +3,15 @@ package log
 import (
 	"context"
 	"io"
+	"log"
 	"os"
+	"path"
+	"runtime"
+	"strconv"
 	"time"
 
+	"github.com/getsentry/sentry-go"
+	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing/common"
 	F "github.com/sagernet/sing/common/format"
 	"github.com/sagernet/sing/common/observable"
@@ -108,90 +114,102 @@ type observableLogger struct {
 	*defaultFactory
 	tag string
 }
-
-func (l *observableLogger) Log(ctx context.Context, level Level, args []any) {
+// karing
+func (l *observableLogger) log(ctx context.Context, level Level, deep int, args []any) {
 	level = OverrideLevelFromContext(level, ctx)
 	if level > l.level {
 		return
 	}
+	if(l.writer == nil){ //karing
+		return
+	}
+	_, file, line, _ := runtime.Caller(deep)  // karing
+	tag := " " + path.Base(file) + ":" + strconv.Itoa(line) + " " + l.tag  // karing
 	nowTime := time.Now()
 	if l.needObservable {
-		message, messageSimple := l.formatter.FormatWithSimple(ctx, level, l.tag, F.ToString(args...), nowTime)
+		message, messageSimple := l.formatter.FormatWithSimple(ctx, level, tag, F.ToString(args...), nowTime)
 		if level == LevelPanic {
 			panic(message)
 		}
 		l.writer.Write([]byte(message))
 		if level == LevelFatal {
-			os.Exit(1)
+			sentry.CaptureMessage(message) //karing
+			sentry.Flush(time.Second * 3)  //karing
+			log.Fatal(message)
 		}
 		l.subscriber.Emit(Entry{level, messageSimple})
 	} else {
-		message := l.formatter.Format(ctx, level, l.tag, F.ToString(args...), nowTime)
+		message := l.formatter.Format(ctx, level, tag, F.ToString(args...), nowTime)
 		if level == LevelPanic {
 			panic(message)
 		}
 		l.writer.Write([]byte(message))
 		if level == LevelFatal {
-			os.Exit(1)
+			sentry.CaptureMessage(message) //karing
+			sentry.Flush(time.Second * 3)  //karing
+			log.Fatal(message)
 		}
 	}
-	if l.platformWriter != nil {
-		l.platformWriter.WriteMessage(level, l.platformFormatter.Format(ctx, level, l.tag, F.ToString(args...), nowTime))
+	if C.Build == "debug" { //karing
+		if l.platformWriter != nil {
+			l.platformWriter.WriteMessage(level, l.platformFormatter.Format(ctx, level, l.tag, F.ToString(args...), nowTime))
+		}
 	}
+
 }
 
 func (l *observableLogger) Trace(args ...any) {
-	l.TraceContext(context.Background(), args...)
+	l.log(context.Background(), LevelTrace, 2, args) // karing
 }
 
 func (l *observableLogger) Debug(args ...any) {
-	l.DebugContext(context.Background(), args...)
+	l.log(context.Background(), LevelDebug, 2, args) // karing
 }
 
 func (l *observableLogger) Info(args ...any) {
-	l.InfoContext(context.Background(), args...)
+	l.log(context.Background(), LevelInfo, 2, args) // karing
 }
 
 func (l *observableLogger) Warn(args ...any) {
-	l.WarnContext(context.Background(), args...)
+	l.log(context.Background(), LevelWarn, 2, args) // karing
 }
 
 func (l *observableLogger) Error(args ...any) {
-	l.ErrorContext(context.Background(), args...)
+	l.log(context.Background(), LevelError, 2, args) // karing
 }
 
 func (l *observableLogger) Fatal(args ...any) {
-	l.FatalContext(context.Background(), args...)
+	l.log(context.Background(), LevelFatal, 2, args) // karing
 }
 
 func (l *observableLogger) Panic(args ...any) {
-	l.PanicContext(context.Background(), args...)
+	l.log(context.Background(), LevelPanic, 2, args) // karing
 }
 
 func (l *observableLogger) TraceContext(ctx context.Context, args ...any) {
-	l.Log(ctx, LevelTrace, args)
+	l.log(ctx, LevelTrace, 2, args) // karing
 }
 
 func (l *observableLogger) DebugContext(ctx context.Context, args ...any) {
-	l.Log(ctx, LevelDebug, args)
+	l.log(ctx, LevelDebug, 2, args) // karing
 }
 
 func (l *observableLogger) InfoContext(ctx context.Context, args ...any) {
-	l.Log(ctx, LevelInfo, args)
+	l.log(ctx, LevelInfo, 2, args) // karing
 }
 
 func (l *observableLogger) WarnContext(ctx context.Context, args ...any) {
-	l.Log(ctx, LevelWarn, args)
+	l.log(ctx, LevelWarn, 2, args) // karing
 }
 
 func (l *observableLogger) ErrorContext(ctx context.Context, args ...any) {
-	l.Log(ctx, LevelError, args)
+	l.log(ctx, LevelError, 2, args) // karing
 }
 
 func (l *observableLogger) FatalContext(ctx context.Context, args ...any) {
-	l.Log(ctx, LevelFatal, args)
+	l.log(ctx, LevelFatal, 2, args) // karing
 }
 
 func (l *observableLogger) PanicContext(ctx context.Context, args ...any) {
-	l.Log(ctx, LevelPanic, args)
+	l.log(ctx, LevelPanic, 2, args) // karing
 }

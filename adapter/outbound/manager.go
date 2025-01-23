@@ -16,6 +16,11 @@ import (
 	"github.com/sagernet/sing/common/logger"
 )
 
+type OutboundHasConnectionsFunc func(tag string) bool //karing
+var (
+	OutboundHasConnections OutboundHasConnectionsFunc //karing
+)
+
 var _ adapter.OutboundManager = (*Manager)(nil)
 
 type Manager struct {
@@ -239,13 +244,13 @@ func (m *Manager) Remove(tag string) error {
 	return nil
 }
 
-func (m *Manager) Create(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, inboundType string, options any) error {
+func (m *Manager) Create(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, inboundType string, options any) (Outbound, error) {//karing
 	if tag == "" {
-		return os.ErrInvalid
+		return nil, os.ErrInvalid //karing
 	}
 	outbound, err := m.registry.CreateOutbound(ctx, router, logger, tag, inboundType, options)
 	if err != nil {
-		return err
+		return outbound, err //karing
 	}
 	m.access.Lock()
 	defer m.access.Unlock()
@@ -253,7 +258,7 @@ func (m *Manager) Create(ctx context.Context, router adapter.Router, logger log.
 		for _, stage := range adapter.ListStartStages {
 			err = adapter.LegacyStart(outbound, stage)
 			if err != nil {
-				return E.Cause(err, stage, " outbound/", outbound.Type(), "[", outbound.Tag(), "]")
+				return outbound, E.Cause(err, stage, " outbound/", outbound.Type(), "[", outbound.Tag(), "]") //karing
 			}
 		}
 	}
@@ -261,7 +266,7 @@ func (m *Manager) Create(ctx context.Context, router adapter.Router, logger log.
 		if m.started {
 			err = common.Close(existsOutbound)
 			if err != nil {
-				return E.Cause(err, "close outbound/", existsOutbound.Type(), "[", existsOutbound.Tag(), "]")
+				return outbound, E.Cause(err, "close outbound/", existsOutbound.Type(), "[", existsOutbound.Tag(), "]") //karing
 			}
 		}
 		existsIndex := common.Index(m.outbounds, func(it adapter.Outbound) bool {
@@ -284,5 +289,5 @@ func (m *Manager) Create(ctx context.Context, router adapter.Router, logger log.
 			m.logger.Info("updated default outbound to ", outbound.Tag())
 		}
 	}
-	return nil
+	return outbound, nil //karing
 }

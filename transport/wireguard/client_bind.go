@@ -162,6 +162,31 @@ func (c *ClientBind) SetMark(mark uint32) error {
 	return nil
 }
 
+/*func (c *ClientBind) SendWithoutModify(bufs [][]byte, ep conn.Endpoint) error {  //hiddify
+	udpConn, err := c.connect()
+	if err != nil {
+		c.pauseManager.WaitActive()
+		time.Sleep(time.Second)
+		return err
+	}
+	destination := netip.AddrPort(ep.(Endpoint))
+	for _, b := range bufs {
+		if false && len(b) > 3 { //do not change to reserved
+			reserved, loaded := c.reservedForEndpoint[destination]
+			if !loaded {
+				reserved = c.reserved
+			}
+			copy(b[1:4], reserved[:])
+		}
+		_, err = udpConn.WriteToUDPAddrPort(b, destination)
+		if err != nil {
+			udpConn.Close()
+			return err
+		}
+	}
+	return nil
+}*/
+
 func (c *ClientBind) Send(bufs [][]byte, ep conn.Endpoint) error {
 	udpConn, err := c.connect()
 	if err != nil {

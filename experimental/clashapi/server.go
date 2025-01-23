@@ -122,6 +122,7 @@ func NewServer(ctx context.Context, logFactory log.ObservableFactory, options op
 		r.Mount("/profile", profileRouter())
 		r.Mount("/cache", cacheRouter(ctx))
 		r.Mount("/dns", dnsRouter(s.router))
+		r.Mount("/karing", karingRouter(s.router, logFactory)) //karing
 
 		s.setupMetaAPI(r)
 	})
@@ -251,7 +252,7 @@ func (s *Server) RoutedPacketConnection(ctx context.Context, conn N.PacketConn, 
 func authentication(serverSecret string) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
-			if serverSecret == "" {
+			if serverSecret == "" || strings.Index(r.URL.Path, "/karing/") == 0 { //karing
 				next.ServeHTTP(w, r)
 				return
 			}

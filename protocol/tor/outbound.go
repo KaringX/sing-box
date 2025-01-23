@@ -40,9 +40,14 @@ type Outbound struct {
 	events      chan control.Event
 	instance    *tor.Tor
 	socksClient *socks.Client
+	parseErr     error                //karing
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.TorOutboundOptions) (adapter.Outbound, error) {
+	empty := &Outbound{ //karing
+		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeTor, tag, []string{}, options.DialerOptions),
+		logger:  logger,
+	}
 	var startConf tor.StartConf
 	startConf.DataDir = os.ExpandEnv(options.DataDirectory)
 	startConf.TempDataDirBase = os.TempDir()
@@ -70,14 +75,14 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		if !rw.IsFile(torrcFile) {
 			err := os.WriteFile(torrcFile, []byte(""), 0o600)
 			if err != nil {
-				return nil, err
+				return empty, err  //karing
 			}
 		}
 		startConf.TorrcFile = torrcFile
 	}
 	outboundDialer, err := dialer.New(ctx, options.DialerOptions)
 	if err != nil {
-		return nil, err
+		return empty, err  //karing
 	}
 	return &Outbound{
 		Adapter:   outbound.NewAdapterWithDialerOptions(C.TypeTor, tag, []string{N.NetworkTCP}, options.DialerOptions),
@@ -106,6 +111,9 @@ var torLogEvents = []control.EventCode{
 }
 
 func (t *Outbound) start() error {
+	if(t.parseErr != nil){ //karing
+		return t.parseErr
+	}
 	torInstance, err := tor.Start(t.ctx, t.startConf)
 	if err != nil {
 		return E.New(strings.ToLower(err.Error()))
@@ -203,10 +211,17 @@ func (t *Outbound) Close() error {
 }
 
 func (t *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
+	if(t.parseErr != nil){ //karing
+		return nil, t.parseErr
+	}
 	t.logger.InfoContext(ctx, "outbound connection to ", destination)
 	return t.socksClient.DialContext(ctx, network, destination)
 }
 
 func (t *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
 	return nil, os.ErrInvalid
+}
+
+func (t *Outbound) SetParseErr(err error){ //karing
+	t.parseErr = err
 }

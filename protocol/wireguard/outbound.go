@@ -12,6 +12,7 @@ import (
 	"github.com/sagernet/sing-box/experimental/deprecated"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
+	"github.com/sagernet/sing-box/protocol/wireguard/houtbound" //hiddify
 	"github.com/sagernet/sing-box/transport/wireguard"
 	"github.com/sagernet/sing-dns"
 	"github.com/sagernet/sing/common"
@@ -37,12 +38,30 @@ type Outbound struct {
 	logger         logger.ContextLogger
 	localAddresses []netip.Prefix
 	endpoint       *wireguard.Endpoint
+	hforwarder       *houtbound.Forwarder //hiddify
+	fakePackets      []int                //hiddify
+	fakePacketsSize  []int                //hiddify
+	fakePacketsDelay []int                //hiddify
+	fakePacketsMode  string               //hiddify
+	parseErr         error                //karing
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.LegacyWireGuardOutboundOptions) (adapter.Outbound, error) {
+	empty := &Outbound{ //karing
+		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeWireGuard, tag, []string{}, options.DialerOptions),
+		logger:  logger,
+	}
 	deprecated.Report(ctx, deprecated.OptionWireGuardOutbound)
 	if options.GSO {
 		deprecated.Report(ctx, deprecated.OptionWireGuardGSO)
+	}
+	if len(options.LocalAddress) == 0 {
+		return empty, E.New("missing local address") //karing
+	}
+	for _, prefix := range options.LocalAddress { //karing
+		if !prefix.IsValid() {
+			return empty, E.New("invalid local address")
+		}
 	}
 	outbound := &Outbound{
 		Adapter:        outbound.NewAdapterWithDialerOptions(C.TypeWireGuard, tag, []string{N.NetworkTCP, N.NetworkUDP}, options.DialerOptions),
@@ -54,11 +73,11 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 	if options.Detour == "" {
 		options.IsWireGuardListener = true
 	} else if options.GSO {
-		return nil, E.New("gso is conflict with detour")
+		return empty, E.New("gso is conflict with detour") //karing
 	}
 	outboundDialer, err := dialer.New(ctx, options.DialerOptions)
 	if err != nil {
-		return nil, err
+		return empty, err  //karing
 	}
 	peers := common.Map(options.Peers, func(it option.LegacyWireGuardPeer) wireguard.PeerOptions {
 		return wireguard.PeerOptions{
@@ -102,10 +121,40 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		},
 		Peers:   peers,
 		Workers: options.Workers,
+		hforwarder:   hforwarder, //hiddify
 	})
 	if err != nil {
-		return nil, err
+		return empty, err  //karing
 	}
+	/*wgEndpoint.fakePackets = []int{0, 0}      //hiddify
+	wgEndpoint.fakePacketsSize = []int{0, 0}  //hiddify
+	wgEndpoint.fakePacketsDelay = []int{0, 0} //hiddify
+	wgEndpoint.fakePacketsMode = options.FakePacketsMode  //hiddify
+	if options.FakePackets != "" {          //hiddify
+		var err error
+		wgEndpoint.fakePackets, err = option.ParseIntRange(options.FakePackets)
+		if err != nil {
+			return empty, err //karing
+		}
+		wgEndpoint.fakePacketsSize = []int{40, 100}
+		wgEndpoint.fakePacketsDelay = []int{10, 50}
+
+		if options.FakePacketsSize != "" {
+			var err error
+			wgEndpoint.fakePacketsSize, err = option.ParseIntRange(options.FakePacketsSize)
+			if err != nil {
+				return empty, err //karing
+			}
+		}
+
+		if options.FakePacketsDelay != "" {
+			var err error
+			wgEndpoint.fakePacketsDelay, err = option.ParseIntRange(options.FakePacketsDelay)
+			if err != nil {
+				return empty, err //karing
+			}
+		}
+	}*/
 	outbound.endpoint = wgEndpoint
 	return outbound, nil
 }
@@ -124,12 +173,19 @@ func (o *Outbound) Close() error {
 	return o.endpoint.Close()
 }
 
+func (h *Outbound) SetParseErr(err error){ //karing
+	h.parseErr = err
+}
+
 func (o *Outbound) InterfaceUpdated() {
 	o.endpoint.BindUpdate()
 	return
 }
 
 func (o *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
+	if(o.parseErr != nil){ //karing
+		return nil, o.parseErr
+	}
 	switch network {
 	case N.NetworkTCP:
 		o.logger.InfoContext(ctx, "outbound connection to ", destination)
@@ -149,6 +205,9 @@ func (o *Outbound) DialContext(ctx context.Context, network string, destination 
 }
 
 func (o *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
+	if(o.parseErr != nil){ //karing
+		return nil, o.parseErr
+	}
 	o.logger.InfoContext(ctx, "outbound packet connection to ", destination)
 	if destination.IsFqdn() {
 		destinationAddresses, err := o.router.LookupDefault(ctx, destination.Fqdn)
