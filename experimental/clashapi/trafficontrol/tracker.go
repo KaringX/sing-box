@@ -27,7 +27,7 @@ type TrackerMetadata struct {
 	Outbound     string
 	OutboundType string
 	User         string //karing
-	Protocol	 string //karing
+	Protocol     string //karing
 }
 
 
@@ -50,7 +50,7 @@ func (t TrackerMetadata) MarshalJSON() ([]byte, error) {
 		if t.Metadata.ProcessInfo.ProcessPath != "" {
 			processPath = t.Metadata.ProcessInfo.ProcessPath
 		} else if t.Metadata.ProcessInfo.PackageName != "" {
-			packageName = t.Metadata.ProcessInfo.PackageName
+			packageName = t.Metadata.ProcessInfo.PackageName //karing
 		}
 		if processPath == "" {
 			if t.Metadata.ProcessInfo.UserId != -1 {
