@@ -69,21 +69,17 @@ require ( //karing
 )
 
 //go get github.com/KaringX/sing-quic@de3999b0837577a99a891562c776914c8aed3bc1
-//replace github.com/sagernet/sing => github.com/KaringX/sing v0.4.2-0.20240626045944-164e86c6147b
-//replace github.com/sagernet/sing-tun => ../../KaringX/sing-tun
-//replace github.com/sagernet/sing-quic => ../../KaringX/sing-quic
+replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20250124021809-5012e583d04d //karing_v0.6.0-beta.12
+//replace github.com/sagernet/sing => ../../KaringX/sing
+
+replace github.com/sagernet/sing-dns => github.com/KaringX/sing-dns v0.3.0-beta.14.0.20250124041328-49ee6549e540 //karing_v0.4.0-beta.2 
 //replace github.com/sagernet/sing-dns => ../../KaringX/sing-dns
-//replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.3.3-0.20240808075023-e16a492e752c
-//replace github.com/caddyserver/certmagic => github.com/caddyserver/certmagic v0.20.0
-//replace github.com/sagernet/sing => github.com/KaringX/sing v0.4.2-0.20241126034411-6d198024edfc
 
-//replace github.com/sagernet/gvisor => github.com/sagernet/gvisor v0.0.0-20240428053021-e691de28565f
+replace github.com/sagernet/sing-quic => github.com/KaringX/sing-quic v0.2.0-beta.12.0.20250124035510-765d4fa62b4e  //karing_v0.4.0-beta.4 
+//replace github.com/sagernet/sing-quic => ../../KaringX/sing-quic
 
-//replace github.com/sagernet/sing-dns => github.com/KaringX/sing-dns v0.2.4-0.20240912090223-8c33bbae1bb5
-
-//replace github.com/sagernet/sing-quic => github.com/KaringX/sing-quic v0.2.0-beta.12.0.20241113071321-878bb1288c7c
-
-//replace github.com/sagernet/wireguard-go => github.com/hiddify/wireguard-go v0.0.0-20240727191222-383c1da14ff1 //hiddify
+replace github.com/sagernet/wireguard-go => github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20250124034128-57c349f786fb //karing_v0.0.1-beta.5 
+//replace github.com/sagernet/wireguard-go => ../../KaringX/wireguard-go
 
 require (
 	github.com/Dreamacro/protobytes v0.0.0-20230911123819-0bbf144b9b9a // indirect

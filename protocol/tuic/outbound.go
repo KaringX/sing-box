@@ -23,7 +23,7 @@ import (
 	"github.com/sagernet/sing/common/uot"
 
 	"github.com/gofrs/uuid/v5"
-	"github.com/sagernet/sing-box/outbound/houtbound" //hiddify
+	"github.com/sagernet/sing-box/protocol/wireguard/houtbound" //hiddify
 )
 
 func RegisterOutbound(registry *outbound.Registry) {
