@@ -92,6 +92,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		logger:    logger,
 		client:    client,
 		udpStream: options.UDPOverStream,
+		hforwarder: hforwarder, //hiddify
 	}, nil
 }
 

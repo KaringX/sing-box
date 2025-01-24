@@ -98,7 +98,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		TLSConfig:     tlsConfig,
 		UDPDisabled:   !common.Contains(networkList, N.NetworkUDP),
 		HopPorts:      options.HopPorts, //https://github.com/morgenanno/sing-box
-		//HopInterval:   options.HopInterval, //https://github.com/morgenanno/sing-box
+		HopInterval:   options.HopInterval, //https://github.com/morgenanno/sing-box
 
 		ConnReceiveWindow:   options.ReceiveWindowConn,
 		StreamReceiveWindow: options.ReceiveWindow,
@@ -111,6 +111,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeHysteria, tag, networkList, options.DialerOptions),
 		logger:  logger,
 		client:  client,
+		hforwarder: hforwarder, //hiddify
 	}, nil
 }
 

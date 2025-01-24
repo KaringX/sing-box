@@ -74,9 +74,6 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		return empty, err //karing
 	}
 	networkList := options.Network.Build()
-	if options.HopInterval < 5 { //https://github.com/morgenanno/sing-box
-		options.HopInterval = 5
-	}
 	client, err := hysteria2.NewClient(hysteria2.ClientOptions{
 		Context:            ctx,
 		Dialer:             outboundDialer,
@@ -91,8 +88,6 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		Password:           options.Password,
 		TLSConfig:          tlsConfig,
 		UDPDisabled:        !common.Contains(networkList, N.NetworkUDP),
-		HopPorts:      		options.HopPorts, //https://github.com/morgenanno/sing-box
-		//HopInterval:   		options.HopInterval, //https://github.com/morgenanno/sing-box
 	})
 	if err != nil {
 		return empty, err //karing
@@ -101,6 +96,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeHysteria2, tag, networkList, options.DialerOptions),
 		logger:  logger,
 		client:  client,
+		hforwarder: hforwarder, //hiddify
 	}, nil
 }
 

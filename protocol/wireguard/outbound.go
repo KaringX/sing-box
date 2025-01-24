@@ -14,7 +14,7 @@ import (
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing-box/protocol/wireguard/houtbound" //hiddify
 	"github.com/sagernet/sing-box/transport/wireguard"
-	"github.com/sagernet/sing-dns"
+	dns "github.com/sagernet/sing-dns"
 	"github.com/sagernet/sing/common"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/logger"
@@ -63,12 +63,43 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 			return empty, E.New("invalid local address")
 		}
 	}
+	hforwarder := houtbound.ApplyTurnRelay(houtbound.CommonTurnRelayOptions{ServerOptions: options.ServerOptions, TurnRelayOptions: options.TurnRelay}) //hiddify
 	outbound := &Outbound{
 		Adapter:        outbound.NewAdapterWithDialerOptions(C.TypeWireGuard, tag, []string{N.NetworkTCP, N.NetworkUDP}, options.DialerOptions),
 		ctx:            ctx,
 		router:         router,
 		logger:         logger,
 		localAddresses: options.LocalAddress,
+		hforwarder:     hforwarder, //hiddify
+	}
+	outbound.fakePackets = []int{0, 0}      //hiddify
+	outbound.fakePacketsSize = []int{0, 0}  //hiddify
+	outbound.fakePacketsDelay = []int{0, 0} //hiddify
+	outbound.fakePacketsMode = options.FakePacketsMode  //hiddify
+	if options.FakePackets != "" {          //hiddify
+		var err error
+		outbound.fakePackets, err = option.ParseIntRange(options.FakePackets)
+		if err != nil {
+			return empty, err //karing
+		}
+		outbound.fakePacketsSize = []int{40, 100}
+		outbound.fakePacketsDelay = []int{10, 50}
+
+		if options.FakePacketsSize != "" {
+			var err error
+			outbound.fakePacketsSize, err = option.ParseIntRange(options.FakePacketsSize)
+			if err != nil {
+				return empty, err //karing
+			}
+		}
+
+		if options.FakePacketsDelay != "" {
+			var err error
+			outbound.fakePacketsDelay, err = option.ParseIntRange(options.FakePacketsDelay)
+			if err != nil {
+				return empty, err //karing
+			}
+		}
 	}
 	if options.Detour == "" {
 		options.IsWireGuardListener = true
@@ -121,40 +152,11 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		},
 		Peers:   peers,
 		Workers: options.Workers,
-		hforwarder:   hforwarder, //hiddify
+		
 	})
 	if err != nil {
 		return empty, err  //karing
 	}
-	/*wgEndpoint.fakePackets = []int{0, 0}      //hiddify
-	wgEndpoint.fakePacketsSize = []int{0, 0}  //hiddify
-	wgEndpoint.fakePacketsDelay = []int{0, 0} //hiddify
-	wgEndpoint.fakePacketsMode = options.FakePacketsMode  //hiddify
-	if options.FakePackets != "" {          //hiddify
-		var err error
-		wgEndpoint.fakePackets, err = option.ParseIntRange(options.FakePackets)
-		if err != nil {
-			return empty, err //karing
-		}
-		wgEndpoint.fakePacketsSize = []int{40, 100}
-		wgEndpoint.fakePacketsDelay = []int{10, 50}
-
-		if options.FakePacketsSize != "" {
-			var err error
-			wgEndpoint.fakePacketsSize, err = option.ParseIntRange(options.FakePacketsSize)
-			if err != nil {
-				return empty, err //karing
-			}
-		}
-
-		if options.FakePacketsDelay != "" {
-			var err error
-			wgEndpoint.fakePacketsDelay, err = option.ParseIntRange(options.FakePacketsDelay)
-			if err != nil {
-				return empty, err //karing
-			}
-		}
-	}*/
 	outbound.endpoint = wgEndpoint
 	return outbound, nil
 }

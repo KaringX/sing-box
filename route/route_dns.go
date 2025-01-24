@@ -10,8 +10,8 @@ import (
 	"github.com/sagernet/sing-box/adapter"
 	C "github.com/sagernet/sing-box/constant"
 	R "github.com/sagernet/sing-box/route/rule"
-	"github.com/sagernet/sing-dns"
-	"github.com/sagernet/sing-tun"
+	dns "github.com/sagernet/sing-dns"
+	tun "github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common/cache"
 	E "github.com/sagernet/sing/common/exceptions"
 	F "github.com/sagernet/sing/common/format"
@@ -247,11 +247,15 @@ func (r *Router) Lookup(ctx context.Context, domain string, strategy dns.DomainS
 	ctx, metadata := adapter.ExtendContext(ctx)
 	metadata.Destination = M.Socksaddr{}
 	metadata.Domain = domain
+	var ( //karing
+		transportN dns.Transport
+	)
 	if metadata.DNSServer != "" {
 		transport, loaded := r.transportMap[metadata.DNSServer]
 		if !loaded {
 			return nil, E.New("transport not found: ", metadata.DNSServer)
 		}
+		transportN = transport //karing
 		if strategy == dns.DomainStrategyAsIS {
 			if transportDomainStrategy, loaded := r.transportDomainStrategy[transport]; loaded {
 				strategy = transportDomainStrategy
@@ -286,6 +290,7 @@ func (r *Router) Lookup(ctx context.Context, domain string, strategy dns.DomainS
 					}
 				}
 			}
+			transportN = transport //karing
 			if rule != nil && rule.WithAddressLimit() {
 				addressLimit = true
 				responseAddrs, err = r.dnsClient.LookupWithResponseCheck(dnsCtx, transport, domain, options, func(responseAddrs []netip.Addr) bool {
@@ -304,7 +309,7 @@ func (r *Router) Lookup(ctx context.Context, domain string, strategy dns.DomainS
 	}
 	printResult()
 	if len(responseAddrs) > 0 {
-		r.dnsLogger.InfoContext(ctx, "[", transport.Name(), "]", "lookup succeed for ", domain, ": ", strings.Join(F.MapToString(responseAddrs), " ")) //karing
+		r.dnsLogger.InfoContext(ctx, "[", transportN.Name(), "]", "lookup succeed for ", domain, ": ", strings.Join(F.MapToString(responseAddrs), " ")) //karing
 	}
 	return responseAddrs, err
 }
