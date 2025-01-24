@@ -244,13 +244,16 @@ func (m *Manager) Remove(tag string) error {
 	return nil
 }
 
-func (m *Manager) Create(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, inboundType string, options any) (Outbound, error) {//karing
+func (m *Manager) Create(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, inboundType string, options any) error {
 	if tag == "" {
-		return nil, os.ErrInvalid //karing
+		m.logger.Error("create outbound failed: empty tag") //karing
+		return os.ErrInvalid
 	}
 	outbound, err := m.registry.CreateOutbound(ctx, router, logger, tag, inboundType, options)
 	if err != nil {
-		return outbound, err //karing
+		outbound.SetParseErr(err) //karing
+		m.logger.Error("create outbound failed: ", err) //karing
+		return err
 	}
 	m.access.Lock()
 	defer m.access.Unlock()
@@ -258,7 +261,9 @@ func (m *Manager) Create(ctx context.Context, router adapter.Router, logger log.
 		for _, stage := range adapter.ListStartStages {
 			err = adapter.LegacyStart(outbound, stage)
 			if err != nil {
-				return outbound, E.Cause(err, stage, " outbound/", outbound.Type(), "[", outbound.Tag(), "]") //karing
+				outbound.SetParseErr(err) //karing
+				m.logger.Error("create outbound failed: ", err) //karing
+				return E.Cause(err, stage, " outbound/", outbound.Type(), "[", outbound.Tag(), "]")
 			}
 		}
 	}
@@ -266,7 +271,9 @@ func (m *Manager) Create(ctx context.Context, router adapter.Router, logger log.
 		if m.started {
 			err = common.Close(existsOutbound)
 			if err != nil {
-				return outbound, E.Cause(err, "close outbound/", existsOutbound.Type(), "[", existsOutbound.Tag(), "]") //karing
+				outbound.SetParseErr(err) //karing
+				m.logger.Error("create outbound failed: ", err) //karing
+				return E.Cause(err, "close outbound/", existsOutbound.Type(), "[", existsOutbound.Tag(), "]")
 			}
 		}
 		existsIndex := common.Index(m.outbounds, func(it adapter.Outbound) bool {
@@ -289,5 +296,5 @@ func (m *Manager) Create(ctx context.Context, router adapter.Router, logger log.
 			m.logger.Info("updated default outbound to ", outbound.Tag())
 		}
 	}
-	return outbound, nil //karing
+	return nil
 }

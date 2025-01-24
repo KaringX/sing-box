@@ -4,12 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
-	"net"
 	"time"
 
 	"github.com/sagernet/sing-box/common/urltest"
-	"github.com/sagernet/sing-dns"
-	N "github.com/sagernet/sing/common/network"
+	dns "github.com/sagernet/sing-dns"
 	"github.com/sagernet/sing/common/varbin"
 )
 
@@ -29,9 +27,6 @@ type V2RayServer interface {
 type CacheFile interface {
 	LifecycleService
 	BeforePreStarter //karing
-
-	RoutedConnection(ctx context.Context, conn net.Conn, metadata InboundContext, matchedRule Rule, protocol string, outbound string) (net.Conn, Tracker)               //karing
-	RoutedPacketConnection(ctx context.Context, conn N.PacketConn, metadata InboundContext, matchedRule Rule, protocol string, outbound string) (N.PacketConn, Tracker) //karing
 
 	StoreFakeIP() bool
 	FakeIPStorage

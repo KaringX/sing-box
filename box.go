@@ -146,11 +146,10 @@ func New(options Options) (*Box, error) {
 		cacheFile := service.FromContext[adapter.CacheFile](ctx)
 		if cacheFile == nil {
 			cacheFile = cachefile.New(ctx, common.PtrValueOrDefault(experimentalOptions.CacheFile))
-			service.MustRegister[adapter.CacheFile](ctx, cacheFile)
-		}
-		err = cacheFile.BeforePreStart()
-		if err != nil {
-			return nil, E.Cause(err, "cacheFile load failed")
+			err = cacheFile.BeforePreStart()
+			if err != nil {
+				return nil, E.Cause(err, "cacheFile load failed")
+			}
 		}
 	}
 
@@ -233,7 +232,7 @@ func New(options Options) (*Box, error) {
 				Outbound: tag,
 			})
 		}
-		outbound, err = outboundManager.Create(
+		err = outboundManager.Create(
 			outboundCtx,
 			router,
 			logFactory.NewLogger(F.ToString("outbound/", outboundOptions.Type, "[", tag, "]")),
@@ -242,11 +241,7 @@ func New(options Options) (*Box, error) {
 			outboundOptions.Options,
 		)
 		if err != nil {
-			if(outbound != nil){ //karing
-				outbound.SetParseErr(E.Cause(err, "initialize outbound"))
-			} else{
-				return nil, E.Cause(err, "initialize outbound[", i, "]")
-			}
+			//return nil, E.Cause(err, "initialize outbound[", i, "]")
 		}
 	}
 	outboundManager.Initialize(common.Must1(
@@ -266,9 +261,14 @@ func New(options Options) (*Box, error) {
 	}
 	var services []adapter.LifecycleService
 	if needCacheFile {
-		cacheFile := cachefile.New(ctx, common.PtrValueOrDefault(experimentalOptions.CacheFile))
-		service.MustRegister[adapter.CacheFile](ctx, cacheFile)
-		services = append(services, cacheFile)
+		//cacheFile := cachefile.New(ctx, common.PtrValueOrDefault(experimentalOptions.CacheFile))  //karing
+		//service.MustRegister[adapter.CacheFile](ctx, cacheFile)  //karing
+		//services = append(services, cacheFile)  //karing
+		cacheFile := service.FromContext[adapter.CacheFile](ctx) //karing
+		if cacheFile != nil { //karing
+			service.MustRegister[adapter.CacheFile](ctx, cacheFile)
+			services = append(services, cacheFile)
+		}
 	}
 	if needClashAPI {
 		clashAPIOptions := common.PtrValueOrDefault(experimentalOptions.ClashAPI)

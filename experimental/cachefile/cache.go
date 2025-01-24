@@ -100,8 +100,10 @@ func (c *CacheFile) Name() string {
 func (c *CacheFile) Dependencies() []string {
 	return nil
 }
-
 func (c *CacheFile) Start(stage adapter.StartStage) error {
+	return nil
+}
+func (c *CacheFile) start(stage adapter.StartStage) error {
 	if stage != adapter.StartStateInitialize {
 		return nil
 	}
@@ -163,7 +165,7 @@ func (c *CacheFile) Start(stage adapter.StartStage) error {
 }
 
 func (c *CacheFile) BeforePreStart() error { //karing
-	return c.start()
+	return c.start(adapter.StartStateInitialize)
 }
 
 func (c *CacheFile) Close() error {
