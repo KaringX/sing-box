@@ -8,9 +8,7 @@ import (
 	"github.com/sagernet/sing-box/common/conntrack"
 	"github.com/sagernet/sing-box/common/gofree"
 	"github.com/sagernet/sing-box/experimental/clashapi/compatible"
-	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/atomic"
-	"github.com/sagernet/sing/common/json"
 	"github.com/sagernet/sing/common/x/list"
 
 	"github.com/gofrs/uuid/v5"
@@ -18,10 +16,10 @@ import (
 
 type Manager struct {
 	startTime           time.Time //karing
-	uploadTemp          atomic.Int64
-	downloadTemp        atomic.Int64
-	uploadBlip          atomic.Int64
-	downloadBlip        atomic.Int64
+	uploadTemp          atomic.Int64 //karing
+	downloadTemp        atomic.Int64 //karing
+	uploadBlip          atomic.Int64 //karing
+	downloadBlip        atomic.Int64 //karing
 	uploadTotal         atomic.Int64
 	downloadTotal       atomic.Int64
 	uploadTotalDirect   atomic.Int64 //karing
@@ -56,18 +54,18 @@ func (m *Manager) Leave(c Tracker) {
 	}
 }
 
-func (m *Manager) PushUploaded(size int64, protocol string, outbound string) { //karing
+func (m *Manager) PushUploaded(size int64, direct bool) { //karing
 	m.uploadTemp.Add(size)
 	m.uploadTotal.Add(size)
-	if protocol == "direct" { //karing
+	if direct { //karing
 		m.uploadTotalDirect.Add(size) //karing
 	}
 }
 
-func (m *Manager) PushDownloaded(size int64, protocol string, outbound string) { //karing
+func (m *Manager) PushDownloaded(size int64, direct bool) { //karing
 	m.downloadTemp.Add(size)
 	m.downloadTotal.Add(size)
-	if protocol == "direct" { //karing
+	if direct { //karing
 		m.downloadTotalDirect.Add(size) //karing
 	}
 }
@@ -118,31 +116,27 @@ func (m *Manager) Snapshot(includeConnections bool) *Snapshot { //karing
 	runtime.ReadMemStats(&memStats)
 	m.memory = memStats.StackInuse + memStats.HeapInuse + memStats.HeapIdle - memStats.HeapReleased
 
-	return &Snapshot{
-		Upload:      m.uploadTotal.Load(),
-		Download:    m.downloadTotal.Load(),
-		Connections: connections,
-		Memory:      m.memory,
-		StartTime:           m.startTime, //karing
+	return &Snapshot{//karing
+		StartTime:           m.startTime,  
 		UploadTotal:         m.uploadTotal.Load(),
 		DownloadTotal:       m.downloadTotal.Load(),
-		UploadTotalDirect:   m.uploadTotalDirect.Load(),   //karing
-		DownloadSpeed:       m.downloadBlip.Load(),        //karing
-		UploadSpeed:         m.uploadBlip.Load(),          //karing
-		DownloadTotalDirect: m.downloadTotalDirect.Load(), //karing
-		ConnectionsOut:      int32(conntrack.Count()),     //karing
-		ConnectionsIn:       int32(m.connections.Len()),   //karing
-		Goroutines:          int32(runtime.NumGoroutine()),//karing
+		UploadTotalDirect:   m.uploadTotalDirect.Load(),    
+		DownloadSpeed:       m.downloadBlip.Load(),         
+		UploadSpeed:         m.uploadBlip.Load(),           
+		DownloadTotalDirect: m.downloadTotalDirect.Load(),  
+		ConnectionsOut:      int32(conntrack.Count()),      
+		ConnectionsIn:       int32(m.connections.Len()),    
+		Goroutines:          int32(runtime.NumGoroutine()), 
 		Connections:         connections,
-		ThreadCount:         int32(gofree.ThreadNum()),    //karing
+		ThreadCount:         int32(gofree.ThreadNum()),
 		Memory:              m.memory,
 	}
 }
 func (m *Manager) OutboundHasConnections(tag string) bool {  //karing
 	hasConn := false;
-	m.connections.Range(func(_ string, value tracker) bool {
-		if info, istrack := value.(*tcpTracker); istrack {
-			for _, data := range info.Chain{
+	m.connections.Range(func(_ uuid.UUID, value Tracker) bool {
+		if info, istrack := value.(*TCPConn); istrack {
+			for _, data := range info.metadata.Chain{
 				if(data == tag){
 					hasConn = true
 					return false;
@@ -150,8 +144,8 @@ func (m *Manager) OutboundHasConnections(tag string) bool {  //karing
 			}
 			return true;
 		}
-		if info, istrack := value.(*udpTracker); istrack {
-			for _, data := range info.Chain{
+		if info, istrack := value.(*UDPConn); istrack {
+			for _, data := range info.metadata.Chain{
 				if(data == tag){
 					hasConn = true
 					return false;
@@ -170,13 +164,30 @@ func (m *Manager) ResetStatistic() {
 	m.uploadTotalDirect.Store(0)   //karing
 	m.downloadTotalDirect.Store(0) //karing
 }
+func (m *Manager) Close() error { //karing
+	m.startTime = time.Now()
+	m.ResetStatistic()
+	m.connections.Clear()
+	return nil
+}
 
-/*type Snapshot struct {
+/* //karing
+type Snapshot struct {
 	Download    int64
 	Upload      int64
 	Connections []Tracker
 	Memory      uint64
-}*/
+}
+
+func (s *Snapshot) MarshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]any{
+		"downloadTotal": s.Download,
+		"uploadTotal":   s.Upload,
+		"connections":   common.Map(s.Connections, func(t Tracker) TrackerMetadata { return t.Metadata() }),
+		"memory":        s.Memory,
+	})
+}
+*/
 type Snapshot struct {
 	StartTime           time.Time `json:"startTime"` //karing
 	DownloadTotal       int64     `json:"downloadTotal"`
@@ -189,28 +200,12 @@ type Snapshot struct {
 	ConnectionsIn       int32     `json:"connectionsIn"`       //karing
 	Goroutines          int32     `json:"goroutines"`          //karing
 	ConnectionsCount    int32     `json:"connectionsCount"`    //karing
-	Connections         []tracker `json:"connections"`
+	Connections         []Tracker `json:"connections"`
 	ThreadCount         int32     `json:"threadCount"`         //karing
 	Memory              uint64    `json:"memory"`
 }
 
-func (s *Snapshot) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]any{
-		"downloadTotal": s.Download,
-		"uploadTotal":   s.Upload,
-		"connections":   common.Map(s.Connections, func(t Tracker) TrackerMetadata { return t.Metadata() }),
-		"memory":        s.Memory,
-	})
-}
 
-func (m *Manager) Close() error {
-	m.ticker.Stop()
-	close(m.done)
-	m.startTime = time.Now()
-	m.ResetStatistic()  //karing
-	m.connections.Clear()  //karing
-	return nil
-}
 
 
 

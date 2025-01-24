@@ -25,8 +25,8 @@ type V2RayServer interface {
 }
 
 type CacheFile interface {
+	BeforeStart() error //karing
 	LifecycleService
-	BeforePreStarter //karing
 
 	StoreFakeIP() bool
 	FakeIPStorage

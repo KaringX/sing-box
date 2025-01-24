@@ -20,6 +20,7 @@ import (
 	F "github.com/sagernet/sing/common/format"
 	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
+	"github.com/sagernet/sing/service"
 )
 
 var (
@@ -220,8 +221,9 @@ func outboundQuery(router adapter.Router, logFactory log.Factory) func(w http.Re
 		ctx := context.Background()
 		ctx = adapter.ContextWithRouter(ctx, router)
 		meta := adapter.InboundContext{Domain: domain, Destination: M.ParseSocksaddr(ip)}
-		rule, outbound, err := router.GetMatchRule(ctx, &meta)
-		rulechain := router.GetMatchRuleChain(rule)
+		rule, matchOutboundTag, err := router.GetMatchRule(ctx, &meta)
+		outboundManager := service.FromContext[adapter.OutboundManager](ctx)
+		rulechain, outboundTag, _ := router.GetMatchRuleChain(outboundManager, matchOutboundTag)
 		if err != nil {
 			render.JSON(w, r, render.M{
 				"err":       err.Error(),
@@ -235,14 +237,14 @@ func outboundQuery(router adapter.Router, logFactory log.Factory) func(w http.Re
 					"err":       nil,
 					"rule":      rule.String(),
 					"rulechain": rulechain,
-					"outbound":  outbound,
+					"outbound":  outboundTag,
 				})
 			} else {
 				render.JSON(w, r, render.M{
 					"err":       nil,
 					"rule":      "final",
 					"rulechain": rulechain,
-					"outbound":  outbound,
+					"outbound":  outboundTag,
 				})
 			}
 		}

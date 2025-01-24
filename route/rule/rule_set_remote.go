@@ -80,6 +80,14 @@ func (s *RemoteRuleSet) String() string {
 	return strings.Join(F.MapToString(s.rules), " ")
 }
 
+func (s *RemoteRuleSet) Url() string { //karing
+	return s.options.RemoteOptions.URL
+}
+
+func (s *RemoteRuleSet) RulesCount() int { //karing
+	return len(s.rules)
+}
+
 func (s *RemoteRuleSet) StartContext(ctx context.Context, startContext *adapter.HTTPStartContext) error {
 	s.cacheFile = service.FromContext[adapter.CacheFile](s.ctx)
 	var dialer N.Dialer

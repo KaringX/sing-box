@@ -16,12 +16,13 @@ import (
 	"github.com/sagernet/sing-box/common/process"
 	"github.com/sagernet/sing-box/common/taskmonitor"
 	C "github.com/sagernet/sing-box/constant"
+	"github.com/sagernet/sing-box/experimental/clashapi/trafficontrol"
 	"github.com/sagernet/sing-box/experimental/libbox/platform"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
 	R "github.com/sagernet/sing-box/route/rule"
 	"github.com/sagernet/sing-box/transport/fakeip"
-	"github.com/sagernet/sing-dns"
+	dns "github.com/sagernet/sing-dns"
 	"github.com/sagernet/sing/common"
 	E "github.com/sagernet/sing/common/exceptions"
 	F "github.com/sagernet/sing/common/format"
@@ -139,7 +140,7 @@ func NewRouter(ctx context.Context, logFactory log.Factory, options option.Route
 				cacheFile := service.FromContext[adapter.CacheFile](ctx)
 				if cacheFile != nil {
 					if !cacheFile.HasRuleSet(ruleSetOptions.RemoteOptions.URL) {   //karing
-						ruleSet := R.NewRemoteRuleSet(ctx, router, router.logger, ruleSetOptions)
+						ruleSet := R.NewRemoteRuleSet(ctx, router.logger, ruleSetOptions)
 						router.ruleSetsRemoteWithLocal = append(router.ruleSetsRemoteWithLocal, ruleSet)
 						ruleSetOptions.Type = C.RuleSetTypeLocal
 					}
@@ -493,6 +494,7 @@ func (r *Router) Start(stage adapter.StartStage) error {
 			}
 		}
 	case adapter.StartStatePostStart:
+		//PostStart //karing
 		for i, rule := range r.rules {
 			monitor.Start("initialize rule[", i, "]")
 			err := rule.Start()
@@ -580,7 +582,7 @@ func (r *Router) Close() error {
 	return err
 }
 
-func (r *Router) PostStart() error {
+/*func (r *Router) PostStart() error {
 	monitor := taskmonitor.New(r.logger, C.StopTimeout)
 	if len(r.ruleSets) > 0 {
 		monitor.Start("initialize rule-set")
@@ -638,7 +640,7 @@ func (r *Router) PostStart() error {
 	}
 	r.started = true
 	return nil
-}
+}*/
 
 func (r *Router) FakeIPStore() adapter.FakeIPStore {
 	return r.fakeIPStore
@@ -653,7 +655,7 @@ func (r *Router) GetRemoteRuleSetRulesCount() map[string]int{  //karing
 	counts :=  make( map[string]int)
 	for _, ruleSet := range r.ruleSets {
 		if ruleset, isRemote := ruleSet.(*R.RemoteRuleSet); isRemote {
-			counts[ruleset.options.RemoteOptions.URL]= len(ruleset.rules)
+			counts[ruleset.Url()] = ruleset.RulesCount()
 		}
 	}
 	return counts
@@ -677,6 +679,7 @@ func (r *Router) ResetNetwork() {
 		transport.Reset()
 	}
 }
+
 func (r *Router) FindProcessInfo(ctx context.Context, network string, source netip.AddrPort)(*process.Info, error){ //karing
 	if r.processSearcher != nil {
 		var originDestination netip.AddrPort
@@ -684,44 +687,27 @@ func (r *Router) FindProcessInfo(ctx context.Context, network string, source net
 	}
 	return nil, E.New("processSearcher not impl")
 }
-func (r *Router) GetMatchRuleChain(rule adapter.Rule) []string { //karing
-	var chain []string
-	var next string
-	if rule == nil {
-		if defaultOutbound, err := r.DefaultOutbound(N.NetworkTCP); err == nil {
-			next = defaultOutbound.Tag()
-		}
-	} else {
-		next = rule.Outbound()
-	}
-	for {
-		chain = append(chain, next)
-		detour, loaded := r.Outbound(next)
-		if !loaded {
-			break
-		}
-		group, isGroup := detour.(adapter.OutboundGroup)
-		if !isGroup {
-			break
-		}
-		next = group.Now()
-	}
-	return chain
+
+func (r *Router) GetMatchRuleChain(outboundManager adapter.OutboundManager, matchOutboundTag string) ([]string, string, string) { //karing
+	return trafficontrol.GetMatchRuleChain(outboundManager, matchOutboundTag)
 }
+
 func (r *Router) GetMatchRule(ctx context.Context, metadata *adapter.InboundContext) (adapter.Rule, string, error) { //karing
-	_, rule, detour, err := r.match(ctx, metadata, r.defaultOutboundForConnection)
+	rule, _, _, _, err := r.matchRule(ctx, metadata, false, nil, nil)
 	if err != nil {
 		return nil, "", err
 	}
 
-	return rule, detour.Tag(), err
+	return rule, rule.Action().String(), err
 }
+
 func (r *Router) GetAssetContent(path string)([]byte, error) {//karing
 	if r.platformInterface == nil{
 		return nil, E.New("platform interface not set")
 	}
 	return r.platformInterface.GetAssetContent(path)
 }
+
 func (r *Router) SingalQuit(){ //karing
 	r.quitSig()
 }

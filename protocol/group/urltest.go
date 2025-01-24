@@ -91,18 +91,7 @@ func (s *URLTest) Start() error {
 		}
 		outbounds = append(outbounds, detour)
 	}
-	group, err := NewURLTestGroup(
-		s.ctx,
-		s.router,
-		s.logger,
-		outbounds,
-		s.link,
-		s.interval,
-		s.tolerance,
-		s.idleTimeout,
-		s.interruptExternalConnections,
-		s.defaultTag, //karing
-	)
+	group, err := NewURLTestGroup(s.ctx, s.outbound, s.logger, outbounds, s.link, s.interval, s.tolerance, s.idleTimeout, s.interruptExternalConnections, s.defaultTag) //karing
 	if err != nil {
 		return err
 	}
@@ -342,18 +331,7 @@ type URLTestGroup struct {
 	udpConnectionFailureCount MinZeroAtomicInt64 //hiddify
 }
 
-func NewURLTestGroup(
-	ctx context.Context,
-	router adapter.Router,
-	logger log.Logger,
-	outbounds []adapter.Outbound,
-	link string,
-	interval time.Duration,
-	tolerance uint16,
-	idleTimeout time.Duration,
-	interruptExternalConnections bool,
-	defaultTag string, //karing
-) (*URLTestGroup, error) {
+func NewURLTestGroup(ctx context.Context, outboundManager adapter.OutboundManager, logger log.Logger, outbounds []adapter.Outbound, link string, interval time.Duration, tolerance uint16, idleTimeout time.Duration, interruptExternalConnections bool, defaultTag string) (*URLTestGroup, error) { //karing
 	if interval == 0 {
 		interval = C.DefaultURLTestInterval
 	}
@@ -575,8 +553,8 @@ func (g *URLTestGroup) urlTest(ctx context.Context, force bool) (map[string]urlt
 				case C.TypeTUIC:needUpdate = true
 				}	
 				if isListener && needUpdate{
-					if(OutboundHasConnections != nil){
-						if(!OutboundHasConnections(realTag)){
+					if(outbound.OutboundHasConnections != nil){
+						if(!outbound.OutboundHasConnections(realTag)){
 							listener.InterfaceUpdated()
 						}
 					}

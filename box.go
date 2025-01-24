@@ -146,7 +146,7 @@ func New(options Options) (*Box, error) {
 		cacheFile := service.FromContext[adapter.CacheFile](ctx)
 		if cacheFile == nil {
 			cacheFile = cachefile.New(ctx, common.PtrValueOrDefault(experimentalOptions.CacheFile))
-			err = cacheFile.BeforePreStart()
+			err = cacheFile.BeforeStart()
 			if err != nil {
 				return nil, E.Cause(err, "cacheFile load failed")
 			}

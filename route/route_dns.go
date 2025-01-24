@@ -329,7 +329,7 @@ func (r *Router) LookupTag(ctx context.Context, domain string, strategy dns.Doma
 	metadata.Domain = domain
 	var (
 		transport         dns.Transport
-		transportStrategy dns.DomainStrategy
+		options           dns.QueryOptions
 		rule              adapter.DNSRule
 		ruleIndex         int
 	)
@@ -342,9 +342,9 @@ func (r *Router) LookupTag(ctx context.Context, domain string, strategy dns.Doma
 		)
 		metadata.ResetRuleCache()
 		metadata.DestinationAddresses = nil
-		dnsCtx, transport, transportStrategy, rule, ruleIndex = r.matchDNS(ctx, false, ruleIndex, true)
-		if strategy == dns.DomainStrategyAsIS {
-			strategy = transportStrategy
+		transport, options, rule, ruleIndex = r.matchDNS(ctx, false, ruleIndex, true)
+		if strategy != dns.DomainStrategyAsIS {
+			options.Strategy = strategy
 		}
 		dnsCtx, cancel = context.WithTimeout(dnsCtx, C.DNSTimeout)
 		responseAddrs, err = r.lookupStaticIP(domain, strategy) //hiddify
@@ -353,13 +353,13 @@ func (r *Router) LookupTag(ctx context.Context, domain string, strategy dns.Doma
 			r.dnsLogger.DebugContext(ctx, "Static IP responsefor ", domain, " ", responseAddrs[0])
 		} else if rule != nil && rule.WithAddressLimit() { //hiddify
 			addressLimit = true
-			responseAddrs, err = r.dnsClient.LookupWithResponseCheck(dnsCtx, transport, domain, strategy, func(responseAddrs []netip.Addr) bool {
+			responseAddrs, err = r.dnsClient.LookupWithResponseCheck(dnsCtx, transport, domain, options, func(responseAddrs []netip.Addr) bool {
 				metadata.DestinationAddresses = responseAddrs
 				return rule.MatchAddressLimit(metadata)
 			})
 		} else {
 			addressLimit = false
-			responseAddrs, err = r.dnsClient.Lookup(dnsCtx, transport, domain, strategy)
+			responseAddrs, err = r.dnsClient.Lookup(dnsCtx, transport, domain, options)
 		}
 		cancel()
 		if err != nil {

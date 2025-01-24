@@ -13,7 +13,7 @@ import (
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing-box/transport/wireguard"
-	"github.com/sagernet/sing-dns"
+	dns "github.com/sagernet/sing-dns"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/bufio"
 	E "github.com/sagernet/sing/common/exceptions"
@@ -210,4 +210,7 @@ func (w *Endpoint) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
 		return packetConn, err
 	}
 	return w.endpoint.ListenPacket(ctx, destination)
+}
+
+func (w *Endpoint) SetParseErr(err error){ //karing
 }

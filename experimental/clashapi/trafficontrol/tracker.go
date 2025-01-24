@@ -26,22 +26,9 @@ type TrackerMetadata struct {
 	Rule         adapter.Rule
 	Outbound     string
 	OutboundType string
+	User         string //karing
+	Protocol	 string //karing
 }
-/*=======
-type Metadata struct {
-	NetWork     string     `json:"network"`
-	Type        string     `json:"type"`
-	SrcIP       netip.Addr `json:"sourceIP"`
-	DstIP       netip.Addr `json:"destinationIP"`
-	SrcPort     string     `json:"sourcePort"`
-	DstPort     string     `json:"destinationPort"`
-	Host        string     `json:"host"`
-	DNSMode     string     `json:"dnsMode"`
-	ProcessPath string     `json:"processPath"`
-	PackageName string     `json:"packageName"` //karing
-	User        string     `json:"user"`     //karing
-	Protocol    string     `json:"protocol"` //karing
->>>>>>> karing_v1.9.7*/
 
 
 func (t TrackerMetadata) MarshalJSON() ([]byte, error) {
@@ -58,11 +45,12 @@ func (t TrackerMetadata) MarshalJSON() ([]byte, error) {
 		domain = t.Metadata.Destination.Fqdn
 	}
 	var processPath string
+	var packageName string //karing
 	if t.Metadata.ProcessInfo != nil {
 		if t.Metadata.ProcessInfo.ProcessPath != "" {
 			processPath = t.Metadata.ProcessInfo.ProcessPath
 		} else if t.Metadata.ProcessInfo.PackageName != "" {
-			processPath = t.Metadata.ProcessInfo.PackageName
+			packageName = t.Metadata.ProcessInfo.PackageName
 		}
 		if processPath == "" {
 			if t.Metadata.ProcessInfo.UserId != -1 {
@@ -92,6 +80,9 @@ func (t TrackerMetadata) MarshalJSON() ([]byte, error) {
 			"host":            domain,
 			"dnsMode":         "normal",
 			"processPath":     processPath,
+			"packageName":     packageName,//karing
+			"user":            t.User,     //karing
+			"protocol":        t.Protocol, //karing
 		},
 		"upload":      t.Upload.Load(),
 		"download":    t.Download.Load(),
@@ -136,6 +127,8 @@ func (tt *TCPConn) WriterReplaceable() bool {
 
 func NewTCPTracker(conn net.Conn, manager *Manager, metadata adapter.InboundContext, outboundManager adapter.OutboundManager, matchRule adapter.Rule, matchOutbound adapter.Outbound) *TCPConn {
 	id, _ := uuid.NewV4()
+	chain, outbound, outboundType := GetMatchRuleChain(outboundManager, matchOutbound.Tag()) //karing
+	/* //karing
 	var (
 		chain        []string
 		next         string
@@ -161,15 +154,16 @@ func NewTCPTracker(conn net.Conn, manager *Manager, metadata adapter.InboundCont
 		}
 		next = group.Now()
 	}
+	*/
 	upload := new(atomic.Int64)
 	download := new(atomic.Int64)
 	tracker := &TCPConn{
 		ExtendedConn: bufio.NewCounterConn(conn, []N.CountFunc{func(n int64) {
 			upload.Add(n)
-			manager.PushUploaded(n, protocol, outbound) //karing
+			manager.PushUploaded(n, metadata.Protocol == "direct") //karing
 		}}, []N.CountFunc{func(n int64) {
 			download.Add(n)
-			manager.PushDownloaded(n, protocol, outbound) //karing
+			manager.PushDownloaded(n, metadata.Protocol == "direct") //karing
 		}}),
 		metadata: TrackerMetadata{
 			ID:           id,
@@ -181,6 +175,8 @@ func NewTCPTracker(conn net.Conn, manager *Manager, metadata adapter.InboundCont
 			Rule:         matchRule,
 			Outbound:     outbound,
 			OutboundType: outboundType,
+			User:         metadata.User,     //karing
+			Protocol:     metadata.Protocol, //karing
 		},
 		manager: manager,
 	}
@@ -217,6 +213,8 @@ func (ut *UDPConn) WriterReplaceable() bool {
 
 func NewUDPTracker(conn N.PacketConn, manager *Manager, metadata adapter.InboundContext, outboundManager adapter.OutboundManager, matchRule adapter.Rule, matchOutbound adapter.Outbound) *UDPConn {
 	id, _ := uuid.NewV4()
+	chain, outbound, outboundType := GetMatchRuleChain(outboundManager, matchOutbound.Tag()) //karing
+	/* //karing
 	var (
 		chain        []string
 		next         string
@@ -242,15 +240,16 @@ func NewUDPTracker(conn N.PacketConn, manager *Manager, metadata adapter.Inbound
 		}
 		next = group.Now()
 	}
+	*/
 	upload := new(atomic.Int64)
 	download := new(atomic.Int64)
 	trackerConn := &UDPConn{
 		PacketConn: bufio.NewCounterPacketConn(conn, []N.CountFunc{func(n int64) {
 			upload.Add(n)
-			manager.PushUploaded(n, protocol, outbound) //karing
+			manager.PushUploaded(n, metadata.Protocol == "direct") //karing
 		}}, []N.CountFunc{func(n int64) {
 			download.Add(n)
-			manager.PushDownloaded(n, protocol, outbound) //karing
+			manager.PushDownloaded(n, metadata.Protocol == "direct") //karing
 		}}),
 		metadata: TrackerMetadata{
 			ID:           id,
@@ -262,58 +261,40 @@ func NewUDPTracker(conn N.PacketConn, manager *Manager, metadata adapter.Inbound
 			Rule:         matchRule,
 			Outbound:     outbound,
 			OutboundType: outboundType,
+			User:         metadata.User,     //karing
+			Protocol:     metadata.Protocol, //karing
 		},
 		manager: manager,
 	}
 	manager.Join(trackerConn)
 	return trackerConn
 }
+func GetMatchRuleChain(outboundManager adapter.OutboundManager, matchOutboundTag string) ([]string, string, string) { //karing
+	var (
+		chain        []string
+		next         string
+		outbound     string
+		outboundType string
+	)
+	if len(matchOutboundTag) != 0 {
+		next = matchOutboundTag
+	} else {
+		next = outboundManager.Default().Tag()
+	}
+	for {
+		detour, loaded := outboundManager.Outbound(next)
+		if !loaded {
+			break
+		}
+		chain = append(chain, next)
+		outbound = detour.Tag()
+		outboundType = detour.Type()
+		group, isGroup := detour.(adapter.OutboundGroup)
+		if !isGroup {
+			break
+		}
+		next = group.Now()
+	}
+	return chain, outbound, outboundType
+}
 
-/*
-func castMetadata(metadata adapter.InboundContext) trafficontrol.Metadata {
-	var inbound string
-	if metadata.Inbound != "" {
-		inbound = metadata.InboundType + "/" + metadata.Inbound
-	} else {
-		inbound = metadata.InboundType
-	}
-	var domain string
-	if metadata.Domain != "" {
-		domain = metadata.Domain
-	} else {
-		domain = metadata.Destination.Fqdn
-	}
-	var processPath string
-	var packageName string //karing
-	if metadata.ProcessInfo != nil {
-		if metadata.ProcessInfo.ProcessPath != "" {
-			processPath = metadata.ProcessInfo.ProcessPath
-		}
-		if metadata.ProcessInfo.PackageName != "" { //karing
-			packageName = metadata.ProcessInfo.PackageName //karing
-		}
-		if processPath == "" {
-			if metadata.ProcessInfo.UserId != -1 {
-				processPath = F.ToString(metadata.ProcessInfo.UserId)
-			}
-		} else if metadata.ProcessInfo.User != "" {
-			processPath = F.ToString(processPath, " (", metadata.ProcessInfo.User, ")")
-		} else if metadata.ProcessInfo.UserId != -1 {
-			processPath = F.ToString(processPath, " (", metadata.ProcessInfo.UserId, ")")
-		}
-	}
-	return trafficontrol.Metadata{
-		NetWork:     metadata.Network,
-		Type:        inbound,
-		SrcIP:       metadata.Source.Addr,
-		DstIP:       metadata.Destination.Addr,
-		SrcPort:     F.ToString(metadata.Source.Port),
-		DstPort:     F.ToString(metadata.Destination.Port),
-		Host:        domain,
-		DNSMode:     "normal",
-		ProcessPath: processPath,
-		PackageName: packageName,       //karing
-		User:        metadata.User,     //karing
-		Protocol:    metadata.Protocol, //karing
-	}
-}*/

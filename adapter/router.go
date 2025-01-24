@@ -42,7 +42,7 @@ type Router interface {
 
 	LookupTag(ctx context.Context, domain string, strategy dns.DomainStrategy) ([]netip.Addr, string, error) //karing
 	FindProcessInfo(ctx context.Context, network string, source netip.AddrPort)(*process.Info, error)        //karing
-	GetMatchRuleChain(rule Rule) []string                                                                    //karing
+	GetMatchRuleChain(outboundManager OutboundManager, matchOutboundTag string) ([]string, string, string)   //karing
 	GetMatchRule(ctx context.Context, metadata *InboundContext) (Rule, string, error)                        //karing
 	GetAssetContent(path string)([]byte, error) //karing
 	SingalQuit() //karing
