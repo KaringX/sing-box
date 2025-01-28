@@ -19,6 +19,7 @@ type Interface interface {
 	UnderNetworkExtension() bool
 	IncludeAllNetworks() bool
 	ClearDNSCache()
+	GetAssetContent(path string)([]byte, error) //karing
 	ReadWIFIState() adapter.WIFIState
 	process.Searcher
 	SendNotification(notification *Notification) error
@@ -33,3 +34,4 @@ type Notification struct {
 	Body       string
 	OpenURL    string
 }
+

@@ -51,7 +51,7 @@ func memory(trafficManager *trafficontrol.Manager) func(w http.ResponseWriter, r
 		for range tick.C {
 			buf.Reset()
 
-			inuse := trafficManager.Snapshot().Memory
+			inuse := trafficManager.Snapshot(false).Memory  //karing
 
 			// make chat.js begin with zero
 			// this is shit var,but we need output 0 for first time

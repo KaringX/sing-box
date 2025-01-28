@@ -40,3 +40,5 @@ func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
 	h.logger.InfoContext(ctx, "blocked packet connection to ", destination)
 	return nil, syscall.EPERM
 }
+func (w *Outbound) SetParseErr(err error){ //karing
+}

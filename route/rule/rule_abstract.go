@@ -21,6 +21,7 @@ type abstractDefaultRule struct {
 	ruleSetItem             RuleItem
 	invert                  bool
 	action                  adapter.RuleAction
+	name                    string //karing
 }
 
 func (r *abstractDefaultRule) Type() string {
@@ -48,6 +49,15 @@ func (r *abstractDefaultRule) Close() error {
 			return err
 		}
 	}
+	//karing
+	r.items = make([]RuleItem, 0)
+	r.sourceAddressItems = make([]RuleItem, 0)
+	r.sourcePortItems = make([]RuleItem, 0)
+	r.destinationAddressItems = make([]RuleItem, 0)
+	r.destinationIPCIDRItems = make([]RuleItem, 0)
+	r.destinationPortItems = make([]RuleItem, 0)
+	r.allItems = make([]RuleItem, 0)
+	//karing
 	return nil
 }
 
@@ -155,6 +165,9 @@ func (r *abstractDefaultRule) Action() adapter.RuleAction {
 }
 
 func (r *abstractDefaultRule) String() string {
+	if len(r.name) > 0 { //karing
+		return r.name
+	}
 	if !r.invert {
 		return strings.Join(F.MapToString(r.allItems), " ")
 	} else {
@@ -167,6 +180,7 @@ type abstractLogicalRule struct {
 	mode   string
 	invert bool
 	action adapter.RuleAction
+	name   string //karing
 }
 
 func (r *abstractLogicalRule) Type() string {
@@ -236,6 +250,9 @@ func (r *abstractLogicalRule) Action() adapter.RuleAction {
 }
 
 func (r *abstractLogicalRule) String() string {
+	if len(r.name) > 0 { //karing
+		return r.name
+	}
 	var op string
 	switch r.mode {
 	case C.LogicalTypeAnd:

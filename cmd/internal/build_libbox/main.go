@@ -9,6 +9,7 @@ import (
 
 	_ "github.com/sagernet/gomobile"
 	"github.com/sagernet/sing-box/cmd/internal/build_shared"
+	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/log"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/rw"
@@ -19,12 +20,14 @@ var (
 	debugEnabled bool
 	target       string
 	platform     string
+	ldflags      string //karing
 )
 
 func init() {
 	flag.BoolVar(&debugEnabled, "debug", false, "enable debug")
 	flag.StringVar(&target, "target", "android", "target platform")
 	flag.StringVar(&platform, "platform", "", "specify platform")
+	flag.StringVar(&ldflags, "ldflags", "", "additional ldflags") //karing
 }
 
 func main() {
@@ -55,14 +58,21 @@ func init() {
 	if err != nil {
 		currentTag = "unknown"
 	}
-	sharedFlags = append(sharedFlags, "-ldflags", "-X github.com/sagernet/sing-box/constant.Version="+currentTag+" -s -w -buildid=")
-	debugFlags = append(debugFlags, "-ldflags", "-X github.com/sagernet/sing-box/constant.Version="+currentTag)
+	sharedFlags = append(sharedFlags, "-ldflags", "-X github.com/sagernet/sing-box/constant.Version="+currentTag+" "+ldflags+" -checklinkname=0 "+" -s -w -buildid=") //karing
 
-	sharedTags = append(sharedTags, "with_gvisor", "with_quic", "with_wireguard", "with_ech", "with_utls", "with_clash_api")
-	iosTags = append(iosTags, "with_dhcp", "with_low_memory", "with_conntrack")
+	debugFlags = append(debugFlags, "-ldflags", "-X github.com/sagernet/sing-box/constant.Version="+currentTag+" "+ldflags+" -checklinkname=0 ") //karing
+
+	sharedTags = append(sharedTags, "with_acme", "with_gvisor", "with_quic", "with_wireguard", "with_ech", "with_utls", "with_clash_api", "with_karing", "with_shadowsocksr", "with_grpc", "with_conntrack") //karing
+	iosTags = append(iosTags, "with_dhcp", "with_low_memory", "with_conntrack")                                                                                                                              //karing
 	debugTags = append(debugTags, "debug")
 }
 
+func getGoMobilePath() string { // karing
+	if C.IsWindows {
+		return "/gomobile.exe"
+	}
+	return "/gomobile"
+}
 func buildAndroid() {
 	build_shared.FindSDK()
 
@@ -97,7 +107,7 @@ func buildAndroid() {
 		"-target", bindTarget,
 		"-androidapi", "21",
 		"-javapkg=io.nekohasekai",
-		"-libname=box",
+		//"-libname=box",  //karing
 	}
 	if !debugEnabled {
 		args = append(args, sharedFlags...)
@@ -113,7 +123,7 @@ func buildAndroid() {
 	}
 	args = append(args, "./experimental/libbox")
 
-	command := exec.Command(build_shared.GoBinPath+"/gomobile", args...)
+	command := exec.Command(build_shared.GoBinPath+getGoMobilePath(), args...) //karing
 	command.Stdout = os.Stdout
 	command.Stderr = os.Stderr
 	err = command.Run()
@@ -147,7 +157,8 @@ func buildApple() {
 		"bind",
 		"-v",
 		"-target", bindTarget,
-		"-libname=box",
+		//"-libname=box", //karing
+		"-target", "ios,iossimulator,tvos,tvossimulator,macos",
 	}
 	if !debugEnabled {
 		args = append(args, sharedFlags...)
@@ -164,7 +175,7 @@ func buildApple() {
 	}
 	args = append(args, "./experimental/libbox")
 
-	command := exec.Command(build_shared.GoBinPath+"/gomobile", args...)
+	command := exec.Command(build_shared.GoBinPath+getGoMobilePath(), args...) //karing
 	command.Stdout = os.Stdout
 	command.Stderr = os.Stderr
 	err := command.Run()

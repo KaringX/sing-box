@@ -120,5 +120,6 @@ type Hysteria2OutboundOptions struct {
 	Password    string                     `json:"password,omitempty"`
 	Network     NetworkList                `json:"network,omitempty"`
 	OutboundTLSOptionsContainer
-	BrutalDebug bool `json:"brutal_debug,omitempty"`
+	BrutalDebug bool              `json:"brutal_debug,omitempty"`
+	TurnRelay   *TurnRelayOptions `json:"turn_relay,omitempty"` //hiddify
 }

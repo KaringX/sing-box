@@ -93,6 +93,10 @@ func (s *platformInterfaceStub) IncludeAllNetworks() bool {
 func (s *platformInterfaceStub) ClearDNSCache() {
 }
 
+func (s *platformInterfaceStub) GetAssetContent(path string)([]byte, error) {//karing
+	return nil, os.ErrInvalid
+}
+
 func (s *platformInterfaceStub) ReadWIFIState() adapter.WIFIState {
 	return adapter.WIFIState{}
 }

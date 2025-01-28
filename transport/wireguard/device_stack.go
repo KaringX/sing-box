@@ -16,7 +16,7 @@ import (
 	"github.com/sagernet/gvisor/pkg/tcpip/stack"
 	"github.com/sagernet/gvisor/pkg/tcpip/transport/tcp"
 	"github.com/sagernet/gvisor/pkg/tcpip/transport/udp"
-	"github.com/sagernet/sing-tun"
+	tun "github.com/sagernet/sing-tun"
 	E "github.com/sagernet/sing/common/exceptions"
 	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
@@ -179,7 +179,9 @@ func (w *stackDevice) Write(bufs [][]byte, offset int) (count int, err error) {
 		packetBuffer := stack.NewPacketBuffer(stack.PacketBufferOptions{
 			Payload: buffer.MakeWithData(b),
 		})
-		w.dispatcher.DeliverNetworkPacket(networkProtocol, packetBuffer)
+		if w.dispatcher != nil { //hiddify
+			w.dispatcher.DeliverNetworkPacket(networkProtocol, packetBuffer)
+		}
 		packetBuffer.DecRef()
 		count++
 	}
@@ -203,6 +205,11 @@ func (w *stackDevice) Events() <-chan wgTun.Event {
 }
 
 func (w *stackDevice) Close() error {
+	select {//karing
+	case <-w.done:
+		return os.ErrClosed
+	default:
+	}
 	close(w.done)
 	close(w.events)
 	w.stack.Close()
