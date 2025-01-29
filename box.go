@@ -366,14 +366,14 @@ func (s *Box) Start() error {
 		s.Close()
 		return err
 	}
-	for i, in := range s.inbounds {  //karing
+	for i, in := range s.inbound.Inbounds() {  //karing
 		var tag string
 		if in.Tag() == "" {
 			tag = F.ToString(i)
 		} else {
 			tag = in.Tag()
 		}
-		err = in.Start()
+		err = in.Start(adapter.StartStateStart)
 		if err != nil {
 			return E.Cause(err, "initialize inbound/", in.Type(), "[", tag, "]")
 		}

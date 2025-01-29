@@ -2,25 +2,17 @@ package clashapi
 
 //karing
 import (
-	"context"
 	"net/http"
-	"net/netip"
 	"os"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/common/conntrack"
 	D "github.com/sagernet/sing-box/common/debug"
-	"github.com/sagernet/sing-box/common/dialer"
 	"github.com/sagernet/sing-box/log"
 	dns "github.com/sagernet/sing-dns"
-	E "github.com/sagernet/sing/common/exceptions"
-	F "github.com/sagernet/sing/common/format"
-	M "github.com/sagernet/sing/common/metadata"
-	N "github.com/sagernet/sing/common/network"
-	"github.com/sagernet/sing/service"
+	//"github.com/sagernet/sing-box/log"
 )
 
 var (
@@ -56,6 +48,7 @@ func transStrategy(strategy string) dns.DomainStrategy {
 		return dns.DomainStrategy(dns.DomainStrategyPreferIPv4)
 	}
 }
+/*
 func LookupWithDefaultRouter(router adapter.Router, logFactory log.Factory, domain string, strategy dns.DomainStrategy) (uint16, []netip.Addr, string, error) {
 	ctx := context.Background()
 	ctx = adapter.ContextWithRouter(ctx, router)
@@ -135,7 +128,7 @@ func Lookup(router adapter.Router, logFactory log.Factory, req DNSQueryRequest) 
 	duration := uint16(time.Since(start) / time.Millisecond)
 	return duration, addr, nil
 }
-
+*/
 func karingRouter(router adapter.Router, logFactory log.Factory) http.Handler {
 	dnsClient = dns.NewClient(dns.ClientOptions{
 		DisableCache:     true,
@@ -146,9 +139,9 @@ func karingRouter(router adapter.Router, logFactory log.Factory) http.Handler {
 
 	r := chi.NewRouter()
 	r.Get("/stop", stop(router, logFactory))
-	r.Get("/dnsQueryWithDefaultRouter", dnsQueryWithDefaultRouter(router, logFactory))
-	r.Post("/dnsQuery", dnsQuery(router, logFactory))
-	r.Get("/outboundQuery", outboundQuery(router, logFactory))
+	//r.Get("/dnsQueryWithDefaultRouter", dnsQueryWithDefaultRouter(router, logFactory))
+	//r.Post("/dnsQuery", dnsQuery(router, logFactory))
+	//r.Get("/outboundQuery", outboundQuery(router, logFactory))
 	r.Get("/remoteRuleSetRulesCount", remoteRuleSetRulesCount(router, logFactory))
 	r.Get("/resetOutboundConnections", resetOutboundConnections(router, logFactory))
 	r.Get("/mainStack", mainStack(router, logFactory))
@@ -163,7 +156,7 @@ func stop(router adapter.Router, logFactory log.Factory) func(w http.ResponseWri
 		})
 	}
 }
-
+/*
 func dnsQueryWithDefaultRouter(router adapter.Router, logFactory log.Factory) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		domain := r.URL.Query().Get("domain")
@@ -250,7 +243,7 @@ func outboundQuery(router adapter.Router, logFactory log.Factory) func(w http.Re
 		}
 	}
 }
-
+*/
 func remoteRuleSetRulesCount(router adapter.Router, logFactory log.Factory) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		render.JSON(w, r, render.M{

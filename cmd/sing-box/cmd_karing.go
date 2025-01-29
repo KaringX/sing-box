@@ -94,17 +94,22 @@ func setUpDir(content []byte) error {
 	if err1 != nil {
 		return err1
 	}
-
-	base_dir := stringNotNil(value.GetStringBytes("base_dir"))
-	work_dir := stringNotNil(value.GetStringBytes("work_dir"))
-	cache_dir := stringNotNil(value.GetStringBytes("cache_dir"))
 	core_path := stringNotNil(value.GetStringBytes("core_path"))
 	if len(core_path) == 0 {
 		return E.New(serviceConfigPath + " : core_path is empty")
 	}
-	libbox.Setup(base_dir, work_dir, cache_dir, false)
 	configPaths = append(configPaths, core_path)
-	return nil
+
+	setupOptions := libbox.SetupOptions {
+		BasePath     :stringNotNil(value.GetStringBytes("base_dir")),
+		WorkingPath     :stringNotNil(value.GetStringBytes("work_dir")),
+		TempPath        :stringNotNil(value.GetStringBytes("cache_dir")),
+		Username        :"",
+		IsTVOS          :false,
+		FixAndroidStack :false,
+	}
+
+	return libbox.Setup(&setupOptions)
 }
 func stringNotNil(v []byte) string {
 	if v == nil {
