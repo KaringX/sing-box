@@ -9,10 +9,14 @@ import (
 	"strconv"
 	"time"
 
+	box "github.com/sagernet/sing-box"
+	"github.com/sagernet/sing-box/experimental/deprecated"
 	"github.com/sagernet/sing-box/experimental/libbox"
+	"github.com/sagernet/sing-box/include"
 	_ "github.com/sagernet/sing-box/include"
 	"github.com/sagernet/sing-box/log"
 	E "github.com/sagernet/sing/common/exceptions"
+	"github.com/sagernet/sing/service"
 	"github.com/sagernet/sing/service/filemanager"
 	"github.com/valyala/fastjson"
 
@@ -85,6 +89,8 @@ func preRun(cmd *cobra.Command, args []string) error{
 	if len(configPaths) == 0 && len(configDirectories) == 0 {
 		configPaths = append(configPaths, "config.json")
 	}
+	globalCtx = service.ContextWith(globalCtx, deprecated.NewStderrManager(log.StdLogger()))
+	globalCtx = box.Context(globalCtx, include.InboundRegistry(), include.OutboundRegistry(), include.EndpointRegistry())
 	return nil
 }
 
@@ -101,12 +107,12 @@ func setUpDir(content []byte) error {
 	configPaths = append(configPaths, core_path)
 
 	setupOptions := libbox.SetupOptions {
-		BasePath     :stringNotNil(value.GetStringBytes("base_dir")),
-		WorkingPath     :stringNotNil(value.GetStringBytes("work_dir")),
-		TempPath        :stringNotNil(value.GetStringBytes("cache_dir")),
-		Username        :"",
-		IsTVOS          :false,
-		FixAndroidStack :false,
+		BasePath:         stringNotNil(value.GetStringBytes("base_dir")),
+		WorkingPath:      stringNotNil(value.GetStringBytes("work_dir")),
+		TempPath:         stringNotNil(value.GetStringBytes("cache_dir")),
+		Username:         "",
+		IsTVOS:           false,
+		FixAndroidStack : false,
 	}
 
 	return libbox.Setup(&setupOptions)

@@ -366,18 +366,7 @@ func (s *Box) Start() error {
 		s.Close()
 		return err
 	}
-	for i, in := range s.inbound.Inbounds() {  //karing
-		var tag string
-		if in.Tag() == "" {
-			tag = F.ToString(i)
-		} else {
-			tag = in.Tag()
-		}
-		err = in.Start(adapter.StartStateStart)
-		if err != nil {
-			return E.Cause(err, "initialize inbound/", in.Type(), "[", tag, "]")
-		}
-	}
+	
 	s.logger.Info("started (", F.Seconds(time.Since(s.createdAt).Seconds()), "s) since ", s.createdAt) //karing
 	return nil
 }
@@ -414,15 +403,15 @@ func (s *Box) start() error {
 	if err != nil {
 		return err
 	}
-	err = s.inbound.Start(adapter.StartStateStart)
+	/*err = s.inbound.Start(adapter.StartStateStart) //karing
 	if err != nil {
 		return err
-	}
+	}*/
 	err = adapter.Start(adapter.StartStateStart, s.endpoint)
 	if err != nil {
 		return err
 	}
-	err = adapter.Start(adapter.StartStatePostStart, s.outbound, s.network, s.connection, s.router, s.inbound, s.endpoint)
+	err = adapter.Start(adapter.StartStatePostStart, s.outbound, s.network, s.connection, s.router, s.endpoint) //karing
 	if err != nil {
 		return err
 	}
@@ -430,10 +419,24 @@ func (s *Box) start() error {
 	if err != nil {
 		return err
 	}
-	err = adapter.Start(adapter.StartStateStarted, s.network, s.connection, s.router, s.outbound, s.inbound, s.endpoint)
+	err = adapter.Start(adapter.StartStateStarted, s.network, s.connection, s.router, s.outbound, s.endpoint) //karing
 	if err != nil {
 		return err
 	}
+	//karing begin
+	err = s.inbound.Start(adapter.StartStateStart)
+	if err != nil {
+		return err
+	}
+	err = adapter.Start(adapter.StartStatePostStart, s.inbound)
+	if err != nil {
+		return err
+	}
+	err = adapter.Start(adapter.StartStateStarted, s.inbound)
+	if err != nil {
+		return err
+	}
+	//karing end
 	err = adapter.StartNamed(adapter.StartStateStarted, s.services)
 	if err != nil {
 		return err
