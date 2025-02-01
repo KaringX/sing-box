@@ -183,16 +183,39 @@ func NewDefault(ctx context.Context, options option.DialerOptions) (*DefaultDial
 		}
 		setMultiPathTCP(&dialer4)
 	}
+
+	var tlsFragment *TLSFragment = nil                             //hiddify
+	if options.TLSFragment != nil && options.TLSFragment.Enabled { //hiddify
+		tlsFragment = &TLSFragment{}
+		if options.TCPFastOpen {
+			return nil, E.New("TLS Fragmentation is not compatible with TCP Fast Open, set `tcp_fast_open` to `false` in your outbound if you intend to enable TLS fragmentation.")
+		}
+		tlsFragment.Enabled = true
+
+		sleep, err := option.Parse2IntRange(options.TLSFragment.Sleep)
+
+		if err != nil {
+			return nil, E.Cause(err, "invalid TLS fragment sleep period supplied")
+		}
+		tlsFragment.Sleep = sleep
+
+		size, err := option.Parse2IntRange(options.TLSFragment.Size)
+		if err != nil {
+			return nil, E.Cause(err, "invalid TLS fragment size supplied")
+		}
+		tlsFragment.Size = size
+
+	}
 	if options.IsWireGuardListener {
 		for _, controlFn := range WgControlFns {
 			listener.Control = control.Append(listener.Control, controlFn)
 		}
 	}
-	tcpDialer4, err := newTCPDialer(dialer4, options.TCPFastOpen)
+	tcpDialer4, err := newTCPDialer(dialer4, options.TCPFastOpen, tlsFragment) //hiddify
 	if err != nil {
 		return nil, err
 	}
-	tcpDialer6, err := newTCPDialer(dialer6, options.TCPFastOpen)
+	tcpDialer6, err := newTCPDialer(dialer6, options.TCPFastOpen, tlsFragment) //hiddify
 	if err != nil {
 		return nil, err
 	}
@@ -281,6 +304,11 @@ func (d *DefaultDialer) DialParallelInterface(ctx context.Context, network strin
 	}
 	if !fastFallback && !isPrimary {
 		d.networkLastFallback.Store(time.Now())
+	}
+	if !address.IsIPv6() {
+		return trackConn(d.dialer4.DialContext(ctx, network, address)) //hiddify
+	} else {
+		return trackConn(d.dialer6.DialContext(ctx, network, address)) //hiddify
 	}
 	return trackConn(conn, nil)
 }

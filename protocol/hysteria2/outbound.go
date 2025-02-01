@@ -14,6 +14,7 @@ import (
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing-box/protocol/tuic"
+	"github.com/sagernet/sing-box/protocol/wireguard/houtbound" //hiddify
 	"github.com/sagernet/sing-quic/hysteria"
 	"github.com/sagernet/sing-quic/hysteria2"
 	"github.com/sagernet/sing/common"
@@ -37,32 +38,40 @@ type Outbound struct {
 	outbound.Adapter
 	logger logger.ContextLogger
 	client *hysteria2.Client
+	hforwarder *houtbound.Forwarder //hiddify
+	parseErr    error               //karing
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.Hysteria2OutboundOptions) (adapter.Outbound, error) {
+	empty := &Outbound{ //karing
+		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeHysteria2, tag, []string{}, options.DialerOptions),
+		logger:  logger,
+	}
 	options.UDPFragmentDefault = true
 	if options.TLS == nil || !options.TLS.Enabled {
-		return nil, C.ErrTLSRequired
+		return empty, C.ErrTLSRequired //karing
 	}
+	hforwarder := houtbound.ApplyTurnRelay(houtbound.CommonTurnRelayOptions{ServerOptions: options.ServerOptions, TurnRelayOptions: options.TurnRelay}) //hiddify
+
 	tlsConfig, err := tls.NewClient(ctx, options.Server, common.PtrValueOrDefault(options.TLS))
 	if err != nil {
-		return nil, err
+		return empty, err //karing
 	}
 	var salamanderPassword string
 	if options.Obfs != nil {
 		if options.Obfs.Password == "" {
-			return nil, E.New("missing obfs password")
+			return empty, E.New("missing obfs password") //karing
 		}
 		switch options.Obfs.Type {
 		case hysteria2.ObfsTypeSalamander:
 			salamanderPassword = options.Obfs.Password
 		default:
-			return nil, E.New("unknown obfs type: ", options.Obfs.Type)
+			return empty, E.New("unknown obfs type: ", options.Obfs.Type) //karing
 		}
 	}
 	outboundDialer, err := dialer.New(ctx, options.DialerOptions)
 	if err != nil {
-		return nil, err
+		return empty, err //karing
 	}
 	networkList := options.Network.Build()
 	client, err := hysteria2.NewClient(hysteria2.ClientOptions{
@@ -81,16 +90,20 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		UDPDisabled:        !common.Contains(networkList, N.NetworkUDP),
 	})
 	if err != nil {
-		return nil, err
+		return empty, err //karing
 	}
 	return &Outbound{
 		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeHysteria2, tag, networkList, options.DialerOptions),
 		logger:  logger,
 		client:  client,
+		hforwarder: hforwarder, //hiddify
 	}, nil
 }
 
 func (h *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
+	if(h.parseErr != nil){ //karing
+		return nil, h.parseErr
+	}
 	switch N.NetworkName(network) {
 	case N.NetworkTCP:
 		h.logger.InfoContext(ctx, "outbound connection to ", destination)
@@ -107,6 +120,9 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 }
 
 func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
+	if(h.parseErr != nil){ //karing
+		return nil, h.parseErr
+	}
 	h.logger.InfoContext(ctx, "outbound packet connection to ", destination)
 	return h.client.ListenPacket(ctx)
 }
@@ -116,5 +132,14 @@ func (h *Outbound) InterfaceUpdated() {
 }
 
 func (h *Outbound) Close() error {
+	if h.hforwarder != nil { //hiddify
+		h.hforwarder.Close()
+	}
+	if h.client == nil { //karing
+		return nil
+	}
 	return h.client.CloseWithError(os.ErrClosed)
+}
+func (h *Outbound) SetParseErr(err error){ //karing
+	h.parseErr = err
 }

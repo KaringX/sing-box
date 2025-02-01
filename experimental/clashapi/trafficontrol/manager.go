@@ -5,7 +5,8 @@ import (
 	"sync"
 	"time"
 
-	C "github.com/sagernet/sing-box/constant"
+	"github.com/sagernet/sing-box/common/conntrack"
+	"github.com/sagernet/sing-box/common/gofree"
 	"github.com/sagernet/sing-box/experimental/clashapi/compatible"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/atomic"
@@ -24,10 +25,20 @@ type Manager struct {
 	closedConnections       list.List[TrackerMetadata]
 	// process     *process.Process
 	memory uint64
+
+	startTime           time.Time    //karing
+	uploadTemp          atomic.Int64 //karing
+	downloadTemp        atomic.Int64 //karing
+	uploadBlip          atomic.Int64 //karing
+	downloadBlip        atomic.Int64 //karing
+	uploadTotalDirect   atomic.Int64 //karing
+	downloadTotalDirect atomic.Int64 //karing
 }
 
 func NewManager() *Manager {
-	return &Manager{}
+	return &Manager{
+		startTime: time.Now(), //karing
+	}
 }
 
 func (m *Manager) Join(c Tracker) {
@@ -48,12 +59,20 @@ func (m *Manager) Leave(c Tracker) {
 	}
 }
 
-func (m *Manager) PushUploaded(size int64) {
+func (m *Manager) PushUploaded(size int64, direct bool) { //karing
+	m.uploadTemp.Add(size)
 	m.uploadTotal.Add(size)
+	if direct { //karing
+		m.uploadTotalDirect.Add(size) //karing
+	}
 }
 
-func (m *Manager) PushDownloaded(size int64) {
+func (m *Manager) PushDownloaded(size int64, direct bool) { //karing
+	m.downloadTemp.Add(size)
 	m.downloadTotal.Add(size)
+	if direct { //karing
+		m.downloadTotalDirect.Add(size) //karing
+	}
 }
 
 func (m *Manager) Total() (up int64, down int64) {
@@ -87,30 +106,74 @@ func (m *Manager) Connection(id uuid.UUID) Tracker {
 	return connection
 }
 
-func (m *Manager) Snapshot() *Snapshot {
+func (m *Manager) Snapshot(includeConnections bool) *Snapshot { //karing
 	var connections []Tracker
-	m.connections.Range(func(_ uuid.UUID, value Tracker) bool {
-		if value.Metadata().OutboundType != C.TypeDNS {
+	if includeConnections { //karing
+		m.connections.Range(func(_ uuid.UUID, value Tracker) bool {
+			//if value.Metadata().OutboundType != C.TypeDNS {//karing
 			connections = append(connections, value)
-		}
-		return true
-	})
+			//}	
+			return true
+		})
+	}
 
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
 	m.memory = memStats.StackInuse + memStats.HeapInuse + memStats.HeapIdle - memStats.HeapReleased
 
 	return &Snapshot{
-		Upload:      m.uploadTotal.Load(),
-		Download:    m.downloadTotal.Load(),
-		Connections: connections,
-		Memory:      m.memory,
+		Upload:         m.uploadTotal.Load(),
+		Download:       m.downloadTotal.Load(),
+		Connections:    connections,
+		Memory:         m.memory,
+		StartTime:      m.startTime,                  //karing
+		DownloadDirect: m.downloadTotalDirect.Load(), //karing 
+		UploadDirect:   m.uploadTotalDirect.Load(),   //karing 
+		DownloadSpeed:  m.downloadBlip.Load(),        //karing      
+		UploadSpeed:    m.uploadBlip.Load(),          //karing      
+		ConnectionsOut: int32(conntrack.Count()),     //karing     
+		ConnectionsIn:  int32(m.connections.Len()),   //karing    
+		Goroutines:     int32(runtime.NumGoroutine()),//karing
+		ThreadCount:    int32(gofree.ThreadNum()),    //karing
 	}
 }
+func (m *Manager) OutboundHasConnections(tag string) bool {  //karing
+	hasConn := false;
+	m.connections.Range(func(_ uuid.UUID, value Tracker) bool {
+		if info, istrack := value.(*TCPConn); istrack {
+			for _, data := range info.metadata.Chain{
+				if(data == tag){
+					hasConn = true
+					return false;
+				}
+			}
+			return true;
+		}
+		if info, istrack := value.(*UDPConn); istrack {
+			for _, data := range info.metadata.Chain{
+				if(data == tag){
+					hasConn = true
+					return false;
+				}
+			}
+			return true;
+		}
 
+		return true
+	})
+	return hasConn
+}
 func (m *Manager) ResetStatistic() {
 	m.uploadTotal.Store(0)
 	m.downloadTotal.Store(0)
+	m.uploadTotalDirect.Store(0)   //karing
+	m.downloadTotalDirect.Store(0) //karing
+}
+func (m *Manager) Close() error { //karing
+	m.startTime = time.Now()
+	m.ResetStatistic()
+	m.connections.Clear()
+	return nil
 }
 
 type Snapshot struct {
@@ -118,13 +181,39 @@ type Snapshot struct {
 	Upload      int64
 	Connections []Tracker
 	Memory      uint64
+	StartTime           time.Time //karing
+	DownloadDirect      int64     //karing
+	UploadDirect        int64     //karing
+	DownloadSpeed       int64     //karing 
+	UploadSpeed         int64     //karing
+	ConnectionsOut      int32     //karing
+	ConnectionsIn       int32     //karing       
+	Goroutines          int32     //karing        
+	ConnectionsCount    int32     //karing    
+	ThreadCount         int32     //karing       
 }
 
 func (s *Snapshot) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]any{
-		"downloadTotal": s.Download,
-		"uploadTotal":   s.Upload,
-		"connections":   common.Map(s.Connections, func(t Tracker) TrackerMetadata { return t.Metadata() }),
-		"memory":        s.Memory,
+		"downloadTotal":       s.Download,
+		"uploadTotal":         s.Upload,
+		"connections":         common.Map(s.Connections, func(t Tracker) TrackerMetadata { return t.Metadata() }), 
+		"memory":              s.Memory,
+		"startTime":           s.StartTime, //karing
+		"downloadTotalDirect": s.DownloadDirect, //karing
+		"uploadTotalDirect":   s.UploadDirect, //karing
+		"downloadSpeed":       s.DownloadSpeed, //karing
+		"uploadSpeed":         s.UploadSpeed, //karing
+		"connectionsOut":      s.ConnectionsOut, //karing
+		"connectionsIn":       s.ConnectionsIn, //karing
+		"goroutines":          s.Goroutines, //karing
+		"connectionsCount":    s.ConnectionsCount, //karing
+		"threadCount":         s.ThreadCount, //karing
 	})
 }
+
+
+
+
+
+

@@ -10,7 +10,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/sagernet/sing-box"
+	sentry "github.com/getsentry/sentry-go"
+	box "github.com/sagernet/sing-box"
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/common/process"
 	"github.com/sagernet/sing-box/common/urltest"
@@ -21,7 +22,7 @@ import (
 	"github.com/sagernet/sing-box/include"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
-	"github.com/sagernet/sing-tun"
+	tun "github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/control"
 	E "github.com/sagernet/sing/common/exceptions"
@@ -45,10 +46,11 @@ type BoxService struct {
 
 func NewService(configContent string, platformInterface PlatformInterface) (*BoxService, error) {
 	ctx := box.Context(context.Background(), include.InboundRegistry(), include.OutboundRegistry(), include.EndpointRegistry())
-	ctx = filemanager.WithDefault(ctx, sWorkingPath, sTempPath, sUserID, sGroupID)
+	ctx = filemanager.WithDefault(ctx, sWorkingPath, sBasePath, sTempPath, sUserID, sGroupID) //karing
 	service.MustRegister[deprecated.Manager](ctx, new(deprecatedManager))
 	options, err := parseConfig(ctx, configContent)
 	if err != nil {
+		sentry.CaptureException(err) //karing
 		return nil, err
 	}
 	runtimeDebug.FreeOSMemory()
@@ -67,6 +69,7 @@ func NewService(configContent string, platformInterface PlatformInterface) (*Box
 	})
 	if err != nil {
 		cancel()
+		sentry.CaptureException(err) //karing
 		return nil, E.Cause(err, "create service")
 	}
 	runtimeDebug.FreeOSMemory()
@@ -256,6 +259,10 @@ func (w *platformInterfaceWrapper) FindProcessInfo(ctx context.Context, network 
 	}
 	packageName, _ := w.iif.PackageNameByUid(uid)
 	return &process.Info{UserId: uid, PackageName: packageName}, nil
+}
+
+func (w *platformInterfaceWrapper) GetAssetContent(path string)([]byte, error) {//karing
+	return w.iif.GetAssetContent(path)
 }
 
 func (w *platformInterfaceWrapper) DisableColors() bool {

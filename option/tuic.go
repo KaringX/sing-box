@@ -30,4 +30,5 @@ type TUICOutboundOptions struct {
 	Heartbeat         badoption.Duration `json:"heartbeat,omitempty"`
 	Network           NetworkList        `json:"network,omitempty"`
 	OutboundTLSOptionsContainer
+	TurnRelay         *TurnRelayOptions`json:"turn_relay,omitempty"`	//hiddify
 }

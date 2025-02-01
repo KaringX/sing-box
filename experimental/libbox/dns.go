@@ -45,6 +45,10 @@ func (p *platformLocalDNSTransport) Name() string {
 	return "local"
 }
 
+func (t *platformLocalDNSTransport) Address() string { //karing
+	return "local"
+}
+
 func (p *platformLocalDNSTransport) Start() error {
 	return nil
 }
