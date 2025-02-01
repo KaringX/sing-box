@@ -55,8 +55,8 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 	if options.GSO {
 		deprecated.Report(ctx, deprecated.OptionWireGuardGSO)
 	}
-	if len(options.LocalAddress) == 0 {
-		return empty, E.New("missing local address") //karing
+	if len(options.LocalAddress) == 0 { //karing
+		return empty, E.New("missing local address")
 	}
 	for _, prefix := range options.LocalAddress { //karing
 		if !prefix.IsValid() {

@@ -33,4 +33,3 @@ type Notification struct {
 	Body       string
 	OpenURL    string
 }
-

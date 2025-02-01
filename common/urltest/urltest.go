@@ -126,8 +126,6 @@ func URLTest(ctx context.Context, link string, detour N.Dialer) (t uint16, t2 ui
 			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
 				return instance, nil
 			},
-			//DisableKeepAlives:   true,// karing
-			//TLSHandshakeTimeout: C.TCPTimeout,// karing
 		},
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
