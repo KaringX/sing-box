@@ -2,16 +2,25 @@ package clashapi
 
 //karing
 import (
+	"context"
 	"net/http"
+	"net/netip"
 	"os"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/common/conntrack"
 	D "github.com/sagernet/sing-box/common/debug"
+	"github.com/sagernet/sing-box/common/dialer"
 	"github.com/sagernet/sing-box/log"
 	dns "github.com/sagernet/sing-dns"
+	E "github.com/sagernet/sing/common/exceptions"
+	F "github.com/sagernet/sing/common/format"
+	M "github.com/sagernet/sing/common/metadata"
+	N "github.com/sagernet/sing/common/network"
+	"github.com/sagernet/sing/service"
 	//"github.com/sagernet/sing-box/log"
 )
 
@@ -48,10 +57,8 @@ func transStrategy(strategy string) dns.DomainStrategy {
 		return dns.DomainStrategy(dns.DomainStrategyPreferIPv4)
 	}
 }
-/*
-func LookupWithDefaultRouter(router adapter.Router, logFactory log.Factory, domain string, strategy dns.DomainStrategy) (uint16, []netip.Addr, string, error) {
-	ctx := context.Background()
-	ctx = adapter.ContextWithRouter(ctx, router)
+
+func LookupWithDefaultRouter(ctx context.Context, router adapter.Router, logFactory log.Factory, domain string, strategy dns.DomainStrategy) (uint16, []netip.Addr, string, error) {
 	start := time.Now()
 	addr, tag, err := router.LookupTag(ctx, domain, strategy)
 	if err != nil {
@@ -60,22 +67,21 @@ func LookupWithDefaultRouter(router adapter.Router, logFactory log.Factory, doma
 	duration := uint16(time.Since(start) / time.Millisecond)
 	return duration, addr, tag, nil
 }
-func Lookup(router adapter.Router, logFactory log.Factory, req DNSQueryRequest) (uint16, []netip.Addr, error) {
-	ctx := context.Background()
-	ctx = adapter.ContextWithRouter(ctx, router)
+func Lookup(ctx context.Context, router adapter.Router, logFactory log.Factory, req DNSQueryRequest) (uint16, []netip.Addr, error) {
+	ctx, _ = adapter.ExtendContext(ctx)
+	outboundManager := service.FromContext[adapter.OutboundManager](ctx)
 	var resolverTransport dns.Transport
-
 	if len(req.Resolver.Addresses) != 0 {
 		tag := req.Resolver.Tag + "_" + req.Resolver.Detour
 		var detour N.Dialer
 		if req.Resolver.Detour == "" {
-			detour = dialer.NewRouter(router)
+			detour = dialer.NewDefaultOutbound(outboundManager)
 		} else {
-			_, detourExist := router.Outbound(req.Resolver.Detour)
+			_, detourExist := outboundManager.Outbound(req.Resolver.Detour)
 			if !detourExist {
 				return 0, nil, E.New("resolver.detour not found: " + req.Resolver.Detour)
 			}
-			detour = dialer.NewDetour(router, req.Resolver.Detour)
+			detour = dialer.NewDetour(outboundManager, req.Resolver.Detour)
 		}
 
 		transport, err := dns.CreateTransport(dns.TransportOptions{
@@ -95,13 +101,13 @@ func Lookup(router adapter.Router, logFactory log.Factory, req DNSQueryRequest) 
 	tag := req.Query.Tag + "_" + req.Query.Detour
 	var detour N.Dialer
 	if req.Query.Detour == "" {
-		detour = dialer.NewRouter(router)
+		detour = dialer.NewDefaultOutbound(outboundManager)
 	} else {
-		_, detourExist := router.Outbound(req.Query.Detour)
+		_, detourExist := outboundManager.Outbound(req.Query.Detour)
 		if !detourExist {
 			return 0, nil, E.New("query.detour not found: " + req.Query.Detour)
 		}
-		detour = dialer.NewDetour(router, req.Query.Detour)
+		detour = dialer.NewDetour(outboundManager, req.Query.Detour)
 	}
 	if len(req.Resolver.Addresses) != 0 {
 		detour = dns.NewDialerWrapper(detour, dnsClient, resolverTransport, transStrategy(req.Query.Strategy), time.Duration(0))
@@ -121,15 +127,15 @@ func Lookup(router adapter.Router, logFactory log.Factory, req DNSQueryRequest) 
 	}
 
 	start := time.Now()
-	addr, err := dnsClient.Lookup(ctx, transport, req.Domain, transStrategy(req.Query.Strategy))
+	addr, err := dnsClient.Lookup(ctx, transport, req.Domain, dns.QueryOptions{Strategy: transStrategy(req.Query.Strategy)})
 	if err != nil {
 		return 0, nil, err
 	}
 	duration := uint16(time.Since(start) / time.Millisecond)
 	return duration, addr, nil
 }
-*/
-func karingRouter(router adapter.Router, logFactory log.Factory) http.Handler {
+
+func karingRouter(ctx context.Context, router adapter.Router, logFactory log.Factory) http.Handler {
 	dnsClient = dns.NewClient(dns.ClientOptions{
 		DisableCache:     true,
 		DisableExpire:    false,
@@ -138,17 +144,17 @@ func karingRouter(router adapter.Router, logFactory log.Factory) http.Handler {
 	})
 
 	r := chi.NewRouter()
-	r.Get("/stop", stop(router, logFactory))
-	//r.Get("/dnsQueryWithDefaultRouter", dnsQueryWithDefaultRouter(router, logFactory))
-	//r.Post("/dnsQuery", dnsQuery(router, logFactory))
-	//r.Get("/outboundQuery", outboundQuery(router, logFactory))
-	r.Get("/remoteRuleSetRulesCount", remoteRuleSetRulesCount(router, logFactory))
-	r.Get("/resetOutboundConnections", resetOutboundConnections(router, logFactory))
-	r.Get("/mainStack", mainStack(router, logFactory))
+	r.Get("/stop", stop(router))
+	r.Get("/dnsQueryWithDefaultRouter", dnsQueryWithDefaultRouter(ctx, router, logFactory))
+	r.Post("/dnsQuery", dnsQuery(ctx, router, logFactory))
+	r.Get("/outboundQuery", outboundQuery(ctx, router))
+	r.Get("/remoteRuleSetRulesCount", remoteRuleSetRulesCount(router))
+	r.Get("/resetOutboundConnections", resetOutboundConnections())
+	r.Get("/mainStack", mainStack())
 	return r
 }
 
-func stop(router adapter.Router, logFactory log.Factory) func(w http.ResponseWriter, r *http.Request) {
+func stop(router adapter.Router) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		router.SingalQuit()
 		render.JSON(w, r, render.M{
@@ -156,13 +162,13 @@ func stop(router adapter.Router, logFactory log.Factory) func(w http.ResponseWri
 		})
 	}
 }
-/*
-func dnsQueryWithDefaultRouter(router adapter.Router, logFactory log.Factory) func(w http.ResponseWriter, r *http.Request) {
+
+func dnsQueryWithDefaultRouter(ctx context.Context, router adapter.Router, logFactory log.Factory) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		domain := r.URL.Query().Get("domain")
 		strategy := r.URL.Query().Get("strategy")
 
-		duration, addr, tag, err := LookupWithDefaultRouter(router, logFactory, domain, transStrategy(strategy))
+		duration, addr, tag, err := LookupWithDefaultRouter(ctx, router, logFactory, domain, transStrategy(strategy))
 		if err != nil {
 			render.JSON(w, r, render.M{
 				"err":     err.Error(),
@@ -181,7 +187,7 @@ func dnsQueryWithDefaultRouter(router adapter.Router, logFactory log.Factory) fu
 	}
 }
 
-func dnsQuery(router adapter.Router, logFactory log.Factory) func(w http.ResponseWriter, r *http.Request) {
+func dnsQuery(ctx context.Context, router adapter.Router, logFactory log.Factory) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		req := DNSQueryRequest{}
 		if err := render.DecodeJSON(r.Body, &req); err != nil {
@@ -190,7 +196,7 @@ func dnsQuery(router adapter.Router, logFactory log.Factory) func(w http.Respons
 			})
 			return
 		}
-		duration, addr, err := Lookup(router, logFactory, req)
+		duration, addr, err := Lookup(ctx, router, logFactory, req)
 		if err != nil {
 			render.JSON(w, r, render.M{
 				"err":     err.Error(),
@@ -207,12 +213,10 @@ func dnsQuery(router adapter.Router, logFactory log.Factory) func(w http.Respons
 	}
 }
 
-func outboundQuery(router adapter.Router, logFactory log.Factory) func(w http.ResponseWriter, r *http.Request) {
+func outboundQuery(ctx context.Context, router adapter.Router) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		domain := r.URL.Query().Get("domain")
 		ip := r.URL.Query().Get("ip")
-		ctx := context.Background()
-		ctx = adapter.ContextWithRouter(ctx, router)
 		meta := adapter.InboundContext{Domain: domain, Destination: M.ParseSocksaddr(ip)}
 		rule, matchOutboundTag, err := router.GetMatchRule(ctx, &meta)
 		outboundManager := service.FromContext[adapter.OutboundManager](ctx)
@@ -243,21 +247,21 @@ func outboundQuery(router adapter.Router, logFactory log.Factory) func(w http.Re
 		}
 	}
 }
-*/
-func remoteRuleSetRulesCount(router adapter.Router, logFactory log.Factory) func(w http.ResponseWriter, r *http.Request) {
+
+func remoteRuleSetRulesCount(router adapter.Router) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		render.JSON(w, r, render.M{
 			"result": router.GetRemoteRuleSetRulesCount(),
 		})
 	}
 }
-func resetOutboundConnections(router adapter.Router, logFactory log.Factory) func(w http.ResponseWriter, r *http.Request) {
+func resetOutboundConnections() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		conntrack.Close()
 		render.JSON(w, r, render.M{})
 	}
 }
-func mainStack(router adapter.Router, logFactory log.Factory) func(w http.ResponseWriter, r *http.Request) {
+func mainStack() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		stacks := D.Stacks(true, true)
 		stackBody, ok := stacks[D.MainGoId]
