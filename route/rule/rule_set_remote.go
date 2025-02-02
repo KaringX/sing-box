@@ -217,6 +217,7 @@ func (s *RemoteRuleSet) loopUpdate() {
 			s.logger.Error("fetch rule-set ", s.options.Tag, ": ", err)
 		} else if s.refs.Load() == 0 {
 			s.rules = nil
+			s.updateTicker = time.NewTicker(s.updateInterval) //karing
 		} else { //karing
 			s.updateTicker = time.NewTicker(s.updateInterval)
 		}
@@ -235,6 +236,7 @@ func (s *RemoteRuleSet) loopUpdate() {
 				s.logger.Error("fetch rule-set ", s.options.Tag, ": ", err)
 			} else if s.refs.Load() == 0 {
 				s.rules = nil
+				s.updateTicker = time.NewTicker(s.updateInterval) //karing
 			} else {//karing
 				s.updateTicker = time.NewTicker(s.updateInterval)
 			}
