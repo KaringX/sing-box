@@ -42,7 +42,7 @@ type CacheFile interface {
 	StoreGroupExpand(group string, expand bool) error
 	LoadRuleSet(tag string) *SavedRuleSet
 	SaveRuleSet(tag string, set *SavedRuleSet) error
-	DeleteRuleSet(tag string) 
+	DeleteRuleSet(tag string) //karing
 	HasRuleSet(tag string) bool //karing
 	GetAllRuleSetKeys() map[string]bool //karing
 }
