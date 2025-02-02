@@ -42,6 +42,7 @@ type CacheFile interface {
 	StoreGroupExpand(group string, expand bool) error
 	LoadRuleSet(tag string) *SavedRuleSet
 	SaveRuleSet(tag string, set *SavedRuleSet) error
+	DeleteRuleSet(tag string) 
 	HasRuleSet(tag string) bool //karing
 	GetAllRuleSetKeys() map[string]bool //karing
 }

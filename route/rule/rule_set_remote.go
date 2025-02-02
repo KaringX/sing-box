@@ -102,23 +102,24 @@ func (s *RemoteRuleSet) StartContext(ctx context.Context, startContext *adapter.
 	}
 	s.dialer = dialer
 	if s.cacheFile != nil {
-		if savedSet := s.cacheFile.LoadRuleSet(s.options.RemoteOptions.URL); savedSet != nil {   //karing
+		if savedSet := s.cacheFile.LoadRuleSet(s.options.RemoteOptions.URL); savedSet != nil { //karing
 			err := s.loadBytes(savedSet.Content)
 			if err != nil {
-				return E.Cause(err, "restore cached rule-set")
+				s.cacheFile.DeleteRuleSet(s.options.RemoteOptions.URL)
+				//return E.Cause(err, "restore cached rule-set")
+			} else { //karing
+				s.lastUpdated = savedSet.LastUpdated
+				s.lastEtag = savedSet.LastEtag
 			}
-			s.lastUpdated = savedSet.LastUpdated
-			s.lastEtag = savedSet.LastEtag
 		}
 	}
 
-	if s.lastUpdated.IsZero() { 
-		s.fetchOnce(ctx, startContext) //karing
-		//err := s.fetchOnce(ctx, startContext) //karing
-		//if err != nil { //karing
-		//	return E.Cause(err, "initial rule-set: ", s.options.Tag) //karing
-		//} //karing
-	}
+	/*if s.lastUpdated.IsZero() { //karing
+		err := s.fetchOnce(ctx, startContext)
+		if err != nil {
+			return E.Cause(err, "initial rule-set: ", s.options.Tag)
+		}
+	}*/
 	s.updateTicker = time.NewTicker(s.updateInterval)
 	return nil
 }
@@ -208,7 +209,7 @@ func (s *RemoteRuleSet) loadBytes(content []byte) error {
 }
 
 func (s *RemoteRuleSet) loopUpdate() {
-	if time.Since(s.lastUpdated) > s.updateInterval {
+	if  s.lastUpdated.IsZero() || time.Since(s.lastUpdated) > s.updateInterval { //karing
 		err := s.fetchOnce(s.ctx, nil)
 		if err != nil {
 			s.updateTicker = time.NewTicker(5 * time.Second) //karing

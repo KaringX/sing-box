@@ -321,6 +321,16 @@ func (c *CacheFile) SaveRuleSet(tag string, set *adapter.SavedRuleSet) error {
 		return bucket.Put([]byte(tag), setBinary)
 	})
 }
+func (c *CacheFile) DeleteRuleSet(tag string) { //karing
+	c.DB.View(func(t *bbolt.Tx) error {
+		bucket := c.bucket(t, bucketRuleSet)
+		if bucket == nil {
+			return os.ErrNotExist
+		}
+		bucket.Delete([]byte(tag))
+		return nil
+	})
+}
 func (c *CacheFile) HasRuleSet(tag string) bool { //karing
 	err := c.DB.View(func(t *bbolt.Tx) error {
 		bucket := c.bucket(t, bucketRuleSet)

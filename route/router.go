@@ -452,25 +452,23 @@ func (r *Router) Start(stage adapter.StartStage) error {
 			cacheContext.Close()
 		}
 		if len(r.ruleSetsRemoteWithLocal) > 0 { //karing
-			go func() {
-				cacheRemoteContext := adapter.NewHTTPStartContext()
-				var ruleSetStartGroup task.Group
-				for i, ruleSet := range r.ruleSetsRemoteWithLocal {
-					ruleSetInPlace := ruleSet
-					ruleSetStartGroup.Append0(func(ctx context.Context) error {
-						err := ruleSetInPlace.StartContext(ctx, cacheRemoteContext)
-						if err != nil {
-							return E.Cause(err, "initialize rule-set-remote[", i, "]")
-						}
-						return nil
-					})
-				}
-				ruleSetStartGroup.Concurrency(5)
-				ruleSetStartGroup.FastFail()
-				ruleSetStartGroup.Run(r.ctx)
-	
-				cacheRemoteContext.Close()
-			}()
+			cacheRemoteContext := adapter.NewHTTPStartContext()
+			var ruleSetStartGroup task.Group
+			for i, ruleSet := range r.ruleSetsRemoteWithLocal {
+				ruleSetInPlace := ruleSet
+				ruleSetStartGroup.Append0(func(ctx context.Context) error {
+					err := ruleSetInPlace.StartContext(ctx, cacheRemoteContext)
+					if err != nil {
+						return E.Cause(err, "initialize rule-set-remote[", i, "]")
+					}
+					return nil
+				})
+			}
+			ruleSetStartGroup.Concurrency(5)
+			ruleSetStartGroup.FastFail()
+			ruleSetStartGroup.Run(r.ctx)
+
+			cacheRemoteContext.Close()
 		}
 		needFindProcess := r.needFindProcess
 		for _, ruleSet := range r.ruleSets {
@@ -516,6 +514,14 @@ func (r *Router) Start(stage adapter.StartStage) error {
 			monitor.Finish()
 			if err != nil {
 				return E.Cause(err, "post start rule_set[", ruleSet.Name(), "]")
+			}
+		}
+		for _, ruleSet := range r.ruleSetsRemoteWithLocal { //karing
+			monitor.Start("post start rule_set_remote_with_local[", ruleSet.Name(), "]")
+			err := ruleSet.PostStart()
+			monitor.Finish()
+			if err != nil {
+				return E.Cause(err, "post start rule_set_remote_with_local[", ruleSet.Name(), "]")
 			}
 		}
 		r.started = true
