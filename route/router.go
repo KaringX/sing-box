@@ -136,13 +136,15 @@ func NewRouter(ctx context.Context, logFactory log.Factory, options option.Route
 			return nil, E.New("duplicate rule-set tag: ", ruleSetOptions.Tag)
 		}
 		if ruleSetOptions.Type == C.RuleSetTypeRemote { //karing
-			if len(ruleSetOptions.LocalOptions.Path) != 0 {
+			if len(ruleSetOptions.RemoteOptions.Path) != 0 {
 				cacheFile := service.FromContext[adapter.CacheFile](ctx)
 				if cacheFile != nil {
-					if !cacheFile.HasRuleSet(ruleSetOptions.RemoteOptions.URL) {   //karing
+					if !cacheFile.HasRuleSet(ruleSetOptions.RemoteOptions.URL) {
 						ruleSet := R.NewRemoteRuleSet(ctx, router.logger, ruleSetOptions)
 						router.ruleSetsRemoteWithLocal = append(router.ruleSetsRemoteWithLocal, ruleSet)
+
 						ruleSetOptions.Type = C.RuleSetTypeLocal
+						ruleSetOptions.LocalOptions.Path = ruleSetOptions.RemoteOptions.Path;
 					}
 				}
 			}
@@ -366,21 +368,6 @@ func (r *Router) Start(stage adapter.StartStage) error {
 			}
 		}
 	case adapter.StartStateStart:
-		/*if r.timeService != nil {// karing
-			go func(){ // karing
-				monitor := taskmonitor.New(r.logger, C.StartTimeout)
-				monitor.Start("initialize time service")
-				err := r.timeService.Start()
-				monitor.Finish()
-				if err != nil {
-					time.Sleep(time.Second * 3)
-					err := r.timeService.Start()
-					if err != nil {
-						r.logger.ErrorContext(r.ctx, "initialize time service: ", err)
-					}
-				}
-			}()
-		}*/
 		if r.needGeoIPDatabase {
 			monitor.Start("initialize geoip database")
 			err := r.prepareGeoIPDatabase()
@@ -464,6 +451,27 @@ func (r *Router) Start(stage adapter.StartStage) error {
 		if cacheContext != nil {
 			cacheContext.Close()
 		}
+		if len(r.ruleSetsRemoteWithLocal) > 0 { //karing
+			go func() {
+				cacheRemoteContext := adapter.NewHTTPStartContext()
+				var ruleSetStartGroup task.Group
+				for i, ruleSet := range r.ruleSetsRemoteWithLocal {
+					ruleSetInPlace := ruleSet
+					ruleSetStartGroup.Append0(func(ctx context.Context) error {
+						err := ruleSetInPlace.StartContext(ctx, cacheRemoteContext)
+						if err != nil {
+							return E.Cause(err, "initialize rule-set-remote[", i, "]")
+						}
+						return nil
+					})
+				}
+				ruleSetStartGroup.Concurrency(5)
+				ruleSetStartGroup.FastFail()
+				ruleSetStartGroup.Run(r.ctx)
+	
+				cacheRemoteContext.Close()
+			}()
+		}
 		needFindProcess := r.needFindProcess
 		for _, ruleSet := range r.ruleSets {
 			metadata := ruleSet.Metadata()
@@ -494,7 +502,6 @@ func (r *Router) Start(stage adapter.StartStage) error {
 			}
 		}
 	case adapter.StartStatePostStart:
-		//PostStart //karing
 		for i, rule := range r.rules {
 			monitor.Start("initialize rule[", i, "]")
 			err := rule.Start()
@@ -581,66 +588,6 @@ func (r *Router) Close() error {
 
 	return err
 }
-
-/*func (r *Router) PostStart() error {
-	monitor := taskmonitor.New(r.logger, C.StopTimeout)
-	if len(r.ruleSets) > 0 {
-		monitor.Start("initialize rule-set")
-		ruleSetStartContext := NewRuleSetStartContext()
-		var ruleSetStartGroup task.Group
-		for i, ruleSet := range r.ruleSets {
-			ruleSetInPlace := ruleSet
-			ruleSetStartGroup.Append0(func(ctx context.Context) error {
-				err := ruleSetInPlace.StartContext(ctx, ruleSetStartContext)
-				if err != nil {
-					return E.Cause(err, "initialize rule-set[", i, "]")
-				}
-				return nil
-			})
-		}
-		ruleSetStartGroup.Concurrency(5)
-		ruleSetStartGroup.FastFail()
-		err := ruleSetStartGroup.Run(r.ctx)
-		monitor.Finish()
-		if err != nil {
-			return err
-		}
-		ruleSetStartContext.Close()
-	}
-
-	if len(r.ruleSetsRemoteWithLocal) > 0 { //karing
-		go func() {
-			ruleSetStartContext := NewRuleSetStartContext()
-			var ruleSetStartGroup task.Group
-			for i, ruleSet := range r.ruleSetsRemoteWithLocal {
-				ruleSetInPlace := ruleSet
-				ruleSetStartGroup.Append0(func(ctx context.Context) error {
-					err := ruleSetInPlace.StartContext(ctx, ruleSetStartContext)
-					if err != nil {
-						return E.Cause(err, "initialize rule-set-remote[", i, "]")
-					}
-					return nil
-				})
-			}
-			ruleSetStartGroup.Concurrency(5)
-			ruleSetStartGroup.FastFail()
-			ruleSetStartGroup.Run(r.ctx)
-
-			ruleSetStartContext.Close()
-		}()
-	}
- 
-	for _, rule := range r.rules { //karing
-		monitor.Start("initialize rule[", rule, "]") //karing
-		err := rule.Start()
-		monitor.Finish()
-		if err != nil {
-			return E.Cause(err, "initialize rule[", rule, "]") //karing
-		}
-	}
-	r.started = true
-	return nil
-}*/
 
 func (r *Router) FakeIPStore() adapter.FakeIPStore {
 	return r.fakeIPStore

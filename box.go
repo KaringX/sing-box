@@ -142,10 +142,14 @@ func New(options Options) (*Box, error) {
 	if err != nil {
 		return nil, E.Cause(err, "create log factory")
 	}
+	var services []adapter.LifecycleService //karing
+	var cacheFile adapter.CacheFile  //karing
 	if needCacheFile { //karing
-		cacheFile := service.FromContext[adapter.CacheFile](ctx)
+		cacheFile = service.FromContext[adapter.CacheFile](ctx)
 		if cacheFile == nil {
 			cacheFile = cachefile.New(ctx, common.PtrValueOrDefault(experimentalOptions.CacheFile))
+			service.MustRegister[adapter.CacheFile](ctx, cacheFile)
+			services = append(services, cacheFile)
 			err = cacheFile.BeforeStart()
 			if err != nil {
 				return nil, E.Cause(err, "cacheFile load failed")
@@ -259,17 +263,12 @@ func New(options Options) (*Box, error) {
 			return nil, E.Cause(err, "initialize platform interface")
 		}
 	}
-	var services []adapter.LifecycleService
+	/*var services []adapter.LifecycleService //karing
 	if needCacheFile {
 		//cacheFile := cachefile.New(ctx, common.PtrValueOrDefault(experimentalOptions.CacheFile))  //karing
-		//service.MustRegister[adapter.CacheFile](ctx, cacheFile)  //karing
-		//services = append(services, cacheFile)  //karing
-		cacheFile := service.FromContext[adapter.CacheFile](ctx) //karing
-		if cacheFile != nil { //karing
-			service.MustRegister[adapter.CacheFile](ctx, cacheFile)
-			services = append(services, cacheFile)
-		}
-	}
+		//service.MustRegister[adapter.CacheFile](ctx, cacheFile)
+		//services = append(services, cacheFile)
+	}*/
 	if needClashAPI {
 		clashAPIOptions := common.PtrValueOrDefault(experimentalOptions.ClashAPI)
 		clashAPIOptions.ModeList = experimental.CalculateClashModeList(options.Options)
@@ -309,6 +308,7 @@ func New(options Options) (*Box, error) {
 			Logger:        logFactory.NewLogger("ntp"),
 			Server:        ntpOptions.ServerOptions.Build(),
 			Interval:      time.Duration(ntpOptions.Interval),
+			Timeout:       time.Duration(3 * time.Second), //karing
 			WriteToSystem: ntpOptions.WriteToSystem,
 		})
 		timeService.TimeService = ntpService
