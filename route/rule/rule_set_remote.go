@@ -111,12 +111,14 @@ func (s *RemoteRuleSet) StartContext(ctx context.Context, startContext *adapter.
 			s.lastEtag = savedSet.LastEtag
 		}
 	}
-	/*if s.lastUpdated.IsZero() { //karing
-		err := s.fetchOnce(ctx, startContext)
-		if err != nil {
-			return E.Cause(err, "initial rule-set: ", s.options.Tag)
-		}
-	}*/
+
+	if s.lastUpdated.IsZero() { 
+		s.fetchOnce(ctx, startContext) //karing
+		//err := s.fetchOnce(ctx, startContext) //karing
+		//if err != nil { //karing
+		//	return E.Cause(err, "initial rule-set: ", s.options.Tag) //karing
+		//} //karing
+	}
 	s.updateTicker = time.NewTicker(s.updateInterval)
 	return nil
 }
