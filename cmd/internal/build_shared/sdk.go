@@ -48,7 +48,7 @@ func FindSDK() {
 }
 
 func findNDK() bool {
-	const fixedVersion = "28.0.12916984"
+	const fixedVersion = "26.3.11579264" //"28.0.12916984" //karing
 	const versionFile = "source.properties"
 	if fixedPath := filepath.Join(androidSDKPath, "ndk", fixedVersion); rw.IsFile(filepath.Join(fixedPath, versionFile)) {
 		androidNDKPath = fixedPath
