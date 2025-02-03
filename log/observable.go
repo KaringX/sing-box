@@ -15,7 +15,7 @@ import (
 	"github.com/sagernet/sing/common"
 	F "github.com/sagernet/sing/common/format"
 	"github.com/sagernet/sing/common/observable"
-	"github.com/sagernet/sing/service/filemanager"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 var _ Factory = (*defaultFactory)(nil)
@@ -24,6 +24,7 @@ type defaultFactory struct {
 	ctx               context.Context
 	formatter         Formatter
 	platformFormatter Formatter
+	logger            *lumberjack.Logger //karing
 	writer            io.Writer
 	file              *os.File
 	filePath          string
@@ -67,18 +68,29 @@ func NewDefaultFactory(
 
 func (f *defaultFactory) Start() error {
 	if f.filePath != "" {
+		f.logger = &lumberjack.Logger{ //karing
+			Filename:   f.filePath,  
+			MaxSize:    50,                      
+			MaxBackups: 0,                       
+			MaxAge:     0,                        
+			Compress:   false,                     
+		}
+		f.writer = f.logger //karing
+		/* //karing
 		logFile, err := filemanager.OpenFile(f.ctx, f.filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 		if err != nil {
 			return err
 		}
 		f.writer = logFile
 		f.file = logFile
+		*/
 	}
 	return nil
 }
 
 func (f *defaultFactory) Close() error {
 	return common.Close(
+		f.logger, //karing
 		common.PtrOrNil(f.file),
 		f.subscriber,
 	)

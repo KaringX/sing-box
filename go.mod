@@ -58,10 +58,11 @@ require ( //hiddify
 	github.com/pion/logging v0.2.2
 	github.com/pion/turn/v3 v3.0.3
 	github.com/pires/go-proxyproto v0.8.0
-    //github.com/sagernet/tfo-go v0.0.0-20230816093905-5a5c285d44a6
+//github.com/sagernet/tfo-go v0.0.0-20230816093905-5a5c285d44a6
 )
 
 require ( //karing
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1 
 	github.com/Dreamacro/clash v1.18.0
 	github.com/alitto/pond v1.9.2
 	github.com/getsentry/sentry-go v0.29.1
@@ -72,13 +73,13 @@ require ( //karing
 //replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20250124021809-5012e583d04d //karing_v0.6.0-beta.12
 replace github.com/sagernet/sing => ../../KaringX/sing
 
-//replace github.com/sagernet/sing-dns => github.com/KaringX/sing-dns v0.3.0-beta.14.0.20250124041328-49ee6549e540 //karing_v0.4.0-beta.2 
+//replace github.com/sagernet/sing-dns => github.com/KaringX/sing-dns v0.3.0-beta.14.0.20250124041328-49ee6549e540 //karing_v0.4.0-beta.2
 replace github.com/sagernet/sing-dns => ../../KaringX/sing-dns
 
-//replace github.com/sagernet/sing-quic => github.com/KaringX/sing-quic v0.2.0-beta.12.0.20250124035510-765d4fa62b4e  //karing_v0.4.0-beta.4 
+//replace github.com/sagernet/sing-quic => github.com/KaringX/sing-quic v0.2.0-beta.12.0.20250124035510-765d4fa62b4e  //karing_v0.4.0-beta.4
 replace github.com/sagernet/sing-quic => ../../KaringX/sing-quic
 
-//replace github.com/sagernet/wireguard-go => github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20250124034128-57c349f786fb //karing_v0.0.1-beta.5 
+//replace github.com/sagernet/wireguard-go => github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20250124034128-57c349f786fb //karing_v0.0.1-beta.5
 replace github.com/sagernet/wireguard-go => ../../KaringX/wireguard-go
 
 require (
