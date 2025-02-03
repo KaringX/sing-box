@@ -481,7 +481,7 @@ func (r *Router) Start(stage adapter.StartStage) error {
 				r.needWIFIState = true
 			}
 		}
-		if needFindProcess {
+		if needFindProcess && !C.IsIos { //karing
 			if r.platformInterface != nil && !C.IsDarwin{ //karing
 				r.processSearcher = r.platformInterface
 			} else {
