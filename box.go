@@ -15,9 +15,7 @@ import (
 	"github.com/sagernet/sing-box/adapter/outbound"
 	D "github.com/sagernet/sing-box/common/debug"
 	"github.com/sagernet/sing-box/common/dialer"
-	"github.com/sagernet/sing-box/common/taskmonitor"
 	"github.com/sagernet/sing-box/common/tls"
-	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/experimental"
 	"github.com/sagernet/sing-box/experimental/cachefile"
 	"github.com/sagernet/sing-box/experimental/clashapi"
@@ -141,6 +139,10 @@ func New(options Options) (*Box, error) {
 	})
 	if err != nil {
 		return nil, E.Cause(err, "create log factory")
+	}
+	err = logFactory.Start() //karing
+	if err != nil { //karing
+		return nil, E.Cause(err, "start logger")
 	}
 	var services []adapter.LifecycleService //karing
 	var cacheFile adapter.CacheFile  //karing
@@ -372,14 +374,15 @@ func (s *Box) Start() error {
 }
 
 func (s *Box) preStart() error {
+	/*//karing
 	monitor := taskmonitor.New(s.logger, C.StartTimeout)
 	monitor.Start("start logger")
 	err := s.logFactory.Start()
 	monitor.Finish()
 	if err != nil {
 		return E.Cause(err, "start logger")
-	}
-	err = adapter.StartNamed(adapter.StartStateInitialize, s.services) // cache-file clash-api v2ray-api
+	}*/
+	err := adapter.StartNamed(adapter.StartStateInitialize, s.services) // cache-file clash-api v2ray-api
 	if err != nil {
 		return err
 	}
