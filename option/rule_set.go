@@ -86,7 +86,7 @@ type LocalRuleSet struct {
 }
 
 type RemoteRuleSet struct {
-	Path           string             `json:"path,omitempty"`  //karing
+	LocalRuleSet   //karing
 	URL            string             `json:"url"`
 	DownloadDetour string             `json:"download_detour,omitempty"`
 	UpdateInterval badoption.Duration `json:"update_interval,omitempty"`

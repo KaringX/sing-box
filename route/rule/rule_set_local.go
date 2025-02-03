@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/sagernet/fswatch"
@@ -53,8 +52,30 @@ func NewLocalRuleSet(ctx context.Context, logger logger.Logger, options option.R
 		if err != nil {
 			return nil, err
 		}
-	} else {
-		err := ruleSet.reloadFile(filemanager.WorkPath(ctx, options.LocalOptions.Path), options.LocalOptions.IsAsset) //karing
+	} else if options.Type == C.RuleSetTypeLocal { //karing
+		filePath := filemanager.WorkPath(ctx, options.LocalOptions.Path)
+		err := ruleSet.reloadFile(filePath, options.LocalOptions.IsAsset) 
+		if err != nil {
+			return nil, err
+		}
+		if !options.LocalOptions.IsAsset {
+			watcher, err := fswatch.NewWatcher(fswatch.Options{
+				Path: []string{filePath},
+				Callback: func(path string) {
+					uErr := ruleSet.reloadFile(path, options.LocalOptions.IsAsset)
+					if uErr != nil {
+						logger.Error(E.Cause(uErr, "reload rule-set ", options.Tag))
+					}
+				},
+			})
+			if err != nil {
+				return nil, err
+			}
+			ruleSet.watcher = watcher
+		}
+	}
+	/*} else {//karing
+		err := ruleSet.reloadFile(filemanager.BasePath(ctx, options.LocalOptions.Path))
 		if err != nil {
 			return nil, err
 		}
@@ -64,7 +85,7 @@ func NewLocalRuleSet(ctx context.Context, logger logger.Logger, options option.R
 		watcher, err := fswatch.NewWatcher(fswatch.Options{
 			Path: []string{filePath},
 			Callback: func(path string) {
-				uErr := ruleSet.reloadFile(path, options.LocalOptions.IsAsset) //karing
+				uErr := ruleSet.reloadFile(path)
 				if uErr != nil {
 					logger.Error(E.Cause(uErr, "reload rule-set ", options.Tag))
 				}
@@ -74,7 +95,8 @@ func NewLocalRuleSet(ctx context.Context, logger logger.Logger, options option.R
 			return nil, err
 		}
 		ruleSet.watcher = watcher
-	}
+	}*/
+
 	return ruleSet, nil
 }
 
@@ -96,14 +118,14 @@ func (s *LocalRuleSet) StartContext(ctx context.Context, startContext *adapter.H
 	return nil
 }
 
-func (s *LocalRuleSet) reloadFile(path string, isAsset bool) error {
-	router := service.FromContext[adapter.Router](s.ctx) //karing
+func (s *LocalRuleSet) reloadFile(path string, isAsset bool) error { //karing
 	var ruleSet option.PlainRuleSetCompat
 	switch s.fileFormat {
 	case C.RuleSetFormatSource, "":
 		var content []byte //karing
 		var err error //karing
 		if(isAsset){ //karing
+			router := service.FromContext[adapter.Router](s.ctx) //karing
 			content, err = router.GetAssetContent(path)
 		} else { //karing
 			content, err = os.ReadFile(path)
@@ -118,6 +140,7 @@ func (s *LocalRuleSet) reloadFile(path string, isAsset bool) error {
 
 	case C.RuleSetFormatBinary:
 		if(isAsset){ //karing
+			router := service.FromContext[adapter.Router](s.ctx) //karing
 			content, err := router.GetAssetContent(path)
 			if err != nil {
 				return err

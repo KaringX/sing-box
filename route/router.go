@@ -144,7 +144,8 @@ func NewRouter(ctx context.Context, logFactory log.Factory, options option.Route
 						router.ruleSetsRemoteWithLocal = append(router.ruleSetsRemoteWithLocal, ruleSet)
 
 						ruleSetOptions.Type = C.RuleSetTypeLocal
-						ruleSetOptions.LocalOptions.Path = ruleSetOptions.RemoteOptions.Path;
+						ruleSetOptions.LocalOptions.Path = ruleSetOptions.RemoteOptions.Path
+						ruleSetOptions.LocalOptions.IsAsset = ruleSetOptions.RemoteOptions.IsAsset
 					}
 				}
 			}
