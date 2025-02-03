@@ -81,7 +81,8 @@ func (r *RuleSet) UnmarshalJSON(bytes []byte) error {
 }
 
 type LocalRuleSet struct {
-	IsAsset bool   `json:"is_asset,omitempty"`  //karing
+	IsAsset    bool `json:"is_asset,omitempty"`  //karing
+	AutoReload bool `json:"auto_load,omitempty"` //karing
 	Path    string `json:"path,omitempty"`
 }
 

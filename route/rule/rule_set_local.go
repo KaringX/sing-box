@@ -58,7 +58,7 @@ func NewLocalRuleSet(ctx context.Context, logger logger.Logger, options option.R
 		if err != nil {
 			return nil, err
 		}
-		if !options.LocalOptions.IsAsset {
+		if options.LocalOptions.AutoReload {
 			watcher, err := fswatch.NewWatcher(fswatch.Options{
 				Path: []string{filePath},
 				Callback: func(path string) {
