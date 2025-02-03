@@ -305,11 +305,6 @@ func (d *DefaultDialer) DialParallelInterface(ctx context.Context, network strin
 	if !fastFallback && !isPrimary {
 		d.networkLastFallback.Store(time.Now())
 	}
-	if !address.IsIPv6() {
-		return trackConn(d.dialer4.DialContext(ctx, network, address)) //hiddify
-	} else {
-		return trackConn(d.dialer6.DialContext(ctx, network, address)) //hiddify
-	}
 	return trackConn(conn, nil)
 }
 
