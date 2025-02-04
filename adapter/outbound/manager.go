@@ -253,7 +253,7 @@ func (m *Manager) Create(ctx context.Context, router adapter.Router, logger log.
 	if err != nil {
 		outbound.SetParseErr(err) //karing
 		m.logger.Error("create outbound failed: ", err) //karing
-		return err
+		//return err //karing
 	}
 	m.access.Lock()
 	defer m.access.Unlock()
