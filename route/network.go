@@ -216,6 +216,7 @@ func (r *NetworkManager) UpdateInterfaces() error {
 		if err != nil {
 			return err
 		}
+		if C.IsDarwin || C.IsIos { //karing
 			err = r.interfaceFinder.Update()
 			if err != nil {
 				return err
