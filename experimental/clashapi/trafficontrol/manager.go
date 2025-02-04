@@ -25,6 +25,8 @@ type Manager struct {
 	closedConnections       list.List[TrackerMetadata]
 	// process     *process.Process
 	memory uint64
+	ticker      *time.Ticker //karing
+	done        chan struct{}//karing
 
 	startTime           time.Time    //karing
 	uploadTemp          atomic.Int64 //karing
@@ -36,9 +38,15 @@ type Manager struct {
 }
 
 func NewManager() *Manager {
-	return &Manager{
-		startTime: time.Now(), //karing
+	///return &Manager{}//karing
+	manager := &Manager{//karing
+		startTime: time.Now(), 
+		ticker:    time.NewTicker(time.Second),
+		done:      make(chan struct{}),
+		// process: &process.Process{Pid: int32(os.Getpid())},
 	}
+	go manager.handle()//karing
+	return manager//karing
 }
 
 func (m *Manager) Join(c Tracker) {
@@ -60,18 +68,18 @@ func (m *Manager) Leave(c Tracker) {
 }
 
 func (m *Manager) PushUploaded(size int64, direct bool) { //karing
-	m.uploadTemp.Add(size)
+	m.uploadTemp.Add(size)//karing
 	m.uploadTotal.Add(size)
 	if direct { //karing
-		m.uploadTotalDirect.Add(size) //karing
+		m.uploadTotalDirect.Add(size) 
 	}
 }
 
 func (m *Manager) PushDownloaded(size int64, direct bool) { //karing
-	m.downloadTemp.Add(size)
+	m.downloadTemp.Add(size)//karing
 	m.downloadTotal.Add(size)
 	if direct { //karing
-		m.downloadTotalDirect.Add(size) //karing
+		m.downloadTotalDirect.Add(size) 
 	}
 }
 
@@ -166,10 +174,32 @@ func (m *Manager) OutboundHasConnections(tag string) bool {  //karing
 func (m *Manager) ResetStatistic() {
 	m.uploadTotal.Store(0)
 	m.downloadTotal.Store(0)
+ 
+	m.uploadTemp.Store(0)//karing
+	m.uploadBlip.Store(0)//karing
+	m.downloadTemp.Store(0)//karing
+	m.downloadBlip.Store(0)//karing
 	m.uploadTotalDirect.Store(0)   //karing
 	m.downloadTotalDirect.Store(0) //karing
 }
+func (m *Manager) handle() {//karing
+	var uploadTemp int64
+	var downloadTemp int64
+	for {
+		select {
+		case <-m.done:
+			return
+		case <-m.ticker.C:
+		}
+		uploadTemp = m.uploadTemp.Swap(0)
+		downloadTemp = m.downloadTemp.Swap(0)
+		m.uploadBlip.Store(uploadTemp)
+		m.downloadBlip.Store(downloadTemp)
+	}
+}
 func (m *Manager) Close() error { //karing
+	m.ticker.Stop()
+	close(m.done)
 	m.startTime = time.Now()
 	m.ResetStatistic()
 	m.connections.Clear()
