@@ -133,7 +133,7 @@ type Hysteria2OutboundOptions struct {
 type HopPortsValue string //karing
 type HopIntervalValue badoption.Duration //karing
 
-type _Hysteria2OutboundOptions Hysteria2OutboundOptions
+type _Hysteria2OutboundOptions Hysteria2OutboundOptions //karing
 func (m *Hysteria2OutboundOptions) UnmarshalJSON(bytes []byte) error { //karing
 	err := json.Unmarshal(bytes, (*_Hysteria2OutboundOptions)(m))
 	if err != nil {
