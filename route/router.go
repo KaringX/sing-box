@@ -646,13 +646,13 @@ func (r *Router) GetMatchRuleChain(outboundManager adapter.OutboundManager, matc
 	return trafficontrol.GetMatchRuleChain(outboundManager, matchOutboundTag)
 }
 
-func (r *Router) GetMatchRule(ctx context.Context, metadata *adapter.InboundContext) (adapter.Rule, string, error) { //karing
+func (r *Router) GetMatchRule(ctx context.Context, metadata *adapter.InboundContext) (adapter.Rule, error) { //karing
 	rule, _, _, _, err := r.matchRule(ctx, metadata, false, nil, nil)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
-	return rule, rule.Action().String(), err
+	return rule, err
 }
 
 func (r *Router) GetAssetContent(path string)([]byte, error) {//karing

@@ -42,7 +42,7 @@ type Router interface {
 
 	FindProcessInfo(ctx context.Context, network string, source netip.AddrPort)(*process.Info, error)        //karing
 	GetMatchRuleChain(outboundManager OutboundManager, matchOutboundTag string) ([]string, string, string)   //karing
-	GetMatchRule(ctx context.Context, metadata *InboundContext) (Rule, string, error)                        //karing
+	GetMatchRule(ctx context.Context, metadata *InboundContext) (Rule, error)                        //karing
 	GetAssetContent(path string)([]byte, error) //karing
 	SingalQuit() //karing
 	Rules() []Rule

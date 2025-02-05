@@ -13,8 +13,8 @@ import (
 	"github.com/sagernet/sing-box/common/sniff"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/option"
-	"github.com/sagernet/sing-dns"
-	"github.com/sagernet/sing-tun"
+	dns "github.com/sagernet/sing-dns"
+	tun "github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common"
 	E "github.com/sagernet/sing/common/exceptions"
 	F "github.com/sagernet/sing/common/format"
@@ -144,6 +144,10 @@ func (r *RuleActionRoute) String() string {
 	return F.ToString("route(", strings.Join(descriptions, ","), ")")
 }
 
+func (r *RuleActionRoute) Target() string { //karing
+	return r.Outbound
+}
+
 type RuleActionRouteOptions struct {
 	OverrideAddress           M.Socksaddr
 	OverridePort              uint16
@@ -171,6 +175,10 @@ func (r *RuleActionRouteOptions) String() string {
 	return F.ToString("route-options(", strings.Join(descriptions, ","), ")")
 }
 
+func (r *RuleActionRouteOptions) Target() string { //karing
+	return ""
+}
+
 type RuleActionDNSRoute struct {
 	Server string
 	RuleActionDNSRouteOptions
@@ -193,6 +201,10 @@ func (r *RuleActionDNSRoute) String() string {
 		descriptions = append(descriptions, F.ToString("client-subnet=", r.ClientSubnet))
 	}
 	return F.ToString("route(", strings.Join(descriptions, ","), ")")
+}
+
+func (r *RuleActionDNSRoute) Target() string { //karing
+	return r.Server
 }
 
 type RuleActionDNSRouteOptions struct {
@@ -219,6 +231,10 @@ func (r *RuleActionDNSRouteOptions) String() string {
 	return F.ToString("route-options(", strings.Join(descriptions, ","), ")")
 }
 
+func (r *RuleActionDNSRouteOptions) Target() string { //karing
+	return ""
+}
+
 type RuleActionDirect struct {
 	Dialer      N.Dialer
 	description string
@@ -230,6 +246,10 @@ func (r *RuleActionDirect) Type() string {
 
 func (r *RuleActionDirect) String() string {
 	return "direct" + r.description
+}
+
+func (r *RuleActionDirect) Target() string { //karing
+	return ""
 }
 
 type RuleActionReject struct {
@@ -249,6 +269,10 @@ func (r *RuleActionReject) String() string {
 		return "reject"
 	}
 	return F.ToString("reject(", r.Method, ")")
+}
+
+func (r *RuleActionReject) Target() string { //karing
+	return ""
 }
 
 func (r *RuleActionReject) Error(ctx context.Context) error {
@@ -285,6 +309,10 @@ func (r *RuleActionHijackDNS) Type() string {
 
 func (r *RuleActionHijackDNS) String() string {
 	return "hijack-dns"
+}
+
+func (r *RuleActionHijackDNS) Target() string { //karing
+	return ""
 }
 
 type RuleActionSniff struct {
@@ -343,6 +371,10 @@ func (r *RuleActionSniff) String() string {
 	}
 }
 
+func (r *RuleActionSniff) Target() string { //karing
+	return ""
+}
+
 type RuleActionResolve struct {
 	Strategy dns.DomainStrategy
 	Server   string
@@ -362,4 +394,8 @@ func (r *RuleActionResolve) String() string {
 	} else {
 		return F.ToString("resolve(", option.DomainStrategy(r.Strategy).String(), ",", r.Server, ")")
 	}
+}
+
+func (r *RuleActionResolve) Target() string { //karing
+	return ""
 }

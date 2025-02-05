@@ -14,6 +14,7 @@ import (
 	"github.com/sagernet/sing-box/common/conntrack"
 	D "github.com/sagernet/sing-box/common/debug"
 	"github.com/sagernet/sing-box/common/dialer"
+	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/log"
 	dns "github.com/sagernet/sing-dns"
 	E "github.com/sagernet/sing/common/exceptions"
@@ -218,32 +219,32 @@ func outboundQuery(ctx context.Context, router adapter.Router) func(w http.Respo
 		domain := r.URL.Query().Get("domain")
 		ip := r.URL.Query().Get("ip")
 		meta := adapter.InboundContext{Domain: domain, Destination: M.ParseSocksaddr(ip)}
-		rule, matchOutboundTag, err := router.GetMatchRule(ctx, &meta)
-		outboundManager := service.FromContext[adapter.OutboundManager](ctx)
-		rulechain, outboundTag, _ := router.GetMatchRuleChain(outboundManager, matchOutboundTag)
+		rule, err := router.GetMatchRule(ctx, &meta)
+		
 		if err != nil {
 			render.JSON(w, r, render.M{
 				"err":       err.Error(),
 				"rule":      nil,
-				"rulechain": nil,
+				"chain": nil,
+				"action_type": nil,
 				"outbound":  nil,
 			})
 		} else {
-			if rule != nil {
-				render.JSON(w, r, render.M{
-					"err":       nil,
-					"rule":      rule.String(),
-					"rulechain": rulechain,
-					"outbound":  outboundTag,
-				})
-			} else {
-				render.JSON(w, r, render.M{
-					"err":       nil,
-					"rule":      "final",
-					"rulechain": rulechain,
-					"outbound":  outboundTag,
-				})
+			outboundManager := service.FromContext[adapter.OutboundManager](ctx)
+			var chain []string
+			var outbound string
+			actionType := rule.Action().Type()
+			if actionType == C.RuleActionTypeRoute {
+				chain, outbound, _ = router.GetMatchRuleChain(outboundManager, rule.Action().Target())
 			}
+
+			render.JSON(w, r, render.M{
+				"err":         nil,
+				"rule":        rule.String(),
+				"chain":       chain,
+				"action_type": actionType,
+				"outbound":    outbound,
+			})
 		}
 	}
 }
