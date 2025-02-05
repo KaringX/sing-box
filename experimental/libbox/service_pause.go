@@ -11,6 +11,9 @@ type servicePauseFields struct {
 }
 
 func (s *BoxService) Pause() {
+	if s.instance != nil && s.instance.Logger() != nil { //karing
+		s.instance.Logger().Error("BoxService:Pause") 
+	}
 	s.pauseAccess.Lock()
 	defer s.pauseAccess.Unlock()
 	if s.pauseTimer != nil {
@@ -20,6 +23,9 @@ func (s *BoxService) Pause() {
 }
 
 func (s *BoxService) Wake() {
+	if s.instance != nil && s.instance.Logger() != nil { //karing
+		s.instance.Logger().Error("BoxService:Wake") 
+	}
 	s.pauseAccess.Lock()
 	defer s.pauseAccess.Unlock()
 	if s.pauseTimer != nil {

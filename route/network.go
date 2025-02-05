@@ -355,6 +355,7 @@ func (r *NetworkManager) WIFIState() adapter.WIFIState {
 }
 
 func (r *NetworkManager) ResetNetwork() {
+	r.logger.Error("NetworkManager:ResetNetwork") //karing
 	conntrack.Close()
 
 	for _, endpoint := range r.endpoint.Endpoints() {
