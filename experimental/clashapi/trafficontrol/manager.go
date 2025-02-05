@@ -1,7 +1,6 @@
 package trafficontrol
 
 import (
-	"net"
 	"runtime"
 	"sync"
 	"time"
@@ -125,13 +124,16 @@ func (m *Manager) Snapshot(includeConnections bool) *Snapshot { //karing
 			//}	
 			return true
 		})
-		connectionsOut = common.Map(conntrack.Connections(), func(t conntrack.OutboundConn) TrackerMetadataOut { return TrackerMetadataOut{ //karing
-			CreatedAt: t.CreatedAt,
-			Network:  t.Network,
-			Address:  t.Closer.(net.Conn).RemoteAddr().String(),
-			Destination : t.Destination,
-			Outbound: t.Outbound,
-		} })
+		connectionsOut = common.Map(conntrack.Connections(), func(t conntrack.OutboundConn) TrackerMetadataOut { //karing
+			return TrackerMetadataOut{ 
+				CreatedAt:   t.CreatedAt,
+				Network:     t.Network,
+				Source:      t.Source.String(),
+				Destination: t.Destination.String(),
+				Fqdn:        t.Fqdn,
+				Outbound: t.Outbound,
+			} 
+		})
 	}
  
 	var memStats runtime.MemStats
@@ -219,8 +221,9 @@ func (m *Manager) Close() error { //karing
 type TrackerMetadataOut struct { //karing
 	CreatedAt    time.Time `json:"startTime"`
 	Network      string    `json:"network"`
-	Address      string    `json:"address"`
+	Source       string    `json:"source"`
 	Destination  string    `json:"destination"`
+	Fqdn         string    `json:"fqdn"`
 	Outbound     string    `json:"outbound"`
 }
 

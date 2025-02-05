@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/sagernet/sing/common"
+	M "github.com/sagernet/sing/common/metadata"
 	"github.com/sagernet/sing/common/x/list"
 )
 
@@ -13,7 +14,9 @@ type OutboundConn struct { //karing
 	Closer      io.Closer
 	CreatedAt   time.Time
 	Network     string
-	Destination string
+	Source      M.Socksaddr
+	Destination M.Socksaddr
+	Fqdn        string
 	Outbound    string
 }
 
