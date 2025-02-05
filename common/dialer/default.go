@@ -241,20 +241,27 @@ func (d *DefaultDialer) DialContext(ctx context.Context, network string, address
 	if !address.IsValid() {
 		return nil, E.New("invalid address")
 	}
+	ctx, inbound := adapter.ExtendContext(ctx) //karing
+	var (//karing
+		conn net.Conn
+		 err error
+	)
 	if d.networkStrategy == nil {
 		switch N.NetworkName(network) {
 		case N.NetworkUDP:
 			if !address.IsIPv6() {
-				return trackConn(d.udpDialer4.DialContext(ctx, network, address.String()))
+				conn, err = d.udpDialer4.DialContext(ctx, network, address.String()) //karing
 			} else {
-				return trackConn(d.udpDialer6.DialContext(ctx, network, address.String()))
+				conn, err = d.udpDialer6.DialContext(ctx, network, address.String()) //karing
 			}
+			return trackConn(conn, err, inbound) //karing
 		}
 		if !address.IsIPv6() {
-			return trackConn(DialSlowContext(&d.dialer4, ctx, network, address))
+			conn, err = DialSlowContext(&d.dialer4, ctx, network, address) //karing
 		} else {
-			return trackConn(DialSlowContext(&d.dialer6, ctx, network, address))
+			conn, err = DialSlowContext(&d.dialer6, ctx, network, address) //karing
 		}
+		return trackConn(conn, err, inbound) //karing
 	} else {
 		return d.DialParallelInterface(ctx, network, address, d.networkStrategy, d.networkType, d.fallbackNetworkType, d.networkFallbackDelay)
 	}
@@ -305,18 +312,25 @@ func (d *DefaultDialer) DialParallelInterface(ctx context.Context, network strin
 	if !fastFallback && !isPrimary {
 		d.networkLastFallback.Store(time.Now())
 	}
-	return trackConn(conn, nil)
+	ctx, inbound := adapter.ExtendContext(ctx) //karing
+	return trackConn(conn, nil, inbound) //karing
 }
 
 func (d *DefaultDialer) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
 	if d.networkStrategy == nil {
+		var (
+			conn net.PacketConn
+			 err error
+		)
 		if destination.IsIPv6() {
-			return trackPacketConn(d.udpListener.ListenPacket(ctx, N.NetworkUDP, d.udpAddr6))
+			conn, err = d.udpListener.ListenPacket(ctx, N.NetworkUDP, d.udpAddr6) //karing
 		} else if destination.IsIPv4() && !destination.Addr.IsUnspecified() {
-			return trackPacketConn(d.udpListener.ListenPacket(ctx, N.NetworkUDP+"4", d.udpAddr4))
+			conn, err = d.udpListener.ListenPacket(ctx, N.NetworkUDP+"4", d.udpAddr4) //karing
 		} else {
-			return trackPacketConn(d.udpListener.ListenPacket(ctx, N.NetworkUDP, d.udpAddr4))
+			conn, err = d.udpListener.ListenPacket(ctx, N.NetworkUDP, d.udpAddr4) //karing
 		}
+		_, inbound := adapter.ExtendContext(ctx) //karing
+		return trackPacketConn(conn, err, inbound)
 	} else {
 		return d.ListenSerialInterfacePacket(ctx, destination, d.networkStrategy, d.networkType, d.fallbackNetworkType, d.networkFallbackDelay)
 	}
@@ -352,23 +366,24 @@ func (d *DefaultDialer) ListenSerialInterfacePacket(ctx context.Context, destina
 			return nil, err
 		}
 	}
-	return trackPacketConn(packetConn, nil)
+	_, inbound := adapter.ExtendContext(ctx) //karing
+	return trackPacketConn(packetConn, nil, inbound) //karing
 }
 
 func (d *DefaultDialer) ListenPacketCompat(network, address string) (net.PacketConn, error) {
 	return d.udpListener.ListenPacket(context.Background(), network, address)
 }
 
-func trackConn(conn net.Conn, err error) (net.Conn, error) {
+func trackConn(conn net.Conn, err error, inbound *adapter.InboundContext) (net.Conn, error) {
 	if !conntrack.Enabled || err != nil {
 		return conn, err
 	}
-	return conntrack.NewConn(conn)
+	return conntrack.NewConn(conn, inbound)
 }
 
-func trackPacketConn(conn net.PacketConn, err error) (net.PacketConn, error) {
+func trackPacketConn(conn net.PacketConn, err error, inbound *adapter.InboundContext) (net.PacketConn, error) {
 	if !conntrack.Enabled || err != nil {
 		return conn, err
 	}
-	return conntrack.NewPacketConn(conn)
+	return conntrack.NewPacketConn(conn, inbound)
 }
