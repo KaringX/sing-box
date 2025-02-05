@@ -1,6 +1,8 @@
 package trafficontrol
 
 import (
+	"io"
+	"net"
 	"runtime"
 	"sync"
 	"time"
@@ -116,6 +118,7 @@ func (m *Manager) Connection(id uuid.UUID) Tracker {
 
 func (m *Manager) Snapshot(includeConnections bool) *Snapshot { //karing
 	var connections []Tracker
+	var connectionsOut []TrackerMetadataOut //karing
 	if includeConnections { //karing
 		m.connections.Range(func(_ uuid.UUID, value Tracker) bool {
 			//if value.Metadata().OutboundType != C.TypeDNS {//karing
@@ -123,8 +126,12 @@ func (m *Manager) Snapshot(includeConnections bool) *Snapshot { //karing
 			//}	
 			return true
 		})
+		connectionsOut = common.Map(conntrack.List(), func(t io.Closer) TrackerMetadataOut { return TrackerMetadataOut{ //karing
+			//CreatedAt: nil,time.Now()
+			Address:  t.(net.Conn).RemoteAddr().String(),
+		} })
 	}
-
+ 
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
 	m.memory = memStats.StackInuse + memStats.HeapInuse + memStats.HeapIdle - memStats.HeapReleased
@@ -139,8 +146,9 @@ func (m *Manager) Snapshot(includeConnections bool) *Snapshot { //karing
 		UploadDirect:   m.uploadTotalDirect.Load(),   //karing 
 		DownloadSpeed:  m.downloadBlip.Load(),        //karing      
 		UploadSpeed:    m.uploadBlip.Load(),          //karing      
-		ConnectionsOut: int32(conntrack.Count()),     //karing     
-		ConnectionsIn:  int32(m.connections.Len()),   //karing    
+		ConnectionsOut: connectionsOut,               //karing  
+		ConnectionsOutCount: int32(conntrack.Count()),     //karing     
+		ConnectionsInCount:  int32(m.connections.Len()),   //karing    
 		Goroutines:     int32(runtime.NumGoroutine()),//karing
 		ThreadCount:    int32(gofree.ThreadNum()),    //karing
 	}
@@ -206,6 +214,11 @@ func (m *Manager) Close() error { //karing
 	return nil
 }
 
+type TrackerMetadataOut struct { //karing
+	//CreatedAt    time.Time `json:"start"`
+	Address      string    `json:"address"`
+}
+
 type Snapshot struct {
 	Download    int64
 	Upload      int64
@@ -216,10 +229,10 @@ type Snapshot struct {
 	UploadDirect        int64     //karing
 	DownloadSpeed       int64     //karing 
 	UploadSpeed         int64     //karing
-	ConnectionsOut      int32     //karing
-	ConnectionsIn       int32     //karing       
+	ConnectionsOut      [] TrackerMetadataOut //karing
+	ConnectionsOutCount int32     //karing
+	ConnectionsInCount  int32     //karing       
 	Goroutines          int32     //karing        
-	ConnectionsCount    int32     //karing    
 	ThreadCount         int32     //karing       
 }
 
@@ -234,10 +247,10 @@ func (s *Snapshot) MarshalJSON() ([]byte, error) {
 		"uploadTotalDirect":   s.UploadDirect, //karing
 		"downloadSpeed":       s.DownloadSpeed, //karing
 		"uploadSpeed":         s.UploadSpeed, //karing
-		"connectionsOut":      s.ConnectionsOut, //karing
-		"connectionsIn":       s.ConnectionsIn, //karing
+		"connectionsOut":      s.ConnectionsOut, 
+		"connectionsOutCount": s.ConnectionsOutCount, //karing
+		"connectionsInCount":  s.ConnectionsInCount, //karing
 		"goroutines":          s.Goroutines, //karing
-		"connectionsCount":    s.ConnectionsCount, //karing
 		"threadCount":         s.ThreadCount, //karing
 	})
 }
