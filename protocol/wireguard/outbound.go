@@ -144,7 +144,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		Address:    options.LocalAddress,
 		PrivateKey: options.PrivateKey,
 		ResolvePeer: func(domain string) (netip.Addr, error) {
-			endpointAddresses, lookupErr := router.Lookup(ctx, domain, dns.DomainStrategy(options.DomainStrategy))
+			endpointAddresses, _, lookupErr := router.Lookup(ctx, domain, dns.DomainStrategy(options.DomainStrategy)) //karing
 			if lookupErr != nil {
 				return netip.Addr{}, lookupErr
 			}

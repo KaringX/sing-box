@@ -36,10 +36,11 @@ func (l *Listener) Accept() (net.Conn, error) {
 		conn = bufio.NewCachedConn(conn, cache)
 	}
 	if header != nil {
-		return &bufio.AddrConn{Conn: conn, Metadata: M.Metadata{
+		return &bufio.AddrConn{
+			Conn: conn,  
 			Source:      M.SocksaddrFromNet(header.SourceAddr).Unwrap(),
 			Destination: M.SocksaddrFromNet(header.DestinationAddr).Unwrap(),
-		}}, nil
+		}, nil
 	}
 	return conn, nil
 }
