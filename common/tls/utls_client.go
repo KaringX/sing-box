@@ -21,8 +21,9 @@ import (
 )
 
 type UTLSClientConfig struct {
-	config *utls.Config
-	id     utls.ClientHelloID
+	config      *utls.Config
+	paddingSize option.IntRange //hiddify 
+	id          utls.ClientHelloID
 }
 
 func (e *UTLSClientConfig) ServerName() string {
@@ -49,7 +50,17 @@ func (e *UTLSClientConfig) Config() (*STDConfig, error) {
 }
 
 func (e *UTLSClientConfig) Client(conn net.Conn) (Conn, error) {
-	return &utlsALPNWrapper{utlsConnWrapper{utls.UClient(conn, e.config.Clone(), e.id)}, e.config.NextProtos}, nil
+	var uConn *utls.UConn
+	if e.id != utls.HelloCustom { //hiddify
+		uConn = utls.UClient(conn, e.config.Clone(), e.id)
+	} else { //hiddify
+		var err error
+		uConn, err = makeTLSHelloPacketWithPadding(conn, e, e.config.ServerName)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &utlsALPNWrapper{utlsConnWrapper{UConn: uConn}, e.config.NextProtos}, nil
 }
 
 func (e *UTLSClientConfig) SetSessionIDGenerator(generator func(clientHello []byte, sessionID []byte) error) {
@@ -58,8 +69,9 @@ func (e *UTLSClientConfig) SetSessionIDGenerator(generator func(clientHello []by
 
 func (e *UTLSClientConfig) Clone() Config {
 	return &UTLSClientConfig{
-		config: e.config.Clone(),
-		id:     e.id,
+		config:      e.config.Clone(),
+		paddingSize: e.paddingSize, //hiddify 
+		id:          e.id,
 	}
 }
 
@@ -128,6 +140,10 @@ func NewUTLSClient(ctx context.Context, serverAddress string, options option.Out
 		return nil, E.New("missing server_name or insecure=true")
 	}
 
+	if options.TLSTricks != nil && options.TLSTricks.MixedCaseSNI { //hiddify
+		serverName = randomizeCase(serverName)
+	}
+
 	var tlsConfig utls.Config
 	tlsConfig.Time = ntp.TimeFuncFromContext(ctx)
 	if options.DisableSNI {
@@ -190,7 +206,23 @@ func NewUTLSClient(ctx context.Context, serverAddress string, options option.Out
 	if err != nil {
 		return nil, err
 	}
-	return &UTLSClientConfig{&tlsConfig, id}, nil
+	if options.TLSTricks != nil { //hiddify
+		switch options.TLSTricks.PaddingMode {
+		case "random":
+			paddingSize, err := option.Parse2IntRange(options.TLSTricks.PaddingSize) //hiddify 
+			if err != nil {
+				return nil, E.Cause(err, "invalid Padding Size supplied")
+			}
+			return &UTLSClientConfig{config: &tlsConfig, paddingSize: paddingSize, id: id}, nil
+		case "sni":
+
+		case "hello_client":
+		// TODO
+		default:
+			// TODO
+		}
+	}
+	return &UTLSClientConfig{config: &tlsConfig, id: id}, nil
 }
 
 var (
@@ -240,6 +272,8 @@ func uTLSClientHelloID(name string) (utls.ClientHelloID, error) {
 		return randomFingerprint, nil
 	case "randomized":
 		return randomizedFingerprint, nil
+	case "custom": //hiddify
+		return utls.HelloCustom, nil
 	default:
 		return utls.ClientHelloID{}, E.New("unknown uTLS fingerprint: ", name)
 	}

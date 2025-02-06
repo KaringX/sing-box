@@ -1,9 +1,9 @@
 package rule
 
 import (
+	"bytes"
 	"context"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 
@@ -19,6 +19,7 @@ import (
 	"github.com/sagernet/sing/common/json"
 	"github.com/sagernet/sing/common/logger"
 	"github.com/sagernet/sing/common/x/list"
+	"github.com/sagernet/sing/service"
 	"github.com/sagernet/sing/service/filemanager"
 
 	"go4.org/netipx"
@@ -55,26 +56,32 @@ func NewLocalRuleSet(ctx context.Context, logger logger.Logger, options option.R
 			return nil, err
 		}
 	} else {
-		filePath := filemanager.BasePath(ctx, options.LocalOptions.Path)
-		filePath, _ = filepath.Abs(filePath)
-		err := ruleSet.reloadFile(filePath)
+		//filePath := filemanager.BasePath(ctx, options.LocalOptions.Path) //karing
+		//filePath, _ = filepath.Abs(filePath)//karing
+		//err := ruleSet.reloadFile(filePath)//karing
+
+		filePath := filemanager.WorkPath(ctx, options.LocalOptions.Path)//karing
+		err := ruleSet.reloadFile(filePath, options.LocalOptions.IsAsset) //karing
 		if err != nil {
 			return nil, err
 		}
-		watcher, err := fswatch.NewWatcher(fswatch.Options{
-			Path: []string{filePath},
-			Callback: func(path string) {
-				uErr := ruleSet.reloadFile(path)
-				if uErr != nil {
-					logger.Error(E.Cause(uErr, "reload rule-set ", options.Tag))
-				}
-			},
-		})
-		if err != nil {
-			return nil, err
+		if options.LocalOptions.AutoReload {
+			watcher, err := fswatch.NewWatcher(fswatch.Options{
+				Path: []string{filePath},
+				Callback: func(path string) {
+					uErr := ruleSet.reloadFile(path, options.LocalOptions.IsAsset)
+					if uErr != nil {
+						logger.Error(E.Cause(uErr, "reload rule-set ", options.Tag))
+					}
+				},
+			})
+			if err != nil {
+				return nil, err
+			}
+			ruleSet.watcher = watcher
 		}
-		ruleSet.watcher = watcher
 	}
+
 	return ruleSet, nil
 }
 
@@ -96,11 +103,18 @@ func (s *LocalRuleSet) StartContext(ctx context.Context, startContext *adapter.H
 	return nil
 }
 
-func (s *LocalRuleSet) reloadFile(path string) error {
+func (s *LocalRuleSet) reloadFile(path string, isAsset bool) error { //karing
 	var ruleSet option.PlainRuleSetCompat
 	switch s.fileFormat {
 	case C.RuleSetFormatSource, "":
-		content, err := os.ReadFile(path)
+		var content []byte //karing
+		var err error //karing
+		if(isAsset){ //karing
+			router := service.FromContext[adapter.Router](s.ctx) //karing
+			content, err = router.GetAssetContent(path)
+		} else { //karing
+			content, err = os.ReadFile(path)
+		}
 		if err != nil {
 			return err
 		}
@@ -110,13 +124,26 @@ func (s *LocalRuleSet) reloadFile(path string) error {
 		}
 
 	case C.RuleSetFormatBinary:
-		setFile, err := os.Open(path)
-		if err != nil {
-			return err
-		}
-		ruleSet, err = srs.Read(setFile, false)
-		if err != nil {
-			return err
+		if(isAsset){ //karing
+			router := service.FromContext[adapter.Router](s.ctx) //karing
+			content, err := router.GetAssetContent(path)
+			if err != nil {
+				return err
+			}
+			reader := bytes.NewReader(content)
+			ruleSet, err = srs.Read(reader, false)
+			if err != nil {
+				return err
+			}
+		} else { //karing
+			setFile, err := os.Open(path)
+			if err != nil {
+				return err
+			}
+			ruleSet, err = srs.Read(setFile, false)
+			if err != nil {
+				return err
+			}
 		}
 	default:
 		return E.New("unknown rule-set format: ", s.fileFormat)

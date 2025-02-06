@@ -9,7 +9,7 @@ import (
 	"github.com/sagernet/sing-box/adapter"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/log"
-	"github.com/sagernet/sing-dns"
+	dns "github.com/sagernet/sing-dns"
 	"github.com/sagernet/sing/common/bufio"
 	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
@@ -69,7 +69,7 @@ func (d *resolveDialer) DialContext(ctx context.Context, network string, destina
 	if d.strategy == dns.DomainStrategyAsIS {
 		addresses, err = d.router.LookupDefault(ctx, destination.Fqdn)
 	} else {
-		addresses, err = d.router.Lookup(ctx, destination.Fqdn, d.strategy)
+		addresses, _, err = d.router.Lookup(ctx, destination.Fqdn, d.strategy) //karing
 	}
 	if err != nil {
 		return nil, err
@@ -94,7 +94,7 @@ func (d *resolveDialer) ListenPacket(ctx context.Context, destination M.Socksadd
 	if d.strategy == dns.DomainStrategyAsIS {
 		addresses, err = d.router.LookupDefault(ctx, destination.Fqdn)
 	} else {
-		addresses, err = d.router.Lookup(ctx, destination.Fqdn, d.strategy)
+		addresses, _, err = d.router.Lookup(ctx, destination.Fqdn, d.strategy) //karing
 	}
 	if err != nil {
 		return nil, err
@@ -119,7 +119,7 @@ func (d *resolveParallelNetworkDialer) DialParallelInterface(ctx context.Context
 	if d.strategy == dns.DomainStrategyAsIS {
 		addresses, err = d.router.LookupDefault(ctx, destination.Fqdn)
 	} else {
-		addresses, err = d.router.Lookup(ctx, destination.Fqdn, d.strategy)
+		addresses, _, err = d.router.Lookup(ctx, destination.Fqdn, d.strategy) //karing
 	}
 	if err != nil {
 		return nil, err
@@ -147,7 +147,7 @@ func (d *resolveParallelNetworkDialer) ListenSerialInterfacePacket(ctx context.C
 	if d.strategy == dns.DomainStrategyAsIS {
 		addresses, err = d.router.LookupDefault(ctx, destination.Fqdn)
 	} else {
-		addresses, err = d.router.Lookup(ctx, destination.Fqdn, d.strategy)
+		addresses, _, err = d.router.Lookup(ctx, destination.Fqdn, d.strategy) //karing
 	}
 	if err != nil {
 		return nil, err

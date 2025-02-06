@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"io"
+	"net"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -12,7 +14,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/sagernet/sing-box"
+	box "github.com/sagernet/sing-box"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
@@ -29,7 +31,7 @@ var commandRun = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		err := run()
 		if err != nil {
-			log.Fatal(err)
+			log.Error(err)  //karing
 		}
 	},
 }
@@ -163,6 +165,13 @@ func create() (*box.Box, context.CancelFunc, error) {
 		cancel()
 		return nil, nil, E.Cause(err, "start service")
 	}
+	if servicePort != 0 { //karing
+		conn, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", servicePort)) 
+		if err == nil{
+			conn.Close()
+		}
+	}
+
 	return instance, cancel, nil
 }
 
@@ -177,26 +186,39 @@ func run() error {
 		}
 		runtimeDebug.FreeOSMemory()
 		for {
-			osSignal := <-osSignals
-			if osSignal == syscall.SIGHUP {
-				err = check()
-				if err != nil {
-					log.Error(E.Cause(err, "reload service"))
-					continue
+			select{  //karing
+			case osSignal := <-osSignals:
+				if osSignal == syscall.SIGHUP {
+					err = check()
+					if err != nil {
+						log.Error(E.Cause(err, "reload service"))
+						continue
+					}
 				}
-			}
-			cancel()
-			closeCtx, closed := context.WithCancel(context.Background())
-			go closeMonitor(closeCtx)
-			err = instance.Close()
-			closed()
-			if osSignal != syscall.SIGHUP {
-				if err != nil {
-					log.Error(E.Cause(err, "sing-box did not closed properly"))
+				cancel()
+				closeCtx, closed := context.WithCancel(context.Background())
+				go closeMonitor(closeCtx)
+				err = instance.Close()
+				closed()
+				if osSignal != syscall.SIGHUP {
+					if err != nil {
+						log.Error(E.Cause(err, "sing-box did not closed properly"))
+					}
+					return nil
 				}
+				break
+			case <-instance.QuitSig:  //karing
+				cancel()
+				closeCtx, closed := context.WithCancel(context.Background())
+				go closeMonitor(closeCtx)
+				go func() {
+					time.Sleep(3 * time.Second)
+					os.Exit(2)
+				}()
+				instance.Close()
+				closed()
 				return nil
 			}
-			break
 		}
 	}
 }

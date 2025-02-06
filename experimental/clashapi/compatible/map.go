@@ -53,6 +53,10 @@ func (m *Map[K, V]) LoadAndDelete(key K) (V, bool) {
 	return v.(V), ok
 }
 
+func (m *Map[K, V]) Clear() { //karing
+	m.m = sync.Map{}
+}
+
 func New[K comparable, V any]() *Map[K, V] {
 	return &Map[K, V]{m: sync.Map{}}
 }

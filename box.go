@@ -8,16 +8,17 @@ import (
 	"runtime/debug"
 	"time"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/adapter/endpoint"
 	"github.com/sagernet/sing-box/adapter/inbound"
 	"github.com/sagernet/sing-box/adapter/outbound"
+	D "github.com/sagernet/sing-box/common/debug"
 	"github.com/sagernet/sing-box/common/dialer"
-	"github.com/sagernet/sing-box/common/taskmonitor"
 	"github.com/sagernet/sing-box/common/tls"
-	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/experimental"
 	"github.com/sagernet/sing-box/experimental/cachefile"
+	"github.com/sagernet/sing-box/experimental/clashapi"
 	"github.com/sagernet/sing-box/experimental/libbox/platform"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
@@ -45,6 +46,7 @@ type Box struct {
 	router     *route.Router
 	services   []adapter.LifecycleService
 	done       chan struct{}
+	QuitSig    chan struct{} //karing
 }
 
 type Options struct {
@@ -78,6 +80,14 @@ func Context(
 }
 
 func New(options Options) (*Box, error) {
+	stacks := D.Stacks(false, false) //karing
+	if len(stacks) > 0 {  //karing
+		for key := range stacks {
+			D.MainGoId = key
+			break
+		}
+	}
+	quitSig := make(chan struct{}) //karing
 	createdAt := time.Now()
 	ctx := options.Context
 	if ctx == nil {
@@ -105,7 +115,7 @@ func New(options Options) (*Box, error) {
 	var needCacheFile bool
 	var needClashAPI bool
 	var needV2RayAPI bool
-	if experimentalOptions.CacheFile != nil && experimentalOptions.CacheFile.Enabled || options.PlatformLogWriter != nil {
+	if experimentalOptions.CacheFile != nil && experimentalOptions.CacheFile.Enabled /*|| options.PlatformLogWriter != nil*/ { //karing
 		needCacheFile = true
 	}
 	if experimentalOptions.ClashAPI != nil || options.PlatformLogWriter != nil {
@@ -130,6 +140,24 @@ func New(options Options) (*Box, error) {
 	if err != nil {
 		return nil, E.Cause(err, "create log factory")
 	}
+	err = logFactory.Start() //karing
+	if err != nil { //karing
+		return nil, E.Cause(err, "start logger")
+	}
+	var services []adapter.LifecycleService //karing
+	var cacheFile adapter.CacheFile  //karing
+	if needCacheFile { //karing
+		cacheFile = service.FromContext[adapter.CacheFile](ctx)
+		if cacheFile == nil {
+			cacheFile = cachefile.New(ctx, common.PtrValueOrDefault(experimentalOptions.CacheFile))
+			service.MustRegister[adapter.CacheFile](ctx, cacheFile)
+			services = append(services, cacheFile)
+			err = cacheFile.BeforeStart()
+			if err != nil {
+				return nil, E.Cause(err, "cacheFile load failed")
+			}
+		}
+	}
 
 	routeOptions := common.PtrValueOrDefault(options.Route)
 	endpointManager := endpoint.NewManager(logFactory.NewLogger("endpoint"), endpointRegistry)
@@ -146,7 +174,9 @@ func New(options Options) (*Box, error) {
 	service.MustRegister[adapter.NetworkManager](ctx, networkManager)
 	connectionManager := route.NewConnectionManager(logFactory.NewLogger("connection"))
 	service.MustRegister[adapter.ConnectionManager](ctx, connectionManager)
-	router, err := route.NewRouter(ctx, logFactory, routeOptions, common.PtrValueOrDefault(options.DNS))
+	router, err := route.NewRouter(ctx, logFactory, routeOptions, common.PtrValueOrDefault(options.DNS), func (){ //karing
+		quitSig <- struct{}{}
+	})
 	if err != nil {
 		return nil, E.Cause(err, "initialize router")
 	}
@@ -191,7 +221,7 @@ func New(options Options) (*Box, error) {
 			inboundOptions.Options,
 		)
 		if err != nil {
-			return nil, E.Cause(err, "initialize inbound[", i, "]")
+			return nil, E.Cause(err, "initialize inbound[", i, "][", tag, "]") //karing
 		}
 	}
 	for i, outboundOptions := range options.Outbounds {
@@ -217,7 +247,7 @@ func New(options Options) (*Box, error) {
 			outboundOptions.Options,
 		)
 		if err != nil {
-			return nil, E.Cause(err, "initialize outbound[", i, "]")
+			//return nil, E.Cause(err, "initialize outbound[", i, "]") //karing
 		}
 	}
 	outboundManager.Initialize(common.Must1(
@@ -235,18 +265,24 @@ func New(options Options) (*Box, error) {
 			return nil, E.Cause(err, "initialize platform interface")
 		}
 	}
-	var services []adapter.LifecycleService
+	/*var services []adapter.LifecycleService //karing
 	if needCacheFile {
-		cacheFile := cachefile.New(ctx, common.PtrValueOrDefault(experimentalOptions.CacheFile))
-		service.MustRegister[adapter.CacheFile](ctx, cacheFile)
-		services = append(services, cacheFile)
-	}
+		//cacheFile := cachefile.New(ctx, common.PtrValueOrDefault(experimentalOptions.CacheFile))  //karing
+		//service.MustRegister[adapter.CacheFile](ctx, cacheFile)
+		//services = append(services, cacheFile)
+	}*/
 	if needClashAPI {
 		clashAPIOptions := common.PtrValueOrDefault(experimentalOptions.ClashAPI)
 		clashAPIOptions.ModeList = experimental.CalculateClashModeList(options.Options)
 		clashServer, err := experimental.NewClashServer(ctx, logFactory.(log.ObservableFactory), clashAPIOptions)
 		if err != nil {
 			return nil, E.Cause(err, "create clash-server")
+		}
+
+		outbound.OutboundHasConnections = func(tag string) bool { //karing
+			trafficManager := clashServer.(*clashapi.Server).TrafficManager()
+			hasConn := trafficManager.OutboundHasConnections(tag)
+			return hasConn
 		}
 		router.SetTracker(clashServer)
 		service.MustRegister[adapter.ClashServer](ctx, clashServer)
@@ -274,6 +310,7 @@ func New(options Options) (*Box, error) {
 			Logger:        logFactory.NewLogger("ntp"),
 			Server:        ntpOptions.ServerOptions.Build(),
 			Interval:      time.Duration(ntpOptions.Interval),
+			Timeout:       time.Duration(3 * time.Second), //karing
 			WriteToSystem: ntpOptions.WriteToSystem,
 		})
 		timeService.TimeService = ntpService
@@ -291,6 +328,7 @@ func New(options Options) (*Box, error) {
 		logger:     logFactory.Logger(),
 		services:   services,
 		done:       make(chan struct{}),
+		QuitSig:      quitSig, //karing
 	}, nil
 }
 
@@ -316,6 +354,8 @@ func (s *Box) PreStart() error {
 func (s *Box) Start() error {
 	err := s.start()
 	if err != nil {
+		sentry.CaptureException(err) //karing
+
 		// TODO: remove catch error
 		defer func() {
 			v := recover()
@@ -328,19 +368,21 @@ func (s *Box) Start() error {
 		s.Close()
 		return err
 	}
-	s.logger.Info("sing-box started (", F.Seconds(time.Since(s.createdAt).Seconds()), "s)")
+	
+	s.logger.Info("started (", F.Seconds(time.Since(s.createdAt).Seconds()), "s) since ", s.createdAt) //karing
 	return nil
 }
 
 func (s *Box) preStart() error {
+	/*//karing
 	monitor := taskmonitor.New(s.logger, C.StartTimeout)
 	monitor.Start("start logger")
 	err := s.logFactory.Start()
 	monitor.Finish()
 	if err != nil {
 		return E.Cause(err, "start logger")
-	}
-	err = adapter.StartNamed(adapter.StartStateInitialize, s.services) // cache-file clash-api v2ray-api
+	}*/
+	err := adapter.StartNamed(adapter.StartStateInitialize, s.services) // cache-file clash-api v2ray-api
 	if err != nil {
 		return err
 	}
@@ -364,15 +406,15 @@ func (s *Box) start() error {
 	if err != nil {
 		return err
 	}
-	err = s.inbound.Start(adapter.StartStateStart)
+	/*err = s.inbound.Start(adapter.StartStateStart) //karing
 	if err != nil {
 		return err
-	}
+	}*/
 	err = adapter.Start(adapter.StartStateStart, s.endpoint)
 	if err != nil {
 		return err
 	}
-	err = adapter.Start(adapter.StartStatePostStart, s.outbound, s.network, s.connection, s.router, s.inbound, s.endpoint)
+	err = adapter.Start(adapter.StartStatePostStart, s.outbound, s.network, s.connection, s.router, s.endpoint) //karing
 	if err != nil {
 		return err
 	}
@@ -380,10 +422,24 @@ func (s *Box) start() error {
 	if err != nil {
 		return err
 	}
-	err = adapter.Start(adapter.StartStateStarted, s.network, s.connection, s.router, s.outbound, s.inbound, s.endpoint)
+	err = adapter.Start(adapter.StartStateStarted, s.network, s.connection, s.router, s.outbound, s.endpoint) //karing
 	if err != nil {
 		return err
 	}
+	//karing begin
+	err = s.inbound.Start(adapter.StartStateStart)
+	if err != nil {
+		return err
+	}
+	err = adapter.Start(adapter.StartStatePostStart, s.inbound)
+	if err != nil {
+		return err
+	}
+	err = adapter.Start(adapter.StartStateStarted, s.inbound)
+	if err != nil {
+		return err
+	}
+	//karing end
 	err = adapter.StartNamed(adapter.StartStateStarted, s.services)
 	if err != nil {
 		return err
@@ -426,4 +482,8 @@ func (s *Box) Inbound() adapter.InboundManager {
 
 func (s *Box) Outbound() adapter.OutboundManager {
 	return s.outbound
+}
+
+func (s *Box) Logger() log.ContextLogger { //karing
+	return s.logger
 }

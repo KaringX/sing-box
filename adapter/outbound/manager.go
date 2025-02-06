@@ -16,6 +16,11 @@ import (
 	"github.com/sagernet/sing/common/logger"
 )
 
+type OutboundHasConnectionsFunc func(tag string) bool //karing
+var (
+	OutboundHasConnections OutboundHasConnectionsFunc //karing
+)
+
 var _ adapter.OutboundManager = (*Manager)(nil)
 
 type Manager struct {
@@ -241,11 +246,14 @@ func (m *Manager) Remove(tag string) error {
 
 func (m *Manager) Create(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, inboundType string, options any) error {
 	if tag == "" {
+		m.logger.Error("create outbound failed: empty tag") //karing
 		return os.ErrInvalid
 	}
 	outbound, err := m.registry.CreateOutbound(ctx, router, logger, tag, inboundType, options)
 	if err != nil {
-		return err
+		outbound.SetParseErr(err) //karing
+		m.logger.Error("create outbound failed: ", err) //karing
+		//return err //karing
 	}
 	m.access.Lock()
 	defer m.access.Unlock()
@@ -253,6 +261,8 @@ func (m *Manager) Create(ctx context.Context, router adapter.Router, logger log.
 		for _, stage := range adapter.ListStartStages {
 			err = adapter.LegacyStart(outbound, stage)
 			if err != nil {
+				outbound.SetParseErr(err) //karing
+				m.logger.Error("create outbound failed: ", err) //karing
 				return E.Cause(err, stage, " outbound/", outbound.Type(), "[", outbound.Tag(), "]")
 			}
 		}
@@ -261,6 +271,8 @@ func (m *Manager) Create(ctx context.Context, router adapter.Router, logger log.
 		if m.started {
 			err = common.Close(existsOutbound)
 			if err != nil {
+				outbound.SetParseErr(err) //karing
+				m.logger.Error("create outbound failed: ", err) //karing
 				return E.Cause(err, "close outbound/", existsOutbound.Type(), "[", existsOutbound.Tag(), "]")
 			}
 		}
