@@ -251,6 +251,9 @@ func (m *Manager) Create(ctx context.Context, router adapter.Router, logger log.
 	}
 	outbound, err := m.registry.CreateOutbound(ctx, router, logger, tag, inboundType, options)
 	if err != nil {
+		if outbound == nil { //karing
+			return err
+		}
 		outbound.SetParseErr(err) //karing
 		m.logger.Error("create outbound failed: ", err) //karing
 		//return err //karing
