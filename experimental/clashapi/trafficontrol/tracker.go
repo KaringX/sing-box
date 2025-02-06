@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/sagernet/sing-box/adapter"
+	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/atomic"
 	"github.com/sagernet/sing/common/bufio"
@@ -160,10 +161,10 @@ func NewTCPTracker(conn net.Conn, manager *Manager, metadata adapter.InboundCont
 	tracker := &TCPConn{
 		ExtendedConn: bufio.NewCounterConn(conn, []N.CountFunc{func(n int64) {
 			upload.Add(n)
-			manager.PushUploaded(n, metadata.Protocol == "direct") //karing
+			manager.PushUploaded(n, outboundType == C.TypeDirect) //karing
 		}}, []N.CountFunc{func(n int64) {
 			download.Add(n)
-			manager.PushDownloaded(n, metadata.Protocol == "direct") //karing
+			manager.PushDownloaded(n, outboundType == C.TypeDirect) //karing
 		}}),
 		metadata: TrackerMetadata{
 			ID:           id,
@@ -246,10 +247,10 @@ func NewUDPTracker(conn N.PacketConn, manager *Manager, metadata adapter.Inbound
 	trackerConn := &UDPConn{
 		PacketConn: bufio.NewCounterPacketConn(conn, []N.CountFunc{func(n int64) {
 			upload.Add(n)
-			manager.PushUploaded(n, metadata.Protocol == "direct") //karing
+			manager.PushUploaded(n, outboundType == C.TypeDirect) //karing
 		}}, []N.CountFunc{func(n int64) {
 			download.Add(n)
-			manager.PushDownloaded(n, metadata.Protocol == "direct") //karing
+			manager.PushDownloaded(n, outboundType == C.TypeDirect) //karing
 		}}),
 		metadata: TrackerMetadata{
 			ID:           id,
