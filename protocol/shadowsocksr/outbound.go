@@ -1,6 +1,6 @@
 //go:build with_shadowsocksr
 
-package outbound
+package shadowsocksr
 
 //karing
 import (
@@ -27,7 +27,9 @@ import (
 	N "github.com/sagernet/sing/common/network"
 )
 
-var _ adapter.Outbound = (*Outbound)(nil)
+func RegisterOutbound(registry *outbound.Registry) {
+	outbound.Register[option.ShadowsocksROutboundOptions](registry, C.TypeShadowsocksR, NewOutbound)
+}
 
 type Outbound struct {
 	outbound.Adapter
