@@ -161,16 +161,22 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 }
 
 func (o *Outbound) Start(stage adapter.StartStage) error {
+	if (o.endpoint == nil){ //karing
+		return nil
+	}
 	switch stage {
 	case adapter.StartStateStart:
 		return o.endpoint.Start(false)
-	case adapter.StartStatePostStart:
-		return o.endpoint.Start(true)
+	//case adapter.StartStatePostStart: //karing
+		//return o.endpoint.Start(true)  //karing
 	}
 	return nil
 }
 
 func (o *Outbound) Close() error {
+	if (o.endpoint == nil){ //karing
+		return nil
+	}
 	return o.endpoint.Close()
 }
 
@@ -179,6 +185,9 @@ func (h *Outbound) SetParseErr(err error){ //karing
 }
 
 func (o *Outbound) InterfaceUpdated() {
+	if (o.endpoint == nil){ //karing
+		return
+	}
 	o.endpoint.BindUpdate()
 	return
 }

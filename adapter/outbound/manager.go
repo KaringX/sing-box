@@ -250,12 +250,12 @@ func (m *Manager) Create(ctx context.Context, router adapter.Router, logger log.
 		return os.ErrInvalid
 	}
 	outbound, err := m.registry.CreateOutbound(ctx, router, logger, tag, inboundType, options)
+	if outbound == nil { //karing
+		return err
+	}
 	if err != nil {
-		if outbound == nil { //karing
-			return err
-		}
 		outbound.SetParseErr(err) //karing
-		m.logger.Error("create outbound failed: ", err) //karing
+		m.logger.Error("create outbound failed: ", outbound.Tag(), err) //karing
 		//return err //karing
 	}
 	m.access.Lock()
@@ -264,8 +264,6 @@ func (m *Manager) Create(ctx context.Context, router adapter.Router, logger log.
 		for _, stage := range adapter.ListStartStages {
 			err = adapter.LegacyStart(outbound, stage)
 			if err != nil {
-				outbound.SetParseErr(err) //karing
-				m.logger.Error("create outbound failed: ", err) //karing
 				return E.Cause(err, stage, " outbound/", outbound.Type(), "[", outbound.Tag(), "]")
 			}
 		}
@@ -274,8 +272,6 @@ func (m *Manager) Create(ctx context.Context, router adapter.Router, logger log.
 		if m.started {
 			err = common.Close(existsOutbound)
 			if err != nil {
-				outbound.SetParseErr(err) //karing
-				m.logger.Error("create outbound failed: ", err) //karing
 				return E.Cause(err, "close outbound/", existsOutbound.Type(), "[", existsOutbound.Tag(), "]")
 			}
 		}

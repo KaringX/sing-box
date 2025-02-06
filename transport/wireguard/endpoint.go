@@ -140,9 +140,13 @@ func (e *Endpoint) Start(resolve bool) error {
 	} else if resolve {
 		return nil
 	}
+	if (e.device != nil){ //karing
+		return nil
+	}
 	var bind conn.Bind
 	wgListener, isWgListener := e.options.Dialer.(conn.Listener)
-	if isWgListener {
+	useStdNetBind := false //karing
+	if isWgListener && useStdNetBind { //karing
 		bind = conn.NewStdNetBind(wgListener)
 	} else {
 		var (
@@ -198,6 +202,10 @@ func (e *Endpoint) DialContext(ctx context.Context, network string, destination 
 	if !destination.Addr.IsValid() {
 		return nil, E.Cause(os.ErrInvalid, "invalid non-IP destination")
 	}
+	err := e.Start(true)  //karing
+	if err != nil {  //karing
+		return nil, err
+	}
 	return e.tunDevice.DialContext(ctx, network, destination)
 }
 
@@ -205,10 +213,17 @@ func (e *Endpoint) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
 	if !destination.Addr.IsValid() {
 		return nil, E.Cause(os.ErrInvalid, "invalid non-IP destination")
 	}
+	err := e.Start(true)  //karing
+	if err != nil {  //karing
+		return nil, err
+	}
 	return e.tunDevice.ListenPacket(ctx, destination)
 }
 
 func (e *Endpoint) BindUpdate() error {
+	if e.device == nil { //karing
+		return nil
+	}
 	return e.device.BindUpdate()
 }
 
@@ -223,6 +238,9 @@ func (e *Endpoint) Close() error {
 }
 
 func (e *Endpoint) onPauseUpdated(event int) {
+	if e.device == nil { //karing
+		return
+	}
 	switch event {
 	case pause.EventDevicePaused:
 		e.device.Down()
