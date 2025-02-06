@@ -50,7 +50,7 @@ type RemoteRuleSet struct {
 	callbackAccess sync.Mutex
 	callbacks      list.List[adapter.RuleSetUpdateCallback]
 	refs           atomic.Int32
-	downloadTimes   int  //karing
+	downloadTimes  int  //karing
 }
 
 func NewRemoteRuleSet(ctx context.Context, logger logger.ContextLogger, options option.RuleSet) *RemoteRuleSet {
@@ -247,10 +247,10 @@ func (s *RemoteRuleSet) loopUpdate() {
 func (s *RemoteRuleSet) fetchOnce(ctx context.Context, startContext *adapter.HTTPStartContext) error {
 	if s.downloadTimes >= 5 {  //karing
 		s.Close()
-		return E.New("cancel rule-set download after try ", s.downloadTimes, " times for URL:", s.options.RemoteOptions.URL)
+		return E.New("cancel updating rule-set ", s.options.Tag, " download_detour ", s.options.RemoteOptions.DownloadDetour, " from URL:", s.options.RemoteOptions.URL, " after ", s.downloadTimes, " times")
 	}
 	s.downloadTimes++  //karing
-	s.logger.Debug("updating rule-set ", s.options.Tag, " from URL: ", s.options.RemoteOptions.URL)
+	s.logger.Debug("updating rule-set ", s.options.Tag, " download_detour ", s.options.RemoteOptions.DownloadDetour, " from URL: ", s.options.RemoteOptions.URL, " try ", s.downloadTimes, " times") //karing
 	var httpClient *http.Client
 	if startContext != nil {
 		httpClient = startContext.HTTPClient(s.options.RemoteOptions.DownloadDetour, s.dialer)
