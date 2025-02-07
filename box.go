@@ -8,12 +8,10 @@ import (
 	"runtime/debug"
 	"time"
 
-	"github.com/getsentry/sentry-go"
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/adapter/endpoint"
 	"github.com/sagernet/sing-box/adapter/inbound"
 	"github.com/sagernet/sing-box/adapter/outbound"
-	D "github.com/sagernet/sing-box/common/debug"
 	"github.com/sagernet/sing-box/common/dialer"
 	"github.com/sagernet/sing-box/common/tls"
 	"github.com/sagernet/sing-box/experimental"
@@ -46,7 +44,7 @@ type Box struct {
 	router     *route.Router
 	services   []adapter.LifecycleService
 	done       chan struct{}
-	QuitSig    chan struct{} //karing
+	Quit       chan struct{} //karing
 }
 
 type Options struct {
@@ -80,14 +78,7 @@ func Context(
 }
 
 func New(options Options) (*Box, error) {
-	stacks := D.Stacks(false, false) //karing
-	if len(stacks) > 0 {  //karing
-		for key := range stacks {
-			D.MainGoId = key
-			break
-		}
-	}
-	quitSig := make(chan struct{}) //karing
+	quit := make(chan struct{}) //karing
 	createdAt := time.Now()
 	ctx := options.Context
 	if ctx == nil {
@@ -175,7 +166,7 @@ func New(options Options) (*Box, error) {
 	connectionManager := route.NewConnectionManager(logFactory.NewLogger("connection"))
 	service.MustRegister[adapter.ConnectionManager](ctx, connectionManager)
 	router, err := route.NewRouter(ctx, logFactory, routeOptions, common.PtrValueOrDefault(options.DNS), func (){ //karing
-		quitSig <- struct{}{}
+		quit <- struct{}{}
 	})
 	if err != nil {
 		return nil, E.Cause(err, "initialize router")
@@ -247,7 +238,7 @@ func New(options Options) (*Box, error) {
 			outboundOptions.Options,
 		)
 		if err != nil {
-			//return nil, E.Cause(err, "initialize outbound[", i, "]") //karing
+			return nil, E.Cause(err, "initialize outbound[", i, "]") //karing
 		}
 	}
 	outboundManager.Initialize(common.Must1(
@@ -328,7 +319,7 @@ func New(options Options) (*Box, error) {
 		logger:     logFactory.Logger(),
 		services:   services,
 		done:       make(chan struct{}),
-		QuitSig:      quitSig, //karing
+		Quit:       quit, //karing
 	}, nil
 }
 
@@ -354,8 +345,6 @@ func (s *Box) PreStart() error {
 func (s *Box) Start() error {
 	err := s.start()
 	if err != nil {
-		sentry.CaptureException(err) //karing
-
 		// TODO: remove catch error
 		defer func() {
 			v := recover()

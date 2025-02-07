@@ -8,13 +8,16 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime/debug"
 	runtimeDebug "runtime/debug"
 	"sort"
 	"strings"
 	"syscall"
 	"time"
 
+	"github.com/getsentry/sentry-go"
 	box "github.com/sagernet/sing-box"
+	D "github.com/sagernet/sing-box/common/debug"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
@@ -124,7 +127,20 @@ func readConfigAndMerge() (option.Options, error) {
 	return mergedOptions, nil
 }
 
-func create() (*box.Box, context.CancelFunc, error) {
+func create() (instance *box.Box,cf context.CancelFunc, err error) { //karing
+	defer func() { //karing
+		if e := recover(); e != nil {
+			content := fmt.Sprintf("%v\n%s", e, string(debug.Stack()))
+			err = E.Cause(E.New(content), "panic: create service")
+		}
+	}()
+	stacks := D.Stacks(false, false) //karing
+	if len(stacks) > 0 {  //karing
+		for key := range stacks {
+			D.MainGoId = key
+			break
+		}
+	}
 	options, err := readConfigAndMerge()
 	if err != nil {
 		return nil, nil, err
@@ -136,7 +152,7 @@ func create() (*box.Box, context.CancelFunc, error) {
 		options.Log.DisableColor = true
 	}
 	ctx, cancel := context.WithCancel(globalCtx)
-	instance, err := box.New(box.Options{
+	instance, err = box.New(box.Options{ //karing
 		Context: ctx,
 		Options: options,
 	})
@@ -182,6 +198,7 @@ func run() error {
 	for {
 		instance, cancel, err := create()
 		if err != nil {
+			sentry.CaptureException(err)
 			return err
 		}
 		runtimeDebug.FreeOSMemory()
@@ -207,7 +224,7 @@ func run() error {
 					return nil
 				}
 				break
-			case <-instance.QuitSig:  //karing
+			case <-instance.Quit:  //karing
 				cancel()
 				closeCtx, closed := context.WithCancel(context.Background())
 				go closeMonitor(closeCtx)

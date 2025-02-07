@@ -2,9 +2,11 @@ package libbox
 
 import (
 	"context"
+	"fmt"
 	"net/netip"
 	"os"
 	"runtime"
+	"runtime/debug"
 	runtimeDebug "runtime/debug"
 	"sync"
 	"syscall"
@@ -13,6 +15,7 @@ import (
 	sentry "github.com/getsentry/sentry-go"
 	box "github.com/sagernet/sing-box"
 	"github.com/sagernet/sing-box/adapter"
+	D "github.com/sagernet/sing-box/common/debug"
 	"github.com/sagernet/sing-box/common/process"
 	"github.com/sagernet/sing-box/common/urltest"
 	C "github.com/sagernet/sing-box/constant"
@@ -44,13 +47,28 @@ type BoxService struct {
 	servicePauseFields
 }
 
-func NewService(configContent string, platformInterface PlatformInterface) (*BoxService, error) {
+func NewService(configContent string, platformInterface PlatformInterface) (boxService *BoxService, err error) {
+	defer func() { //karing
+		if e := recover(); e != nil {
+			content := fmt.Sprintf("%v\n%s", e, string(debug.Stack()))
+			err = E.Cause(E.New(content), "panic: create service")
+			sentry.CaptureException(err)
+		}
+	}()
+	stacks := D.Stacks(false, false) //karing
+	if len(stacks) > 0 {  //karing
+		for key := range stacks {
+			D.MainGoId = key
+			break
+		}
+	}
 	ctx := box.Context(context.Background(), include.InboundRegistry(), include.OutboundRegistry(), include.EndpointRegistry())
 	ctx = filemanager.WithDefault(ctx, sWorkingPath, sBasePath, sTempPath, sUserID, sGroupID) //karing
 	service.MustRegister[deprecated.Manager](ctx, new(deprecatedManager))
-	options, err := parseConfig(ctx, configContent)
+	var options option.Options //karing
+	options, err = parseConfig(ctx, configContent) //karing
 	if err != nil {
-		sentry.CaptureException(err) //karing
+		sentry.CaptureException(E.Cause(err, "create service")) //karing 
 		return nil, err
 	}
 	runtimeDebug.FreeOSMemory()
@@ -62,14 +80,15 @@ func NewService(configContent string, platformInterface PlatformInterface) (*Box
 		useProcFS: platformInterface.UseProcFS(),
 	}
 	service.MustRegister[platform.Interface](ctx, platformWrapper)
-	instance, err := box.New(box.Options{
+	var instance *box.Box //karing
+	instance, err = box.New(box.Options{ //karing
 		Context:           ctx,
 		Options:           options,
 		PlatformLogWriter: platformWrapper,
 	})
 	if err != nil {
 		cancel()
-		sentry.CaptureException(err) //karing
+		sentry.CaptureException(E.Cause(err, "create service")) //karing 
 		return nil, E.Cause(err, "create service")
 	}
 	runtimeDebug.FreeOSMemory()
@@ -83,19 +102,30 @@ func NewService(configContent string, platformInterface PlatformInterface) (*Box
 	}, nil
 }
 
-func (s *BoxService) Start() error {
+func (s *BoxService) Start() (err error) { //karing
+	defer func() { //karing
+		if e := recover(); e != nil {
+			content := fmt.Sprintf("%v\n%s", e, string(debug.Stack()))
+			err = E.Cause(E.New(content), "panic: start service")
+			sentry.CaptureException(err)
+		}
+	}()
 	if sFixAndroidStack {
-		var err error
+		//var err error
 		done := make(chan struct{})
 		go func() {
 			err = s.instance.Start()
 			close(done)
 		}()
 		<-done
-		return err
+		//return err //karing
 	} else {
-		return s.instance.Start()
+		err = s.instance.Start()
 	}
+	if err != nil { //karing 
+		sentry.CaptureException(E.Cause(err, "start service"))
+	}
+	return err
 }
 
 func (s *BoxService) Close() error {
