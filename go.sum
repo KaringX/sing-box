@@ -4,6 +4,8 @@ github.com/Dreamacro/protobytes v0.0.0-20230911123819-0bbf144b9b9a h1:1AtE37gqot
 github.com/Dreamacro/protobytes v0.0.0-20230911123819-0bbf144b9b9a/go.mod h1:ESt8LLs50hyrYzfb7NRh3cDm8W1/r/9+CEAKWV+gc38=
 github.com/KaringX/sing v0.5.0-alpha.11.0.20250124021809-5012e583d04d h1:JVGkclzge2VQkQhy49bjRhvFY/Zh44aM7yHhNbUnAFM=
 github.com/KaringX/sing v0.5.0-alpha.11.0.20250124021809-5012e583d04d/go.mod h1:ARkL0gM13/Iv5VCZmci/NuoOlePoIsW0m7BWfln/Hak=
+github.com/KaringX/sing v0.5.0-alpha.11.0.20250208023118-7f7a3473ea8c h1:zCVWy42YKqCUQep25Y5C2PHW2juM7m5miNV/wESHbg8=
+github.com/KaringX/sing v0.5.0-alpha.11.0.20250208023118-7f7a3473ea8c/go.mod h1:ARkL0gM13/Iv5VCZmci/NuoOlePoIsW0m7BWfln/Hak=
 github.com/KaringX/sing-dns v0.3.0-beta.14.0.20250124022851-15400e8f9c11 h1:X3YpBPVHN3Qi1aaxxbhh9Bh6LONuLhtkgH0bMzroRr8=
 github.com/KaringX/sing-dns v0.3.0-beta.14.0.20250124022851-15400e8f9c11/go.mod h1:8wuFcoFkWM4vJuQyg8e97LyvDwe0/Vl7G839WLcKDs8=
 github.com/KaringX/sing-dns v0.3.0-beta.14.0.20250124041328-49ee6549e540 h1:7u07Qfkg2Tr+eovxThLcbhTCaEWKQ7fP8VcTfY1jexU=

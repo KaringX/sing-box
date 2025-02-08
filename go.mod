@@ -70,7 +70,7 @@ require ( //karing
 )
 
 //go get github.com/KaringX/sing-quic@de3999b0837577a99a891562c776914c8aed3bc1
-replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20250124021809-5012e583d04d //karing_v0.6.0-beta.12
+replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20250208023118-7f7a3473ea8c //karing_v0.6.0-beta.12
 //replace github.com/sagernet/sing => ../../KaringX/sing
 
 replace github.com/sagernet/sing-dns => github.com/KaringX/sing-dns v0.3.0-beta.14.0.20250124041328-49ee6549e540 //karing_v0.4.0-beta.2
