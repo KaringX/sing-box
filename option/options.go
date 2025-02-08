@@ -26,7 +26,7 @@ type Options _Options
 func (o *Options) UnmarshalJSONContext(ctx context.Context, content []byte) error {
 	//return o.UnmarshalFastJSON(content) //karing
 	decoder := json.NewDecoderContext(ctx, bytes.NewReader(content))
-	decoder.DisallowUnknownFields()
+	//decoder.DisallowUnknownFields() //karing
 	err := decoder.Decode((*_Options)(o))
 	if err != nil {
 		return err
