@@ -58,11 +58,11 @@ func readRuleSetAt(path string) (*RuleSetEntry, error) {
 		configContent, err = os.ReadFile(path)
 	}
 	if err != nil {
-		return nil, E.Cause(err, "read config ") //karing
+		return nil, E.Cause(err, "read config: ") //karing
 	}
 	options, err := json.UnmarshalExtendedContext[option.PlainRuleSetCompat](globalCtx, configContent)
 	if err != nil {
-		return nil, E.Cause(err, "decode config ") //karing
+		return nil, E.Cause(err, "decode config: ") //karing
 	}
 	return &RuleSetEntry{
 		content: configContent,
