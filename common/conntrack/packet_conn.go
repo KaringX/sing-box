@@ -16,16 +16,26 @@ type PacketConn struct {
 }
 
 func NewPacketConn(conn net.PacketConn, destination M.Socksaddr, inbound *adapter.InboundContext) (net.PacketConn, error) { //karing
-	connAccess.Lock()
+	var ( //karing
+		Source M.Socksaddr
+		Fqdn   string
+		Outbound string
+	)
+	if inbound != nil { //karing
+		Source   = inbound.Source
+		Fqdn     = inbound.Destination.Fqdn
+		Outbound = inbound.Outbound
+	}
 	warpper := OutboundConn { //karing
 		Closer:      conn, 
 		CreatedAt:   time.Now(), 
 		Network:     "udp", 
-		Source:      inbound.Source,
+		Source:      Source,
 		Destination: destination,
-		Fqdn:        inbound.Destination.Fqdn, 
-		Outbound:    inbound.Outbound,
+		Fqdn:        Fqdn, 
+		Outbound:    Outbound,
 	}
+	connAccess.Lock()
 	element := openConnection.PushBack(warpper) //karing
 	connAccess.Unlock()
 	if KillerEnabled {
