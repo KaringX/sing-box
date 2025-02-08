@@ -40,7 +40,7 @@ func (h *Endpoint) UnmarshalJSONContext(ctx context.Context, content []byte) err
 	}
 	err = badjson.UnmarshallExcludedContext(ctx, content, (*_Endpoint)(h), options)
 	if err != nil {
-		return err
+		return E.Cause(err, string(content)) //karing
 	}
 	h.Options = options
 	return nil

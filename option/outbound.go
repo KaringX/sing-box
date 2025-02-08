@@ -48,7 +48,7 @@ func (h *Outbound) UnmarshalJSONContext(ctx context.Context, content []byte) err
 	}
 	err = badjson.UnmarshallExcludedContext(ctx, content, (*_Outbound)(h), options)
 	if err != nil {
-		return err
+		return E.Cause(err, string(content)) //karing
 	}
 	if listenWrapper, isListen := options.(ListenOptionsWrapper); isListen {
 		if listenWrapper.TakeListenOptions().InboundOptions != (InboundOptions{}) {

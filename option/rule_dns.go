@@ -51,7 +51,7 @@ func (r *DNSRule) UnmarshalJSONContext(ctx context.Context, bytes []byte) error 
 	}
 	err = badjson.UnmarshallExcludedContext(ctx, bytes, (*_DNSRule)(r), v)
 	if err != nil {
-		return err
+		return E.Cause(err, string(bytes)) //karing
 	}
 	return nil
 }
