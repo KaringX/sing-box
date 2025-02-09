@@ -1,4 +1,4 @@
-//go:build with_fastjson
+//go:build !with_fastjson
 
 package option
 
@@ -589,7 +589,6 @@ func (o *DNSFakeIPOptions) FastjsonUnmarshal(fj *fastjson.Value) error{
 	o.Inet4Range, _ = FastjsonUnmarshalAnyPtr[netip.Prefix](FastjsonUnmarshalConvertNetipPrefix, fj, "inet4_range")
 	o.Inet6Range, _ = FastjsonUnmarshalAnyPtr[netip.Prefix](FastjsonUnmarshalConvertNetipPrefix, fj, "inet6_range")
 
-	 
 	return nil
 }
 
@@ -1408,7 +1407,11 @@ func (o *RuleSet) FastjsonUnmarshal(fj *fastjson.Value) error{
 	o.Tag, _ = FastjsonUnmarshalString(fj, "tag")
 	o.Format , _= FastjsonUnmarshalString(fj, "format")
 	o.LocalOptions.IsAsset, _ = FastjsonUnmarshalBool(fj, "is_asset")
+	o.LocalOptions.AutoReload, _ = FastjsonUnmarshalBool(fj, "auto_load")
 	o.LocalOptions.Path, _ = FastjsonUnmarshalString(fj, "path")
+	o.RemoteOptions.IsAsset, _ = FastjsonUnmarshalBool(fj, "is_asset")
+	o.RemoteOptions.AutoReload, _ = FastjsonUnmarshalBool(fj, "auto_load")
+	o.RemoteOptions.Path, _ = FastjsonUnmarshalString(fj, "path")
 	o.RemoteOptions.URL, _ = FastjsonUnmarshalString(fj, "url")
 	o.RemoteOptions.DownloadDetour, _ = FastjsonUnmarshalString(fj, "download_detour")
 	o.RemoteOptions.UpdateInterval, _ = FastjsonUnmarshalBadoptionDuration(fj, "update_interval")
@@ -1447,7 +1450,6 @@ func FastjsonUnmarshalRule(fj *fastjson.Value, name string) (Rule, error) {
 	return FastjsonUnmarshalAny[Rule](FastjsonUnmarshalConvertRule,FastjsonUnmarshalDefaultRule, fj, name)
 }
 
-
 func FastjsonUnmarshalArrayRule(fj *fastjson.Value, name string) []Rule {
 	return FastjsonUnmarshalArrayT(FastjsonUnmarshalRule, fj, name, fastjson.TypeObject )
 }
@@ -1479,7 +1481,6 @@ func FastjsonUnmarshalDNSRule(fj *fastjson.Value, name string) (DNSRule, error) 
 func FastjsonUnmarshalArrayDNSRule(fj *fastjson.Value, name string) []DNSRule {
 	return FastjsonUnmarshalArrayT(FastjsonUnmarshalDNSRule, fj, name, fastjson.TypeObject)
 }
-
 
 // rule.go
 func (o *Rule) FastjsonUnmarshal(fj *fastjson.Value) error{
@@ -1536,7 +1537,7 @@ func (o *DefaultRule) FastjsonUnmarshal(fj *fastjson.Value) error{
 	o.RuleSet = FastjsonUnmarshalListableString(fj, "rule_set")
 	o.RuleSetIPCIDRMatchSource, _ = FastjsonUnmarshalBool(fj, "rule_set_ipcidr_match_source")
 	o.Invert , _= FastjsonUnmarshalBool(fj, "invert")
-	o.Outbound, _ = FastjsonUnmarshalString(fj, "outbound")
+	//o.Outbound, _ = FastjsonUnmarshalString(fj, "outbound")
 	o.Name, _ = FastjsonUnmarshalString(fj, "name")
 	return nil
 }
@@ -1549,7 +1550,7 @@ func (o *LogicalRule) FastjsonUnmarshal(fj *fastjson.Value) error{
 	o.Mode, _ = FastjsonUnmarshalString(fj, "mode")
 	o.Rules = FastjsonUnmarshalArrayRule(fj, "rules")
 	o.Invert, _ = FastjsonUnmarshalBool(fj, "invert")
-	o.Outbound = FastjsonUnmarshalString(fj, "outbound")
+	//o.Outbound = FastjsonUnmarshalString(fj, "outbound")
 	o.Name, _ = FastjsonUnmarshalString(fj, "name")
 	return nil
 }
@@ -1638,8 +1639,7 @@ func FastjsonUnmarshalConvertShadowsocksDestination(fj *fastjson.Value) (Shadows
 func FastjsonUnmarshalShadowsocksDestination(fj *fastjson.Value, name string) (ShadowsocksDestination, error) {
 	return FastjsonUnmarshalAny[ShadowsocksDestination](FastjsonUnmarshalConvertShadowsocksDestination, FastjsonUnmarshalDefaultShadowsocksDestination, fj, name)
 }
- 
- 
+
 func FastjsonUnmarshalArrayShadowsocksDestination(fj *fastjson.Value, name string) []ShadowsocksDestination {
 	return FastjsonUnmarshalArrayT(FastjsonUnmarshalShadowsocksDestination, fj, name, fastjson.TypeObject)
 }
