@@ -244,7 +244,7 @@ func (m *Manager) Remove(tag string) error {
 	return nil
 }
 
-func (m *Manager) Create(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, inboundType string, options any) error {
+func (m *Manager) Create(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, inboundType string, options any, parseErr error) error {
 	if tag == "" {
 		m.logger.Error("create outbound failed: empty tag") //karing
 		return os.ErrInvalid
@@ -253,9 +253,12 @@ func (m *Manager) Create(ctx context.Context, router adapter.Router, logger log.
 	if outbound == nil { //karing
 		return err
 	}
+	if parseErr != nil { //karing
+		err = parseErr
+	}
 	if err != nil {
 		outbound.SetParseErr(err) //karing
-		m.logger.Error("create outbound failed: ", outbound.Tag(), err) //karing
+		m.logger.Error("create outbound failed: ", outbound.Tag(), " -> ", err) //karing
 		//return err //karing
 	}
 	m.access.Lock()

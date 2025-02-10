@@ -192,9 +192,10 @@ func New(options Options) (*Box, error) {
 			tag,
 			endpointOptions.Type,
 			endpointOptions.Options,
+			endpointOptions.ParseErr, //karing
 		)
 		if err != nil {
-			return nil, E.Cause(err, "initialize inbound[", i, "]")
+			return nil, E.Cause(err, "initialize endpoint[", i, "][", tag, "]") //karing
 		}
 	}
 	for i, inboundOptions := range options.Inbounds {
@@ -236,9 +237,10 @@ func New(options Options) (*Box, error) {
 			tag,
 			outboundOptions.Type,
 			outboundOptions.Options,
+			outboundOptions.ParseErr, //karing
 		)
 		if err != nil {
-			return nil, E.Cause(err, "initialize outbound[", i, "]") //karing
+			return nil, E.Cause(err, "initialize outbound[", i, "][", tag, "]") //karing
 		}
 	}
 	outboundManager.Initialize(common.Must1(

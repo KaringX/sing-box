@@ -111,7 +111,7 @@ func (m *Manager) Remove(tag string) error {
 	return nil
 }
 
-func (m *Manager) Create(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, outboundType string, options any) error {
+func (m *Manager) Create(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, outboundType string, options any, parseErr error) error {
 	if tag == "" { //karing
 		m.logger.Error("create endpoint failed: empty tag") 
 		return os.ErrInvalid
@@ -120,9 +120,12 @@ func (m *Manager) Create(ctx context.Context, router adapter.Router, logger log.
 	if endpoint == nil { //karing
 		return err
 	}
+	if parseErr != nil { //karing
+		err = parseErr
+	}
 	if err != nil {
 		endpoint.SetParseErr(err) //karing
-		m.logger.Error("create endpoint failed: ", endpoint.Tag(), err) //karing
+		m.logger.Error("create endpoint failed: ", endpoint.Tag(), " -> ", err) //karing
 		//return err //karing
 	}
 	m.access.Lock()

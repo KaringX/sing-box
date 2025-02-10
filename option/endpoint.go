@@ -17,6 +17,7 @@ type _Endpoint struct {
 	Type    string `json:"type"`
 	Tag     string `json:"tag,omitempty"`
 	Options any    `json:"-"`
+	ParseErr error //karing
 }
 
 type Endpoint _Endpoint
@@ -40,7 +41,11 @@ func (h *Endpoint) UnmarshalJSONContext(ctx context.Context, content []byte) err
 	}
 	err = badjson.UnmarshallExcludedContext(ctx, content, (*_Endpoint)(h), options)
 	if err != nil {
-		return E.Cause(err, string(content)) //karing
+		//return err  //karing
+		if len(h.Type) == 0 || len(h.Tag) == 0 {  //karing
+			return err
+		}
+		h.ParseErr = err //karing
 	}
 	h.Options = options
 	return nil

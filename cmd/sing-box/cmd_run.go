@@ -230,7 +230,7 @@ func run() error {
 				go closeMonitor(closeCtx)
 				go func() {
 					time.Sleep(3 * time.Second)
-					os.Exit(2)
+					os.Exit(1)
 				}()
 				instance.Close()
 				closed()
