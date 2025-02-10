@@ -13,9 +13,8 @@ import (
 )
 
 var stderrLogFile *os.File
-
-func StderrRedirect(path string) (err error) {
-	defer func() { //karing
+func StderrRedirect(path string) (err error) { 
+	defer func() {
 		if e := recover(); e != nil {
 			content := fmt.Sprintf("%v\n%s", e, string(debug.Stack()))
 			err = E.Cause(E.New(content), "panic: StderrRedirect")
