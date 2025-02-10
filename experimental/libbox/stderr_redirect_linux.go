@@ -9,5 +9,5 @@ import (
 )
 
 func stderrRedirect(f *os.File) error {
-	return syscall.Dup2(int(f.Fd()), int(os.Stderr.Fd()))
+	return syscall.Dup3(int(f.Fd()), int(os.Stderr.Fd()), 0)
 }
