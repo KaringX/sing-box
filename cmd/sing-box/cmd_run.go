@@ -15,10 +15,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/getsentry/sentry-go"
 	box "github.com/sagernet/sing-box"
 	D "github.com/sagernet/sing-box/common/debug"
 	C "github.com/sagernet/sing-box/constant"
+	"github.com/sagernet/sing-box/experimental/libbox"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
 	E "github.com/sagernet/sing/common/exceptions"
@@ -132,6 +132,7 @@ func create() (instance *box.Box,cf context.CancelFunc, err error) { //karing
 		if e := recover(); e != nil {
 			content := fmt.Sprintf("%v\n%s", e, string(debug.Stack()))
 			err = E.Cause(E.New(content), "panic: create service")
+			libbox.SentryCaptureException(&libbox.SentryPanicError{Err: err.Error()})
 		}
 	}()
 	stacks := D.Stacks(false, false) //karing
@@ -141,8 +142,10 @@ func create() (instance *box.Box,cf context.CancelFunc, err error) { //karing
 			break
 		}
 	}
+	
 	options, err := readConfigAndMerge()
 	if err != nil {
+		libbox.SentryCaptureException(err) //karing
 		return nil, nil, err
 	}
 	if disableColor {
@@ -158,6 +161,7 @@ func create() (instance *box.Box,cf context.CancelFunc, err error) { //karing
 	})
 	if err != nil {
 		cancel()
+		libbox.SentryCaptureException(E.Cause(err, "create service")) //karing
 		return nil, nil, E.Cause(err, "create service")
 	}
 
@@ -179,6 +183,7 @@ func create() (instance *box.Box,cf context.CancelFunc, err error) { //karing
 	finishStart()
 	if err != nil {
 		cancel()
+		libbox.SentryCaptureException(E.Cause(err, "start service")) //karing
 		return nil, nil, E.Cause(err, "start service")
 	}
 	if servicePort != 0 { //karing
@@ -198,7 +203,6 @@ func run() error {
 	for {
 		instance, cancel, err := create()
 		if err != nil {
-			sentry.CaptureException(err)
 			return err
 		}
 		runtimeDebug.FreeOSMemory()

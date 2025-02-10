@@ -12,7 +12,6 @@ import (
 	"syscall"
 	"time"
 
-	sentry "github.com/getsentry/sentry-go"
 	box "github.com/sagernet/sing-box"
 	"github.com/sagernet/sing-box/adapter"
 	D "github.com/sagernet/sing-box/common/debug"
@@ -52,7 +51,7 @@ func NewService(configContent string, platformInterface PlatformInterface) (boxS
 		if e := recover(); e != nil {
 			content := fmt.Sprintf("%v\n%s", e, string(debug.Stack()))
 			err = E.Cause(E.New(content), "panic: create service")
-			sentry.CaptureException(err)
+			SentryCaptureException(&SentryPanicError{Err: err.Error()})
 		}
 	}()
 	stacks := D.Stacks(false, false) //karing
@@ -68,7 +67,7 @@ func NewService(configContent string, platformInterface PlatformInterface) (boxS
 	var options option.Options //karing
 	options, err = parseConfig(ctx, configContent) //karing
 	if err != nil {
-		sentry.CaptureException(E.Cause(err, "create service")) //karing 
+		SentryCaptureException(E.Cause(err, "create service")) //karing 
 		return nil, err
 	}
 	runtimeDebug.FreeOSMemory()
@@ -88,7 +87,7 @@ func NewService(configContent string, platformInterface PlatformInterface) (boxS
 	})
 	if err != nil {
 		cancel()
-		sentry.CaptureException(E.Cause(err, "create service")) //karing 
+		SentryCaptureException(E.Cause(err, "create service")) //karing 
 		return nil, E.Cause(err, "create service")
 	}
 	runtimeDebug.FreeOSMemory()
@@ -107,7 +106,7 @@ func (s *BoxService) Start() (err error) { //karing
 		if e := recover(); e != nil {
 			content := fmt.Sprintf("%v\n%s", e, string(debug.Stack()))
 			err = E.Cause(E.New(content), "panic: start service")
-			sentry.CaptureException(err)
+			SentryCaptureException(&SentryPanicError{Err: err.Error()})
 		}
 	}()
 	if sFixAndroidStack {
@@ -123,7 +122,7 @@ func (s *BoxService) Start() (err error) { //karing
 		err = s.instance.Start()
 	}
 	if err != nil { //karing 
-		sentry.CaptureException(E.Cause(err, "start service"))
+		SentryCaptureException(E.Cause(err, "start service"))
 	}
 	return err
 }

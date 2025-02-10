@@ -101,6 +101,7 @@ func setUpDir(content []byte) error {
 		return err1
 	}
 	core_path := stringNotNil(value.GetStringBytes("core_path"))
+	err_path := stringNotNil(value.GetStringBytes("err_path"))
 	if len(core_path) == 0 {
 		return E.New(serviceConfigPath + " : core_path is empty")
 	}
@@ -114,7 +115,7 @@ func setUpDir(content []byte) error {
 		IsTVOS:           false,
 		FixAndroidStack : false,
 	}
-
+    libbox.StderrRedirect(err_path)
 	return libbox.Setup(&setupOptions)
 }
 func stringNotNil(v []byte) string {
