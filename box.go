@@ -303,7 +303,7 @@ func New(options Options) (*Box, error) {
 			Logger:        logFactory.NewLogger("ntp"),
 			Server:        ntpOptions.ServerOptions.Build(),
 			Interval:      time.Duration(ntpOptions.Interval),
-			Timeout:       time.Duration(3 * time.Second), //karing
+			Timeout:       time.Duration(5 * time.Second), //karing
 			WriteToSystem: ntpOptions.WriteToSystem,
 		})
 		timeService.TimeService = ntpService
