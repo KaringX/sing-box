@@ -27,8 +27,9 @@ func connectionRouter(router adapter.Router, trafficManager *trafficontrol.Manag
 
 func getConnections(trafficManager *trafficontrol.Manager) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		noConnections := r.URL.Query().Get("noConnections")  //karing
 		if r.Header.Get("Upgrade") != "websocket" {
-			snapshot := trafficManager.Snapshot()
+			snapshot := trafficManager.Snapshot(noConnections != "true")  //karing
 			render.JSON(w, r, snapshot)
 			return
 		}
@@ -54,7 +55,7 @@ func getConnections(trafficManager *trafficontrol.Manager) func(w http.ResponseW
 		buf := &bytes.Buffer{}
 		sendSnapshot := func() error {
 			buf.Reset()
-			snapshot := trafficManager.Snapshot()
+			snapshot := trafficManager.Snapshot(noConnections != "true")  //karing
 			if err := json.NewEncoder(buf).Encode(snapshot); err != nil {
 				return err
 			}
@@ -78,7 +79,7 @@ func getConnections(trafficManager *trafficontrol.Manager) func(w http.ResponseW
 func closeConnection(trafficManager *trafficontrol.Manager) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := uuid.FromStringOrNil(chi.URLParam(r, "id"))
-		snapshot := trafficManager.Snapshot()
+		snapshot := trafficManager.Snapshot(true)  //karing
 		for _, c := range snapshot.Connections {
 			if id == c.Metadata().ID {
 				c.Close()
@@ -91,7 +92,7 @@ func closeConnection(trafficManager *trafficontrol.Manager) func(w http.Response
 
 func closeAllConnections(router adapter.Router, trafficManager *trafficontrol.Manager) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		snapshot := trafficManager.Snapshot()
+		snapshot := trafficManager.Snapshot(true)  //karing
 		for _, c := range snapshot.Connections {
 			c.Close()
 		}

@@ -179,7 +179,9 @@ func (w *stackDevice) Write(bufs [][]byte, offset int) (count int, err error) {
 		packetBuffer := stack.NewPacketBuffer(stack.PacketBufferOptions{
 			Payload: buffer.MakeWithData(b),
 		})
-		w.dispatcher.DeliverNetworkPacket(networkProtocol, packetBuffer)
+		if w.dispatcher != nil { //hiddify
+			w.dispatcher.DeliverNetworkPacket(networkProtocol, packetBuffer)
+		}
 		packetBuffer.DecRef()
 		count++
 	}
@@ -195,7 +197,7 @@ func (w *stackDevice) MTU() (int, error) {
 }
 
 func (w *stackDevice) Name() (string, error) {
-	return "sing-box", nil
+	return "karing", nil //karing
 }
 
 func (w *stackDevice) Events() <-chan wgTun.Event {
@@ -203,6 +205,11 @@ func (w *stackDevice) Events() <-chan wgTun.Event {
 }
 
 func (w *stackDevice) Close() error {
+	select {//karing
+	case <-w.done:
+		return os.ErrClosed
+	default:
+	}
 	close(w.done)
 	close(w.events)
 	w.stack.Close()

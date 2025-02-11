@@ -16,7 +16,7 @@ import (
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/experimental/libbox/platform"
 	"github.com/sagernet/sing-box/option"
-	"github.com/sagernet/sing-tun"
+	tun "github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/atomic"
 	"github.com/sagernet/sing/common/control"
@@ -217,7 +217,7 @@ func (r *NetworkManager) UpdateInterfaces() error {
 		if err != nil {
 			return err
 		}
-		if C.IsDarwin {
+		if C.IsDarwin || C.IsIos { //karing
 			err = r.interfaceFinder.Update()
 			if err != nil {
 				return err
@@ -355,6 +355,7 @@ func (r *NetworkManager) WIFIState() adapter.WIFIState {
 }
 
 func (r *NetworkManager) ResetNetwork() {
+	r.logger.Error("NetworkManager:ResetNetwork") //karing
 	conntrack.Close()
 
 	for _, endpoint := range r.endpoint.Endpoints() {

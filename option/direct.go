@@ -27,7 +27,7 @@ type _DirectOutboundOptions struct {
 type DirectOutboundOptions _DirectOutboundOptions
 
 func (d *DirectOutboundOptions) UnmarshalJSONContext(ctx context.Context, content []byte) error {
-	err := json.UnmarshalDisallowUnknownFields(content, (*_DirectOutboundOptions)(d))
+	err := json.UnmarshalAllowUnknownFields(content, (*_DirectOutboundOptions)(d)) //karing
 	if err != nil {
 		return err
 	}

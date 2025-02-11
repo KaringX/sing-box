@@ -12,7 +12,7 @@ import (
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
-	"github.com/sagernet/sing-shadowtls"
+	shadowtls "github.com/sagernet/sing-shadowtls"
 	"github.com/sagernet/sing/common"
 	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
@@ -25,6 +25,7 @@ func RegisterOutbound(registry *outbound.Registry) {
 type Outbound struct {
 	outbound.Adapter
 	client *shadowtls.Client
+	parseErr error                //karing
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.ShadowTLSOutboundOptions) (adapter.Outbound, error) {
@@ -32,7 +33,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeShadowTLS, tag, []string{N.NetworkTCP}, options.DialerOptions),
 	}
 	if options.TLS == nil || !options.TLS.Enabled {
-		return nil, C.ErrTLSRequired
+		return outbound, C.ErrTLSRequired //karing
 	}
 
 	if options.Version == 0 {
@@ -45,7 +46,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 	}
 	tlsConfig, err := tls.NewClient(ctx, options.Server, common.PtrValueOrDefault(options.TLS))
 	if err != nil {
-		return nil, err
+		return outbound, err //karing
 	}
 
 	var tlsHandshakeFunc shadowtls.TLSHandshakeFunc
@@ -70,7 +71,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 	}
 	outboundDialer, err := dialer.New(ctx, options.DialerOptions)
 	if err != nil {
-		return nil, err
+		return outbound, err //karing
 	}
 	client, err := shadowtls.NewClient(shadowtls.ClientConfig{
 		Version:      options.Version,
@@ -81,13 +82,16 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		Logger:       logger,
 	})
 	if err != nil {
-		return nil, err
+		return outbound, err //karing
 	}
 	outbound.client = client
 	return outbound, nil
 }
 
 func (h *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
+	if(h.parseErr != nil){ //karing
+		return nil, h.parseErr
+	}
 	ctx, metadata := adapter.ExtendContext(ctx)
 	metadata.Outbound = h.Tag()
 	metadata.Destination = destination
@@ -101,4 +105,7 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 
 func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
 	return nil, os.ErrInvalid
+}
+func (w *Outbound) SetParseErr(err error){ //karing
+	w.parseErr = err
 }

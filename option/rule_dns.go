@@ -51,7 +51,7 @@ func (r *DNSRule) UnmarshalJSONContext(ctx context.Context, bytes []byte) error 
 	}
 	err = badjson.UnmarshallExcludedContext(ctx, bytes, (*_DNSRule)(r), v)
 	if err != nil {
-		return err
+		return E.Cause(err, string(bytes)) //karing
 	}
 	return nil
 }
@@ -109,6 +109,7 @@ type RawDefaultDNSRule struct {
 
 	// Deprecated: renamed to rule_set_ip_cidr_match_source
 	Deprecated_RulesetIPCIDRMatchSource bool `json:"rule_set_ipcidr_match_source,omitempty"`
+	Name                     string		     `json:"name,omitempty"` //karing
 }
 
 type DefaultDNSRule struct {
@@ -139,6 +140,7 @@ type RawLogicalDNSRule struct {
 	Mode   string    `json:"mode"`
 	Rules  []DNSRule `json:"rules,omitempty"`
 	Invert bool      `json:"invert,omitempty"`
+	Name   string    `json:"name,omitempty"` //karing
 }
 
 type LogicalDNSRule struct {

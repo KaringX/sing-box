@@ -60,3 +60,6 @@ func (d *Outbound) NewConnectionEx(ctx context.Context, conn net.Conn, metadata 
 func (d *Outbound) NewPacketConnectionEx(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) {
 	NewDNSPacketConnection(ctx, d.router, conn, nil, metadata)
 }
+
+func (w *Outbound) SetParseErr(err error){ //karing
+}

@@ -53,6 +53,7 @@ func NewDefaultDNSRule(ctx context.Context, logger log.ContextLogger, options op
 		abstractDefaultRule: abstractDefaultRule{
 			invert: options.Invert,
 			action: NewDNSRuleAction(logger, options.DNSRuleAction),
+			name:   options.Name,  //karing
 		},
 	}
 	if len(options.Inbound) > 0 {
@@ -306,6 +307,7 @@ func NewLogicalDNSRule(ctx context.Context, logger log.ContextLogger, options op
 			rules:  make([]adapter.HeadlessRule, len(options.Rules)),
 			invert: options.Invert,
 			action: NewDNSRuleAction(logger, options.DNSRuleAction),
+			name:   options.Name,  //karing
 		},
 	}
 	switch options.Mode {

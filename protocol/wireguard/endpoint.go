@@ -13,7 +13,7 @@ import (
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing-box/transport/wireguard"
-	"github.com/sagernet/sing-dns"
+	dns "github.com/sagernet/sing-dns"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/bufio"
 	E "github.com/sagernet/sing/common/exceptions"
@@ -38,6 +38,7 @@ type Endpoint struct {
 	logger         logger.ContextLogger
 	localAddresses []netip.Prefix
 	endpoint       *wireguard.Endpoint
+	parseErr        error                //karing
 }
 
 func NewEndpoint(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.WireGuardEndpointOptions) (adapter.Endpoint, error) {
@@ -53,7 +54,7 @@ func NewEndpoint(ctx context.Context, router adapter.Router, logger log.ContextL
 	}
 	outboundDialer, err := dialer.New(ctx, options.DialerOptions)
 	if err != nil {
-		return nil, err
+		return ep, err //karing
 	}
 	var udpTimeout time.Duration
 	if options.UDPTimeout != 0 {
@@ -79,7 +80,7 @@ func NewEndpoint(ctx context.Context, router adapter.Router, logger log.ContextL
 		PrivateKey: options.PrivateKey,
 		ListenPort: options.ListenPort,
 		ResolvePeer: func(domain string) (netip.Addr, error) {
-			endpointAddresses, lookupErr := router.Lookup(ctx, domain, dns.DomainStrategy(options.DomainStrategy))
+			endpointAddresses, _, lookupErr := router.Lookup(ctx, domain, dns.DomainStrategy(options.DomainStrategy)) //karing
 			if lookupErr != nil {
 				return netip.Addr{}, lookupErr
 			}
@@ -98,27 +99,43 @@ func NewEndpoint(ctx context.Context, router adapter.Router, logger log.ContextL
 		Workers: options.Workers,
 	})
 	if err != nil {
-		return nil, err
+		return ep, err //karing
 	}
 	ep.endpoint = wgEndpoint
 	return ep, nil
 }
 
 func (w *Endpoint) Start(stage adapter.StartStage) error {
+	if(w.parseErr != nil){ //karing
+		return nil
+	}
+	if w.endpoint == nil { //karing
+		return nil
+	}
 	switch stage {
 	case adapter.StartStateStart:
 		return w.endpoint.Start(false)
-	case adapter.StartStatePostStart:
-		return w.endpoint.Start(true)
+	//case adapter.StartStatePostStart: //karing
+	//	return w.endpoint.Start(true) //karing
 	}
 	return nil
 }
 
 func (w *Endpoint) Close() error {
+	if w.endpoint == nil { //karing
+		return nil
+	}
 	return w.endpoint.Close()
 }
 
+func (w *Endpoint) SetParseErr(err error){ //karing
+	w.parseErr = err
+}
+
 func (w *Endpoint) InterfaceUpdated() {
+	if w.endpoint == nil { //karing
+		return
+	}
 	w.endpoint.BindUpdate()
 	return
 }
@@ -134,6 +151,9 @@ func (w *Endpoint) PrepareConnection(network string, source M.Socksaddr, destina
 }
 
 func (w *Endpoint) NewConnectionEx(ctx context.Context, conn net.Conn, source M.Socksaddr, destination M.Socksaddr, onClose N.CloseHandlerFunc) {
+	if(w.parseErr != nil){ //karing
+		return
+	}
 	var metadata adapter.InboundContext
 	metadata.Inbound = w.Tag()
 	metadata.InboundType = w.Type()
