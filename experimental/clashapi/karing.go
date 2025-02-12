@@ -231,16 +231,23 @@ func outboundQuery(ctx context.Context, router adapter.Router) func(w http.Respo
 			})
 		} else {
 			outboundManager := service.FromContext[adapter.OutboundManager](ctx)
+			var ruleName string
 			var chain []string
 			var outbound string
-			actionType := rule.Action().Type()
-			if actionType == C.RuleActionTypeRoute {
-				chain, outbound, _ = router.GetMatchRuleChain(outboundManager, rule.Action().Target())
+			var actionType string 
+			if rule != nil {
+				ruleName = rule.String()
+				actionType = rule.Action().Type()
+				outbound = rule.Action().Target()
+			} else {
+				ruleName = "final"
 			}
-
+			if len(actionType) == 0 || actionType == C.RuleActionTypeRoute {
+				chain, outbound, _ = router.GetMatchRuleChain(outboundManager, outbound)
+			}
 			render.JSON(w, r, render.M{
 				"err":         nil,
-				"rule":        rule.String(),
+				"rule":        ruleName,
 				"chain":       chain,
 				"action_type": actionType,
 				"outbound":    outbound,
