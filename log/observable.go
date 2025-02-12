@@ -71,8 +71,8 @@ func (f *defaultFactory) Start() error {
 		f.logger = &lumberjack.Logger{ //karing
 			Filename:   f.filePath,  
 			MaxSize:    20,                      
-			MaxBackups: 0,                       
-			MaxAge:     0,                        
+			MaxBackups: 1,                       
+			MaxAge:     1,                        
 			Compress:   false,                     
 		}
 		f.writer = f.logger //karing
