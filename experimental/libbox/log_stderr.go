@@ -32,7 +32,7 @@ func StderrRedirect(path string) (err error) {
 	if len(content) > 0 {
 		go func() {
 			var stack []string
-			index := strings.Index(content, "panic: ")
+			index := strings.Index(content, "panic")
 			if index >= 0 {
 				lines := strings.Split(content[index:], "\n")
 				findStack := false
@@ -40,7 +40,7 @@ func StderrRedirect(path string) (err error) {
 					line = strings.Trim(line, "\r\t\n")
 					if strings.HasPrefix(line, "goroutine ") {
 						if findStack {
-						break
+							break
 						}
 						findStack = true
 					} else{
