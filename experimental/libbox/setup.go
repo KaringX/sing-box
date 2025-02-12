@@ -33,16 +33,14 @@ type SetupOptions struct {
 	TempPath        string
 	Username        string
 	TimeZone        string //karing
+	TimeZoneOffset  int    //karing
 	IsTVOS          bool
 	FixAndroidStack bool
 }
 
 func Setup(options *SetupOptions) error {
 	if len(options.TimeZone) > 0 { //karing
-		z, err := time.LoadLocation(options.TimeZone)
-		if err == nil {
-			time.Local = z
-		}
+		time.Local = time.FixedZone(options.TimeZone, options.TimeZoneOffset)
 	}
 	sBasePath = options.BasePath
 	sWorkingPath = options.WorkingPath
