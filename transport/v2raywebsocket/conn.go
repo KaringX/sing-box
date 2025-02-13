@@ -73,6 +73,9 @@ func (c *WebsocketConn) Read(b []byte) (n int, err error) {
 		if err != nil {
 			return
 		}
+		if header.Length < 0 { //karing
+			header.Length = 0
+		}
 		if header.OpCode.IsControl() {
 			err = c.controlHandler(header, c.reader)
 			if err != nil {
