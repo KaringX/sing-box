@@ -1,7 +1,7 @@
 //karing
 //go:build !windows
 
-package listener
+package tun
 
 func SetTunnelType(name string) {
 }

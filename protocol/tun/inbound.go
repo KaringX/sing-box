@@ -173,6 +173,7 @@ func NewInbound(ctx context.Context, router adapter.Router, logger log.ContextLo
 		outputMark = tun.DefaultAutoRedirectOutputMark
 	}
 	networkManager := service.FromContext[adapter.NetworkManager](ctx)
+	SetTunnelType(options.InterfaceName) //karing
 	inbound := &Inbound{
 		tag:            tag,
 		ctx:            ctx,
