@@ -2,6 +2,8 @@ github.com/Dreamacro/clash v1.18.0 h1:tic7ykTOCaT0mxwAkXo6QP3LN3Nps8oZz9atgr6TU8
 github.com/Dreamacro/clash v1.18.0/go.mod h1:r//xe/2pA3Zl+3fjIiI/o6RjIVd+z87drCD58dpRnFg=
 github.com/Dreamacro/protobytes v0.0.0-20230911123819-0bbf144b9b9a h1:1AtE37gqotGM0T90bcmdh2J2eVIjQneS/4/PGLIjl3Y=
 github.com/Dreamacro/protobytes v0.0.0-20230911123819-0bbf144b9b9a/go.mod h1:ESt8LLs50hyrYzfb7NRh3cDm8W1/r/9+CEAKWV+gc38=
+github.com/KaringX/clash v0.0.0-20241101044429-f71df89d4091 h1:525dFF+PjztEPQqelozoPhIX849uUlq4rLRnQ8om1so=
+github.com/KaringX/clash v0.0.0-20241101044429-f71df89d4091/go.mod h1:r//xe/2pA3Zl+3fjIiI/o6RjIVd+z87drCD58dpRnFg=
 github.com/KaringX/sing v0.5.0-alpha.11.0.20250211064536-429b7d5ff906 h1:OpWH1vPawcJZZBdHtK1kwQhXtwBP1K+ZPEwcs0pHCeI=
 github.com/KaringX/sing v0.5.0-alpha.11.0.20250211064536-429b7d5ff906/go.mod h1:ARkL0gM13/Iv5VCZmci/NuoOlePoIsW0m7BWfln/Hak=
 github.com/KaringX/sing-dns v0.3.0-beta.14.0.20250211064956-d36e5ce76964 h1:FEWp4lYT1fUlZBc3dPKNyvRw4sl/BUZ8yK1a0x7EbQc=

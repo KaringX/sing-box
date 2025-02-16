@@ -69,6 +69,8 @@ require ( //karing
 	github.com/valyala/fastjson v1.6.4
 )
 
+replace github.com/Dreamacro/clash => github.com/KaringX/clash v0.0.0-20241101044429-f71df89d4091
+
 //go get github.com/KaringX/sing-quic@de3999b0837577a99a891562c776914c8aed3bc1
 replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20250211064536-429b7d5ff906 //karing_v0.6.1
 //replace github.com/sagernet/sing => ../../KaringX/sing
