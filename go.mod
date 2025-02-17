@@ -62,29 +62,34 @@ require ( //hiddify
 )
 
 require ( //karing
-	gopkg.in/natefinch/lumberjack.v2 v2.2.1 
 	github.com/Dreamacro/clash v1.18.0
 	github.com/alitto/pond v1.9.2
 	github.com/getsentry/sentry-go v0.29.1
 	github.com/valyala/fastjson v1.6.4
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
 
 replace github.com/Dreamacro/clash => github.com/KaringX/clash v0.0.0-20241101044429-f71df89d4091
 
 //go get github.com/KaringX/sing-quic@de3999b0837577a99a891562c776914c8aed3bc1
 replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20250217065007-910be290353a //karing_v0.6.1
+
 //replace github.com/sagernet/sing => ../../KaringX/sing
 
 replace github.com/sagernet/sing-dns => github.com/KaringX/sing-dns v0.3.0-beta.14.0.20250211064956-d36e5ce76964 //karing_v0.4.0
+
 //replace github.com/sagernet/sing-dns => ../../KaringX/sing-dns
 
-replace github.com/sagernet/sing-quic => github.com/KaringX/sing-quic v0.2.0-beta.12.0.20250211065213-b48dcc4767ef  //karing_v0.4.0
+replace github.com/sagernet/sing-quic => github.com/KaringX/sing-quic v0.2.0-beta.12.0.20250211065213-b48dcc4767ef //karing_v0.4.0
+
 //replace github.com/sagernet/sing-quic => ../../KaringX/sing-quic
 
-replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.20250217065132-ca81a8bace0f  //karing_v0.6.1
+replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.20250217094852-0937333732f9 //karing_v0.6.1
+
 //replace github.com/sagernet/sing-tun => ../../KaringX/sing-tun
 
 replace github.com/sagernet/wireguard-go => github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20250124034128-57c349f786fb //karing_v0.0.1-beta.5
+
 //replace github.com/sagernet/wireguard-go => ../../KaringX/wireguard-go
 
 require (
@@ -107,6 +112,7 @@ require (
 	github.com/klauspost/compress v1.17.11 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.8 // indirect
 	github.com/libdns/libdns v0.2.2 // indirect
+	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mdlayher/netlink v1.7.2 // indirect
 	github.com/mdlayher/socket v0.4.1 // indirect
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
@@ -117,13 +123,19 @@ require (
 	github.com/pion/transport/v2 v2.2.1 // indirect
 	github.com/pion/transport/v3 v3.0.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/quic-go/qpack v0.5.1 // indirect
 	github.com/quic-go/qtls-go1-20 v0.4.1 // indirect
 	github.com/sagernet/netlink v0.0.0-20240612041022-b9a21c07ac6a // indirect
 	github.com/sagernet/nftables v0.3.0-beta.4 // indirect
+	github.com/shirou/gopsutil/v3 v3.24.5 // indirect
+	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
+	github.com/tklauser/go-sysconf v0.3.12 // indirect
+	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/u-root/uio v0.0.0-20230220225925-ffce2a382923 // indirect
 	github.com/vishvananda/netns v0.0.4 // indirect
+	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	github.com/zeebo/blake3 v0.2.3 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect

@@ -29,12 +29,12 @@ var (
 	configDirectories []string
 	workingDir        string
 	disableColor      bool
-	serviceConfigPath string  
+	serviceConfigPath string
 	servicePort       int
 )
 
 var mainCommand = &cobra.Command{
-	Use:              "karing",
+	Use:               "karing",
 	PersistentPreRunE: preRun,
 }
 
@@ -47,18 +47,19 @@ func init() {
 	mainCommand.PersistentFlags().IntVarP(&servicePort, "service-port", "p", 0, "service-port")
 }
 
-func preRun(cmd *cobra.Command, args []string) error{
+func preRun(cmd *cobra.Command, args []string) error {
 	content, err := libbox.SentryInit(serviceConfigPath)
-	if(content == nil){
+	if content == nil {
 		return err
 	}
-	if len(content) == 0{
+	if len(content) == 0 {
 		return E.New(serviceConfigPath + " : file content is empty")
 	}
 	err = setUpDir(content)
-	if(err != nil){
+	if err != nil {
 		return err
 	}
+	makeProcessSingleton()
 	globalCtx = context.Background()
 	sudoUser := os.Getenv("SUDO_USER")
 	sudoUID, _ := strconv.Atoi(os.Getenv("SUDO_UID"))
@@ -107,15 +108,15 @@ func setUpDir(content []byte) error {
 	}
 	configPaths = append(configPaths, core_path)
 
-	setupOptions := libbox.SetupOptions {
-		BasePath:         stringNotNil(value.GetStringBytes("base_dir")),
-		WorkingPath:      stringNotNil(value.GetStringBytes("work_dir")),
-		TempPath:         stringNotNil(value.GetStringBytes("cache_dir")),
-		Username:         "",
-		IsTVOS:           false,
-		FixAndroidStack : false,
+	setupOptions := libbox.SetupOptions{
+		BasePath:        stringNotNil(value.GetStringBytes("base_dir")),
+		WorkingPath:     stringNotNil(value.GetStringBytes("work_dir")),
+		TempPath:        stringNotNil(value.GetStringBytes("cache_dir")),
+		Username:        "",
+		IsTVOS:          false,
+		FixAndroidStack: false,
 	}
-    libbox.StderrRedirect(err_path)
+	libbox.StderrRedirect(err_path)
 	return libbox.Setup(&setupOptions)
 }
 func stringNotNil(v []byte) string {
