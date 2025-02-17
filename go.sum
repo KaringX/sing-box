@@ -6,10 +6,14 @@ github.com/KaringX/clash v0.0.0-20241101044429-f71df89d4091 h1:525dFF+PjztEPQqel
 github.com/KaringX/clash v0.0.0-20241101044429-f71df89d4091/go.mod h1:r//xe/2pA3Zl+3fjIiI/o6RjIVd+z87drCD58dpRnFg=
 github.com/KaringX/sing v0.5.0-alpha.11.0.20250211064536-429b7d5ff906 h1:OpWH1vPawcJZZBdHtK1kwQhXtwBP1K+ZPEwcs0pHCeI=
 github.com/KaringX/sing v0.5.0-alpha.11.0.20250211064536-429b7d5ff906/go.mod h1:ARkL0gM13/Iv5VCZmci/NuoOlePoIsW0m7BWfln/Hak=
+github.com/KaringX/sing v0.5.0-alpha.11.0.20250217065007-910be290353a h1:u9w3UkmVSQJXWfODTBVGJEMI+JHVegWXh71cQ289VY8=
+github.com/KaringX/sing v0.5.0-alpha.11.0.20250217065007-910be290353a/go.mod h1:ARkL0gM13/Iv5VCZmci/NuoOlePoIsW0m7BWfln/Hak=
 github.com/KaringX/sing-dns v0.3.0-beta.14.0.20250211064956-d36e5ce76964 h1:FEWp4lYT1fUlZBc3dPKNyvRw4sl/BUZ8yK1a0x7EbQc=
 github.com/KaringX/sing-dns v0.3.0-beta.14.0.20250211064956-d36e5ce76964/go.mod h1:dweQs54ng2YGzoJfz+F9dGuDNdP5pJ3PLeggnK5VWc8=
 github.com/KaringX/sing-quic v0.2.0-beta.12.0.20250211065213-b48dcc4767ef h1:CW3237F4vGhzIwA9GFapisOoireMMpeA8d+oqLdTbuA=
 github.com/KaringX/sing-quic v0.2.0-beta.12.0.20250211065213-b48dcc4767ef/go.mod h1:c+CytOEyeN20KCTFIP8YQUkNDVFLSzjrEPqP7Hlnxys=
+github.com/KaringX/sing-tun v0.6.2-0.20250217065132-ca81a8bace0f h1:HokDrC/thoMWqIqKKzNg7tFCSrTt7x0zbhiDjerfN3M=
+github.com/KaringX/sing-tun v0.6.2-0.20250217065132-ca81a8bace0f/go.mod h1:fisFCbC4Vfb6HqQNcwPJi2CDK2bf0Xapyz3j3t4cnHE=
 github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20250124034128-57c349f786fb h1:O+R95D4oOdaT4hN4awhHHejEq7kZF0MPCMKJ9zel8WU=
 github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20250124034128-57c349f786fb/go.mod h1:jGXij2Gn2wbrWuYNUmmNhf1dwcZtvyAvQoe8Xd8MbUo=
 github.com/ajg/form v1.5.1 h1:t9c7v8JUKu/XxOGBU0yjNpaMloxGEJhUkqFRq0ibGeU=

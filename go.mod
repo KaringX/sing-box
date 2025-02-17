@@ -72,7 +72,7 @@ require ( //karing
 replace github.com/Dreamacro/clash => github.com/KaringX/clash v0.0.0-20241101044429-f71df89d4091
 
 //go get github.com/KaringX/sing-quic@de3999b0837577a99a891562c776914c8aed3bc1
-replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20250211064536-429b7d5ff906 //karing_v0.6.1
+replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20250217065007-910be290353a //karing_v0.6.1
 //replace github.com/sagernet/sing => ../../KaringX/sing
 
 replace github.com/sagernet/sing-dns => github.com/KaringX/sing-dns v0.3.0-beta.14.0.20250211064956-d36e5ce76964 //karing_v0.4.0
@@ -80,6 +80,9 @@ replace github.com/sagernet/sing-dns => github.com/KaringX/sing-dns v0.3.0-beta.
 
 replace github.com/sagernet/sing-quic => github.com/KaringX/sing-quic v0.2.0-beta.12.0.20250211065213-b48dcc4767ef  //karing_v0.4.0
 //replace github.com/sagernet/sing-quic => ../../KaringX/sing-quic
+
+replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.20250217065132-ca81a8bace0f  //karing_v0.6.1
+//replace github.com/sagernet/sing-tun => ../../KaringX/sing-tun
 
 replace github.com/sagernet/wireguard-go => github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20250124034128-57c349f786fb //karing_v0.0.1-beta.5
 //replace github.com/sagernet/wireguard-go => ../../KaringX/wireguard-go
