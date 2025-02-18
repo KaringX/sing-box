@@ -6,13 +6,13 @@ import (
 	"net/netip"
 	"os"
 
-	"github.com/sagernet/sing-box"
+	box "github.com/sagernet/sing-box"
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/common/process"
 	"github.com/sagernet/sing-box/experimental/libbox/platform"
 	"github.com/sagernet/sing-box/include"
 	"github.com/sagernet/sing-box/option"
-	"github.com/sagernet/sing-tun"
+	tun "github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common/control"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/json"
@@ -24,7 +24,7 @@ import (
 func parseConfig(ctx context.Context, configContent string) (option.Options, error) {
 	options, err := json.UnmarshalExtendedContext[option.Options](ctx, []byte(configContent))
 	if err != nil {
-		return option.Options{}, E.Cause(err, "decode config")
+		return option.Options{}, E.Cause(err, "decode config: config length: ", len(configContent))
 	}
 	return options, nil
 }
@@ -89,7 +89,7 @@ func (s *platformInterfaceStub) IncludeAllNetworks() bool {
 func (s *platformInterfaceStub) ClearDNSCache() {
 }
 
-func (s *platformInterfaceStub) GetAssetContent(path string)([]byte, error) {//karing
+func (s *platformInterfaceStub) GetAssetContent(path string) ([]byte, error) { //karing
 	return nil, os.ErrInvalid
 }
 
