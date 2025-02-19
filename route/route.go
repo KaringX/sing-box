@@ -17,9 +17,9 @@ import (
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing-box/route/rule"
-	"github.com/sagernet/sing-dns"
-	"github.com/sagernet/sing-mux"
-	"github.com/sagernet/sing-vmess"
+	dns "github.com/sagernet/sing-dns"
+	mux "github.com/sagernet/sing-mux"
+	vmess "github.com/sagernet/sing-vmess"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/buf"
 	"github.com/sagernet/sing/common/bufio"
@@ -303,12 +303,12 @@ func (r *Router) matchRule(
 		}
 		processInfo, fErr := process.FindProcessInfo(r.processSearcher, ctx, metadata.Network, metadata.Source.AddrPort(), originDestination)
 		if fErr != nil {
-			r.logger.InfoContext(ctx, "failed to search process: ", fErr)
+			r.logger.InfoContext(ctx, "failed to search process: ", fErr, " from: ", metadata.Network, " ", metadata.Source.AddrPort()) //karing
 		} else {
 			if processInfo.ProcessPath != "" {
-				r.logger.InfoContext(ctx, "found process path: ", processInfo.ProcessPath)
+				r.logger.InfoContext(ctx, "found process path: ", processInfo.ProcessPath, " from: ", metadata.Network, " ", metadata.Source.AddrPort()) //karing
 			} else if processInfo.PackageName != "" {
-				r.logger.InfoContext(ctx, "found package name: ", processInfo.PackageName)
+				r.logger.InfoContext(ctx, "found package name: ", processInfo.PackageName, " from: ", metadata.Network, " ", metadata.Source.AddrPort()) //karing
 			} else if processInfo.UserId != -1 {
 				if /*needUserName &&*/ true {
 					osUser, _ := user.LookupId(F.ToString(processInfo.UserId))

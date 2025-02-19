@@ -132,12 +132,12 @@ func New(options Options) (*Box, error) {
 		return nil, E.Cause(err, "create log factory")
 	}
 	err = logFactory.Start() //karing
-	if err != nil { //karing
+	if err != nil {          //karing
 		return nil, E.Cause(err, "start logger")
 	}
 	var services []adapter.LifecycleService //karing
-	var cacheFile adapter.CacheFile  //karing
-	if needCacheFile { //karing
+	var cacheFile adapter.CacheFile         //karing
+	if needCacheFile {                      //karing
 		cacheFile = service.FromContext[adapter.CacheFile](ctx)
 		if cacheFile == nil {
 			cacheFile = cachefile.New(ctx, common.PtrValueOrDefault(experimentalOptions.CacheFile))
@@ -165,7 +165,7 @@ func New(options Options) (*Box, error) {
 	service.MustRegister[adapter.NetworkManager](ctx, networkManager)
 	connectionManager := route.NewConnectionManager(logFactory.NewLogger("connection"))
 	service.MustRegister[adapter.ConnectionManager](ctx, connectionManager)
-	router, err := route.NewRouter(ctx, logFactory, routeOptions, common.PtrValueOrDefault(options.DNS), func (){ //karing
+	router, err := route.NewRouter(ctx, logFactory, routeOptions, common.PtrValueOrDefault(options.DNS), func() { //karing
 		quit <- struct{}{}
 	})
 	if err != nil {
@@ -359,7 +359,7 @@ func (s *Box) Start() error {
 		s.Close()
 		return err
 	}
-	
+
 	s.logger.Info("started (", F.Seconds(time.Since(s.createdAt).Seconds()), "s) since ", s.createdAt) //karing
 	return nil
 }
@@ -381,7 +381,7 @@ func (s *Box) preStart() error {
 	if err != nil {
 		return err
 	}
-	err = adapter.Start(adapter.StartStateStart, s.outbound, s.network, s.connection, s.router)
+	err = adapter.Start(adapter.StartStateStart, s.network, s.connection, s.router) //karing
 	if err != nil {
 		return err
 	}
@@ -401,7 +401,7 @@ func (s *Box) start() error {
 	if err != nil {
 		return err
 	}*/
-	err = adapter.Start(adapter.StartStateStart, s.endpoint)
+	err = adapter.Start(adapter.StartStateStart, s.endpoint, s.outbound) //karing
 	if err != nil {
 		return err
 	}

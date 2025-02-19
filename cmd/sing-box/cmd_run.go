@@ -34,7 +34,7 @@ var commandRun = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		err := run()
 		if err != nil {
-			log.Error(err)  //karing
+			log.Error(err) //karing
 		}
 	},
 }
@@ -127,7 +127,7 @@ func readConfigAndMerge() (option.Options, error) {
 	return mergedOptions, nil
 }
 
-func create() (instance *box.Box,cf context.CancelFunc, err error) { //karing
+func create() (instance *box.Box, cf context.CancelFunc, err error) { //karing
 	defer func() { //karing
 		if e := recover(); e != nil {
 			content := fmt.Sprintf("%v\n%s", e, string(debug.Stack()))
@@ -136,13 +136,13 @@ func create() (instance *box.Box,cf context.CancelFunc, err error) { //karing
 		}
 	}()
 	stacks := D.Stacks(false, false) //karing
-	if len(stacks) > 0 {  //karing
+	if len(stacks) > 0 {             //karing
 		for key := range stacks {
 			D.MainGoId = key
 			break
 		}
 	}
-	
+
 	options, err := readConfigAndMerge()
 	if err != nil {
 		libbox.SentryCaptureException(err) //karing
@@ -187,8 +187,8 @@ func create() (instance *box.Box,cf context.CancelFunc, err error) { //karing
 		return nil, nil, E.Cause(err, "start service")
 	}
 	if servicePort != 0 { //karing
-		conn, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", servicePort)) 
-		if err == nil{
+		conn, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", servicePort))
+		if err == nil {
 			conn.Close()
 		}
 	}
@@ -207,7 +207,7 @@ func run() error {
 		}
 		runtimeDebug.FreeOSMemory()
 		for {
-			select{  //karing
+			select { //karing
 			case osSignal := <-osSignals:
 				if osSignal == syscall.SIGHUP {
 					err = check()
@@ -228,13 +228,13 @@ func run() error {
 					return nil
 				}
 				break
-			case <-instance.Quit:  //karing
+			case <-instance.Quit: //karing
 				cancel()
 				closeCtx, closed := context.WithCancel(context.Background())
 				go closeMonitor(closeCtx)
 				go func() {
 					time.Sleep(3 * time.Second)
-					os.Exit(1)
+					terminateCurrentProcess()
 				}()
 				instance.Close()
 				closed()
