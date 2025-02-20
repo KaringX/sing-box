@@ -69,11 +69,11 @@ func NewDefaultFactory(
 func (f *defaultFactory) Start() error {
 	if f.filePath != "" {
 		f.logger = &lumberjack.Logger{ //karing
-			Filename:   f.filePath,  
-			MaxSize:    20,                      
-			MaxBackups: 1,                       
-			MaxAge:     1,                        
-			Compress:   false,                     
+			Filename:   f.filePath,
+			MaxSize:    20,
+			MaxBackups: 1,
+			MaxAge:     1,
+			Compress:   false,
 		}
 		f.writer = f.logger //karing
 		/* //karing
@@ -126,17 +126,18 @@ type observableLogger struct {
 	*defaultFactory
 	tag string
 }
+
 // karing
 func (l *observableLogger) log(ctx context.Context, level Level, deep int, args []any) {
 	level = OverrideLevelFromContext(level, ctx)
 	if level > l.level {
 		return
 	}
-	if(l.writer == nil){ //karing
+	if l.writer == nil { //karing
 		return
 	}
-	_, file, line, _ := runtime.Caller(deep)  // karing
-	tag := " " + path.Base(file) + ":" + strconv.Itoa(line) + " " + l.tag  // karing
+	_, file, line, _ := runtime.Caller(deep)                              // karing
+	tag := " " + path.Base(file) + ":" + strconv.Itoa(line) + " " + l.tag // karing
 	nowTime := time.Now()
 	if l.needObservable {
 		message, messageSimple := l.formatter.FormatWithSimple(ctx, level, tag, F.ToString(args...), nowTime)
@@ -162,7 +163,7 @@ func (l *observableLogger) log(ctx context.Context, level Level, deep int, args 
 			log.Fatal(message)
 		}
 	}
-	if C.Build == "debug" { //karing
+	if C.Build != "release" { //karing
 		if l.platformWriter != nil {
 			l.platformWriter.WriteMessage(level, l.platformFormatter.Format(ctx, level, l.tag, F.ToString(args...), nowTime))
 		}
