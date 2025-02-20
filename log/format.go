@@ -2,6 +2,7 @@ package log
 
 import (
 	"context"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -71,11 +72,11 @@ func (f Formatter) Format(ctx context.Context, level Level, tag string, message 
 	}
 	switch {
 	case f.DisableTimestamp:
-		message = levelString + " " + message
+		message = F.ToString("[", os.Getpid(), "] ") + levelString + " " + message //karing
 	case f.FullTimestamp:
-		message = timestamp.Format(f.TimestampFormat) + " " + levelString + " " + message
+		message = timestamp.Format(f.TimestampFormat) + " " + F.ToString("[", os.Getpid(), "] ") + levelString + " " + message //karing
 	default:
-		message = levelString + "[" + xd(int(timestamp.Sub(f.BaseTime)/time.Second), 4) + "] " + message
+		message = F.ToString("[", os.Getpid(), "] ") + levelString + "[" + xd(int(timestamp.Sub(f.BaseTime)/time.Second), 4) + "] " + message //karing
 	}
 	if f.DisableLineBreak {
 		if message[len(message)-1] == '\n' {
@@ -143,11 +144,11 @@ func (f Formatter) FormatWithSimple(ctx context.Context, level Level, tag string
 	}
 	switch {
 	case f.DisableTimestamp:
-		message = levelString + " " + message
+		message = F.ToString("[", os.Getpid(), "] ") + levelString + " " + message //karing
 	case f.FullTimestamp:
-		message = timestamp.Format(f.TimestampFormat) + " " + levelString + " " + message
+		message = timestamp.Format(f.TimestampFormat) + " " + F.ToString("[", os.Getpid(), "] ") + levelString + " " + message //karing
 	default:
-		message = levelString + "[" + xd(int(timestamp.Sub(f.BaseTime)/time.Second), 4) + "] " + message
+		message = F.ToString("[", os.Getpid(), "] ") + levelString + "[" + xd(int(timestamp.Sub(f.BaseTime)/time.Second), 4) + "] " + message //karing
 	}
 	if message[len(message)-1] != '\n' {
 		message += "\n"
