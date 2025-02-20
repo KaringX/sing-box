@@ -381,7 +381,7 @@ func (s *Box) preStart() error {
 	if err != nil {
 		return err
 	}
-	err = adapter.Start(adapter.StartStateStart, s.network, s.connection, s.router) //karing
+	err = adapter.Start(adapter.StartStateStart, s.outbound, s.network, s.connection, s.router)
 	if err != nil {
 		return err
 	}
@@ -401,7 +401,7 @@ func (s *Box) start() error {
 	if err != nil {
 		return err
 	}*/
-	err = adapter.Start(adapter.StartStateStart, s.endpoint, s.outbound) //karing
+	err = adapter.Start(adapter.StartStateStart, s.endpoint)
 	if err != nil {
 		return err
 	}
