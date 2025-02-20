@@ -84,7 +84,7 @@ replace github.com/sagernet/sing-quic => github.com/KaringX/sing-quic v0.2.0-bet
 
 //replace github.com/sagernet/sing-quic => ../../KaringX/sing-quic
 
-replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.20250219035204-6a0d7be4c0d6 //karing_v0.6.1
+replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.20250220122547-41f9fa202924 //karing_v0.6.1
 
 //replace github.com/sagernet/sing-tun => ../../KaringX/sing-tun
 
