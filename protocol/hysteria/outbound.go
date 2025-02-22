@@ -35,14 +35,14 @@ var (
 
 type Outbound struct {
 	outbound.Adapter
-	logger logger.ContextLogger
-	client *hysteria.Client
+	logger     logger.ContextLogger
+	client     *hysteria.Client
 	hforwarder *houtbound.Forwarder //hiddify
-	parseErr    error               //karing
+	parseErr   error                //karing
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.HysteriaOutboundOptions) (adapter.Outbound, error) {
-	empty := &Outbound{  //karing
+	empty := &Outbound{ //karing
 		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeHysteria, tag, []string{}, options.DialerOptions),
 		logger:  logger,
 	}
@@ -97,7 +97,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		Password:      password,
 		TLSConfig:     tlsConfig,
 		UDPDisabled:   !common.Contains(networkList, N.NetworkUDP),
-		HopPorts:      options.HopPorts, //https://github.com/morgenanno/sing-box
+		HopPorts:      options.HopPorts,    //https://github.com/morgenanno/sing-box
 		HopInterval:   options.HopInterval, //https://github.com/morgenanno/sing-box
 
 		ConnReceiveWindow:   options.ReceiveWindowConn,
@@ -108,15 +108,15 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		return empty, err //karing
 	}
 	return &Outbound{
-		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeHysteria, tag, networkList, options.DialerOptions),
-		logger:  logger,
-		client:  client,
+		Adapter:    outbound.NewAdapterWithDialerOptions(C.TypeHysteria, tag, networkList, options.DialerOptions),
+		logger:     logger,
+		client:     client,
 		hforwarder: hforwarder, //hiddify
 	}, nil
 }
 
 func (h *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
-	if(h.parseErr != nil){ //karing
+	if h.parseErr != nil { //karing
 		return nil, h.parseErr
 	}
 	switch N.NetworkName(network) {
@@ -135,7 +135,7 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 }
 
 func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
-	if(h.parseErr != nil){ //karing
+	if h.parseErr != nil { //karing
 		return nil, h.parseErr
 	}
 	h.logger.InfoContext(ctx, "outbound packet connection to ", destination)
@@ -143,6 +143,9 @@ func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
 }
 
 func (h *Outbound) InterfaceUpdated() {
+	if h.client == nil { //karing
+		return
+	}
 	h.client.CloseWithError(E.New("network changed"))
 }
 
@@ -152,6 +155,6 @@ func (h *Outbound) Close() error {
 	}
 	return h.client.CloseWithError(os.ErrClosed)
 }
-func (h *Outbound) SetParseErr(err error){ //karing
+func (h *Outbound) SetParseErr(err error) { //karing
 	h.parseErr = err
 }
