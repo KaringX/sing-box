@@ -90,7 +90,7 @@ func (f *defaultFactory) Start() error {
 
 func (f *defaultFactory) Close() error {
 	return common.Close(
-		f.logger, //karing
+		common.PtrOrNil(f.logger), //karing
 		common.PtrOrNil(f.file),
 		f.subscriber,
 	)
