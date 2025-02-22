@@ -17,6 +17,10 @@ type WireGuardEndpointOptions struct {
 	UDPTimeout badoption.Duration               `json:"udp_timeout,omitempty"`
 	Workers    int                              `json:"workers,omitempty"`
 	DialerOptions
+	FakePackets      string `json:"fake_packets,omitempty"`       //hiddify
+	FakePacketsSize  string `json:"fake_packets_size,omitempty"`  //hiddify
+	FakePacketsDelay string `json:"fake_packets_delay,omitempty"` //hiddify
+	FakePacketsMode  string `json:"fake_packets_mode,omitempty"`  //hiddify
 }
 
 type WireGuardPeer struct {

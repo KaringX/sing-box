@@ -11,8 +11,8 @@ import (
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/experimental/deprecated"
 	"github.com/sagernet/sing-box/log"
-	"github.com/sagernet/sing-box/option"
-	"github.com/sagernet/sing-box/protocol/wireguard/houtbound" //hiddify
+	"github.com/sagernet/sing-box/option" //hiddify
+	"github.com/sagernet/sing-box/protocol/wireguard/houtbound"
 	"github.com/sagernet/sing-box/transport/wireguard"
 	dns "github.com/sagernet/sing-dns"
 	"github.com/sagernet/sing/common"
@@ -38,12 +38,8 @@ type Outbound struct {
 	logger         logger.ContextLogger
 	localAddresses []netip.Prefix
 	endpoint       *wireguard.Endpoint
-	hforwarder       *houtbound.Forwarder //hiddify
-	fakePackets      []int                //hiddify
-	fakePacketsSize  []int                //hiddify
-	fakePacketsDelay []int                //hiddify
-	fakePacketsMode  string               //hiddify
-	parseErr         error                //karing
+	hforwarder     *houtbound.Forwarder //hiddify
+	parseErr       error                //karing
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.LegacyWireGuardOutboundOptions) (adapter.Outbound, error) {
@@ -72,35 +68,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		localAddresses: options.LocalAddress,
 		hforwarder:     hforwarder, //hiddify
 	}
-	outbound.fakePackets = []int{0, 0}      //hiddify
-	outbound.fakePacketsSize = []int{0, 0}  //hiddify
-	outbound.fakePacketsDelay = []int{0, 0} //hiddify
-	outbound.fakePacketsMode = options.FakePacketsMode  //hiddify
-	if options.FakePackets != "" {          //hiddify
-		var err error
-		outbound.fakePackets, err = option.ParseIntRange(options.FakePackets)
-		if err != nil {
-			return empty, err //karing
-		}
-		outbound.fakePacketsSize = []int{40, 100}
-		outbound.fakePacketsDelay = []int{10, 50}
 
-		if options.FakePacketsSize != "" {
-			var err error
-			outbound.fakePacketsSize, err = option.ParseIntRange(options.FakePacketsSize)
-			if err != nil {
-				return empty, err //karing
-			}
-		}
-
-		if options.FakePacketsDelay != "" {
-			var err error
-			outbound.fakePacketsDelay, err = option.ParseIntRange(options.FakePacketsDelay)
-			if err != nil {
-				return empty, err //karing
-			}
-		}
-	}
 	if options.Detour == "" {
 		options.IsWireGuardListener = true
 	} else if options.GSO {
@@ -108,7 +76,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 	}
 	outboundDialer, err := dialer.New(ctx, options.DialerOptions)
 	if err != nil {
-		return empty, err  //karing
+		return empty, err //karing
 	}
 	peers := common.Map(options.Peers, func(it option.LegacyWireGuardPeer) wireguard.PeerOptions {
 		return wireguard.PeerOptions{
@@ -150,42 +118,46 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 			}
 			return endpointAddresses[0], nil
 		},
-		Peers:   peers,
-		Workers: options.Workers,
+		Peers:            peers,
+		Workers:          options.Workers,
+		FakePackets:      options.FakePackets,      //hiddify
+		FakePacketsSize:  options.FakePacketsSize,  //hiddify
+		FakePacketsDelay: options.FakePacketsDelay, //hiddify
+		FakePacketsMode:  options.FakePacketsMode,  //hiddify
 	})
 	if err != nil {
-		return empty, err  //karing
+		return empty, err //karing
 	}
 	outbound.endpoint = wgEndpoint
 	return outbound, nil
 }
 
 func (o *Outbound) Start(stage adapter.StartStage) error {
-	if (o.endpoint == nil){ //karing
+	if o.endpoint == nil { //karing
 		return nil
 	}
 	switch stage {
 	case adapter.StartStateStart:
 		return o.endpoint.Start(false)
-	//case adapter.StartStatePostStart: //karing
+		//case adapter.StartStatePostStart: //karing
 		//return o.endpoint.Start(true)  //karing
 	}
 	return nil
 }
 
 func (o *Outbound) Close() error {
-	if (o.endpoint == nil){ //karing
+	if o.endpoint == nil { //karing
 		return nil
 	}
 	return o.endpoint.Close()
 }
 
-func (h *Outbound) SetParseErr(err error){ //karing
+func (h *Outbound) SetParseErr(err error) { //karing
 	h.parseErr = err
 }
 
 func (o *Outbound) InterfaceUpdated() {
-	if (o.endpoint == nil){ //karing
+	if o.endpoint == nil { //karing
 		return
 	}
 	o.endpoint.BindUpdate()
@@ -193,7 +165,7 @@ func (o *Outbound) InterfaceUpdated() {
 }
 
 func (o *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
-	if(o.parseErr != nil){ //karing
+	if o.parseErr != nil { //karing
 		return nil, o.parseErr
 	}
 	switch network {
@@ -215,7 +187,7 @@ func (o *Outbound) DialContext(ctx context.Context, network string, destination 
 }
 
 func (o *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
-	if(o.parseErr != nil){ //karing
+	if o.parseErr != nil { //karing
 		return nil, o.parseErr
 	}
 	o.logger.InfoContext(ctx, "outbound packet connection to ", destination)

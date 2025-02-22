@@ -5,7 +5,7 @@ import (
 	"net/netip"
 	"time"
 
-	"github.com/sagernet/sing-tun"
+	tun "github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common/logger"
 	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
@@ -27,6 +27,11 @@ type EndpointOptions struct {
 	ResolvePeer  func(domain string) (netip.Addr, error)
 	Peers        []PeerOptions
 	Workers      int
+
+	FakePackets      string //hiddify
+	FakePacketsSize  string //hiddify
+	FakePacketsDelay string //hiddify
+	FakePacketsMode  string //hiddify
 }
 
 type PeerOptions struct {
