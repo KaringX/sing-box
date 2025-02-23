@@ -5,6 +5,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/shirou/gopsutil/v3/process"
 )
@@ -19,6 +20,7 @@ func makeProcessSingleton() error {
 	if err != nil {
 		return err
 	}
+	currentExeName := filepath.Base(currentExe)
 
 	processes, err := process.Processes()
 	if err != nil {
@@ -33,7 +35,8 @@ func makeProcessSingleton() error {
 		if err != nil {
 			continue
 		}
-		if targetExe == currentExe {
+		targetExeName := filepath.Base(targetExe)
+		if strings.EqualFold(targetExeName, currentExeName) {
 			terminateProcess(p)
 		}
 	}
