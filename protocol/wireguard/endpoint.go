@@ -119,8 +119,8 @@ func (w *Endpoint) Start(stage adapter.StartStage) error {
 	switch stage {
 	case adapter.StartStateStart:
 		return w.endpoint.Start(false)
-		//case adapter.StartStatePostStart: //karing
-		//	return w.endpoint.Start(true) //karing
+	case adapter.StartStatePostStart:
+		return w.endpoint.Start(true)
 	}
 	return nil
 }

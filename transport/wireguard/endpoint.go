@@ -39,6 +39,7 @@ type Endpoint struct {
 	fakePacketsDelay    []int  //hiddify
 	fakePacketsHeader   []byte //hiddify
 	fakePacketsNoModify bool   //hiddify
+	parseErr            error  //karing
 }
 
 func NewEndpoint(options EndpointOptions) (*Endpoint, error) {
@@ -176,7 +177,6 @@ func NewEndpoint(options EndpointOptions) (*Endpoint, error) {
 		Address:        options.Address,
 		AllowedAddress: allowedAddresses,
 	}
-
 	tunDevice, err := NewDevice(deviceOptions)
 	if err != nil {
 		return nil, E.Cause(err, "create WireGuard device")
@@ -196,28 +196,37 @@ func NewEndpoint(options EndpointOptions) (*Endpoint, error) {
 }
 
 func (e *Endpoint) Start(resolve bool) error {
+	return nil //karing
+}
+
+func (e *Endpoint) start() error {
+	if e.parseErr != nil { //karing
+		return e.parseErr
+	}
+	if e.device != nil { //karing
+		return nil
+	}
 	if common.Any(e.peers, func(peer peerConfig) bool {
 		return !peer.endpoint.IsValid() && peer.destination.IsFqdn()
 	}) {
-		if !resolve {
-			return nil
-		}
+		//if !resolve { //karing
+		//	return nil
+		//}
 		for peerIndex, peer := range e.peers {
 			if peer.endpoint.IsValid() || !peer.destination.IsFqdn() {
 				continue
 			}
 			destinationAddress, err := e.options.ResolvePeer(peer.destination.Fqdn)
 			if err != nil {
+				e.parseErr = E.Cause(err, "resolve endpoint domain for peer[", peerIndex, "]: ", peer.destination) //karing
 				return E.Cause(err, "resolve endpoint domain for peer[", peerIndex, "]: ", peer.destination)
 			}
 			e.peers[peerIndex].endpoint = netip.AddrPortFrom(destinationAddress, peer.destination.Port)
 		}
-	} else if resolve {
-		return nil
-	}
-	if e.device != nil { //karing
-		return nil
-	}
+	} //else if resolve { //karing
+	//	return nil
+	//}
+
 	var bind conn.Bind
 	wgListener, isWgListener := e.options.Dialer.(conn.Listener)
 	useStdNetBind := false             //karing
@@ -245,6 +254,7 @@ func (e *Endpoint) Start(resolve bool) error {
 	}
 	err := e.tunDevice.Start()
 	if err != nil {
+		e.parseErr = err //karing
 		return err
 	}
 	logger := &device.Logger{
@@ -268,6 +278,7 @@ func (e *Endpoint) Start(resolve bool) error {
 	}
 	err = wgDevice.IpcSet(ipcConf)
 	if err != nil {
+		e.parseErr = E.Cause(err, "setup wireguard: \n", ipcConf) //karing
 		return E.Cause(err, "setup wireguard: \n", ipcConf)
 	}
 	e.device = wgDevice
@@ -282,8 +293,8 @@ func (e *Endpoint) DialContext(ctx context.Context, network string, destination 
 	if !destination.Addr.IsValid() {
 		return nil, E.Cause(os.ErrInvalid, "invalid non-IP destination")
 	}
-	err := e.Start(true) //karing
-	if err != nil {      //karing
+	err := e.start() //karing
+	if err != nil {  //karing
 		return nil, err
 	}
 	return e.tunDevice.DialContext(ctx, network, destination)
@@ -293,14 +304,17 @@ func (e *Endpoint) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
 	if !destination.Addr.IsValid() {
 		return nil, E.Cause(os.ErrInvalid, "invalid non-IP destination")
 	}
-	err := e.Start(true) //karing
-	if err != nil {      //karing
+	err := e.start() //karing
+	if err != nil {  //karing
 		return nil, err
 	}
 	return e.tunDevice.ListenPacket(ctx, destination)
 }
 
 func (e *Endpoint) BindUpdate() error {
+	if e.parseErr != nil { //karing
+		return e.parseErr
+	}
 	if e.device == nil { //karing
 		return nil
 	}

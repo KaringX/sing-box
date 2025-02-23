@@ -139,8 +139,8 @@ func (o *Outbound) Start(stage adapter.StartStage) error {
 	switch stage {
 	case adapter.StartStateStart:
 		return o.endpoint.Start(false)
-		//case adapter.StartStatePostStart: //karing
-		//return o.endpoint.Start(true)  //karing
+	case adapter.StartStatePostStart:
+		return o.endpoint.Start(true)
 	}
 	return nil
 }
