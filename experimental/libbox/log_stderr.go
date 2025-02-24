@@ -13,7 +13,8 @@ import (
 )
 
 var stderrLogFile *os.File
-func StderrRedirect(path string) (err error) { 
+
+func StderrRedirect(path string) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			content := fmt.Sprintf("%v\n%s", e, string(debug.Stack()))
@@ -29,6 +30,9 @@ func StderrRedirect(path string) (err error) {
 		return E.Cause(err, "StderrRedirect:")
 	}
 	content, _ := readFile(stderrLogFile, 4*1000)
+	stderrLogFile.Truncate(0)
+	stderrLogFile.Seek(0, 0)
+	stderrLogFile.Sync()
 	if len(content) > 0 {
 		go func() {
 			var stack []string
@@ -43,19 +47,17 @@ func StderrRedirect(path string) (err error) {
 							break
 						}
 						findStack = true
-					} else{
+					} else {
 						stack = append(stack, line)
 					}
 				}
 				if len(stack) > 0 {
-					SentryCaptureException(&SentryPanicError{Err: strings.Join(stack,"\n")})
+					SentryCaptureException(&SentryPanicError{Err: strings.Join(stack, "\n")})
 				}
 			}
 		}()
 	}
-	stderrLogFile.Truncate(0)
-	stderrLogFile.Seek(0, 0)
-	stderrLogFile.Sync()
+
 	return stderrRedirect(stderrLogFile)
 }
 
@@ -74,12 +76,12 @@ func readFile(file *os.File, maxLen int64) (string, error) {
 	result := ""
 	for offset <= maxLen {
 		n, err := file.Read(buf)
-        if err != nil && err != io.EOF {
-            return result, err
-        }
-        if err == io.EOF {
-            break
-        }
+		if err != nil && err != io.EOF {
+			return result, err
+		}
+		if err == io.EOF {
+			break
+		}
 		result += string(buf[:n])
 	}
 	return result, nil
