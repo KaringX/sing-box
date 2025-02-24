@@ -6,6 +6,7 @@ import (
 	"context"
 	"net"
 	"os"
+	"sync/atomic"
 
 	"github.com/sagernet/gvisor/pkg/buffer"
 	"github.com/sagernet/gvisor/pkg/tcpip"
@@ -16,7 +17,7 @@ import (
 	"github.com/sagernet/gvisor/pkg/tcpip/stack"
 	"github.com/sagernet/gvisor/pkg/tcpip/transport/tcp"
 	"github.com/sagernet/gvisor/pkg/tcpip/transport/udp"
-	"github.com/sagernet/sing-tun"
+	tun "github.com/sagernet/sing-tun"
 	E "github.com/sagernet/sing/common/exceptions"
 	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
@@ -29,6 +30,7 @@ var _ Device = (*stackDevice)(nil)
 type stackDevice struct {
 	stack      *stack.Stack
 	mtu        uint32
+	closed     atomic.Bool //karing
 	events     chan wgTun.Event
 	outbound   chan *stack.PacketBuffer
 	done       chan struct{}
@@ -134,6 +136,9 @@ func (w *stackDevice) SetDevice(device *device.Device) {
 }
 
 func (w *stackDevice) Start() error {
+	if w.closed.Load() { //karing
+		return E.New("[stackDevice] device closed")
+	}
 	w.events <- wgTun.EventUp
 	return nil
 }
@@ -205,11 +210,12 @@ func (w *stackDevice) Events() <-chan wgTun.Event {
 }
 
 func (w *stackDevice) Close() error {
-	select {//karing
+	select { //karing
 	case <-w.done:
 		return os.ErrClosed
 	default:
 	}
+	w.closed.Store(true) //karing
 	close(w.done)
 	close(w.events)
 	w.stack.Close()
