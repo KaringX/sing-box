@@ -73,8 +73,8 @@ func (c *WebsocketConn) Read(b []byte) (n int, err error) {
 		if err != nil {
 			return
 		}
-		if header.Length < 0 { //karing
-			header.Length = 0
+		if header.OpCode == ws.OpClose { //karing https://datatracker.ietf.org/doc/html/rfc6455#section-5.5.1
+			header.Length = int64(uint16(header.Length))
 		}
 		if header.OpCode.IsControl() {
 			err = c.controlHandler(header, c.reader)
