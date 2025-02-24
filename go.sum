@@ -24,6 +24,8 @@ github.com/KaringX/sing-tun v0.6.2-0.20250219035204-6a0d7be4c0d6 h1:RL3FkL9ntSEU
 github.com/KaringX/sing-tun v0.6.2-0.20250219035204-6a0d7be4c0d6/go.mod h1:fisFCbC4Vfb6HqQNcwPJi2CDK2bf0Xapyz3j3t4cnHE=
 github.com/KaringX/sing-tun v0.6.2-0.20250220122547-41f9fa202924 h1:8hqDxrtb0xSKy4tB3ekzXeUcOtZquiDDtHFHT9R5CdE=
 github.com/KaringX/sing-tun v0.6.2-0.20250220122547-41f9fa202924/go.mod h1:fisFCbC4Vfb6HqQNcwPJi2CDK2bf0Xapyz3j3t4cnHE=
+github.com/KaringX/sing-tun v0.6.2-0.20250224122437-2421005a71b2 h1:jvtIkaYDjkAomVavnx4cxtydzAcvwVH04onIabENQho=
+github.com/KaringX/sing-tun v0.6.2-0.20250224122437-2421005a71b2/go.mod h1:fisFCbC4Vfb6HqQNcwPJi2CDK2bf0Xapyz3j3t4cnHE=
 github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20250124034128-57c349f786fb h1:O+R95D4oOdaT4hN4awhHHejEq7kZF0MPCMKJ9zel8WU=
 github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20250124034128-57c349f786fb/go.mod h1:jGXij2Gn2wbrWuYNUmmNhf1dwcZtvyAvQoe8Xd8MbUo=
 github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20250223050301-4b516c388c7f h1:21WQPVgceg4BpQNSf1B/os4p9NxP6t+oq4/KoZSjPRg=
