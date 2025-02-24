@@ -54,7 +54,7 @@ func (m *Map[K, V]) LoadAndDelete(key K) (V, bool) {
 }
 
 func (m *Map[K, V]) Clear() { //karing
-	m.m = sync.Map{}
+	m.m.Clear()
 }
 
 func New[K comparable, V any]() *Map[K, V] {
