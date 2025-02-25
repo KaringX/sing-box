@@ -526,6 +526,9 @@ func (g *URLTestGroup) urlTest(ctx context.Context, force bool) (map[string]urlt
 		if !loaded {
 			continue
 		}
+		if g.pauseManager.IsNetworkPaused() || g.pauseManager.IsDevicePaused() { //karing
+			g.pauseManager.WaitActive()
+		}
 		group.Submit(func() { //karing
 			//b.Go(realTag, func() (any, error) {
 			testCtx, cancel := context.WithTimeout(g.ctx, C.TCPTimeout)
