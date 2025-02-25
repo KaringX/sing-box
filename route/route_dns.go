@@ -58,9 +58,9 @@ func (r *Router) matchDNS(ctx context.Context, allowFakeIP bool, ruleIndex int, 
 		if currentRule.Match(metadata) {
 			ruleDescription := currentRule.String()
 			if ruleDescription != "" {
-				r.logger.DebugContext(ctx, "match[", currentRuleIndex, "] ", currentRule, " => ", currentRule.Action())
+				r.logger.DebugContext(ctx, metadata.Domain, " match[", currentRuleIndex, "] ", currentRule, " => ", currentRule.Action()) //karing
 			} else {
-				r.logger.DebugContext(ctx, "match[", currentRuleIndex, "] => ", currentRule.Action())
+				r.logger.DebugContext(ctx, metadata.Domain, " match[", currentRuleIndex, "] => ", currentRule.Action()) //karing
 			}
 			switch action := currentRule.Action().(type) {
 			case *R.RuleActionDNSRoute:
@@ -87,7 +87,7 @@ func (r *Router) matchDNS(ctx context.Context, allowFakeIP bool, ruleIndex int, 
 				} else {
 					options.Strategy = r.defaultDomainStrategy
 				}
-				r.logger.DebugContext(ctx, "match[", currentRuleIndex, "] => ", currentRule.Action())
+				r.logger.DebugContext(ctx, metadata.Domain, "match[", currentRuleIndex, "] => ", currentRule.Action()) //karing
 				return transport, options, currentRule, currentRuleIndex
 			case *R.RuleActionDNSRouteOptions:
 				if action.DisableCache {
@@ -313,10 +313,10 @@ func (r *Router) Lookup(ctx context.Context, domain string, strategy dns.DomainS
 	}
 	return responseAddrs, transportN.Name(), err
 }
- 
+
 func (r *Router) LookupDefault(ctx context.Context, domain string) ([]netip.Addr, error) {
-	addr, _, err := r.Lookup(ctx, domain, dns.DomainStrategyAsIS)  //karing
-	return addr, err  //karing
+	addr, _, err := r.Lookup(ctx, domain, dns.DomainStrategyAsIS) //karing
+	return addr, err                                              //karing
 }
 
 func (r *Router) ClearDNSCache() {
