@@ -382,11 +382,11 @@ func (r *NetworkManager) ResetNetwork() {
 
 func (r *NetworkManager) notifyInterfaceUpdate(defaultInterface *control.Interface, flags int) {
 	if defaultInterface == nil {
+		r.logger.Error("NetworkManager NetworkPause: missing default interface or network is not active") //karing
 		r.pauseManager.NetworkPause()
-		r.logger.Error("missing default interface or network is not active") //karing
 		return
 	}
-
+	r.logger.Error("NetworkManager NetworkWake") //karing
 	r.pauseManager.NetworkWake()
 	var options []string
 	options = append(options, F.ToString("index ", defaultInterface.Index))
