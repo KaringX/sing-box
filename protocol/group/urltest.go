@@ -24,13 +24,12 @@ import (
 	"github.com/sagernet/sing/service/pause"
 )
 
-const TimeoutDelay = 65535   //hiddify
+const TimeoutDelay = 65535  //hiddify
 const MinFailureToReset = 5 //hiddify
 
 func RegisterURLTest(registry *outbound.Registry) {
 	outbound.Register[option.URLTestOutboundOptions](registry, C.TypeURLTest, NewURLTest)
 }
-
 
 var (
 	_ adapter.OutboundGroup           = (*URLTest)(nil)
@@ -74,13 +73,13 @@ func NewURLTest(ctx context.Context, router adapter.Router, logger log.ContextLo
 		reTestIfNetworkUpdate:        options.ReTestIfNetworkUpdate, //karing
 	}
 	if len(outbound.tags) == 0 {
-		return outbound, E.New("missing tags")  //karing
+		return outbound, E.New("missing tags") //karing
 	}
 	return outbound, nil
 }
 
 func (s *URLTest) Start() error {
-	if(s.parseErr != nil){ //karing
+	if s.parseErr != nil { //karing
 		return s.parseErr
 	}
 	outbounds := make([]adapter.Outbound, 0, len(s.tags))
@@ -100,7 +99,7 @@ func (s *URLTest) Start() error {
 }
 
 func (s *URLTest) PostStart() error {
-	if(s.parseErr != nil){ //karing
+	if s.parseErr != nil { //karing
 		return s.parseErr
 	}
 	if s.interval < 0 { //karing
@@ -111,7 +110,7 @@ func (s *URLTest) PostStart() error {
 }
 
 func (s *URLTest) Close() error {
-	if(s.parseErr != nil){ //karing
+	if s.parseErr != nil { //karing
 		return nil
 	}
 	return common.Close(
@@ -148,7 +147,7 @@ func (s *URLTest) CheckOutbounds() {
 }
 
 func (s *URLTest) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
-	if(s.parseErr != nil){ //karing
+	if s.parseErr != nil { //karing
 		return nil, s.parseErr
 	}
 	s.group.Touch()
@@ -198,7 +197,7 @@ func (s *URLTest) DialContext(ctx context.Context, network string, destination M
 			})
 			s.group.selectedOutboundUDP = nil
 			s.group.performUpdateCheck()
-			if !s.group.pauseManager.IsNetworkPaused() {
+			if !s.group.pauseManager.IsNetworkPaused() && !s.group.pauseManager.IsDevicePaused() {
 				if outbound == s.group.selectedOutboundUDP && !s.Checking() {
 					s.logger.Warn("UDP URLTest dial ", s.Tag(), " (", outboundToString(s.group.selectedOutboundUDP), ") failed to connect for ", MinFailureToReset, " times -> recheck")
 					s.CheckOutbounds()
@@ -208,7 +207,7 @@ func (s *URLTest) DialContext(ctx context.Context, network string, destination M
 	} else if outbound == s.group.selectedOutboundTCP {
 		s.logger.Warn("TCP URLTest dial ", s.Tag(), " (", outboundToString(s.group.selectedOutboundTCP), ") failed to connect for ", s.group.tcpConnectionFailureCount.count, " times")
 		if s.group.tcpConnectionFailureCount.IncrementConditionReset(MinFailureToReset) {
-			
+
 			s.group.history.StoreURLTestHistory(realTag, &urltest.History{
 				Time:  time.Now(),
 				Delay: 0,
@@ -216,21 +215,21 @@ func (s *URLTest) DialContext(ctx context.Context, network string, destination M
 			})
 			s.group.selectedOutboundTCP = nil
 			s.group.performUpdateCheck()
-			if !s.group.pauseManager.IsNetworkPaused() {
-				if outbound == s.group.selectedOutboundTCP && !s.Checking(){
+			if !s.group.pauseManager.IsNetworkPaused() && !s.group.pauseManager.IsDevicePaused() {
+				if outbound == s.group.selectedOutboundTCP && !s.Checking() {
 					s.logger.Warn("TCP URLTest dial ", s.Tag(), " (", outboundToString(s.group.selectedOutboundTCP), ") failed to connect for ", MinFailureToReset, " times -> recheck")
 					s.CheckOutbounds()
 				}
 			}
 		}
 	}
-	//karing 
+	//karing
 
 	return nil, err
 }
 
 func (s *URLTest) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
-	if(s.parseErr != nil){ //karing
+	if s.parseErr != nil { //karing
 		return nil, s.parseErr
 	}
 	s.group.Touch()
@@ -261,8 +260,8 @@ func (s *URLTest) ListenPacket(ctx context.Context, destination M.Socksaddr) (ne
 		if s.group.udpConnectionFailureCount.IncrementConditionReset(MinFailureToReset) {
 			s.group.selectedOutboundUDP = nil
 			s.group.performUpdateCheck()
-			if !s.group.pauseManager.IsNetworkPaused() { 
-				if outbound == s.group.selectedOutboundUDP && !s.Checking(){
+			if !s.group.pauseManager.IsNetworkPaused() && !s.group.pauseManager.IsDevicePaused() {
+				if outbound == s.group.selectedOutboundUDP && !s.Checking() {
 					s.logger.Warn("UDP URLTest listen ", s.Tag(), " (", outboundToString(s.group.selectedOutboundUDP), ") failed to connect for ", MinFailureToReset, " times -> recheck")
 					s.CheckOutbounds()
 				}
@@ -275,7 +274,7 @@ func (s *URLTest) ListenPacket(ctx context.Context, destination M.Socksaddr) (ne
 }
 
 func (s *URLTest) NewConnectionEx(ctx context.Context, conn net.Conn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) {
-	if(s.parseErr != nil){ //karing
+	if s.parseErr != nil { //karing
 		return
 	}
 	ctx = interrupt.ContextWithIsExternalConnection(ctx)
@@ -283,7 +282,7 @@ func (s *URLTest) NewConnectionEx(ctx context.Context, conn net.Conn, metadata a
 }
 
 func (s *URLTest) NewPacketConnectionEx(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) {
-	if(s.parseErr != nil){ //karing
+	if s.parseErr != nil { //karing
 		return
 	}
 	ctx = interrupt.ContextWithIsExternalConnection(ctx)
@@ -291,7 +290,7 @@ func (s *URLTest) NewPacketConnectionEx(ctx context.Context, conn N.PacketConn, 
 }
 
 func (s *URLTest) InterfaceUpdated() {
-	if s.group.pauseManager.IsNetworkPaused() { //karing
+	if s.group.pauseManager.IsNetworkPaused() || s.group.pauseManager.IsDevicePaused() { //karing
 		return
 	}
 	if !s.reTestIfNetworkUpdate { //karing
@@ -299,9 +298,10 @@ func (s *URLTest) InterfaceUpdated() {
 	}
 	go s.group.CheckOutbounds(true)
 }
-func (s *URLTest) SetParseErr(err error){ //karing
+func (s *URLTest) SetParseErr(err error) { //karing
 	s.parseErr = err
 }
+
 type URLTestGroup struct {
 	ctx                          context.Context
 	router                       adapter.Router
@@ -527,7 +527,7 @@ func (g *URLTestGroup) urlTest(ctx context.Context, force bool) (map[string]urlt
 			continue
 		}
 		group.Submit(func() { //karing
-		//b.Go(realTag, func() (any, error) {		
+			//b.Go(realTag, func() (any, error) {
 			testCtx, cancel := context.WithTimeout(g.ctx, C.TCPTimeout)
 			defer cancel()
 			t, _, err := urltest.URLTest(testCtx, g.link, p)
@@ -548,13 +548,16 @@ func (g *URLTestGroup) urlTest(ctx context.Context, force bool) (map[string]urlt
 				})
 				needUpdate := false
 				switch detour.Type() {
-				case C.TypeHysteria:needUpdate = true
-				case C.TypeHysteria2:needUpdate = true
-				case C.TypeTUIC:needUpdate = true
-				}	
-				if isListener && needUpdate{
-					if(outbound.OutboundHasConnections != nil){
-						if(!outbound.OutboundHasConnections(realTag)){
+				case C.TypeHysteria:
+					needUpdate = true
+				case C.TypeHysteria2:
+					needUpdate = true
+				case C.TypeTUIC:
+					needUpdate = true
+				}
+				if isListener && needUpdate {
+					if outbound.OutboundHasConnections != nil {
+						if !outbound.OutboundHasConnections(realTag) {
 							listener.InterfaceUpdated()
 						}
 					}
@@ -569,7 +572,7 @@ func (g *URLTestGroup) urlTest(ctx context.Context, force bool) (map[string]urlt
 			resultAccess.Unlock()
 			//return nil, nil//karing
 		})
-		count++            //karing
+		count++                                         //karing
 		if count%20 == 0 || count == len(g.outbounds) { //karing
 			group.Wait()           //karing
 			g.performUpdateCheck() //karing

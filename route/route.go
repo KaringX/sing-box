@@ -60,6 +60,9 @@ func (r *Router) RouteConnectionEx(ctx context.Context, conn net.Conn, metadata 
 }
 
 func (r *Router) routeConnection(ctx context.Context, conn net.Conn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) error {
+	if r.pauseManager.IsNetworkPaused() { //karing
+		return E.New("reject connection to ", metadata.Destination, " while network paused")
+	}
 	if r.pauseManager.IsDevicePaused() {
 		return E.New("reject connection to ", metadata.Destination, " while device paused")
 	}
@@ -186,6 +189,9 @@ func (r *Router) RoutePacketConnectionEx(ctx context.Context, conn N.PacketConn,
 }
 
 func (r *Router) routePacketConnection(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) error {
+	if r.pauseManager.IsNetworkPaused() { //karing
+		return E.New("reject packet connection to ", metadata.Destination, " while network paused")
+	}
 	if r.pauseManager.IsDevicePaused() {
 		return E.New("reject packet connection to ", metadata.Destination, " while device paused")
 	}
