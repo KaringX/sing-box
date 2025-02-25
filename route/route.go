@@ -63,9 +63,9 @@ func (r *Router) routeConnection(ctx context.Context, conn net.Conn, metadata ad
 	if r.pauseManager.IsNetworkPaused() { //karing
 		return E.New("reject connection to ", metadata.Destination, " while network paused")
 	}
-	if r.pauseManager.IsDevicePaused() {
+	/*if r.pauseManager.IsDevicePaused() { //karing
 		return E.New("reject connection to ", metadata.Destination, " while device paused")
-	}
+	}*/
 
 	//nolint:staticcheck
 	if metadata.InboundDetour != "" {
@@ -192,9 +192,9 @@ func (r *Router) routePacketConnection(ctx context.Context, conn N.PacketConn, m
 	if r.pauseManager.IsNetworkPaused() { //karing
 		return E.New("reject packet connection to ", metadata.Destination, " while network paused")
 	}
-	if r.pauseManager.IsDevicePaused() {
+	/*if r.pauseManager.IsDevicePaused() { //karing
 		return E.New("reject packet connection to ", metadata.Destination, " while device paused")
-	}
+	}*/
 	//nolint:staticcheck
 	if metadata.InboundDetour != "" {
 		if metadata.LastInbound == metadata.InboundDetour {
