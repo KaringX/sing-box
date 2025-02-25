@@ -87,7 +87,7 @@ func (r *Router) matchDNS(ctx context.Context, allowFakeIP bool, ruleIndex int, 
 				} else {
 					options.Strategy = r.defaultDomainStrategy
 				}
-				r.logger.DebugContext(ctx, metadata.Domain, "match[", currentRuleIndex, "] => ", currentRule.Action()) //karing
+				r.logger.DebugContext(ctx, metadata.Domain, " match[", currentRuleIndex, "] => ", currentRule.Action()) //karing
 				return transport, options, currentRule, currentRuleIndex
 			case *R.RuleActionDNSRouteOptions:
 				if action.DisableCache {
@@ -99,9 +99,9 @@ func (r *Router) matchDNS(ctx context.Context, allowFakeIP bool, ruleIndex int, 
 				if action.ClientSubnet.IsValid() {
 					options.ClientSubnet = action.ClientSubnet
 				}
-				r.logger.DebugContext(ctx, "match[", currentRuleIndex, "] => ", currentRule.Action())
+				r.logger.DebugContext(ctx, metadata.Domain, " match[", currentRuleIndex, "] => ", currentRule.Action()) //karing
 			case *R.RuleActionReject:
-				r.logger.DebugContext(ctx, "match[", currentRuleIndex, "] => ", currentRule.Action())
+				r.logger.DebugContext(ctx, metadata.Domain, " match[", currentRuleIndex, "] => ", currentRule.Action()) //karing
 				return nil, options, currentRule, currentRuleIndex
 			}
 		}
