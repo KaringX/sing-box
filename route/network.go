@@ -355,7 +355,7 @@ func (r *NetworkManager) WIFIState() adapter.WIFIState {
 }
 
 func (r *NetworkManager) ResetNetwork() {
-	r.logger.Error("NetworkManager:ResetNetwork") //karing
+	r.logger.Info("NetworkManager:ResetNetwork") //karing
 	conntrack.Close()
 
 	for _, endpoint := range r.endpoint.Endpoints() {
@@ -386,7 +386,7 @@ func (r *NetworkManager) notifyInterfaceUpdate(defaultInterface *control.Interfa
 		r.pauseManager.NetworkPause()
 		return
 	}
-	r.logger.Error("NetworkManager NetworkWake") //karing
+	r.logger.Info("NetworkManager NetworkWake") //karing
 	r.pauseManager.NetworkWake()
 	var options []string
 	options = append(options, F.ToString("index ", defaultInterface.Index))
@@ -434,16 +434,16 @@ func (r *NetworkManager) notifyInterfaceUpdate(defaultInterface *control.Interfa
 func (r *NetworkManager) notifyWindowsPowerEvent(event int) {
 	switch event {
 	case winpowrprof.EVENT_SUSPEND:
-		r.pauseManager.DevicePause()
-		r.ResetNetwork()
+		r.ResetNetwork()             //karing
+		r.pauseManager.DevicePause() //karing
 	case winpowrprof.EVENT_RESUME:
 		if !r.pauseManager.IsDevicePaused() {
 			return
 		}
 		fallthrough
 	case winpowrprof.EVENT_RESUME_AUTOMATIC:
-		r.pauseManager.DeviceWake()
-		r.ResetNetwork()
+		r.ResetNetwork()            //karing
+		r.pauseManager.DeviceWake() //karing
 	}
 }
 
