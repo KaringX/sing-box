@@ -73,11 +73,11 @@ require ( //karing
 replace github.com/Dreamacro/clash => github.com/KaringX/clash v0.0.0-20241101044429-f71df89d4091
 
 //go get github.com/KaringX/sing-quic@de3999b0837577a99a891562c776914c8aed3bc1
-replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20250223034922-ddf34fb62560 //karing_v0.6.1
+replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20250226022948-d747e4e8e208 //karing_v0.6.1
 
 //replace github.com/sagernet/sing => ../../KaringX/sing
 
-replace github.com/sagernet/sing-dns => github.com/KaringX/sing-dns v0.3.0-beta.14.0.20250223034424-bed5e3efc69b //karing_v0.4.0
+replace github.com/sagernet/sing-dns => github.com/KaringX/sing-dns v0.3.0-beta.14.0.20250226020731-661fae0be6ef //karing_v0.4.0
 
 //replace github.com/sagernet/sing-dns => ../../KaringX/sing-dns
 

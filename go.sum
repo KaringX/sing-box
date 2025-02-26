@@ -10,10 +10,14 @@ github.com/KaringX/sing v0.5.0-alpha.11.0.20250217065007-910be290353a h1:u9w3Ukm
 github.com/KaringX/sing v0.5.0-alpha.11.0.20250217065007-910be290353a/go.mod h1:ARkL0gM13/Iv5VCZmci/NuoOlePoIsW0m7BWfln/Hak=
 github.com/KaringX/sing v0.5.0-alpha.11.0.20250223034922-ddf34fb62560 h1:E70mVeswHo7D83cZXieY5kuzfHcKtNINKVPC48HDp/A=
 github.com/KaringX/sing v0.5.0-alpha.11.0.20250223034922-ddf34fb62560/go.mod h1:ARkL0gM13/Iv5VCZmci/NuoOlePoIsW0m7BWfln/Hak=
+github.com/KaringX/sing v0.5.0-alpha.11.0.20250226022948-d747e4e8e208 h1:zGER9ZnctFqHbtbBEY93YZovCUwPoOL196v6a+zE91o=
+github.com/KaringX/sing v0.5.0-alpha.11.0.20250226022948-d747e4e8e208/go.mod h1:ARkL0gM13/Iv5VCZmci/NuoOlePoIsW0m7BWfln/Hak=
 github.com/KaringX/sing-dns v0.3.0-beta.14.0.20250211064956-d36e5ce76964 h1:FEWp4lYT1fUlZBc3dPKNyvRw4sl/BUZ8yK1a0x7EbQc=
 github.com/KaringX/sing-dns v0.3.0-beta.14.0.20250211064956-d36e5ce76964/go.mod h1:dweQs54ng2YGzoJfz+F9dGuDNdP5pJ3PLeggnK5VWc8=
 github.com/KaringX/sing-dns v0.3.0-beta.14.0.20250223034424-bed5e3efc69b h1:U4g7sdgtxpJAbkFbmvfcpwRr9SFc9x87awF5xepPjHg=
 github.com/KaringX/sing-dns v0.3.0-beta.14.0.20250223034424-bed5e3efc69b/go.mod h1:dweQs54ng2YGzoJfz+F9dGuDNdP5pJ3PLeggnK5VWc8=
+github.com/KaringX/sing-dns v0.3.0-beta.14.0.20250226020731-661fae0be6ef h1:koTUUw0VjWB6+phfUzPqDFjGL1u/4QC/SrYchkluaWE=
+github.com/KaringX/sing-dns v0.3.0-beta.14.0.20250226020731-661fae0be6ef/go.mod h1:dweQs54ng2YGzoJfz+F9dGuDNdP5pJ3PLeggnK5VWc8=
 github.com/KaringX/sing-quic v0.2.0-beta.12.0.20250211065213-b48dcc4767ef h1:CW3237F4vGhzIwA9GFapisOoireMMpeA8d+oqLdTbuA=
 github.com/KaringX/sing-quic v0.2.0-beta.12.0.20250211065213-b48dcc4767ef/go.mod h1:c+CytOEyeN20KCTFIP8YQUkNDVFLSzjrEPqP7Hlnxys=
 github.com/KaringX/sing-tun v0.6.2-0.20250217065132-ca81a8bace0f h1:HokDrC/thoMWqIqKKzNg7tFCSrTt7x0zbhiDjerfN3M=

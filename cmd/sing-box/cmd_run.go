@@ -232,10 +232,10 @@ func run() error {
 				cancel()
 				closeCtx, closed := context.WithCancel(context.Background())
 				go closeMonitor(closeCtx)
-				go func() {
+				/*go func() {
 					time.Sleep(3 * time.Second)
 					terminateCurrentProcess()
-				}()
+				}()*/
 				instance.Close()
 				closed()
 				return nil
@@ -245,11 +245,12 @@ func run() error {
 }
 
 func closeMonitor(ctx context.Context) {
-	time.Sleep(C.FatalStopTimeout)
+	time.Sleep(C.StopTimeout) //karing
 	select {
 	case <-ctx.Done():
 		return
 	default:
 	}
-	log.Fatal("sing-box did not close!")
+	log.Error("sing-box did not close!") //karing
+	terminateCurrentProcess()            //karing
 }
