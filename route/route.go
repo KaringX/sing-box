@@ -17,9 +17,9 @@ import (
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing-box/route/rule"
-	"github.com/sagernet/sing-dns"
-	"github.com/sagernet/sing-mux"
-	"github.com/sagernet/sing-vmess"
+	dns "github.com/sagernet/sing-dns"
+	mux "github.com/sagernet/sing-mux"
+	vmess "github.com/sagernet/sing-vmess"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/buf"
 	"github.com/sagernet/sing/common/bufio"
@@ -60,9 +60,12 @@ func (r *Router) RouteConnectionEx(ctx context.Context, conn net.Conn, metadata 
 }
 
 func (r *Router) routeConnection(ctx context.Context, conn net.Conn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) error {
-	if r.pauseManager.IsDevicePaused() {
-		return E.New("reject connection to ", metadata.Destination, " while device paused")
+	if r.pauseManager.IsNetworkPaused() { //karing
+		return E.New("reject connection to ", metadata.Destination, " while network paused")
 	}
+	/*if r.pauseManager.IsDevicePaused() { //karing
+		return E.New("reject connection to ", metadata.Destination, " while device paused")
+	}*/
 
 	//nolint:staticcheck
 	if metadata.InboundDetour != "" {
@@ -186,9 +189,12 @@ func (r *Router) RoutePacketConnectionEx(ctx context.Context, conn N.PacketConn,
 }
 
 func (r *Router) routePacketConnection(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) error {
-	if r.pauseManager.IsDevicePaused() {
-		return E.New("reject packet connection to ", metadata.Destination, " while device paused")
+	if r.pauseManager.IsNetworkPaused() { //karing
+		return E.New("reject packet connection to ", metadata.Destination, " while network paused")
 	}
+	/*if r.pauseManager.IsDevicePaused() { //karing
+		return E.New("reject packet connection to ", metadata.Destination, " while device paused")
+	}*/
 	//nolint:staticcheck
 	if metadata.InboundDetour != "" {
 		if metadata.LastInbound == metadata.InboundDetour {
@@ -303,12 +309,12 @@ func (r *Router) matchRule(
 		}
 		processInfo, fErr := process.FindProcessInfo(r.processSearcher, ctx, metadata.Network, metadata.Source.AddrPort(), originDestination)
 		if fErr != nil {
-			r.logger.InfoContext(ctx, "failed to search process: ", fErr)
+			r.logger.InfoContext(ctx, "failed to search process: ", fErr, " from: ", metadata.Network, " ", metadata.Source.AddrPort()) //karing
 		} else {
 			if processInfo.ProcessPath != "" {
-				r.logger.InfoContext(ctx, "found process path: ", processInfo.ProcessPath)
+				r.logger.InfoContext(ctx, "found process path: ", processInfo.ProcessPath, " from: ", metadata.Network, " ", metadata.Source.AddrPort()) //karing
 			} else if processInfo.PackageName != "" {
-				r.logger.InfoContext(ctx, "found package name: ", processInfo.PackageName)
+				r.logger.InfoContext(ctx, "found package name: ", processInfo.PackageName, " from: ", metadata.Network, " ", metadata.Source.AddrPort()) //karing
 			} else if processInfo.UserId != -1 {
 				if /*needUserName &&*/ true {
 					osUser, _ := user.LookupId(F.ToString(processInfo.UserId))
@@ -654,7 +660,7 @@ func (r *Router) actionSniff(
 func (r *Router) actionResolve(ctx context.Context, metadata *adapter.InboundContext, action *rule.RuleActionResolve) error {
 	if metadata.Destination.IsFqdn() {
 		metadata.DNSServer = action.Server
-		addresses, err := r.Lookup(adapter.WithContext(ctx, metadata), metadata.Destination.Fqdn, action.Strategy)
+		addresses, _, err := r.Lookup(adapter.WithContext(ctx, metadata), metadata.Destination.Fqdn, action.Strategy) //karing
 		if err != nil {
 			return err
 		}

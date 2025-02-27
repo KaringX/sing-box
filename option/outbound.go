@@ -21,6 +21,7 @@ type _Outbound struct {
 	Type    string `json:"type"`
 	Tag     string `json:"tag,omitempty"`
 	Options any    `json:"-"`
+	ParseErr error //karing
 }
 
 type Outbound _Outbound
@@ -48,7 +49,11 @@ func (h *Outbound) UnmarshalJSONContext(ctx context.Context, content []byte) err
 	}
 	err = badjson.UnmarshallExcludedContext(ctx, content, (*_Outbound)(h), options)
 	if err != nil {
-		return err
+		//return err  //karing
+		if len(h.Type) == 0 || len(h.Tag) == 0 {  //karing
+			return err
+		}
+		h.ParseErr = err //karing
 	}
 	if listenWrapper, isListen := options.(ListenOptionsWrapper); isListen {
 		if listenWrapper.TakeListenOptions().InboundOptions != (InboundOptions{}) {
@@ -83,6 +88,7 @@ type DialerOptions struct {
 	FallbackNetworkType badoption.Listable[InterfaceType] `json:"fallback_network_type,omitempty"`
 	FallbackDelay       badoption.Duration                `json:"fallback_delay,omitempty"`
 	IsWireGuardListener bool                              `json:"-"`
+	TLSFragment         *TLSFragmentOptions               `json:"tls_fragment,omitempty"` //hiddify
 }
 
 func (o *DialerOptions) TakeDialerOptions() DialerOptions {

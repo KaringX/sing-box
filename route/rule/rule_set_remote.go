@@ -50,6 +50,7 @@ type RemoteRuleSet struct {
 	callbackAccess sync.Mutex
 	callbacks      list.List[adapter.RuleSetUpdateCallback]
 	refs           atomic.Int32
+	downloadTimes  int  //karing
 }
 
 func NewRemoteRuleSet(ctx context.Context, logger logger.ContextLogger, options option.RuleSet) *RemoteRuleSet {
@@ -79,6 +80,14 @@ func (s *RemoteRuleSet) String() string {
 	return strings.Join(F.MapToString(s.rules), " ")
 }
 
+func (s *RemoteRuleSet) Url() string { //karing
+	return s.options.RemoteOptions.URL
+}
+
+func (s *RemoteRuleSet) RulesCount() int { //karing
+	return len(s.rules)
+}
+
 func (s *RemoteRuleSet) StartContext(ctx context.Context, startContext *adapter.HTTPStartContext) error {
 	s.cacheFile = service.FromContext[adapter.CacheFile](s.ctx)
 	var dialer N.Dialer
@@ -93,22 +102,25 @@ func (s *RemoteRuleSet) StartContext(ctx context.Context, startContext *adapter.
 	}
 	s.dialer = dialer
 	if s.cacheFile != nil {
-		if savedSet := s.cacheFile.LoadRuleSet(s.options.Tag); savedSet != nil {
+		if savedSet := s.cacheFile.LoadRuleSet(s.options.RemoteOptions.URL); savedSet != nil { //karing
 			err := s.loadBytes(savedSet.Content)
 			if err != nil {
-				return E.Cause(err, "restore cached rule-set")
+				s.cacheFile.DeleteRuleSet(s.options.RemoteOptions.URL)  //karing
+				//return E.Cause(err, "restore cached rule-set")
+			} else { //karing
+				s.lastUpdated = savedSet.LastUpdated
+				s.lastEtag = savedSet.LastEtag
 			}
-			s.lastUpdated = savedSet.LastUpdated
-			s.lastEtag = savedSet.LastEtag
 		}
 	}
-	if s.lastUpdated.IsZero() {
+
+	/*if s.lastUpdated.IsZero() { //karing
 		err := s.fetchOnce(ctx, startContext)
 		if err != nil {
 			return E.Cause(err, "initial rule-set: ", s.options.Tag)
 		}
 	}
-	s.updateTicker = time.NewTicker(s.updateInterval)
+	s.updateTicker = time.NewTicker(s.updateInterval)*/
 	return nil
 }
 
@@ -197,13 +209,20 @@ func (s *RemoteRuleSet) loadBytes(content []byte) error {
 }
 
 func (s *RemoteRuleSet) loopUpdate() {
-	if time.Since(s.lastUpdated) > s.updateInterval {
+	if  s.lastUpdated.IsZero() || time.Since(s.lastUpdated) > s.updateInterval { //karing
+		s.updateTicker = time.NewTicker(s.updateInterval) //karing
 		err := s.fetchOnce(s.ctx, nil)
 		if err != nil {
+			s.updateTicker = time.NewTicker(5 * time.Second) //karing
 			s.logger.Error("fetch rule-set ", s.options.Tag, ": ", err)
 		} else if s.refs.Load() == 0 {
 			s.rules = nil
+			s.updateTicker = time.NewTicker(s.updateInterval) //karing
+		} else { //karing
+			s.updateTicker = time.NewTicker(s.updateInterval)
 		}
+	} else{
+		s.updateTicker = time.NewTicker(time.Since(s.lastUpdated)) //karing
 	}
 	for {
 		runtime.GC()
@@ -217,13 +236,21 @@ func (s *RemoteRuleSet) loopUpdate() {
 				s.logger.Error("fetch rule-set ", s.options.Tag, ": ", err)
 			} else if s.refs.Load() == 0 {
 				s.rules = nil
+				s.updateTicker = time.NewTicker(s.updateInterval) //karing
+			} else {//karing
+				s.updateTicker = time.NewTicker(s.updateInterval)
 			}
 		}
 	}
 }
 
 func (s *RemoteRuleSet) fetchOnce(ctx context.Context, startContext *adapter.HTTPStartContext) error {
-	s.logger.Debug("updating rule-set ", s.options.Tag, " from URL: ", s.options.RemoteOptions.URL)
+	if s.downloadTimes >= 5 {  //karing
+		s.Close()
+		return E.New("cancel updating rule-set ", s.options.Tag, " download_detour ", s.options.RemoteOptions.DownloadDetour, " from URL:", s.options.RemoteOptions.URL, " after ", s.downloadTimes, " times")
+	}
+	s.downloadTimes++  //karing
+	s.logger.Debug("updating rule-set ", s.options.Tag, " download_detour ", s.options.RemoteOptions.DownloadDetour, " from URL: ", s.options.RemoteOptions.URL, " try ", s.downloadTimes, " times") //karing
 	var httpClient *http.Client
 	if startContext != nil {
 		httpClient = startContext.HTTPClient(s.options.RemoteOptions.DownloadDetour, s.dialer)
@@ -254,10 +281,10 @@ func (s *RemoteRuleSet) fetchOnce(ctx context.Context, startContext *adapter.HTT
 	case http.StatusNotModified:
 		s.lastUpdated = time.Now()
 		if s.cacheFile != nil {
-			savedRuleSet := s.cacheFile.LoadRuleSet(s.options.Tag)
+			savedRuleSet := s.cacheFile.LoadRuleSet(s.options.RemoteOptions.URL)  //karing
 			if savedRuleSet != nil {
 				savedRuleSet.LastUpdated = s.lastUpdated
-				err = s.cacheFile.SaveRuleSet(s.options.Tag, savedRuleSet)
+				err = s.cacheFile.SaveRuleSet(s.options.RemoteOptions.URL, savedRuleSet)  //karing
 				if err != nil {
 					s.logger.Error("save rule-set updated time: ", err)
 					return nil
@@ -286,7 +313,7 @@ func (s *RemoteRuleSet) fetchOnce(ctx context.Context, startContext *adapter.HTT
 	}
 	s.lastUpdated = time.Now()
 	if s.cacheFile != nil {
-		err = s.cacheFile.SaveRuleSet(s.options.Tag, &adapter.SavedBinary{
+		err = s.cacheFile.SaveRuleSet(s.options.RemoteOptions.URL, &adapter.SavedBinary{   //karing
 			LastUpdated: s.lastUpdated,
 			Content:     content,
 			LastEtag:    s.lastEtag,
@@ -295,6 +322,7 @@ func (s *RemoteRuleSet) fetchOnce(ctx context.Context, startContext *adapter.HTT
 			s.logger.Error("save rule-set cache: ", err)
 		}
 	}
+	s.downloadTimes = 0 //karing
 	s.logger.Info("updated rule-set ", s.options.Tag)
 	return nil
 }

@@ -100,8 +100,13 @@ func (c *CacheFile) Name() string {
 func (c *CacheFile) Dependencies() []string {
 	return nil
 }
-
+func (c *CacheFile) BeforeStart() error { //karing
+	return c.start(adapter.StartStateInitialize)
+}
 func (c *CacheFile) Start(stage adapter.StartStage) error {
+	return nil
+}
+func (c *CacheFile) start(stage adapter.StartStage) error {
 	if stage != adapter.StartStateInitialize {
 		return nil
 	}
@@ -130,11 +135,11 @@ func (c *CacheFile) Start(stage adapter.StartStage) error {
 	if err != nil {
 		return err
 	}
-	err = filemanager.Chown(c.ctx, c.path)
+	/*err = filemanager.Chown(c.ctx, c.path)//karing
 	if err != nil {
 		db.Close()
 		return E.Cause(err, "platform chown")
-	}
+	}*/
 	err = db.Batch(func(tx *bbolt.Tx) error {
 		return tx.ForEach(func(name []byte, b *bbolt.Bucket) error {
 			if name[0] == 0 {
@@ -315,4 +320,45 @@ func (c *CacheFile) SaveRuleSet(tag string, set *adapter.SavedBinary) error {
 		}
 		return bucket.Put([]byte(tag), setBinary)
 	})
+}
+func (c *CacheFile) DeleteRuleSet(tag string) { //karing
+	c.DB.View(func(t *bbolt.Tx) error {
+		bucket := c.bucket(t, bucketRuleSet)
+		if bucket == nil {
+			return os.ErrNotExist
+		}
+		bucket.Delete([]byte(tag))
+		return nil
+	})
+}
+func (c *CacheFile) HasRuleSet(tag string) bool { //karing
+	err := c.DB.View(func(t *bbolt.Tx) error {
+		bucket := c.bucket(t, bucketRuleSet)
+		if bucket == nil {
+			return os.ErrNotExist
+		}
+		setBinary := bucket.Get([]byte(tag))
+		if len(setBinary) == 0 {
+			return os.ErrInvalid
+		}
+		return nil
+	})
+	return err == nil
+}
+func (c *CacheFile) GetAllRuleSetKeys() map[string]bool { //karing
+	keys :=  make( map[string]bool)
+	c.DB.View(func(t *bbolt.Tx) error {
+		bucket := c.bucket(t, bucketRuleSet)
+		if bucket == nil {
+			return os.ErrNotExist
+		}
+		bucket.ForEach(func(name []byte, setBinary []byte) error {
+			if len(name) != 0 {
+				keys[string(name)] = len(setBinary) != 0
+			}
+			return nil
+		})
+		return nil
+	})
+	return keys
 }

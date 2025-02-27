@@ -16,7 +16,7 @@ import (
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/experimental/libbox/platform"
 	"github.com/sagernet/sing-box/option"
-	"github.com/sagernet/sing-tun"
+	tun "github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/atomic"
 	"github.com/sagernet/sing/common/control"
@@ -143,7 +143,8 @@ func (r *NetworkManager) Start(stage adapter.StartStage) error {
 			err := r.powerListener.Start()
 			monitor.Finish()
 			if err != nil {
-				return E.Cause(err, "start power listener")
+				//return E.Cause(err, "start power listener") //karing
+				r.logger.Warn("start power listener: ", err) //karing
 			}
 		}
 		if C.IsAndroid && r.platformInterface == nil {
@@ -217,7 +218,7 @@ func (r *NetworkManager) UpdateInterfaces() error {
 		if err != nil {
 			return err
 		}
-		if C.IsDarwin {
+		if C.IsDarwin || C.IsIos { //karing
 			err = r.interfaceFinder.Update()
 			if err != nil {
 				return err
@@ -367,6 +368,7 @@ func (r *NetworkManager) UpdateWIFIState() {
 }
 
 func (r *NetworkManager) ResetNetwork() {
+	r.logger.Info("NetworkManager:ResetNetwork") //karing
 	conntrack.Close()
 
 	for _, endpoint := range r.endpoint.Endpoints() {
@@ -393,11 +395,11 @@ func (r *NetworkManager) ResetNetwork() {
 
 func (r *NetworkManager) notifyInterfaceUpdate(defaultInterface *control.Interface, flags int) {
 	if defaultInterface == nil {
+		r.logger.Error("NetworkManager NetworkPause: missing default interface or network is not active") //karing
 		r.pauseManager.NetworkPause()
-		r.logger.Error("missing default interface")
 		return
 	}
-
+	r.logger.Info("NetworkManager NetworkWake") //karing
 	r.pauseManager.NetworkWake()
 	var options []string
 	options = append(options, F.ToString("index ", defaultInterface.Index))
@@ -437,16 +439,16 @@ func (r *NetworkManager) notifyInterfaceUpdate(defaultInterface *control.Interfa
 func (r *NetworkManager) notifyWindowsPowerEvent(event int) {
 	switch event {
 	case winpowrprof.EVENT_SUSPEND:
-		r.pauseManager.DevicePause()
-		r.ResetNetwork()
+		r.ResetNetwork()             //karing
+		r.pauseManager.DevicePause() //karing
 	case winpowrprof.EVENT_RESUME:
 		if !r.pauseManager.IsDevicePaused() {
 			return
 		}
 		fallthrough
 	case winpowrprof.EVENT_RESUME_AUTOMATIC:
-		r.pauseManager.DeviceWake()
-		r.ResetNetwork()
+		r.ResetNetwork()            //karing
+		r.pauseManager.DeviceWake() //karing
 	}
 }
 

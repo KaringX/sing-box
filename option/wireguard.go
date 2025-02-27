@@ -17,6 +17,10 @@ type WireGuardEndpointOptions struct {
 	UDPTimeout badoption.Duration               `json:"udp_timeout,omitempty"`
 	Workers    int                              `json:"workers,omitempty"`
 	DialerOptions
+	FakePackets      string `json:"fake_packets,omitempty"`       //hiddify
+	FakePacketsSize  string `json:"fake_packets_size,omitempty"`  //hiddify
+	FakePacketsDelay string `json:"fake_packets_delay,omitempty"` //hiddify
+	FakePacketsMode  string `json:"fake_packets_mode,omitempty"`  //hiddify
 }
 
 type WireGuardPeer struct {
@@ -38,12 +42,17 @@ type LegacyWireGuardOutboundOptions struct {
 	PrivateKey      string                           `json:"private_key"`
 	Peers           []LegacyWireGuardPeer            `json:"peers,omitempty"`
 	ServerOptions
-	PeerPublicKey string      `json:"peer_public_key"`
-	PreSharedKey  string      `json:"pre_shared_key,omitempty"`
-	Reserved      []uint8     `json:"reserved,omitempty"`
-	Workers       int         `json:"workers,omitempty"`
-	MTU           uint32      `json:"mtu,omitempty"`
-	Network       NetworkList `json:"network,omitempty"`
+	PeerPublicKey    string            `json:"peer_public_key"`
+	PreSharedKey     string            `json:"pre_shared_key,omitempty"`
+	Reserved         []uint8           `json:"reserved,omitempty"`
+	Workers          int               `json:"workers,omitempty"`
+	MTU              uint32            `json:"mtu,omitempty"`
+	Network          NetworkList       `json:"network,omitempty"`
+	TurnRelay        *TurnRelayOptions `json:"turn_relay,omitempty"`         //hiddify
+	FakePackets      string            `json:"fake_packets,omitempty"`       //hiddify
+	FakePacketsSize  string            `json:"fake_packets_size,omitempty"`  //hiddify
+	FakePacketsDelay string            `json:"fake_packets_delay,omitempty"` //hiddify
+	FakePacketsMode  string            `json:"fake_packets_mode,omitempty"`  //hiddify
 }
 
 type LegacyWireGuardPeer struct {

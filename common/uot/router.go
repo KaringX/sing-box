@@ -84,3 +84,7 @@ func (r *Router) RouteConnectionEx(ctx context.Context, conn net.Conn, metadata 
 func (r *Router) RoutePacketConnectionEx(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) {
 	r.router.RoutePacketConnectionEx(ctx, conn, metadata, onClose)
 }
+func (r *Router) GetRouter() adapter.ConnectionRouter { //karing
+	return r.router
+}
+

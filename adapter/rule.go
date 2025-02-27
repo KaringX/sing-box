@@ -7,6 +7,7 @@ import (
 type HeadlessRule interface {
 	Match(metadata *InboundContext) bool
 	String() string
+	Name() string
 }
 
 type Rule interface {
@@ -26,6 +27,7 @@ type DNSRule interface {
 type RuleAction interface {
 	Type() string
 	String() string
+	Target() string
 }
 
 func IsFinalAction(action RuleAction) bool {

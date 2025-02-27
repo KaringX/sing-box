@@ -10,8 +10,8 @@ import (
 	"github.com/sagernet/sing-box/adapter"
 	C "github.com/sagernet/sing-box/constant"
 	R "github.com/sagernet/sing-box/route/rule"
-	"github.com/sagernet/sing-dns"
-	"github.com/sagernet/sing-tun"
+	dns "github.com/sagernet/sing-dns"
+	tun "github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common/cache"
 	E "github.com/sagernet/sing/common/exceptions"
 	F "github.com/sagernet/sing/common/format"
@@ -58,9 +58,9 @@ func (r *Router) matchDNS(ctx context.Context, allowFakeIP bool, ruleIndex int, 
 		if currentRule.Match(metadata) {
 			ruleDescription := currentRule.String()
 			if ruleDescription != "" {
-				r.logger.DebugContext(ctx, "match[", currentRuleIndex, "] ", currentRule, " => ", currentRule.Action())
+				r.logger.DebugContext(ctx, metadata.Domain, " match[", currentRuleIndex, "] ", currentRule, " => ", currentRule.Action()) //karing
 			} else {
-				r.logger.DebugContext(ctx, "match[", currentRuleIndex, "] => ", currentRule.Action())
+				r.logger.DebugContext(ctx, metadata.Domain, " match[", currentRuleIndex, "] => ", currentRule.Action()) //karing
 			}
 			switch action := currentRule.Action().(type) {
 			case *R.RuleActionDNSRoute:
@@ -87,7 +87,7 @@ func (r *Router) matchDNS(ctx context.Context, allowFakeIP bool, ruleIndex int, 
 				} else {
 					options.Strategy = r.defaultDomainStrategy
 				}
-				r.logger.DebugContext(ctx, "match[", currentRuleIndex, "] => ", currentRule.Action())
+				r.logger.DebugContext(ctx, metadata.Domain, " match[", currentRuleIndex, "] => ", currentRule.Action()) //karing
 				return transport, options, currentRule, currentRuleIndex
 			case *R.RuleActionDNSRouteOptions:
 				if action.DisableCache {
@@ -99,9 +99,9 @@ func (r *Router) matchDNS(ctx context.Context, allowFakeIP bool, ruleIndex int, 
 				if action.ClientSubnet.IsValid() {
 					options.ClientSubnet = action.ClientSubnet
 				}
-				r.logger.DebugContext(ctx, "match[", currentRuleIndex, "] => ", currentRule.Action())
+				r.logger.DebugContext(ctx, metadata.Domain, " match[", currentRuleIndex, "] => ", currentRule.Action()) //karing
 			case *R.RuleActionReject:
-				r.logger.DebugContext(ctx, "match[", currentRuleIndex, "] => ", currentRule.Action())
+				r.logger.DebugContext(ctx, metadata.Domain, " match[", currentRuleIndex, "] => ", currentRule.Action()) //karing
 				return nil, options, currentRule, currentRuleIndex
 			}
 		}
@@ -216,7 +216,7 @@ func (r *Router) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS.Msg, er
 	return response, nil
 }
 
-func (r *Router) Lookup(ctx context.Context, domain string, strategy dns.DomainStrategy) ([]netip.Addr, error) {
+func (r *Router) Lookup(ctx context.Context, domain string, strategy dns.DomainStrategy) ([]netip.Addr, string, error) { //karing
 	var (
 		responseAddrs []netip.Addr
 		cached        bool
@@ -239,19 +239,23 @@ func (r *Router) Lookup(ctx context.Context, domain string, strategy dns.DomainS
 	responseAddrs, cached = r.dnsClient.LookupCache(ctx, domain, strategy)
 	if cached {
 		if len(responseAddrs) == 0 {
-			return nil, dns.RCodeNameError
+			return nil, "", dns.RCodeNameError //karing
 		}
-		return responseAddrs, nil
+		return responseAddrs, "", nil //karing
 	}
 	r.dnsLogger.DebugContext(ctx, "lookup domain ", domain)
 	ctx, metadata := adapter.ExtendContext(ctx)
 	metadata.Destination = M.Socksaddr{}
 	metadata.Domain = domain
+	var ( //karing
+		transportN dns.Transport
+	)
 	if metadata.DNSServer != "" {
 		transport, loaded := r.transportMap[metadata.DNSServer]
 		if !loaded {
-			return nil, E.New("transport not found: ", metadata.DNSServer)
+			return nil, "", E.New("transport not found: ", metadata.DNSServer) //karing
 		}
+		transportN = transport //karing
 		if strategy == dns.DomainStrategyAsIS {
 			if transportDomainStrategy, loaded := r.transportDomainStrategy[transport]; loaded {
 				strategy = transportDomainStrategy
@@ -280,12 +284,13 @@ func (r *Router) Lookup(ctx context.Context, domain string, strategy dns.DomainS
 				case *R.RuleActionReject:
 					switch action.Method {
 					case C.RuleActionRejectMethodDefault:
-						return nil, nil
+						return nil, transportN.Name(), nil //karing
 					case C.RuleActionRejectMethodDrop:
-						return nil, tun.ErrDrop
+						return nil, "", tun.ErrDrop //karing
 					}
 				}
 			}
+			transportN = transport //karing
 			if rule != nil && rule.WithAddressLimit() {
 				addressLimit = true
 				responseAddrs, err = r.dnsClient.LookupWithResponseCheck(dnsCtx, transport, domain, options, func(responseAddrs []netip.Addr) bool {
@@ -304,13 +309,14 @@ func (r *Router) Lookup(ctx context.Context, domain string, strategy dns.DomainS
 	}
 	printResult()
 	if len(responseAddrs) > 0 {
-		r.dnsLogger.InfoContext(ctx, "lookup succeed for ", domain, ": ", strings.Join(F.MapToString(responseAddrs), " "))
+		r.dnsLogger.InfoContext(ctx, "[", transportN.Name(), "]", "lookup succeed for ", domain, ": ", strings.Join(F.MapToString(responseAddrs), " ")) //karing
 	}
-	return responseAddrs, err
+	return responseAddrs, transportN.Name(), err
 }
 
 func (r *Router) LookupDefault(ctx context.Context, domain string) ([]netip.Addr, error) {
-	return r.Lookup(ctx, domain, dns.DomainStrategyAsIS)
+	addr, _, err := r.Lookup(ctx, domain, dns.DomainStrategyAsIS) //karing
+	return addr, err                                              //karing
 }
 
 func (r *Router) ClearDNSCache() {

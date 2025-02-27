@@ -18,7 +18,7 @@ import (
 	"github.com/sagernet/sing-box/experimental/libbox/platform"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
-	"github.com/sagernet/sing-tun"
+	tun "github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/json/badoption"
@@ -173,6 +173,7 @@ func NewInbound(ctx context.Context, router adapter.Router, logger log.ContextLo
 		outputMark = tun.DefaultAutoRedirectOutputMark
 	}
 	networkManager := service.FromContext[adapter.NetworkManager](ctx)
+	SetTunnelType(options.InterfaceName) //karing
 	inbound := &Inbound{
 		tag:            tag,
 		ctx:            ctx,
@@ -203,6 +204,7 @@ func NewInbound(ctx context.Context, router adapter.Router, logger log.ContextLo
 			IncludePackage:           options.IncludePackage,
 			ExcludePackage:           options.ExcludePackage,
 			InterfaceMonitor:         networkManager.InterfaceMonitor(),
+			Logger:                   logger, //karing
 		},
 		udpTimeout:        udpTimeout,
 		stack:             options.Stack,
@@ -237,7 +239,7 @@ func NewInbound(ctx context.Context, router adapter.Router, logger log.ContextLo
 			Logger:                 logger,
 			NetworkMonitor:         networkManager.NetworkMonitor(),
 			InterfaceFinder:        networkManager.InterfaceFinder(),
-			TableName:              "sing-box",
+			TableName:              "karing", //karing
 			DisableNFTables:        dErr == nil && disableNFTables,
 			RouteAddressSet:        &inbound.routeAddressSet,
 			RouteExcludeAddressSet: &inbound.routeExcludeAddressSet,
