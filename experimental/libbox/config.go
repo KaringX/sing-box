@@ -24,7 +24,7 @@ import (
 func parseConfig(ctx context.Context, configContent string) (option.Options, error) {
 	options, err := json.UnmarshalExtendedContext[option.Options](ctx, []byte(configContent))
 	if err != nil {
-		return option.Options{}, E.Cause(err, "decode config: config length: ", len(configContent))
+		return option.Options{}, E.Cause(err, "decode config: config length: ", len(configContent))  //karing
 	}
 	return options, nil
 }

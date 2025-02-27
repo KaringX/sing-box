@@ -103,10 +103,10 @@ func (c *CacheFile) Dependencies() []string {
 func (c *CacheFile) BeforeStart() error { //karing
 	return c.start(adapter.StartStateInitialize)
 }
-func (c *CacheFile) Start(stage adapter.StartStage) error {
+func (c *CacheFile) Start(stage adapter.StartStage) error { //karing
 	return nil
 }
-func (c *CacheFile) start(stage adapter.StartStage) error {
+func (c *CacheFile) start(stage adapter.StartStage) error { //karing
 	if stage != adapter.StartStateInitialize {
 		return nil
 	}

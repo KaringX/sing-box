@@ -136,7 +136,7 @@ func getGroupDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 				})
 			}
 			b.Wait()
-			gofree.FreeIdleThread()
+			gofree.FreeIdleThread()  //karing
 		}
 
 		if err != nil {
@@ -149,8 +149,7 @@ func getGroupDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-// karing
-func updateGroupDelayCheck(server *Server) func(w http.ResponseWriter, r *http.Request) {
+func updateGroupDelayCheck(server *Server) func(w http.ResponseWriter, r *http.Request) { //karing
 	return func(w http.ResponseWriter, r *http.Request) {
 		proxy := r.Context().Value(CtxKeyProxy).(adapter.Outbound)
 		group, ok := proxy.(adapter.OutboundGroup)
@@ -168,8 +167,7 @@ func updateGroupDelayCheck(server *Server) func(w http.ResponseWriter, r *http.R
 	}
 }
 
-// karing
-func getProxyDelayHistory(server *Server) func(w http.ResponseWriter, r *http.Request) {
+func getProxyDelayHistory(server *Server) func(w http.ResponseWriter, r *http.Request) { //karing
 	return func(w http.ResponseWriter, r *http.Request) {
 		delayHistory := server.urlTestHistory.GetURLTestHistory()
 		render.JSON(w, r, render.M{

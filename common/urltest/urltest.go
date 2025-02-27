@@ -137,7 +137,7 @@ func URLTest(ctx context.Context, link string, detour N.Dialer) (t uint16, t2 ui
 	if err != nil {
 		return
 	}
-	t2 = uint16(time.Since(start).Milliseconds())
+	t2 = uint16(time.Since(start).Milliseconds())  //karing
 	resp.Body.Close()
 	{ //karing
 		start2 := time.Now()

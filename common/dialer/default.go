@@ -242,9 +242,9 @@ func (d *DefaultDialer) DialContext(ctx context.Context, network string, address
 		return nil, E.New("invalid address")
 	}
 	inbound := adapter.ContextFrom(ctx) //karing
-	var (//karing
+	var ( //karing
 		conn net.Conn
-		 err error
+		err error
 	)
 	if d.networkStrategy == nil {
 		switch N.NetworkName(network) {
@@ -318,7 +318,7 @@ func (d *DefaultDialer) DialParallelInterface(ctx context.Context, network strin
 
 func (d *DefaultDialer) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
 	if d.networkStrategy == nil {
-		var (
+		var ( //karing
 			conn net.PacketConn
 			 err error
 		)
@@ -330,7 +330,7 @@ func (d *DefaultDialer) ListenPacket(ctx context.Context, destination M.Socksadd
 			conn, err = d.udpListener.ListenPacket(ctx, N.NetworkUDP, d.udpAddr4) //karing
 		}
 		inbound := adapter.ContextFrom(ctx) //karing
-		return trackPacketConn(conn, err, destination, inbound)
+		return trackPacketConn(conn, err, destination, inbound) //karing
 	} else {
 		return d.ListenSerialInterfacePacket(ctx, destination, d.networkStrategy, d.networkType, d.fallbackNetworkType, d.networkFallbackDelay)
 	}
@@ -374,16 +374,16 @@ func (d *DefaultDialer) ListenPacketCompat(network, address string) (net.PacketC
 	return d.udpListener.ListenPacket(context.Background(), network, address)
 }
 
-func trackConn(conn net.Conn, err error, destination M.Socksaddr, inbound *adapter.InboundContext) (net.Conn, error) {
+func trackConn(conn net.Conn, err error, destination M.Socksaddr, inbound *adapter.InboundContext) (net.Conn, error) { //karing
 	if !conntrack.Enabled || err != nil {
 		return conn, err
 	}
-	return conntrack.NewConn(conn, destination, inbound)
+	return conntrack.NewConn(conn, destination, inbound) //karing
 }
 
-func trackPacketConn(conn net.PacketConn, err error, destination M.Socksaddr, inbound *adapter.InboundContext) (net.PacketConn, error) {
+func trackPacketConn(conn net.PacketConn, err error, destination M.Socksaddr, inbound *adapter.InboundContext) (net.PacketConn, error) { //karing
 	if !conntrack.Enabled || err != nil {
 		return conn, err
 	}
-	return conntrack.NewPacketConn(conn, destination, inbound)
+	return conntrack.NewPacketConn(conn, destination, inbound) //karing
 }

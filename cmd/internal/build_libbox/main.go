@@ -107,7 +107,7 @@ func buildAndroid() {
 		"-target", bindTarget,
 		"-androidapi", "21",
 		"-javapkg=io.nekohasekai",
-		//"-libname=box",  //karing
+		"-libname=box",
 	}
 	if !debugEnabled {
 		args = append(args, sharedFlags...)
@@ -157,8 +157,7 @@ func buildApple() {
 		"bind",
 		"-v",
 		"-target", bindTarget,
-		//"-libname=box", //karing
-		"-target", "ios,iossimulator,tvos,tvossimulator,macos",
+		"-libname=box",
 	}
 	if !debugEnabled {
 		args = append(args, sharedFlags...)
