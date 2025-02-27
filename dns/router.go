@@ -174,7 +174,6 @@ func (r *Router) matchDNS(ctx context.Context, allowFakeIP bool, ruleIndex int, 
 						options.ClientSubnet = legacyTransport.LegacyClientSubnet()
 					}
 				}
-				r.logger.DebugContext(ctx, "match[", displayRuleIndex, "] => ", currentRule.Action())
 				return transport, currentRule, currentRuleIndex
 			case *R.RuleActionDNSRouteOptions:
 				if action.Strategy != C.DomainStrategyAsIS {
@@ -189,9 +188,9 @@ func (r *Router) matchDNS(ctx context.Context, allowFakeIP bool, ruleIndex int, 
 				if action.ClientSubnet.IsValid() {
 					options.ClientSubnet = action.ClientSubnet
 				}
-				r.logger.DebugContext(ctx, "match[", displayRuleIndex, "] => ", currentRule.Action())
 			case *R.RuleActionReject:
-				r.logger.DebugContext(ctx, "match[", displayRuleIndex, "] => ", currentRule.Action())
+				return nil, currentRule, currentRuleIndex
+			case *R.RuleActionPredefined:
 				return nil, currentRule, currentRuleIndex
 			}
 		}
@@ -263,6 +262,21 @@ func (r *Router) Exchange(ctx context.Context, message *mDNS.Msg, options adapte
 						case C.RuleActionRejectMethodDrop:
 							return nil, tun.ErrDrop
 						}
+					case *R.RuleActionPredefined:
+						return &mDNS.Msg{
+							MsgHdr: mDNS.MsgHdr{
+								Id:                 message.Id,
+								Response:           true,
+								Authoritative:      true,
+								RecursionDesired:   true,
+								RecursionAvailable: true,
+								Rcode:              action.Rcode,
+							},
+							Question: message.Question,
+							Answer:   action.Answer,
+							Ns:       action.Ns,
+							Extra:    action.Extra,
+						}, nil
 					}
 				}
 				var responseCheck func(responseAddrs []netip.Addr) bool
@@ -301,7 +315,7 @@ func (r *Router) Exchange(ctx context.Context, message *mDNS.Msg, options adapte
 		return nil, err
 	}
 	if r.dnsReverseMapping != nil && len(message.Question) > 0 && response != nil && len(response.Answer) > 0 {
-		if transport.Type() != C.DNSTypeFakeIP {
+		if transport == nil || transport.Type() != C.DNSTypeFakeIP {
 			for _, answer := range response.Answer {
 				switch record := answer.(type) {
 				case *mDNS.A:
@@ -332,20 +346,20 @@ func (r *Router) Lookup(ctx context.Context, domain string, options adapter.DNSQ
 			}
 		} else if len(responseAddrs) == 0 {
 			r.logger.ErrorContext(ctx, "lookup failed for ", domain, ": empty result")
-			err = RCodeNameError
+			err = RcodeNameError
 		}
 	}
 	responseAddrs, cached = r.client.LookupCache(domain, options.Strategy)
 	if cached {
 		if len(responseAddrs) == 0 {
-			return nil, RCodeNameError
+			return nil, RcodeNameError
 		}
 		return responseAddrs, nil
 	}
 	r.logger.DebugContext(ctx, "lookup domain ", domain)
 	ctx, metadata := adapter.ExtendContext(ctx)
 	metadata.Destination = M.Socksaddr{}
-	metadata.Domain = domain
+	metadata.Domain = FqdnToDomain(domain)
 	if options.Transport != nil {
 		transport := options.Transport
 		if legacyTransport, isLegacy := transport.(adapter.LegacyDNSTransport); isLegacy {
@@ -379,6 +393,20 @@ func (r *Router) Lookup(ctx context.Context, domain string, options adapter.DNSQ
 					case C.RuleActionRejectMethodDrop:
 						return nil, tun.ErrDrop
 					}
+				case *R.RuleActionPredefined:
+					if action.Rcode != mDNS.RcodeSuccess {
+						err = RcodeError(action.Rcode)
+					} else {
+						for _, answer := range action.Answer {
+							switch record := answer.(type) {
+							case *mDNS.A:
+								responseAddrs = append(responseAddrs, M.AddrFromIP(record.A))
+							case *mDNS.AAAA:
+								responseAddrs = append(responseAddrs, M.AddrFromIP(record.AAAA))
+							}
+						}
+					}
+					goto response
 				}
 			}
 			var responseCheck func(responseAddrs []netip.Addr) bool
@@ -398,6 +426,7 @@ func (r *Router) Lookup(ctx context.Context, domain string, options adapter.DNSQ
 			printResult()
 		}
 	}
+response:
 	printResult()
 	if len(responseAddrs) > 0 {
 		r.logger.InfoContext(ctx, "lookup succeed for ", domain, ": ", strings.Join(F.MapToString(responseAddrs), " "))

@@ -36,7 +36,10 @@ func NewTransport(ctx context.Context, logger log.ContextLogger, tag string, opt
 	}, nil
 }
 
-func (t *Transport) Start() error {
+func (t *Transport) Start(stage adapter.StartStage) error {
+	if stage != adapter.StartStateStart {
+		return nil
+	}
 	return t.store.Start()
 }
 
@@ -52,7 +55,7 @@ func (t *Transport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS.Msg,
 	if question.Qtype != mDNS.TypeA && question.Qtype != mDNS.TypeAAAA {
 		return nil, E.New("only IP queries are supported by fakeip")
 	}
-	address, err := t.store.Create(question.Name, question.Qtype == mDNS.TypeAAAA)
+	address, err := t.store.Create(dns.FqdnToDomain(question.Name), question.Qtype == mDNS.TypeAAAA)
 	if err != nil {
 		return nil, err
 	}

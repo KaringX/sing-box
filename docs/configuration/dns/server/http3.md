@@ -11,20 +11,22 @@ icon: material/new-box
 ```json
 {
   "dns": {
-    "servers": {
-      "type": "h3",
-      "tag": "",
-      
-      "server": "",
-      "server_port": 443,
-      
-      "path": "",
-      "headers": {},
-      
-      "tls": {},
-      
-      // Dial Fields
-    }
+    "servers": [
+      {
+        "type": "h3",
+        "tag": "",
+        
+        "server": "",
+        "server_port": 443,
+        
+        "path": "",
+        "headers": {},
+        
+        "tls": {},
+        
+        // Dial Fields
+      }
+    ]
   }
 }
 ```
@@ -48,7 +50,7 @@ If domain name is used, `domain_resolver` must also be set to resolve IP address
 
 The port of the DNS server.
 
-`853` will be used by default.
+`443` will be used by default.
 
 #### path
 

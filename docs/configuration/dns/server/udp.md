@@ -4,22 +4,24 @@ icon: material/new-box
 
 !!! question "Since sing-box 1.12.0"
 
-# TCP
+# UDP
 
 ### Structure
 
 ```json
 {
   "dns": {
-    "servers": {
-      "type": "udp",
-      "tag": "",
-      
-      "server": "",
-      "server_port": 53,
-      
-      // Dial Fields
-    }
+    "servers": [
+      {
+        "type": "udp",
+        "tag": "",
+        
+        "server": "",
+        "server_port": 53,
+        
+        // Dial Fields
+      }
+    ]
   }
 }
 ```

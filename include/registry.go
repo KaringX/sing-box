@@ -15,6 +15,7 @@ import (
 	"github.com/sagernet/sing-box/dns/transport/local"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
+	"github.com/sagernet/sing-box/protocol/anytls"
 	"github.com/sagernet/sing-box/protocol/block"
 	"github.com/sagernet/sing-box/protocol/direct"
 	protocolDNS "github.com/sagernet/sing-box/protocol/dns"
@@ -53,6 +54,7 @@ func InboundRegistry() *inbound.Registry {
 	naive.RegisterInbound(registry)
 	shadowtls.RegisterInbound(registry)
 	vless.RegisterInbound(registry)
+	anytls.RegisterInbound(registry)
 
 	registerQUICInbounds(registry)
 	registerStubForRemovedInbounds(registry)
@@ -80,6 +82,7 @@ func OutboundRegistry() *outbound.Registry {
 	ssh.RegisterOutbound(registry)
 	shadowtls.RegisterOutbound(registry)
 	vless.RegisterOutbound(registry)
+	anytls.RegisterOutbound(registry)
 
 	registerQUICOutbounds(registry)
 	registerWireGuardOutbound(registry)
@@ -92,6 +95,7 @@ func EndpointRegistry() *endpoint.Registry {
 	registry := endpoint.NewRegistry()
 
 	registerWireGuardEndpoint(registry)
+	registerTailscaleEndpoint(registry)
 
 	return registry
 }
@@ -103,13 +107,13 @@ func DNSTransportRegistry() *dns.TransportRegistry {
 	transport.RegisterUDP(registry)
 	transport.RegisterTLS(registry)
 	transport.RegisterHTTPS(registry)
-	transport.RegisterPredefined(registry)
 	hosts.RegisterTransport(registry)
 	local.RegisterTransport(registry)
 	fakeip.RegisterTransport(registry)
 
 	registerQUICTransports(registry)
 	registerDHCPTransport(registry)
+	registerTailscaleTransport(registry)
 
 	return registry
 }

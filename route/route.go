@@ -493,12 +493,8 @@ match:
 			break match
 		}
 	}
-	if !preMatch && inputPacketConn != nil && !metadata.Destination.IsFqdn() && !metadata.Destination.Addr.IsGlobalUnicast() {
-		var timeout time.Duration
-		if metadata.InboundType == C.TypeSOCKS {
-			timeout = C.TCPTimeout
-		}
-		newBuffer, newPacketBuffers, newErr := r.actionSniff(ctx, metadata, &rule.RuleActionSniff{Timeout: timeout}, inputConn, inputPacketConn)
+	if !preMatch && inputPacketConn != nil && (metadata.InboundType == C.TypeSOCKS || metadata.InboundType == C.TypeMixed) && !metadata.Destination.IsFqdn() && !metadata.Destination.Addr.IsGlobalUnicast() {
+		newBuffer, newPacketBuffers, newErr := r.actionSniff(ctx, metadata, &rule.RuleActionSniff{Timeout: C.TCPTimeout}, inputConn, inputPacketConn)
 		if newErr != nil {
 			fatalErr = newErr
 			return
@@ -594,7 +590,7 @@ func (r *Router) actionSniff(
 					return
 				}
 			} else {
-				if !metadata.Destination.Addr.IsGlobalUnicast() {
+				if (metadata.InboundType == C.TypeSOCKS || metadata.InboundType == C.TypeMixed) && !metadata.Destination.IsFqdn() && !metadata.Destination.Addr.IsGlobalUnicast() && !metadata.RouteOriginalDestination.IsValid() {
 					metadata.Destination = destination
 				}
 				if len(packetBuffers) > 0 {
@@ -630,7 +626,7 @@ func (r *Router) actionSniff(
 					Destination: destination,
 				}
 				packetBuffers = append(packetBuffers, packetBuffer)
-				if E.IsMulti(err, sniff.ErrClientHelloFragmented) && len(packetBuffers) == 0 {
+				if E.IsMulti(err, sniff.ErrClientHelloFragmented) {
 					r.logger.DebugContext(ctx, "attempt to sniff fragmented QUIC client hello")
 					continue
 				}
@@ -670,8 +666,11 @@ func (r *Router) actionResolve(ctx context.Context, metadata *adapter.InboundCon
 			}
 		}
 		addresses, err := r.dns.Lookup(adapter.WithContext(ctx, metadata), metadata.Destination.Fqdn, adapter.DNSQueryOptions{
-			Transport: transport,
-			Strategy:  action.Strategy,
+			Transport:    transport,
+			Strategy:     action.Strategy,
+			DisableCache: action.DisableCache,
+			RewriteTTL:   action.RewriteTTL,
+			ClientSubnet: action.ClientSubnet,
 		})
 		if err != nil {
 			return err

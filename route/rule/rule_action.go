@@ -20,6 +20,8 @@ import (
 	"github.com/sagernet/sing/common/logger"
 	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
+
+	"github.com/miekg/dns"
 )
 
 func NewRuleAction(ctx context.Context, logger logger.ContextLogger, action option.RuleAction) (adapter.RuleAction, error) {
@@ -88,8 +90,11 @@ func NewRuleAction(ctx context.Context, logger logger.ContextLogger, action opti
 		return sniffAction, sniffAction.build()
 	case C.RuleActionTypeResolve:
 		return &RuleActionResolve{
-			Strategy: C.DomainStrategy(action.ResolveOptions.Strategy),
-			Server:   action.ResolveOptions.Server,
+			Server:       action.ResolveOptions.Server,
+			Strategy:     C.DomainStrategy(action.ResolveOptions.Strategy),
+			DisableCache: action.ResolveOptions.DisableCache,
+			RewriteTTL:   action.ResolveOptions.RewriteTTL,
+			ClientSubnet: action.ResolveOptions.ClientSubnet.Build(netip.Prefix{}),
 		}, nil
 	default:
 		panic(F.ToString("unknown rule action: ", action.Action))
@@ -122,6 +127,13 @@ func NewDNSRuleAction(logger logger.ContextLogger, action option.DNSRuleAction) 
 			Method: action.RejectOptions.Method,
 			NoDrop: action.RejectOptions.NoDrop,
 			logger: logger,
+		}
+	case C.RuleActionTypePredefined:
+		return &RuleActionPredefined{
+			Rcode:  action.PredefinedOptions.Rcode.Build(),
+			Answer: common.Map(action.PredefinedOptions.Answer, option.DNSRecordOptions.Build),
+			Ns:     common.Map(action.PredefinedOptions.Ns, option.DNSRecordOptions.Build),
+			Extra:  common.Map(action.PredefinedOptions.Extra, option.DNSRecordOptions.Build),
 		}
 	default:
 		panic(F.ToString("unknown rule action: ", action.Action))
@@ -172,6 +184,24 @@ func (r *RuleActionRouteOptions) Type() string {
 
 func (r *RuleActionRouteOptions) String() string {
 	var descriptions []string
+	if r.OverrideAddress.IsValid() {
+		descriptions = append(descriptions, F.ToString("override-address=", r.OverrideAddress.AddrString()))
+	}
+	if r.OverridePort > 0 {
+		descriptions = append(descriptions, F.ToString("override-port=", r.OverridePort))
+	}
+	if r.NetworkStrategy != nil {
+		descriptions = append(descriptions, F.ToString("network-strategy=", r.NetworkStrategy))
+	}
+	if r.NetworkType != nil {
+		descriptions = append(descriptions, F.ToString("network-type=", strings.Join(common.Map(r.NetworkType, C.InterfaceType.String), ",")))
+	}
+	if r.FallbackNetworkType != nil {
+		descriptions = append(descriptions, F.ToString("fallback-network-type="+strings.Join(common.Map(r.NetworkType, C.InterfaceType.String), ",")))
+	}
+	if r.FallbackDelay > 0 {
+		descriptions = append(descriptions, F.ToString("fallback-delay=", r.FallbackDelay.String()))
+	}
 	if r.UDPDisableDomainUnmapping {
 		descriptions = append(descriptions, "udp-disable-domain-unmapping")
 	}
@@ -358,8 +388,11 @@ func (r *RuleActionSniff) String() string {
 }
 
 type RuleActionResolve struct {
-	Strategy C.DomainStrategy
-	Server   string
+	Server       string
+	Strategy     C.DomainStrategy
+	DisableCache bool
+	RewriteTTL   *uint32
+	ClientSubnet netip.Prefix
 }
 
 func (r *RuleActionResolve) Type() string {
@@ -367,13 +400,45 @@ func (r *RuleActionResolve) Type() string {
 }
 
 func (r *RuleActionResolve) String() string {
-	if r.Strategy == C.DomainStrategyAsIS && r.Server == "" {
-		return F.ToString("resolve")
-	} else if r.Strategy != C.DomainStrategyAsIS && r.Server == "" {
-		return F.ToString("resolve(", option.DomainStrategy(r.Strategy).String(), ")")
-	} else if r.Strategy == C.DomainStrategyAsIS && r.Server != "" {
-		return F.ToString("resolve(", r.Server, ")")
-	} else {
-		return F.ToString("resolve(", option.DomainStrategy(r.Strategy).String(), ",", r.Server, ")")
+	var options []string
+	if r.Server != "" {
+		options = append(options, r.Server)
 	}
+	if r.Strategy != C.DomainStrategyAsIS {
+		options = append(options, F.ToString(option.DomainStrategy(r.Strategy)))
+	}
+	if r.DisableCache {
+		options = append(options, "disable_cache")
+	}
+	if r.RewriteTTL != nil {
+		options = append(options, F.ToString("rewrite_ttl=", *r.RewriteTTL))
+	}
+	if r.ClientSubnet.IsValid() {
+		options = append(options, F.ToString("client_subnet=", r.ClientSubnet))
+	}
+	if len(options) == 0 {
+		return "resolve"
+	} else {
+		return F.ToString("resolve(", strings.Join(options, ","), ")")
+	}
+}
+
+type RuleActionPredefined struct {
+	Rcode  int
+	Answer []dns.RR
+	Ns     []dns.RR
+	Extra  []dns.RR
+}
+
+func (r *RuleActionPredefined) Type() string {
+	return C.RuleActionTypePredefined
+}
+
+func (r *RuleActionPredefined) String() string {
+	var options []string
+	options = append(options, dns.RcodeToString[r.Rcode])
+	options = append(options, common.Map(r.Answer, dns.RR.String)...)
+	options = append(options, common.Map(r.Ns, dns.RR.String)...)
+	options = append(options, common.Map(r.Extra, dns.RR.String)...)
+	return F.ToString("predefined(", strings.Join(options, ","), ")")
 }

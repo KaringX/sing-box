@@ -19,14 +19,11 @@ import (
 	mDNS "github.com/miekg/dns"
 )
 
-func RegisterTransport(registry *dns.TransportRegistry) {
-	dns.RegisterTransport[option.LocalDNSServerOptions](registry, C.DNSTypeLocal, NewTransport)
-}
-
 var _ adapter.DNSTransport = (*Transport)(nil)
 
 type Transport struct {
 	dns.TransportAdapter
+	ctx    context.Context
 	hosts  *hosts.File
 	dialer N.Dialer
 }
@@ -86,9 +83,11 @@ func (t *Transport) exchangeParallel(ctx context.Context, systemConfig *dnsConfi
 	results := make(chan queryResult)
 	startRacer := func(ctx context.Context, fqdn string) {
 		response, err := t.tryOneName(ctx, systemConfig, fqdn, message)
-		addresses, _ := dns.MessageToAddresses(response)
-		if len(addresses) == 0 {
-			err = E.New(fqdn, ": empty result")
+		if err == nil {
+			addresses, _ := dns.MessageToAddresses(response)
+			if len(addresses) == 0 {
+				err = E.New(fqdn, ": empty result")
+			}
 		}
 		select {
 		case results <- queryResult{response, err}:
@@ -140,6 +139,9 @@ func (t *Transport) tryOneName(ctx context.Context, config *dnsConfig, fqdn stri
 }
 
 func (t *Transport) exchangeOne(ctx context.Context, server M.Socksaddr, question mDNS.Question, timeout time.Duration, useTCP, ad bool) (*mDNS.Msg, error) {
+	if server.Port == 0 {
+		server.Port = 53
+	}
 	var networks []string
 	if useTCP {
 		networks = []string{N.NetworkTCP}
