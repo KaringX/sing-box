@@ -3,6 +3,11 @@ package libbox
 import (
 	"sync"
 	"time"
+
+	"github.com/sagernet/sing-box/adapter"
+	"github.com/sagernet/sing-box/common/conntrack"
+	"github.com/sagernet/sing-box/experimental/clashapi"
+	"github.com/sagernet/sing/service"
 )
 
 type servicePauseFields struct {
@@ -11,10 +16,10 @@ type servicePauseFields struct {
 }
 
 func (s *BoxService) Pause() {
+	in, out := s.getConnectionInAndOutCount()
 	if s.instance != nil && s.instance.Logger() != nil { //karing
-		s.instance.Logger().Info("BoxService:DevicePause")
+		s.instance.Logger().Info("BoxService:DevicePause connectionsIn:", in, " connectionsOut:", out)
 	}
-	s.ResetNetwork()             //karing
 	s.pauseManager.DevicePause() //karing
 
 	s.pauseAccess.Lock()
@@ -22,14 +27,15 @@ func (s *BoxService) Pause() {
 	if s.pauseTimer != nil {
 		s.pauseTimer.Stop()
 	}
-	//s.pauseTimer = time.AfterFunc(3*time.Second, s.ResetNetwork) //karing
+	s.pauseTimer = time.AfterFunc(3*time.Second, s.ResetNetwork)
 }
 
 func (s *BoxService) Wake() {
+	in, out := s.getConnectionInAndOutCount()
 	if s.instance != nil && s.instance.Logger() != nil { //karing
-		s.instance.Logger().Info("BoxService:DeviceWake")
+		s.instance.Logger().Info("BoxService:DeviceWake connectionsIn:", in, " connectionsOut:", out)
 	}
-	s.ResetNetwork()            //karing
+
 	s.pauseManager.DeviceWake() //karing
 
 	s.pauseAccess.Lock()
@@ -37,7 +43,21 @@ func (s *BoxService) Wake() {
 	if s.pauseTimer != nil {
 		s.pauseTimer.Stop()
 	}
-	//s.pauseTimer = time.AfterFunc(3*time.Minute, s.ResetNetwork)//karing
+	s.pauseTimer = time.AfterFunc(3*time.Minute, s.ResetNetwork) //karing
+}
+
+func (s *BoxService) getConnectionInAndOutCount() (int, int) { //karing
+	var connectionsIn int
+	var connectionsOut int
+	clashServer := service.FromContext[adapter.ClashServer](s.ctx)
+	if clashServer != nil {
+		trafficManager := clashServer.(*clashapi.Server).TrafficManager()
+		if trafficManager != nil {
+			connectionsIn = trafficManager.ConnectionsLen()
+		}
+	}
+	connectionsOut = conntrack.Count()
+	return connectionsIn, connectionsOut
 }
 
 func (s *BoxService) ResetNetwork() {
