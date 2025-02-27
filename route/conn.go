@@ -62,7 +62,7 @@ func (m *ConnectionManager) NewConnection(ctx context.Context, this N.Dialer, co
 		remoteConn, err = this.DialContext(ctx, N.NetworkTCP, metadata.Destination)
 	}
 	if err != nil {
-		err = E.Cause(err, "open outbound connection")
+		err = E.Cause(err, "open outbound connection from ", metadata.Inbound, " source: ", metadata.Source, " to ", metadata.Outbound, " destination: ", metadata.Destination) //karing
 		N.CloseOnHandshakeFailure(conn, onClose, err)
 		m.logger.ErrorContext(ctx, err)
 		return
