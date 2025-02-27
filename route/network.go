@@ -143,7 +143,8 @@ func (r *NetworkManager) Start(stage adapter.StartStage) error {
 			err := r.powerListener.Start()
 			monitor.Finish()
 			if err != nil {
-				return E.Cause(err, "start power listener")
+				//return E.Cause(err, "start power listener") //karing
+				r.logger.Warn("start power listener: ", err) //karing
 			}
 		}
 		if C.IsAndroid && r.platformInterface == nil {
