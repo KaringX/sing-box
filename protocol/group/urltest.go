@@ -290,7 +290,7 @@ func (s *URLTest) NewPacketConnectionEx(ctx context.Context, conn N.PacketConn, 
 }
 
 func (s *URLTest) InterfaceUpdated() {
-	if s.group.pauseManager.IsNetworkPaused() || s.group.pauseManager.IsDevicePaused() { //karing
+	if s.group.pauseManager.IsNetworkPaused() { //karing
 		return
 	}
 	if !s.reTestIfNetworkUpdate { //karing
