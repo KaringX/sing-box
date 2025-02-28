@@ -395,7 +395,7 @@ func (r *NetworkManager) ResetNetwork() {
 
 func (r *NetworkManager) notifyInterfaceUpdate(defaultInterface *control.Interface, flags int) {
 	if defaultInterface == nil {
-		r.logger.Error("NetworkManager NetworkPause: missing default interface or network is not active") //karing
+		r.logger.Error("NetworkManager NetworkPause: missing default interface or network is not reachable") //karing
 		r.pauseManager.NetworkPause()
 		return
 	}

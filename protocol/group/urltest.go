@@ -526,7 +526,7 @@ func (g *URLTestGroup) urlTest(ctx context.Context, force bool) (map[string]urlt
 		if !loaded {
 			continue
 		}
-		if g.pauseManager.IsNetworkPaused() || g.pauseManager.IsDevicePaused() { //karing
+		if g.pauseManager.IsNetworkPaused() { //karing
 			g.pauseManager.WaitActive()
 		}
 		group.Submit(func() { //karing
