@@ -75,9 +75,6 @@ func (c *WebsocketConn) Read(b []byte) (n int, err error) {
 		}
 
 		if header.OpCode.IsControl() {
-			if header.Length > ws.MaxControlFramePayloadSize { //karing https://datatracker.ietf.org/doc/html/rfc6455#section-5.5
-				return 0, ws.ErrProtocolControlPayloadOverflow
-			}
 			err = c.controlHandler(header, c.reader)
 			if err != nil {
 				return
