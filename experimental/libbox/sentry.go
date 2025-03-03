@@ -4,24 +4,17 @@ package libbox
 import "os"
 
 type SentryInitCallbackFunc func(configPath string) ([]byte, error)
-type SentryCaptureExceptionCallbackFunc func(exception error)
+type SentryCaptureMessageCallbackFunc func(message error)
+type SentryCaptureExceptionCallbackFunc func(recoverMessage string, attachMessage string, stack string)
 
 var (
-	SentryInitCallback SentryInitCallbackFunc
+	SentryInitCallback             SentryInitCallbackFunc
+	SentryCaptureMessageCallback   SentryCaptureMessageCallbackFunc
 	SentryCaptureExceptionCallback SentryCaptureExceptionCallbackFunc
-	SentryDsn          string
-	SentryDid          string
-	SentryRelease      string
+	SentryDsn                      string
+	SentryDid                      string
+	SentryRelease                  string
 )
-
-type SentryPanicError struct {
-	Err   string
-}
-
-func (e *SentryPanicError) Error() string {
-	return e.Err
-}
-
 
 func SentryGetDsn() string {
 	return SentryDsn
@@ -35,15 +28,21 @@ func SentryGetRelease() string {
 	return SentryRelease
 }
 
-func SentryInit(configPath string) ([]byte, error){
+func SentryInit(configPath string) ([]byte, error) {
 	if SentryInitCallback == nil {
 		return os.ReadFile(configPath)
 	}
 	return SentryInitCallback(configPath)
 }
-func SentryCaptureException(exception error){
-	if SentryCaptureExceptionCallback == nil {
-		return  
+func SentryCaptureMessage(message error) {
+	if SentryCaptureMessageCallback == nil {
+		return
 	}
-	SentryCaptureExceptionCallback(exception)
+	SentryCaptureMessageCallback(message)
+}
+func SentryCaptureException(recoverMessage string, attachMessage string, stack string) {
+	if SentryCaptureExceptionCallback == nil {
+		return
+	}
+	SentryCaptureExceptionCallback(recoverMessage, attachMessage, stack)
 }

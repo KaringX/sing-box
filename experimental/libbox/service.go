@@ -49,13 +49,12 @@ type BoxService struct {
 func NewService(configContent string, platformInterface PlatformInterface) (boxService *BoxService, err error) {
 	defer func() { //karing
 		if e := recover(); e != nil {
-			content := fmt.Sprintf("%v\n%s", e, string(debug.Stack()))
-			err = E.Cause(E.New(content), "panic: create service")
-			SentryCaptureException(&SentryPanicError{Err: err.Error()})
+			recoverMessage := fmt.Sprintf("%v", e)
+			SentryCaptureException(recoverMessage, "panic: create service", string(debug.Stack()))
 		}
 	}()
 	stacks := D.Stacks(false, false) //karing
-	if len(stacks) > 0 {  //karing
+	if len(stacks) > 0 {             //karing
 		for key := range stacks {
 			D.MainGoId = key
 			break
@@ -64,10 +63,10 @@ func NewService(configContent string, platformInterface PlatformInterface) (boxS
 	ctx := box.Context(context.Background(), include.InboundRegistry(), include.OutboundRegistry(), include.EndpointRegistry())
 	ctx = filemanager.WithDefault(ctx, sWorkingPath, sBasePath, sTempPath, sUserID, sGroupID) //karing
 	service.MustRegister[deprecated.Manager](ctx, new(deprecatedManager))
-	var options option.Options //karing
+	var options option.Options                     //karing
 	options, err = parseConfig(ctx, configContent) //karing
 	if err != nil {
-		SentryCaptureException(E.Cause(err, "create service")) //karing 
+		SentryCaptureMessage(E.Cause(err, "create service")) //karing
 		return nil, err
 	}
 	runtimeDebug.FreeOSMemory()
@@ -79,7 +78,7 @@ func NewService(configContent string, platformInterface PlatformInterface) (boxS
 		useProcFS: platformInterface.UseProcFS(),
 	}
 	service.MustRegister[platform.Interface](ctx, platformWrapper)
-	var instance *box.Box //karing
+	var instance *box.Box                //karing
 	instance, err = box.New(box.Options{ //karing
 		Context:           ctx,
 		Options:           options,
@@ -87,7 +86,7 @@ func NewService(configContent string, platformInterface PlatformInterface) (boxS
 	})
 	if err != nil {
 		cancel()
-		SentryCaptureException(E.Cause(err, "create service")) //karing 
+		SentryCaptureMessage(E.Cause(err, "create service")) //karing
 		return nil, E.Cause(err, "create service")
 	}
 	runtimeDebug.FreeOSMemory()
@@ -104,9 +103,8 @@ func NewService(configContent string, platformInterface PlatformInterface) (boxS
 func (s *BoxService) Start() (err error) { //karing
 	defer func() { //karing
 		if e := recover(); e != nil {
-			content := fmt.Sprintf("%v\n%s", e, string(debug.Stack()))
-			err = E.Cause(E.New(content), "panic: start service")
-			SentryCaptureException(&SentryPanicError{Err: err.Error()})
+			recoverMessage := fmt.Sprintf("%v", e)
+			SentryCaptureException(recoverMessage, "panic: start service", string(debug.Stack()))
 		}
 	}()
 	if sFixAndroidStack {
@@ -121,8 +119,8 @@ func (s *BoxService) Start() (err error) { //karing
 	} else {
 		err = s.instance.Start()
 	}
-	if err != nil { //karing 
-		SentryCaptureException(E.Cause(err, "start service"))
+	if err != nil { //karing
+		SentryCaptureMessage(E.Cause(err, "start service"))
 	}
 	return err
 }
@@ -290,7 +288,7 @@ func (w *platformInterfaceWrapper) FindProcessInfo(ctx context.Context, network 
 	return &process.Info{UserId: uid, PackageName: packageName}, nil
 }
 
-func (w *platformInterfaceWrapper) GetAssetContent(path string)([]byte, error) {//karing
+func (w *platformInterfaceWrapper) GetAssetContent(path string) ([]byte, error) { //karing
 	return w.iif.GetAssetContent(path)
 }
 
