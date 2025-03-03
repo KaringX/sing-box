@@ -17,9 +17,8 @@ var stderrLogFile *os.File
 func StderrRedirect(path string) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			content := fmt.Sprintf("%v\n%s", e, string(debug.Stack()))
-			err = E.Cause(E.New(content), "panic: StderrRedirect")
-			SentryCaptureException(&SentryPanicError{Err: err.Error()})
+			recoverMessage := fmt.Sprintf("%v", e)
+			SentryCaptureException(recoverMessage, "panic: StderrRedirect", string(debug.Stack()))
 		}
 	}()
 	if len(path) == 0 {
@@ -39,9 +38,13 @@ func StderrRedirect(path string) (err error) {
 			index := strings.Index(content, "panic")
 			if index >= 0 {
 				lines := strings.Split(content[index:], "\n")
+				recoverMessage := ""
 				findStack := false
-				for _, line := range lines {
+				for i, line := range lines {
 					line = strings.Trim(line, "\r\t\n")
+					if i == 0 {
+						recoverMessage = line
+					}
 					if strings.HasPrefix(line, "goroutine ") {
 						if findStack {
 							break
@@ -52,7 +55,7 @@ func StderrRedirect(path string) (err error) {
 					}
 				}
 				if len(stack) > 0 {
-					SentryCaptureException(&SentryPanicError{Err: strings.Join(stack, "\n")})
+					SentryCaptureException(recoverMessage, "", strings.Join(stack, "\n"))
 				}
 			}
 		}()

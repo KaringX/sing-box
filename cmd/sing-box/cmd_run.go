@@ -130,9 +130,8 @@ func readConfigAndMerge() (option.Options, error) {
 func create() (instance *box.Box, cf context.CancelFunc, err error) { //karing
 	defer func() { //karing
 		if e := recover(); e != nil {
-			content := fmt.Sprintf("%v\n%s", e, string(debug.Stack()))
-			err = E.Cause(E.New(content), "panic: create service")
-			libbox.SentryCaptureException(&libbox.SentryPanicError{Err: err.Error()})
+			recoverMessage := fmt.Sprintf("%v", e)
+			libbox.SentryCaptureException(recoverMessage, "panic: create service", string(debug.Stack()))
 		}
 	}()
 	stacks := D.Stacks(false, false) //karing
@@ -145,7 +144,7 @@ func create() (instance *box.Box, cf context.CancelFunc, err error) { //karing
 
 	options, err := readConfigAndMerge()
 	if err != nil {
-		libbox.SentryCaptureException(err) //karing
+		libbox.SentryCaptureMessage(err) //karing
 		return nil, nil, err
 	}
 	if disableColor {
@@ -161,7 +160,7 @@ func create() (instance *box.Box, cf context.CancelFunc, err error) { //karing
 	})
 	if err != nil {
 		cancel()
-		libbox.SentryCaptureException(E.Cause(err, "create service")) //karing
+		libbox.SentryCaptureMessage(E.Cause(err, "create service")) //karing
 		return nil, nil, E.Cause(err, "create service")
 	}
 
@@ -183,7 +182,7 @@ func create() (instance *box.Box, cf context.CancelFunc, err error) { //karing
 	finishStart()
 	if err != nil {
 		cancel()
-		libbox.SentryCaptureException(E.Cause(err, "start service")) //karing
+		libbox.SentryCaptureMessage(E.Cause(err, "start service")) //karing
 		return nil, nil, E.Cause(err, "start service")
 	}
 	if servicePort != 0 { //karing
