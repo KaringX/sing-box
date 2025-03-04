@@ -34,6 +34,8 @@ github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20250124034128-57c349f786fb h1:O
 github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20250124034128-57c349f786fb/go.mod h1:jGXij2Gn2wbrWuYNUmmNhf1dwcZtvyAvQoe8Xd8MbUo=
 github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20250223050301-4b516c388c7f h1:21WQPVgceg4BpQNSf1B/os4p9NxP6t+oq4/KoZSjPRg=
 github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20250223050301-4b516c388c7f/go.mod h1:jGXij2Gn2wbrWuYNUmmNhf1dwcZtvyAvQoe8Xd8MbUo=
+github.com/KaringX/ws v0.0.0-20250301004503-082f57b5c845 h1:WQC0VxbvsoQlocfnRKDgNfZ9nnp29tqHOeWxxN0PUs0=
+github.com/KaringX/ws v0.0.0-20250301004503-082f57b5c845/go.mod h1:LtfoSK3+NG57tvnVEHgcuBW9ujgE8enPSgzgwStwCAA=
 github.com/ajg/form v1.5.1 h1:t9c7v8JUKu/XxOGBU0yjNpaMloxGEJhUkqFRq0ibGeU=
 github.com/ajg/form v1.5.1/go.mod h1:uL1WgH+h2mgNtvBq0339dVnzXdBETtL2LeUXaIv25UY=
 github.com/alitto/pond v1.9.2 h1:9Qb75z/scEZVCoSU+osVmQ0I0JOeLfdTDafrbcJ8CLs=

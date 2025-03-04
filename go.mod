@@ -89,7 +89,7 @@ replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.202
 
 //replace github.com/sagernet/sing-tun => ../../KaringX/sing-tun
 
-replace github.com/KaringX/ws => github.com/KaringX/ws v0.0.0-20250301004503-082f57b5c845 //karing_fork
+replace github.com/sagernet/ws => github.com/KaringX/ws v0.0.0-20250301004503-082f57b5c845 //karing_fork
 
 //replace github.com/sagernet/ws => ../../KaringX/ws
 
