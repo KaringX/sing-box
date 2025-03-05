@@ -40,7 +40,7 @@ type Outbound struct {
 	cipher     core.Cipher
 	obfs       obfs.Obfs
 	protocol   protocol.Protocol
-	parseErr   error                //karing
+	parseErr   error //karing
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.ShadowsocksROutboundOptions) (adapter.Outbound, error) {
@@ -54,16 +54,17 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		return empty, err //karing
 	}
 	outbound := &Outbound{
-		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeShadowsocksR, tag, options.Network.Build(), options.DialerOptions),
-		router:  router,
-		logger:  logger,
+		Adapter:    outbound.NewAdapterWithDialerOptions(C.TypeShadowsocksR, tag, options.Network.Build(), options.DialerOptions),
+		router:     router,
+		logger:     logger,
 		dialer:     outboundDialer,
 		serverAddr: options.ServerOptions.Build(),
 	}
 	var cipher string
 	switch options.Method {
 	case "none":
-		cipher = "dummy"
+		//cipher = "dummy" //karing
+		return empty, fmt.Errorf("method: %s is not supported", cipher) //karing
 	default:
 		cipher = options.Method
 	}
@@ -110,7 +111,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 }
 
 func (h *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
-	if(h.parseErr != nil){ //karing
+	if h.parseErr != nil { //karing
 		return nil, h.parseErr
 	}
 	ctx, metadata := adapter.ExtendContext(ctx)
@@ -148,7 +149,7 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 }
 
 func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
-	if(h.parseErr != nil){ //karing
+	if h.parseErr != nil { //karing
 		return nil, h.parseErr
 	}
 	ctx, metadata := adapter.ExtendContext(ctx)
@@ -165,9 +166,10 @@ func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
 	return packetConn, nil
 }
 
-func (h *Outbound) SetParseErr(err error){ //karing
+func (h *Outbound) SetParseErr(err error) { //karing
 	h.parseErr = err
 }
+
 type ssPacketConn struct {
 	net.PacketConn
 	rAddr net.Addr
