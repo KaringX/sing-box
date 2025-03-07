@@ -50,7 +50,7 @@ func NewService(configContent string, platformInterface PlatformInterface) (boxS
 	defer func() { //karing
 		if e := recover(); e != nil {
 			recoverMessage := fmt.Sprintf("%v", e)
-			SentryCaptureException(recoverMessage, "panic: create service", string(debug.Stack()))
+			SentryCaptureException(recoverMessage, "panic: create service", SentryTrim(string(debug.Stack())))
 		}
 	}()
 	stacks := D.Stacks(false, false) //karing
@@ -104,7 +104,7 @@ func (s *BoxService) Start() (err error) { //karing
 	defer func() { //karing
 		if e := recover(); e != nil {
 			recoverMessage := fmt.Sprintf("%v", e)
-			SentryCaptureException(recoverMessage, "panic: start service", string(debug.Stack()))
+			SentryCaptureException(recoverMessage, "panic: start service", SentryTrim(string(debug.Stack())))
 		}
 	}()
 	if sFixAndroidStack {

@@ -1,7 +1,10 @@
 // karing
 package libbox
 
-import "os"
+import (
+	"os"
+	"strings"
+)
 
 type SentryInitCallbackFunc func(configPath string) ([]byte, error)
 type SentryCaptureMessageCallbackFunc func(message error)
@@ -45,4 +48,14 @@ func SentryCaptureException(recoverMessage string, attachMessage string, stack s
 		return
 	}
 	SentryCaptureExceptionCallback(recoverMessage, attachMessage, stack)
+}
+func SentryTrim(stack string) string {
+	lines := strings.Split(stack, "\n")
+	if len(lines) > 3 {
+		if lines[1] == "runtime/debug.Stack()" {
+			copy(lines[0:], lines[3:])
+			lines = lines[:len(lines)-3]
+		}
+	}
+	return strings.Join(lines, "\n")
 }

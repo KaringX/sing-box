@@ -131,7 +131,7 @@ func create() (instance *box.Box, cf context.CancelFunc, err error) { //karing
 	defer func() { //karing
 		if e := recover(); e != nil {
 			recoverMessage := fmt.Sprintf("%v", e)
-			libbox.SentryCaptureException(recoverMessage, "panic: create service", string(debug.Stack()))
+			libbox.SentryCaptureException(recoverMessage, "panic: create service", libbox.SentryTrim(string(debug.Stack())))
 		}
 	}()
 	stacks := D.Stacks(false, false) //karing
