@@ -439,6 +439,7 @@ func (s *Box) start() error {
 }
 
 func (s *Box) Close() error {
+	closeDebug() //karing
 	select {
 	case <-s.done:
 		return os.ErrClosed

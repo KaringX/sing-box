@@ -70,7 +70,14 @@ func applyDebugListenOption(options option.DebugOptions) {
 	go func() {
 		err := debugHTTPServer.ListenAndServe()
 		if err != nil && !E.IsClosed(err) {
-			log.Error(E.Cause(err, "serve debug HTTP server"))
+			log.Warn(E.Cause(err, "serve debug HTTP server")) //karing
 		}
 	}()
+}
+
+func closeDebugListen() { //karing
+	if debugHTTPServer != nil {
+		debugHTTPServer.Close()
+		debugHTTPServer = nil
+	}
 }
