@@ -222,7 +222,7 @@ func NewRouter(ctx context.Context, logFactory log.Factory, options option.Route
 								break
 							}
 						} else if notIpAddress && strings.Contains(address, ".") {
-							return nil, E.New("parse dns server[", tag, "]: missing address_resolver")
+							return nil, E.New("parse dns server[", tag, "]: missing address_resolver: ", address)
 						}
 
 					}
