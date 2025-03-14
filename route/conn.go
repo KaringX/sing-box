@@ -165,22 +165,17 @@ func (m *ConnectionManager) NewPacketConnection(ctx context.Context, this N.Dial
 		} else {
 			originDestination = metadata.Destination
 		}
-		if metadata.Destination != M.SocksaddrFrom(destinationAddress, metadata.Destination.Port) {
+		if natConn, loaded := common.Cast[bufio.NATPacketConn](conn); loaded {
+			natConn.UpdateDestination(destinationAddress)
+		} else if metadata.Destination != M.SocksaddrFrom(destinationAddress, metadata.Destination.Port) {
 			if metadata.UDPDisableDomainUnmapping {
 				remotePacketConn = bufio.NewUnidirectionalNATPacketConn(bufio.NewPacketConn(remotePacketConn), M.SocksaddrFrom(destinationAddress, metadata.Destination.Port), originDestination)
 			} else {
 				remotePacketConn = bufio.NewNATPacketConn(bufio.NewPacketConn(remotePacketConn), M.SocksaddrFrom(destinationAddress, metadata.Destination.Port), originDestination)
 			}
 		}
-		if natConn, loaded := common.Cast[bufio.NATPacketConn](conn); loaded {
-			natConn.UpdateDestination(destinationAddress)
-		}
 	} else if metadata.RouteOriginalDestination.IsValid() && metadata.RouteOriginalDestination != metadata.Destination {
-		if metadata.UDPDisableDomainUnmapping {
-			remotePacketConn = bufio.NewUnidirectionalNATPacketConn(bufio.NewPacketConn(remotePacketConn), metadata.Destination, metadata.RouteOriginalDestination)
-		} else {
-			remotePacketConn = bufio.NewNATPacketConn(bufio.NewPacketConn(remotePacketConn), metadata.Destination, metadata.RouteOriginalDestination)
-		}
+		remotePacketConn = bufio.NewDestinationNATPacketConn(bufio.NewPacketConn(remotePacketConn), metadata.Destination, metadata.RouteOriginalDestination)
 	}
 	var udpTimeout time.Duration
 	if metadata.UDPTimeout > 0 {
@@ -295,13 +290,17 @@ func (m *ConnectionManager) connectionCopy(ctx context.Context, source io.Reader
 func (m *ConnectionManager) packetConnectionCopy(ctx context.Context, source N.PacketReader, destination N.PacketWriter, direction bool, done *atomic.Bool, onClose N.CloseHandlerFunc) {
 	_, err := bufio.CopyPacket(destination, source)
 	if !direction {
-		if E.IsClosedOrCanceled(err) {
+		if err == nil {
+			m.logger.DebugContext(ctx, "packet upload finished")
+		} else if E.IsClosedOrCanceled(err) {
 			m.logger.TraceContext(ctx, "packet upload closed")
 		} else {
 			m.logger.DebugContext(ctx, "packet upload closed: ", err)
 		}
 	} else {
-		if E.IsClosedOrCanceled(err) {
+		if err == nil {
+			m.logger.DebugContext(ctx, "packet download finished")
+		} else if E.IsClosedOrCanceled(err) {
 			m.logger.TraceContext(ctx, "packet download closed")
 		} else {
 			m.logger.DebugContext(ctx, "packet download closed: ", err)
