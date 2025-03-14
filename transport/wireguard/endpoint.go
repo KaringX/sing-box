@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing/common"
 	E "github.com/sagernet/sing/common/exceptions"
 	F "github.com/sagernet/sing/common/format"
@@ -32,9 +33,78 @@ type Endpoint struct {
 	device         *device.Device
 	pauseManager   pause.Manager
 	pauseCallback  *list.Element[pause.Callback]
+
+	fakePackets         []int  //hiddify
+	fakePacketsSize     []int  //hiddify
+	fakePacketsDelay    []int  //hiddify
+	fakePacketsHeader   []byte //hiddify
+	fakePacketsNoModify bool   //hiddify
+	parseErr            error  //karing
 }
 
 func NewEndpoint(options EndpointOptions) (*Endpoint, error) {
+	fakePackets := []int{0, 0}      //hiddify                                                                                                                        //hiddify
+	fakePacketsSize := []int{0, 0}  //hiddify                                                                                                                       //hiddify
+	fakePacketsDelay := []int{0, 0} //hiddify
+	fakePacketsHeader := []byte{}   //hiddify
+	fakePacketsNoModify := false    //hiddify                                                                                                           //hiddify
+	if options.FakePackets != "" {  //hiddify                                                                                                                   //hiddify
+		var err error
+		fakePackets, err = option.ParseIntRange(options.FakePackets)
+		if err != nil {
+			return nil, err
+		}
+		fakePacketsSize = []int{40, 100}
+		fakePacketsDelay = []int{10, 50}
+
+		if options.FakePacketsSize != "" {
+			var err error
+			fakePacketsSize, err = option.ParseIntRange(options.FakePacketsSize)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		if options.FakePacketsDelay != "" {
+			var err error
+			fakePacketsDelay, err = option.ParseIntRange(options.FakePacketsDelay)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	//hiddify begin
+	mode := strings.ToLower(options.FakePacketsMode)
+	if mode == "" || mode == "m1" {
+		fakePacketsHeader = []byte{}
+		fakePacketsNoModify = false
+	} else if mode == "m2" {
+		fakePacketsHeader = []byte{}
+		fakePacketsNoModify = true
+	} else if mode == "m3" {
+		// clist := []byte{0xC0, 0xC2, 0xC3, 0xC4, 0xC9, 0xCB, 0xCC, 0xCD, 0xCE, 0xCF}
+		fakePacketsHeader = []byte{0xDC, 0xDE, 0xD3, 0xD9, 0xD0, 0xEC, 0xEE, 0xE3}
+		fakePacketsNoModify = false
+	} else if mode == "m4" {
+		fakePacketsHeader = []byte{0xDC, 0xDE, 0xD3, 0xD9, 0xD0, 0xEC, 0xEE, 0xE3}
+		fakePacketsNoModify = true
+	} else if mode == "m5" {
+		fakePacketsHeader = []byte{0xC0, 0xC2, 0xC3, 0xC4, 0xC9, 0xCB, 0xCC, 0xCD, 0xCE, 0xCF}
+		fakePacketsNoModify = false
+	} else if mode == "m6" {
+		fakePacketsHeader = []byte{0x40, 0x42, 0x43, 0x44, 0x49, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F}
+		fakePacketsNoModify = true
+	} else if strings.HasPrefix(mode, "h") || strings.HasPrefix(mode, "g") {
+		clist, err := hex.DecodeString(strings.ReplaceAll(mode[1:], "_", ""))
+		if err != nil {
+			return nil, E.Cause(err, "decode FakePacketsMode")
+		}
+		fakePacketsHeader = clist
+		fakePacketsNoModify = strings.HasPrefix(mode, "h")
+	} else {
+		return nil, fmt.Errorf("incorrect packet mode: %s", mode)
+	}
+	//hiddify end
 	if options.PrivateKey == "" {
 		return nil, E.New("missing private key")
 	}
@@ -112,37 +182,55 @@ func NewEndpoint(options EndpointOptions) (*Endpoint, error) {
 		return nil, E.Cause(err, "create WireGuard device")
 	}
 	return &Endpoint{
-		options:        options,
-		peers:          peers,
-		ipcConf:        ipcConf,
-		allowedAddress: allowedAddresses,
-		tunDevice:      tunDevice,
+		options:             options,
+		peers:               peers,
+		ipcConf:             ipcConf,
+		allowedAddress:      allowedAddresses,
+		tunDevice:           tunDevice,
+		fakePackets:         fakePackets,         //hiddify
+		fakePacketsSize:     fakePacketsSize,     //hiddify
+		fakePacketsDelay:    fakePacketsDelay,    //hiddify
+		fakePacketsHeader:   fakePacketsHeader,   //hiddify
+		fakePacketsNoModify: fakePacketsNoModify, //hiddify
 	}, nil
 }
 
 func (e *Endpoint) Start(resolve bool) error {
+	return nil //karing
+}
+
+func (e *Endpoint) start() error {
+	if e.parseErr != nil { //karing
+		return e.parseErr
+	}
+	if e.device != nil { //karing
+		return nil
+	}
 	if common.Any(e.peers, func(peer peerConfig) bool {
 		return !peer.endpoint.IsValid() && peer.destination.IsFqdn()
 	}) {
-		if !resolve {
-			return nil
-		}
+		//if !resolve { //karing
+		//	return nil
+		//}
 		for peerIndex, peer := range e.peers {
 			if peer.endpoint.IsValid() || !peer.destination.IsFqdn() {
 				continue
 			}
 			destinationAddress, err := e.options.ResolvePeer(peer.destination.Fqdn)
 			if err != nil {
+				e.parseErr = E.Cause(err, "resolve endpoint domain for peer[", peerIndex, "]: ", peer.destination) //karing
 				return E.Cause(err, "resolve endpoint domain for peer[", peerIndex, "]: ", peer.destination)
 			}
 			e.peers[peerIndex].endpoint = netip.AddrPortFrom(destinationAddress, peer.destination.Port)
 		}
-	} else if resolve {
-		return nil
-	}
+	} //else if resolve { //karing
+	//	return nil
+	//}
+
 	var bind conn.Bind
 	wgListener, isWgListener := e.options.Dialer.(conn.Listener)
-	if isWgListener {
+	useStdNetBind := false             //karing
+	if isWgListener && useStdNetBind { //karing
 		bind = conn.NewStdNetBind(wgListener)
 	} else {
 		var (
@@ -166,6 +254,7 @@ func (e *Endpoint) Start(resolve bool) error {
 	}
 	err := e.tunDevice.Start()
 	if err != nil {
+		e.parseErr = err //karing
 		return err
 	}
 	logger := &device.Logger{
@@ -177,6 +266,11 @@ func (e *Endpoint) Start(resolve bool) error {
 		},
 	}
 	wgDevice := device.NewDevice(e.options.Context, e.tunDevice, bind, logger, e.options.Workers)
+	wgDevice.FakePackets = e.fakePackets                 //hiddify
+	wgDevice.FakePacketsSize = e.fakePacketsSize         //hiddify
+	wgDevice.FakePacketsDelays = e.fakePacketsDelay      //hiddify
+	wgDevice.FakePacketsHeader = e.fakePacketsHeader     //hiddify
+	wgDevice.FakePacketsNoModify = e.fakePacketsNoModify //hiddify
 	e.tunDevice.SetDevice(wgDevice)
 	ipcConf := e.ipcConf
 	for _, peer := range e.peers {
@@ -184,6 +278,7 @@ func (e *Endpoint) Start(resolve bool) error {
 	}
 	err = wgDevice.IpcSet(ipcConf)
 	if err != nil {
+		e.parseErr = E.Cause(err, "setup wireguard: \n", ipcConf) //karing
 		return E.Cause(err, "setup wireguard: \n", ipcConf)
 	}
 	e.device = wgDevice
@@ -198,6 +293,10 @@ func (e *Endpoint) DialContext(ctx context.Context, network string, destination 
 	if !destination.Addr.IsValid() {
 		return nil, E.Cause(os.ErrInvalid, "invalid non-IP destination")
 	}
+	err := e.start() //karing
+	if err != nil {  //karing
+		return nil, err
+	}
 	return e.tunDevice.DialContext(ctx, network, destination)
 }
 
@@ -205,10 +304,20 @@ func (e *Endpoint) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
 	if !destination.Addr.IsValid() {
 		return nil, E.Cause(os.ErrInvalid, "invalid non-IP destination")
 	}
+	err := e.start() //karing
+	if err != nil {  //karing
+		return nil, err
+	}
 	return e.tunDevice.ListenPacket(ctx, destination)
 }
 
 func (e *Endpoint) BindUpdate() error {
+	if e.parseErr != nil { //karing
+		return e.parseErr
+	}
+	if e.device == nil { //karing
+		return nil
+	}
 	return e.device.BindUpdate()
 }
 
@@ -223,6 +332,9 @@ func (e *Endpoint) Close() error {
 }
 
 func (e *Endpoint) onPauseUpdated(event int) {
+	if e.device == nil { //karing
+		return
+	}
 	switch event {
 	case pause.EventDevicePaused:
 		e.device.Down()

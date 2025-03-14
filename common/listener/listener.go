@@ -36,6 +36,7 @@ type Listener struct {
 	packetOutbound       chan *N.PacketBuffer
 	packetOutboundClosed chan struct{}
 	shutdown             atomic.Bool
+	router               adapter.Router //karing
 }
 
 type Options struct {
@@ -50,6 +51,7 @@ type Options struct {
 	DisablePacketOutput      bool
 	SetSystemProxy           bool
 	SystemProxySOCKS         bool
+	Router                   adapter.Router //karing
 }
 
 func New(
@@ -67,6 +69,7 @@ func New(
 		disablePacketOutput:      options.DisablePacketOutput,
 		setSystemProxy:           options.SetSystemProxy,
 		systemProxySOCKS:         options.SystemProxySOCKS,
+		router:                   options.Router, //karing
 	}
 }
 

@@ -25,7 +25,11 @@ func (l *Listener) ListenUDP() (net.PacketConn, error) {
 		lc.Control = control.Append(lc.Control, control.DisableUDPFragment())
 	}
 	udpConn, err := lc.ListenPacket(l.ctx, M.NetworkFromNetAddr(N.NetworkUDP, bindAddr.Addr), bindAddr.String())
-	if err != nil {
+	if err != nil { //karing
+		info, err1 := l.router.FindProcessInfo(l.ctx, N.NetworkTCP, bindAddr.AddrPort())
+		if err1 == nil {
+			err = E.Cause(err, "port[", bindAddr.AddrPort().Port(), "] is occupied by[", info.ProcessPath, info.PackageName, "] ")
+		}
 		return nil, err
 	}
 	l.udpConn = udpConn.(*net.UDPConn)

@@ -78,7 +78,7 @@ func findProcessName(network string, ip netip.Addr, srcPort int) (string, error)
 	}
 
 	const (
-		tcpTablePidConn = 4
+		tcpTablePidAll = 5 //TCP_TABLE_OWNER_PID_ALL  //karing
 		udpTablePid     = 1
 	)
 
@@ -87,7 +87,7 @@ func findProcessName(network string, ip netip.Addr, srcPort int) (string, error)
 	switch network {
 	case N.NetworkTCP:
 		fn = procGetExtendedTcpTable.Addr()
-		class = tcpTablePidConn
+		class = tcpTablePidAll //karing
 	case N.NetworkUDP:
 		fn = procGetExtendedUdpTable.Addr()
 		class = udpTablePid
@@ -126,8 +126,8 @@ func (s *searcher) Search(b []byte, ip netip.Addr, port uint16) (uint32, error) 
 
 		if s.tcpState >= 0 {
 			tcpState := readNativeUint32(row[s.tcpState : s.tcpState+4])
-			// MIB_TCP_STATE_ESTAB, only check established connections for TCP
-			if tcpState != 5 {
+			// MIB_TCP_STATE_ESTAB, MIB_TCP_STATE_LISTEN only check listening or established connections for TCP
+			if tcpState != 5 && tcpState != 2 { //karing
 				continue
 			}
 		}

@@ -46,6 +46,12 @@ func (l *Listener) ListenTCP() (net.Listener, error) {
 	}
 	if err == nil {
 		l.logger.Info("tcp server started at ", tcpListener.Addr())
+	} else { //karing
+		info, err1 := l.router.FindProcessInfo(l.ctx, N.NetworkTCP, bindAddr.AddrPort())
+		if err1 == nil {
+			err = E.Cause(err, "port[", bindAddr.AddrPort().Port(), "] is occupied by[", info.ProcessPath, info.PackageName, "] ")
+		}
+		return nil, err
 	}
 	//nolint:staticcheck
 	if l.listenOptions.ProxyProtocol || l.listenOptions.ProxyProtocolAcceptNoHeader {

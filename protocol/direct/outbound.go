@@ -39,13 +39,18 @@ type Outbound struct {
 	overrideOption      int
 	overrideDestination M.Socksaddr
 	// loopBack *loopBackDetector
+	parseErr            error   //karing
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.DirectOutboundOptions) (adapter.Outbound, error) {
+	empty := &Outbound{ //karing
+		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeDirect, tag, []string{}, options.DialerOptions),
+		logger:  logger,
+	}
 	options.UDPFragmentDefault = true
 	outboundDialer, err := dialer.NewDirect(ctx, options.DialerOptions)
 	if err != nil {
-		return nil, err
+		return empty, err //karing
 	}
 	outbound := &Outbound{
 		Adapter:        outbound.NewAdapterWithDialerOptions(C.TypeDirect, tag, []string{N.NetworkTCP, N.NetworkUDP}, options.DialerOptions),
@@ -57,7 +62,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 	}
 	//nolint:staticcheck
 	if options.ProxyProtocol != 0 {
-		return nil, E.New("Proxy Protocol is deprecated and removed in sing-box 1.6.0")
+		return empty, E.New("Proxy Protocol is deprecated and removed in sing-box 1.6.0")  //karing
 	}
 	//nolint:staticcheck
 	if options.OverrideAddress != "" && options.OverridePort != 0 {
@@ -74,6 +79,9 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 }
 
 func (h *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
+	if(h.parseErr != nil){ //karing
+		return nil, h.parseErr
+	}
 	ctx, metadata := adapter.ExtendContext(ctx)
 	metadata.Outbound = h.Tag()
 	metadata.Destination = destination
@@ -103,6 +111,9 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 }
 
 func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
+	if(h.parseErr != nil){ //karing
+		return nil, h.parseErr
+	}
 	ctx, metadata := adapter.ExtendContext(ctx)
 	metadata.Outbound = h.Tag()
 	metadata.Destination = destination
@@ -238,7 +249,9 @@ func (h *Outbound) ListenSerialNetworkPacket(ctx context.Context, destination M.
 	}
 	return conn, newDestination, nil
 }
-
+func (w *Outbound) SetParseErr(err error){ //karing
+	w.parseErr = err
+}
 /*func (h *Outbound) NewConnection(ctx context.Context, conn net.Conn, metadata adapter.InboundContext) error {
 	if h.loopBack.CheckConn(metadata.Source.AddrPort(), M.AddrPortFromNet(conn.LocalAddr())) {
 		return E.New("reject loopback connection to ", metadata.Destination)

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	C "github.com/sagernet/sing-box/constant"
-	"github.com/sagernet/sing-dns"
+	dns "github.com/sagernet/sing-dns"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/json"
 	"github.com/sagernet/sing/common/json/badjson"
@@ -133,7 +133,11 @@ func (r *DNSRuleAction) UnmarshalJSONContext(ctx context.Context, data []byte) e
 	default:
 		return E.New("unknown DNS rule action: " + r.Action)
 	}
-	return badjson.UnmarshallExcludedContext(ctx, data, (*_DNSRuleAction)(r), v)
+	err = badjson.UnmarshallExcludedContext(ctx, data, (*_DNSRuleAction)(r), v) //karing
+	if err != nil { //karing
+		return E.Cause(err, string(data)) //karing
+	}
+	return err
 }
 
 type RouteActionOptions struct {

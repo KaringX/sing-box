@@ -81,10 +81,13 @@ func (r *RuleSet) UnmarshalJSON(bytes []byte) error {
 }
 
 type LocalRuleSet struct {
-	Path string `json:"path,omitempty"`
+	IsAsset    bool `json:"is_asset,omitempty"`  //karing
+	AutoReload bool `json:"auto_load,omitempty"` //karing
+	Path    string `json:"path,omitempty"`
 }
 
 type RemoteRuleSet struct {
+	LocalRuleSet   //karing
 	URL            string             `json:"url"`
 	DownloadDetour string             `json:"download_detour,omitempty"`
 	UpdateInterval badoption.Duration `json:"update_interval,omitempty"`

@@ -1,0 +1,934 @@
+{
+    "dns": {
+        "rules": [
+            {
+                "outbound": [
+                    "any"
+                ],
+                "server": "local"
+            },
+            {
+                "disable_cache": true,
+                "geosite": [
+                    "category-ads-all"
+                ],
+                "server": "block"
+            },
+            {
+                "clash_mode": "global",
+                "server": "remote"
+            },
+            {
+                "clash_mode": "direct",
+                "server": "local"
+            },
+            {
+                "geosite": [
+                    "cn"
+                ],
+                "server": "local"
+            }
+        ],
+        "servers": [
+            {
+                "address": "https://1.1.1.1/dns-query",
+                "detour": "select",
+                "tag": "remote"
+            },
+            {
+                "address": "https://223.5.5.5/dns-query",
+                "detour": "direct",
+                "tag": "local"
+            },
+            {
+                "address": "rcode://success",
+                "tag": "block"
+            }
+        ],
+        "strategy": "prefer_ipv4"
+    },
+    "experimental": {
+        "clash_api": {
+            "external_controller": "127.0.0.1:9090",
+            "secret": "",
+            "store_selected": true
+        },
+        "debug": {
+            "max_threads": 100,
+            "panic_on_fault": false
+        }
+    },
+    "inbounds": [
+        {
+            "domain_strategy": "prefer_ipv4",
+            "listen": "127.0.0.1",
+            "listen_port": 2334,
+            "set_system_proxy": false,
+            "sniff": true,
+            "sniff_override_destination": true,
+            "tag": "mixed-in",
+            "type": "mixed",
+            "users": []
+        }
+    ],
+    "log": {
+        "disabled": false,
+        "level": "info",
+        "output": "E:/dev/sing-box-clone/karing_service.log",
+        "timestamp": true
+    },
+    "outbounds": [
+        {
+            "tag": "select",
+            "type": "selector",
+            "default": "urltest",
+            "outbounds": [
+                "urltest",
+                "1 官网: https://跟斗云.com",
+                "1 请使用全局代理访问官网，非全局会拦截报1020",
+                "免流测试 TUIC协议 美国洛杉矶 X01",
+                "中国-澳大利亚 悉尼 WARP+Zero Trust Network Access A01 ",
+                "中国-澳大利亚 悉尼 WARP+Zero Trust Network Access A02 ",
+                "中国-澳大利亚 悉尼 WARP+Zero Trust Network Access A03 ",
+                "中国-澳大利亚 悉尼 WARP+Zero Trust Network Access A04 ",
+                "中国-澳大利亚 悉尼 WARP+Zero Trust Network Access A05 ",
+                "中国-澳大利亚 悉尼 WARP+Zero Trust Network Access A06 ",
+                "中国-澳大利亚 悉尼 WARP+Zero Trust Network Access A07 ",
+                "中国-澳大利亚 悉尼 WARP+Zero Trust Network Access A08 ",
+                "中国-澳大利亚 悉尼 WARP+Zero Trust Network Access A09 ",
+                "中国-澳大利亚 悉尼 ZTNA T21",
+                "中国-澳大利亚 悉尼 ZTNA T22",
+                "中国-澳大利亚 悉尼 ZTNA T23",
+                "中国-澳大利亚 悉尼 ZTNA T24",
+                "中国-澳大利亚 悉尼 ZTNA T25",
+                "中国-澳大利亚 悉尼 ZTNA T26",
+                "日本东京 CF中转 T101 ",
+                "日本东京 CF中转 T102 ",
+                "日本东京 CF中转 T103 ",
+                "日本东京 CF中转 T104 ",
+                "美国圣何塞 CF中转 R111 ",
+                "美国圣何塞 CF中转 R112 ",
+                "美国圣何塞 CF中转 R113 ",
+                "美国圣何塞 CF中转 R114 ",
+                "美国圣何塞 CF中转 R115 ",
+                "美国圣何塞 CF中转 R116 ",
+                "美国圣何塞 CF中转 R117 ",
+                "美国圣何塞 CF中转 R118 ",
+                "美国圣何塞 CF中转 R119 ",
+                "美国洛杉矶  CF中转 X101 ",
+                "美国洛杉矶  CF中转 X102 ",
+                "美国洛杉矶  CF中转 X103 ",
+                "美国洛杉矶  CF中转 X104 ",
+                "美国洛杉矶  CF中转 X105 ",
+                "美国洛杉矶  CF中转 X106 ",
+                "美国洛杉矶  CF中转 X107 ",
+                "美国洛杉矶  CF中转 X108 ",
+                "美国洛杉矶  CF中转 X109 ",
+                "香港 CN2 U11 ",
+                "香港 CN2 U12 ",
+                "香港 CN2 U13 ",
+                "香港 CN2 U14 ",
+                "香港 CN2 U15 ",
+                "香港 CN2 U16 ",
+                "香港-CN2 CF B121 ",
+                "香港-CN2 CF B122 ",
+                "香港-CN2 CF B123 ",
+                "香港-CN2 CF B124 ",
+                "香港-CN2 CF B125 ",
+                "香港-CN2 CF B126 "
+            ]
+        },
+        {
+            "password": "pass",
+            "server": "127.0.0.1",
+            "server_port": 12345,
+            "tag": "1 官网: https://跟斗云.com",
+            "type": "shadowsocks",
+            "method": "chacha20-ietf-poly1305"
+        },
+        {
+            "password": "pass",
+            "server": "127.0.0.1",
+            "server_port": 12345,
+            "tag": "1 请使用全局代理访问官网，非全局会拦截报1020",
+            "type": "shadowsocks",
+            "method": "chacha20-ietf-poly1305"
+        },
+        {
+            "password": "world",
+            "server": "us01.dockerce.net",
+            "server_port": 54126,
+            "tag": "免流测试 TUIC协议 美国洛杉矶 X01",
+            "tls": {
+                "enabled": true,
+                "server_name": "us101.dockerce.net",
+                "alpn": [
+                    "h3"
+                ]
+            },
+            "type": "tuic",
+            "uuid": "418048af-a293-4b99-9b0c-98ca3580dd24",
+            "congestion_control": "bbr",
+            "heartbeat": "0ms"
+        },
+        {
+            "password": "93f1a724ab92eca3",
+            "server": "au01.dockerce.net",
+            "server_port": 17630,
+            "tag": "中国-澳大利亚 悉尼 WARP+Zero Trust Network Access A01 ",
+            "type": "shadowsocks",
+            "method": "chacha20-ietf-poly1305"
+        },
+        {
+            "password": "93f1a724ab92eca3",
+            "server": "au02.dockerce.net",
+            "server_port": 17630,
+            "tag": "中国-澳大利亚 悉尼 WARP+Zero Trust Network Access A02 ",
+            "type": "shadowsocks",
+            "method": "chacha20-ietf-poly1305"
+        },
+        {
+            "password": "93f1a724ab92eca3",
+            "server": "au03.dockerce.net",
+            "server_port": 17630,
+            "tag": "中国-澳大利亚 悉尼 WARP+Zero Trust Network Access A03 ",
+            "type": "shadowsocks",
+            "method": "chacha20-ietf-poly1305"
+        },
+        {
+            "password": "93f1a724ab92eca3",
+            "server": "au04.dockerce.net",
+            "server_port": 17630,
+            "tag": "中国-澳大利亚 悉尼 WARP+Zero Trust Network Access A04 ",
+            "type": "shadowsocks",
+            "method": "chacha20-ietf-poly1305"
+        },
+        {
+            "password": "93f1a724ab92eca3",
+            "server": "au05.dockerce.net",
+            "server_port": 17630,
+            "tag": "中国-澳大利亚 悉尼 WARP+Zero Trust Network Access A05 ",
+            "type": "shadowsocks",
+            "method": "chacha20-ietf-poly1305"
+        },
+        {
+            "password": "93f1a724ab92eca3",
+            "server": "au06.dockerce.net",
+            "server_port": 17630,
+            "tag": "中国-澳大利亚 悉尼 WARP+Zero Trust Network Access A06 ",
+            "type": "shadowsocks",
+            "method": "chacha20-ietf-poly1305"
+        },
+        {
+            "password": "93f1a724ab92eca3",
+            "server": "au07.dockerce.net",
+            "server_port": 17630,
+            "tag": "中国-澳大利亚 悉尼 WARP+Zero Trust Network Access A07 ",
+            "type": "shadowsocks",
+            "method": "chacha20-ietf-poly1305"
+        },
+        {
+            "password": "93f1a724ab92eca3",
+            "server": "au08.dockerce.net",
+            "server_port": 17630,
+            "tag": "中国-澳大利亚 悉尼 WARP+Zero Trust Network Access A08 ",
+            "type": "shadowsocks",
+            "method": "chacha20-ietf-poly1305"
+        },
+        {
+            "password": "93f1a724ab92eca3",
+            "server": "au09.dockerce.net",
+            "server_port": 17630,
+            "tag": "中国-澳大利亚 悉尼 WARP+Zero Trust Network Access A09 ",
+            "type": "shadowsocks",
+            "method": "chacha20-ietf-poly1305"
+        },
+        {
+            "password": "93f1a724ab92eca3",
+            "server": "au21.dockerce.net",
+            "server_port": 17630,
+            "tag": "中国-澳大利亚 悉尼 ZTNA T21",
+            "type": "shadowsocks",
+            "method": "chacha20-ietf-poly1305"
+        },
+        {
+            "password": "93f1a724ab92eca3",
+            "server": "au22.dockerce.net",
+            "server_port": 17630,
+            "tag": "中国-澳大利亚 悉尼 ZTNA T22",
+            "type": "shadowsocks",
+            "method": "chacha20-ietf-poly1305"
+        },
+        {
+            "password": "93f1a724ab92eca3",
+            "server": "au23.dockerce.net",
+            "server_port": 17630,
+            "tag": "中国-澳大利亚 悉尼 ZTNA T23",
+            "type": "shadowsocks",
+            "method": "chacha20-ietf-poly1305"
+        },
+        {
+            "password": "93f1a724ab92eca3",
+            "server": "au24.dockerce.net",
+            "server_port": 17630,
+            "tag": "中国-澳大利亚 悉尼 ZTNA T24",
+            "type": "shadowsocks",
+            "method": "chacha20-ietf-poly1305"
+        },
+        {
+            "password": "93f1a724ab92eca3",
+            "server": "au25.dockerce.net",
+            "server_port": 17630,
+            "tag": "中国-澳大利亚 悉尼 ZTNA T25",
+            "type": "shadowsocks",
+            "method": "chacha20-ietf-poly1305"
+        },
+        {
+            "password": "93f1a724ab92eca3",
+            "server": "au26.dockerce.net",
+            "server_port": 17630,
+            "tag": "中国-澳大利亚 悉尼 ZTNA T26",
+            "type": "shadowsocks",
+            "method": "chacha20-ietf-poly1305"
+        },
+        {
+            "password": "2c1fdac8-6cd4-49d8-85a9-1afd0b214ce6",
+            "server": "jp101.dockerce.net",
+            "server_port": 2083,
+            "tag": "日本东京 CF中转 T101 ",
+            "tls": {
+                "enabled": true,
+                "server_name": "jp101.dockerce.net",
+                "insecure": true
+            },
+            "transport": {
+                "path": "/update",
+                "type": "ws"
+            },
+            "type": "trojan"
+        },
+        {
+            "password": "2c1fdac8-6cd4-49d8-85a9-1afd0b214ce6",
+            "server": "jp102.dockerce.net",
+            "server_port": 2083,
+            "tag": "日本东京 CF中转 T102 ",
+            "tls": {
+                "enabled": true,
+                "server_name": "jp101.dockerce.net",
+                "insecure": true
+            },
+            "transport": {
+                "path": "/update",
+                "type": "ws"
+            },
+            "type": "trojan"
+        },
+        {
+            "password": "2c1fdac8-6cd4-49d8-85a9-1afd0b214ce6",
+            "server": "jp103.dockerce.net",
+            "server_port": 2083,
+            "tag": "日本东京 CF中转 T103 ",
+            "tls": {
+                "enabled": true,
+                "server_name": "jp101.dockerce.net",
+                "insecure": true
+            },
+            "transport": {
+                "path": "/update",
+                "type": "ws"
+            },
+            "type": "trojan"
+        },
+        {
+            "password": "2c1fdac8-6cd4-49d8-85a9-1afd0b214ce6",
+            "server": "jp104.dockerce.net",
+            "server_port": 2083,
+            "tag": "日本东京 CF中转 T104 ",
+            "tls": {
+                "enabled": true,
+                "server_name": "jp101.dockerce.net",
+                "insecure": true
+            },
+            "transport": {
+                "path": "/update",
+                "type": "ws"
+            },
+            "type": "trojan"
+        },
+        {
+            "password": "2c1fdac8-6cd4-49d8-85a9-1afd0b214ce6",
+            "server": "us111.dockerce.net",
+            "server_port": 2083,
+            "tag": "美国圣何塞 CF中转 R111 ",
+            "tls": {
+                "enabled": true,
+                "server_name": "us111.dockerce.net",
+                "insecure": true
+            },
+            "transport": {
+                "path": "/update",
+                "type": "ws"
+            },
+            "type": "trojan"
+        },
+        {
+            "password": "2c1fdac8-6cd4-49d8-85a9-1afd0b214ce6",
+            "server": "us112.dockerce.net",
+            "server_port": 2083,
+            "tag": "美国圣何塞 CF中转 R112 ",
+            "tls": {
+                "enabled": true,
+                "server_name": "us111.dockerce.net",
+                "insecure": true
+            },
+            "transport": {
+                "path": "/update",
+                "type": "ws"
+            },
+            "type": "trojan"
+        },
+        {
+            "password": "2c1fdac8-6cd4-49d8-85a9-1afd0b214ce6",
+            "server": "us113.dockerce.net",
+            "server_port": 2083,
+            "tag": "美国圣何塞 CF中转 R113 ",
+            "tls": {
+                "enabled": true,
+                "server_name": "us111.dockerce.net",
+                "insecure": true
+            },
+            "transport": {
+                "path": "/update",
+                "type": "ws"
+            },
+            "type": "trojan"
+        },
+        {
+            "password": "2c1fdac8-6cd4-49d8-85a9-1afd0b214ce6",
+            "server": "us114.dockerce.net",
+            "server_port": 2083,
+            "tag": "美国圣何塞 CF中转 R114 ",
+            "tls": {
+                "enabled": true,
+                "server_name": "us111.dockerce.net",
+                "insecure": true
+            },
+            "transport": {
+                "path": "/update",
+                "type": "ws"
+            },
+            "type": "trojan"
+        },
+        {
+            "password": "2c1fdac8-6cd4-49d8-85a9-1afd0b214ce6",
+            "server": "us115.dockerce.net",
+            "server_port": 2083,
+            "tag": "美国圣何塞 CF中转 R115 ",
+            "tls": {
+                "enabled": true,
+                "server_name": "us111.dockerce.net",
+                "insecure": true
+            },
+            "transport": {
+                "path": "/update",
+                "type": "ws"
+            },
+            "type": "trojan"
+        },
+        {
+            "password": "2c1fdac8-6cd4-49d8-85a9-1afd0b214ce6",
+            "server": "us116.dockerce.net",
+            "server_port": 2083,
+            "tag": "美国圣何塞 CF中转 R116 ",
+            "tls": {
+                "enabled": true,
+                "server_name": "us111.dockerce.net",
+                "insecure": true
+            },
+            "transport": {
+                "path": "/update",
+                "type": "ws"
+            },
+            "type": "trojan"
+        },
+        {
+            "password": "2c1fdac8-6cd4-49d8-85a9-1afd0b214ce6",
+            "server": "us117.dockerce.net",
+            "server_port": 2083,
+            "tag": "美国圣何塞 CF中转 R117 ",
+            "tls": {
+                "enabled": true,
+                "server_name": "us111.dockerce.net",
+                "insecure": true
+            },
+            "transport": {
+                "path": "/update",
+                "type": "ws"
+            },
+            "type": "trojan"
+        },
+        {
+            "password": "2c1fdac8-6cd4-49d8-85a9-1afd0b214ce6",
+            "server": "us118.dockerce.net",
+            "server_port": 2083,
+            "tag": "美国圣何塞 CF中转 R118 ",
+            "tls": {
+                "enabled": true,
+                "server_name": "us111.dockerce.net",
+                "insecure": true
+            },
+            "transport": {
+                "path": "/update",
+                "type": "ws"
+            },
+            "type": "trojan"
+        },
+        {
+            "password": "2c1fdac8-6cd4-49d8-85a9-1afd0b214ce6",
+            "server": "us119.dockerce.net",
+            "server_port": 2083,
+            "tag": "美国圣何塞 CF中转 R119 ",
+            "tls": {
+                "enabled": true,
+                "server_name": "us111.dockerce.net",
+                "insecure": true
+            },
+            "transport": {
+                "path": "/update",
+                "type": "ws"
+            },
+            "type": "trojan"
+        },
+        {
+            "password": "2c1fdac8-6cd4-49d8-85a9-1afd0b214ce6",
+            "server": "us101.dockerce.net",
+            "server_port": 2083,
+            "tag": "美国洛杉矶  CF中转 X101 ",
+            "tls": {
+                "enabled": true,
+                "server_name": "us101.dockerce.net",
+                "insecure": true
+            },
+            "transport": {
+                "path": "/update",
+                "type": "ws"
+            },
+            "type": "trojan"
+        },
+        {
+            "password": "2c1fdac8-6cd4-49d8-85a9-1afd0b214ce6",
+            "server": "us102.dockerce.net",
+            "server_port": 2083,
+            "tag": "美国洛杉矶  CF中转 X102 ",
+            "tls": {
+                "enabled": true,
+                "server_name": "us101.dockerce.net",
+                "insecure": true
+            },
+            "transport": {
+                "path": "/update",
+                "type": "ws"
+            },
+            "type": "trojan"
+        },
+        {
+            "password": "2c1fdac8-6cd4-49d8-85a9-1afd0b214ce6",
+            "server": "us103.dockerce.net",
+            "server_port": 2083,
+            "tag": "美国洛杉矶  CF中转 X103 ",
+            "tls": {
+                "enabled": true,
+                "server_name": "us101.dockerce.net",
+                "insecure": true
+            },
+            "transport": {
+                "path": "/update",
+                "type": "ws"
+            },
+            "type": "trojan"
+        },
+        {
+            "password": "2c1fdac8-6cd4-49d8-85a9-1afd0b214ce6",
+            "server": "us104.dockerce.net",
+            "server_port": 2083,
+            "tag": "美国洛杉矶  CF中转 X104 ",
+            "tls": {
+                "enabled": true,
+                "server_name": "us101.dockerce.net",
+                "insecure": true
+            },
+            "transport": {
+                "path": "/update",
+                "type": "ws"
+            },
+            "type": "trojan"
+        },
+        {
+            "password": "2c1fdac8-6cd4-49d8-85a9-1afd0b214ce6",
+            "server": "us105.dockerce.net",
+            "server_port": 2083,
+            "tag": "美国洛杉矶  CF中转 X105 ",
+            "tls": {
+                "enabled": true,
+                "server_name": "us101.dockerce.net",
+                "insecure": true
+            },
+            "transport": {
+                "path": "/update",
+                "type": "ws"
+            },
+            "type": "trojan"
+        },
+        {
+            "password": "2c1fdac8-6cd4-49d8-85a9-1afd0b214ce6",
+            "server": "us106.dockerce.net",
+            "server_port": 2083,
+            "tag": "美国洛杉矶  CF中转 X106 ",
+            "tls": {
+                "enabled": true,
+                "server_name": "us101.dockerce.net",
+                "insecure": true
+            },
+            "transport": {
+                "path": "/update",
+                "type": "ws"
+            },
+            "type": "trojan"
+        },
+        {
+            "password": "2c1fdac8-6cd4-49d8-85a9-1afd0b214ce6",
+            "server": "us107.dockerce.net",
+            "server_port": 2083,
+            "tag": "美国洛杉矶  CF中转 X107 ",
+            "tls": {
+                "enabled": true,
+                "server_name": "us101.dockerce.net",
+                "insecure": true
+            },
+            "transport": {
+                "path": "/update",
+                "type": "ws"
+            },
+            "type": "trojan"
+        },
+        {
+            "password": "2c1fdac8-6cd4-49d8-85a9-1afd0b214ce6",
+            "server": "us108.dockerce.net",
+            "server_port": 2083,
+            "tag": "美国洛杉矶  CF中转 X108 ",
+            "tls": {
+                "enabled": true,
+                "server_name": "us101.dockerce.net",
+                "insecure": true
+            },
+            "transport": {
+                "path": "/update",
+                "type": "ws"
+            },
+            "type": "trojan"
+        },
+        {
+            "password": "2c1fdac8-6cd4-49d8-85a9-1afd0b214ce6",
+            "server": "us109.dockerce.net",
+            "server_port": 2083,
+            "tag": "美国洛杉矶  CF中转 X109 ",
+            "tls": {
+                "enabled": true,
+                "server_name": "us101.dockerce.net",
+                "insecure": true
+            },
+            "transport": {
+                "path": "/update",
+                "type": "ws"
+            },
+            "type": "trojan"
+        },
+        {
+            "password": "2c1fdac8-6cd4-49d8-85a9-1afd0b214ce6",
+            "server": "hk11.dockerce.net",
+            "server_port": 12082,
+            "tag": "香港 CN2 U11 ",
+            "tls": {
+                "enabled": true,
+                "server_name": "ecc.dockerce.net",
+                "insecure": true
+            },
+            "type": "trojan"
+        },
+        {
+            "password": "2c1fdac8-6cd4-49d8-85a9-1afd0b214ce6",
+            "server": "hk12.dockerce.net",
+            "server_port": 12082,
+            "tag": "香港 CN2 U12 ",
+            "tls": {
+                "enabled": true,
+                "server_name": "ecc.dockerce.net",
+                "insecure": true
+            },
+            "type": "trojan"
+        },
+        {
+            "password": "2c1fdac8-6cd4-49d8-85a9-1afd0b214ce6",
+            "server": "hk13.dockerce.net",
+            "server_port": 12082,
+            "tag": "香港 CN2 U13 ",
+            "tls": {
+                "enabled": true,
+                "server_name": "ecc.dockerce.net",
+                "insecure": true
+            },
+            "type": "trojan"
+        },
+        {
+            "password": "2c1fdac8-6cd4-49d8-85a9-1afd0b214ce6",
+            "server": "hk14.dockerce.net",
+            "server_port": 12082,
+            "tag": "香港 CN2 U14 ",
+            "tls": {
+                "enabled": true,
+                "server_name": "ecc.dockerce.net",
+                "insecure": true
+            },
+            "type": "trojan"
+        },
+        {
+            "password": "2c1fdac8-6cd4-49d8-85a9-1afd0b214ce6",
+            "server": "hk15.dockerce.net",
+            "server_port": 12082,
+            "tag": "香港 CN2 U15 ",
+            "tls": {
+                "enabled": true,
+                "server_name": "ecc.dockerce.net",
+                "insecure": true
+            },
+            "type": "trojan"
+        },
+        {
+            "password": "2c1fdac8-6cd4-49d8-85a9-1afd0b214ce6",
+            "server": "hk16.dockerce.net",
+            "server_port": 12082,
+            "tag": "香港 CN2 U16 ",
+            "tls": {
+                "enabled": true,
+                "server_name": "ecc.dockerce.net",
+                "insecure": true
+            },
+            "type": "trojan"
+        },
+        {
+            "password": "2c1fdac8-6cd4-49d8-85a9-1afd0b214ce6",
+            "server": "hk121.dockerce.net",
+            "server_port": 2083,
+            "tag": "香港-CN2 CF B121 ",
+            "tls": {
+                "enabled": true,
+                "server_name": "hk121.dockerce.net",
+                "insecure": true
+            },
+            "transport": {
+                "path": "/update",
+                "type": "ws"
+            },
+            "type": "trojan"
+        },
+        {
+            "password": "2c1fdac8-6cd4-49d8-85a9-1afd0b214ce6",
+            "server": "hk122.dockerce.net",
+            "server_port": 2083,
+            "tag": "香港-CN2 CF B122 ",
+            "tls": {
+                "enabled": true,
+                "server_name": "hk121.dockerce.net",
+                "insecure": true
+            },
+            "transport": {
+                "path": "/update",
+                "type": "ws"
+            },
+            "type": "trojan"
+        },
+        {
+            "password": "2c1fdac8-6cd4-49d8-85a9-1afd0b214ce6",
+            "server": "hk123.dockerce.net",
+            "server_port": 2083,
+            "tag": "香港-CN2 CF B123 ",
+            "tls": {
+                "enabled": true,
+                "server_name": "hk121.dockerce.net",
+                "insecure": true
+            },
+            "transport": {
+                "path": "/update",
+                "type": "ws"
+            },
+            "type": "trojan"
+        },
+        {
+            "password": "2c1fdac8-6cd4-49d8-85a9-1afd0b214ce6",
+            "server": "hk124.dockerce.net",
+            "server_port": 2083,
+            "tag": "香港-CN2 CF B124 ",
+            "tls": {
+                "enabled": true,
+                "server_name": "hk121.dockerce.net",
+                "insecure": true
+            },
+            "transport": {
+                "path": "/update",
+                "type": "ws"
+            },
+            "type": "trojan"
+        },
+        {
+            "password": "2c1fdac8-6cd4-49d8-85a9-1afd0b214ce6",
+            "server": "hk125.dockerce.net",
+            "server_port": 2083,
+            "tag": "香港-CN2 CF B125 ",
+            "tls": {
+                "enabled": true,
+                "server_name": "hk121.dockerce.net",
+                "insecure": true
+            },
+            "transport": {
+                "path": "/update",
+                "type": "ws"
+            },
+            "type": "trojan"
+        },
+        {
+            "password": "2c1fdac8-6cd4-49d8-85a9-1afd0b214ce6",
+            "server": "hk126.dockerce.net",
+            "server_port": 2083,
+            "tag": "香港-CN2 CF B126 ",
+            "tls": {
+                "enabled": true,
+                "server_name": "hk121.dockerce.net",
+                "insecure": true
+            },
+            "transport": {
+                "path": "/update",
+                "type": "ws"
+            },
+            "type": "trojan"
+        },
+        {
+            "tag": "direct",
+            "type": "direct"
+        },
+        {
+            "tag": "block",
+            "type": "block"
+        },
+        {
+            "tag": "dns-out",
+            "type": "dns"
+        },
+        {
+            "tag": "urltest",
+            "type": "urltest",
+            "outbounds": [
+                "1 官网: https://跟斗云.com",
+                "1 请使用全局代理访问官网，非全局会拦截报1020",
+                "免流测试 TUIC协议 美国洛杉矶 X01",
+                "中国-澳大利亚 悉尼 WARP+Zero Trust Network Access A01 ",
+                "中国-澳大利亚 悉尼 WARP+Zero Trust Network Access A02 ",
+                "中国-澳大利亚 悉尼 WARP+Zero Trust Network Access A03 ",
+                "中国-澳大利亚 悉尼 WARP+Zero Trust Network Access A04 ",
+                "中国-澳大利亚 悉尼 WARP+Zero Trust Network Access A05 ",
+                "中国-澳大利亚 悉尼 WARP+Zero Trust Network Access A06 ",
+                "中国-澳大利亚 悉尼 WARP+Zero Trust Network Access A07 ",
+                "中国-澳大利亚 悉尼 WARP+Zero Trust Network Access A08 ",
+                "中国-澳大利亚 悉尼 WARP+Zero Trust Network Access A09 ",
+                "中国-澳大利亚 悉尼 ZTNA T21",
+                "中国-澳大利亚 悉尼 ZTNA T22",
+                "中国-澳大利亚 悉尼 ZTNA T23",
+                "中国-澳大利亚 悉尼 ZTNA T24",
+                "中国-澳大利亚 悉尼 ZTNA T25",
+                "中国-澳大利亚 悉尼 ZTNA T26",
+                "日本东京 CF中转 T101 ",
+                "日本东京 CF中转 T102 ",
+                "日本东京 CF中转 T103 ",
+                "日本东京 CF中转 T104 ",
+                "美国圣何塞 CF中转 R111 ",
+                "美国圣何塞 CF中转 R112 ",
+                "美国圣何塞 CF中转 R113 ",
+                "美国圣何塞 CF中转 R114 ",
+                "美国圣何塞 CF中转 R115 ",
+                "美国圣何塞 CF中转 R116 ",
+                "美国圣何塞 CF中转 R117 ",
+                "美国圣何塞 CF中转 R118 ",
+                "美国圣何塞 CF中转 R119 ",
+                "美国洛杉矶  CF中转 X101 ",
+                "美国洛杉矶  CF中转 X102 ",
+                "美国洛杉矶  CF中转 X103 ",
+                "美国洛杉矶  CF中转 X104 ",
+                "美国洛杉矶  CF中转 X105 ",
+                "美国洛杉矶  CF中转 X106 ",
+                "美国洛杉矶  CF中转 X107 ",
+                "美国洛杉矶  CF中转 X108 ",
+                "美国洛杉矶  CF中转 X109 ",
+                "香港 CN2 U11 ",
+                "香港 CN2 U12 ",
+                "香港 CN2 U13 ",
+                "香港 CN2 U14 ",
+                "香港 CN2 U15 ",
+                "香港 CN2 U16 ",
+                "香港-CN2 CF B121 ",
+                "香港-CN2 CF B122 ",
+                "香港-CN2 CF B123 ",
+                "香港-CN2 CF B124 ",
+                "香港-CN2 CF B125 ",
+                "香港-CN2 CF B126 "
+            ]
+        }
+    ],
+    "route": {
+        "find_process":true,
+        "disable_network_monitor": true,
+        "geosite": {
+            "path": "E:/dev/sing-box-clone/geosite.db",
+            "download_url": "https://github.com/SagerNet/sing-geosite/releases/latest/download/geosite.db",
+            "download_detour": ""
+        },
+        "geoip": {
+            "path": "E:/dev/sing-box-clone/geoip.db",
+            "download_url": "https://github.com/SagerNet/sing-geoip/releases/latest/download/geoip.db",
+            "download_detour": ""
+        },
+        "rules": [
+            {
+                "geosite": [
+                    "category-ads-all"
+                ],
+                "outbound": "block"
+            },
+            {
+                "protocol": [
+                    "dns"
+                ],
+                "outbound": "dns-out"
+            },
+            {
+                "clash_mode": "direct",
+                "outbound": "direct"
+            },
+            {
+                "clash_mode": "global",
+                "outbound": "select"
+            },
+            {
+                "geoip": [
+                    "cn",
+                    "private"
+                ],
+                "outbound": "direct"
+            },
+            {
+                "geosite": [
+                    "cn"
+                ],
+                "outbound": "direct"
+            }
+        ]
+    }
+}

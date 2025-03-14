@@ -1,0 +1,1 @@
+clash2singbox -i config.yaml #https://github.com/xmdhs/clash2singbox/tree/master

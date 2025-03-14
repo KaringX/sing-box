@@ -19,6 +19,7 @@ import (
 	"github.com/sagernet/sing-box/protocol/naive"
 	"github.com/sagernet/sing-box/protocol/redirect"
 	"github.com/sagernet/sing-box/protocol/shadowsocks"
+	"github.com/sagernet/sing-box/protocol/shadowsocksr"
 	"github.com/sagernet/sing-box/protocol/shadowtls"
 	"github.com/sagernet/sing-box/protocol/socks"
 	"github.com/sagernet/sing-box/protocol/ssh"
@@ -50,7 +51,7 @@ func InboundRegistry() *inbound.Registry {
 	vless.RegisterInbound(registry)
 
 	registerQUICInbounds(registry)
-	registerStubForRemovedInbounds(registry)
+	//registerStubForRemovedInbounds(registry) //karing
 
 	return registry
 }
@@ -78,7 +79,8 @@ func OutboundRegistry() *outbound.Registry {
 
 	registerQUICOutbounds(registry)
 	registerWireGuardOutbound(registry)
-	registerStubForRemovedOutbounds(registry)
+	shadowsocksr.RegisterOutbound(registry)
+	//registerStubForRemovedOutbounds(registry) //karing
 
 	return registry
 }

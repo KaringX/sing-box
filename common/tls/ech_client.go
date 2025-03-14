@@ -103,7 +103,11 @@ func NewECHClient(ctx context.Context, serverAddress string, options option.Outb
 	if options.DisableSNI {
 		tlsConfig.ServerName = "127.0.0.1"
 	} else {
-		tlsConfig.ServerName = serverName
+		if options.TLSTricks != nil && options.TLSTricks.MixedCaseSNI { //hiddify
+			tlsConfig.ServerName = randomizeCase(tlsConfig.ServerName)
+		} else {
+			tlsConfig.ServerName = serverName
+		}
 	}
 	if options.Insecure {
 		tlsConfig.InsecureSkipVerify = options.Insecure

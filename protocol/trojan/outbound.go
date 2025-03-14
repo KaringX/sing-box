@@ -35,12 +35,17 @@ type Outbound struct {
 	multiplexDialer *mux.Client
 	tlsConfig       tls.Config
 	transport       adapter.V2RayClientTransport
+	parseErr        error                //karing
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.TrojanOutboundOptions) (adapter.Outbound, error) {
+	empty := &Outbound{ //karing
+		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeTrojan, tag, []string{}, options.DialerOptions),
+		logger:  logger,
+	}
 	outboundDialer, err := dialer.New(ctx, options.DialerOptions)
 	if err != nil {
-		return nil, err
+		return empty, err
 	}
 	outbound := &Outbound{
 		Adapter:    outbound.NewAdapterWithDialerOptions(C.TypeTrojan, tag, options.Network.Build(), options.DialerOptions),
@@ -52,23 +57,26 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 	if options.TLS != nil {
 		outbound.tlsConfig, err = tls.NewClient(ctx, options.Server, common.PtrValueOrDefault(options.TLS))
 		if err != nil {
-			return nil, err
+			return empty, err  //karing
 		}
 	}
 	if options.Transport != nil {
 		outbound.transport, err = v2ray.NewClientTransport(ctx, outbound.dialer, outbound.serverAddr, common.PtrValueOrDefault(options.Transport), outbound.tlsConfig)
 		if err != nil {
-			return nil, E.Cause(err, "create client transport: ", options.Transport.Type)
+			return empty, E.Cause(err, "create client transport: ", options.Transport.Type)  //karing
 		}
 	}
 	outbound.multiplexDialer, err = mux.NewClientWithOptions((*trojanDialer)(outbound), logger, common.PtrValueOrDefault(options.Multiplex))
 	if err != nil {
-		return nil, err
+		return empty, err  //karing
 	}
 	return outbound, nil
 }
 
 func (h *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
+	if(h.parseErr != nil){ //karing
+		return nil, h.parseErr
+	}
 	if h.multiplexDialer == nil {
 		switch N.NetworkName(network) {
 		case N.NetworkTCP:
@@ -89,6 +97,9 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 }
 
 func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
+	if(h.parseErr != nil){ //karing
+		return nil, h.parseErr
+	}
 	if h.multiplexDialer == nil {
 		h.logger.InfoContext(ctx, "outbound packet connection to ", destination)
 		return (*trojanDialer)(h).ListenPacket(ctx, destination)
@@ -110,6 +121,10 @@ func (h *Outbound) InterfaceUpdated() {
 
 func (h *Outbound) Close() error {
 	return common.Close(common.PtrOrNil(h.multiplexDialer), h.transport)
+}
+
+func (h *Outbound) SetParseErr(err error){ //karing
+	h.parseErr = err
 }
 
 type trojanDialer Outbound

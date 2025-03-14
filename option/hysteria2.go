@@ -1,7 +1,11 @@
 package option
 
 import (
+	"fmt"
+	"math"
 	"net/url"
+	"strings"
+	"time"
 
 	C "github.com/sagernet/sing-box/constant"
 	E "github.com/sagernet/sing/common/exceptions"
@@ -113,7 +117,7 @@ type Hysteria2OutboundOptions struct {
 	DialerOptions
 	ServerOptions
 	ServerPorts badoption.Listable[string] `json:"server_ports,omitempty"`
-	HopInterval badoption.Duration         `json:"hop_interval,omitempty"`
+	HopInterval HopIntervalValue           `json:"hop_interval,omitempty"` //karing
 	UpMbps      int                        `json:"up_mbps,omitempty"`
 	DownMbps    int                        `json:"down_mbps,omitempty"`
 	Obfs        *Hysteria2Obfs             `json:"obfs,omitempty"`
@@ -121,4 +125,60 @@ type Hysteria2OutboundOptions struct {
 	Network     NetworkList                `json:"network,omitempty"`
 	OutboundTLSOptionsContainer
 	BrutalDebug bool `json:"brutal_debug,omitempty"`
+	TurnRelay   *TurnRelayOptions `json:"turn_relay,omitempty"` //hiddify
+	HopPorts    HopPortsValue     `json:"hop_ports,omitempty"`  //https://github.com/morgenanno/sing-box //"114,514,810-1919"
+	//HopInterval int   //`json:"hop_interval,omitempty"`  //https://github.com/morgenanno/sing-box
+}
+
+type HopPortsValue string //karing
+type HopIntervalValue badoption.Duration //karing
+
+type _Hysteria2OutboundOptions Hysteria2OutboundOptions //karing
+func (m *Hysteria2OutboundOptions) UnmarshalJSON(bytes []byte) error { //karing
+	err := json.Unmarshal(bytes, (*_Hysteria2OutboundOptions)(m))
+	if err != nil {
+		return err
+	}
+    
+	if len(m.ServerPorts) == 0 && len(m.HopPorts) > 0 {
+		ports := strings.Split(string(m.HopPorts), ",")
+		for i := 0; i < len(ports); i++ {
+			ports[i] = strings.Replace(ports[i], "-", ":", -1)
+			parts := strings.Split(ports[i], ":")
+			if len(parts) == 1 {
+				m.ServerPorts = append(m.ServerPorts, fmt.Sprintf("%s:%s", parts[0], parts[0]))
+			} else if len (parts) == 2 {
+				m.ServerPorts = append(m.ServerPorts, fmt.Sprintf("%s:%s", parts[0], parts[1]))
+			} else {
+				return E.New("invalid hop_ports format: ", string(m.HopPorts))
+			}
+		}
+	}
+	m.HopPorts = ""
+    return nil
+}
+func (m *HopIntervalValue) UnmarshalJSON(bytes []byte) error { //karing
+	var stringValue string
+    if err := json.Unmarshal(bytes, &stringValue); err == nil {
+        duration, err := time.ParseDuration(stringValue)
+        if err != nil {
+            return fmt.Errorf("invalid duration string: %w", err)
+        }
+        *m = HopIntervalValue(duration)
+        return nil
+    }
+	var intValue int64
+	if err := json.Unmarshal(bytes, &intValue); err == nil {
+		if intValue < 0 {
+            return fmt.Errorf("negative duration not allowed")
+        }
+        if intValue > math.MaxInt64/int64(time.Second) {
+            return fmt.Errorf("integer overflow for duration")
+        }
+
+        *m = HopIntervalValue(time.Duration(intValue) * time.Second)
+		return nil
+	}
+	 
+    return nil
 }

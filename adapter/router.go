@@ -8,8 +8,9 @@ import (
 	"sync"
 
 	"github.com/sagernet/sing-box/common/geoip"
+	"github.com/sagernet/sing-box/common/process"
 	C "github.com/sagernet/sing-box/constant"
-	"github.com/sagernet/sing-dns"
+	dns "github.com/sagernet/sing-dns"
 	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
 	"github.com/sagernet/sing/common/x/list"
@@ -30,12 +31,20 @@ type Router interface {
 	GeoIPReader() *geoip.Reader
 	LoadGeosite(code string) (Rule, error)
 	RuleSet(tag string) (RuleSet, bool)
+	GetRemoteRuleSetRulesCount() map[string]int  //karing
+
 	NeedWIFIState() bool
 
 	Exchange(ctx context.Context, message *mdns.Msg) (*mdns.Msg, error)
-	Lookup(ctx context.Context, domain string, strategy dns.DomainStrategy) ([]netip.Addr, error)
+	Lookup(ctx context.Context, domain string, strategy dns.DomainStrategy) ([]netip.Addr, string, error)  //karing
 	LookupDefault(ctx context.Context, domain string) ([]netip.Addr, error)
 	ClearDNSCache()
+
+	FindProcessInfo(ctx context.Context, network string, source netip.AddrPort)(*process.Info, error)        //karing
+	GetMatchRuleChain(outboundManager OutboundManager, matchOutboundTag string) ([]string, string, string)   //karing
+	GetMatchRule(ctx context.Context, metadata *InboundContext) (Rule, error)                        //karing
+	GetAssetContent(path string)([]byte, error) //karing
+	SingalQuit() //karing
 	Rules() []Rule
 
 	SetTracker(tracker ConnectionTracker)
