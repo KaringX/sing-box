@@ -38,12 +38,12 @@ func StderrRedirect(path string) (err error) {
 			index := strings.Index(content, "panic")
 			if index >= 0 {
 				lines := strings.Split(content[index:], "\n")
-				recoverMessage := ""
+				recoverMessage := "stderr:"
 				findStack := false
 				for i, line := range lines {
 					line = strings.Trim(line, "\r\t\n")
 					if i == 0 {
-						recoverMessage = line
+						recoverMessage += line
 					}
 					if strings.HasPrefix(line, "goroutine ") {
 						if findStack {
