@@ -59,7 +59,10 @@ func preRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	makeProcessSingleton()
+	err = makeProcessSingleton()
+	if err != nil {
+		return err
+	}
 	globalCtx = context.Background()
 	sudoUser := os.Getenv("SUDO_USER")
 	sudoUID, _ := strconv.Atoi(os.Getenv("SUDO_UID"))

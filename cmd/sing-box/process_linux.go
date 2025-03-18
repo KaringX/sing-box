@@ -1,4 +1,4 @@
-//go:build with_karing && (windows || linux)
+//go:build with_karing && linux
 
 package main
 
@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/shirou/gopsutil/v3/process"
 )
 
@@ -37,7 +38,10 @@ func makeProcessSingleton() error {
 		}
 		targetExeName := filepath.Base(targetExe)
 		if strings.EqualFold(targetExeName, currentExeName) {
-			terminateProcess(p)
+			err = terminateProcess(p, p.Pid, targetExeName)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -62,11 +66,15 @@ func getResolvedExePath(p *process.Process) (string, error) {
 	return filepath.Clean(resolvedPath), nil
 }
 
-func terminateProcess(p *process.Process) error {
+func terminateProcess(p *process.Process, pid int32, processName string) error {
 	err := p.Terminate()
 	if err == nil {
-		return err
+		return nil
 	}
 
-	return p.Kill()
+	err = p.Kill()
+	if err != nil {
+		return E.Cause(err, "kill process [", processName, " pid=", pid, "] failed, please try to restart your device")
+	}
+	return nil
 }
