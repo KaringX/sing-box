@@ -37,25 +37,24 @@ func makeProcessSingleton() error {
 		return err
 	}
 	for {
-		if procEntry.ProcessID == uint32(currentProcess.Pid) {
-			continue
+		if procEntry.ProcessID != uint32(currentProcess.Pid) {
+			targetExe := filepath.Clean(syscall.UTF16ToString(procEntry.ExeFile[:]))
+			targetExeName := filepath.Base(targetExe)
+			if strings.EqualFold(targetExeName, currentExeName) {
+				process, err := process.NewProcess(int32(procEntry.ProcessID))
+				if err != nil {
+					return err
+				}
+				err = terminateProcess(process, process.Pid, targetExeName)
+				if err != nil {
+					return err
+				}
+			}
 		}
 
-		targetExe := filepath.Clean(syscall.UTF16ToString(procEntry.ExeFile[:]))
-		targetExeName := filepath.Base(targetExe)
-		if strings.EqualFold(targetExeName, currentExeName) {
-			process, err := process.NewProcess(int32(procEntry.ProcessID))
-			if err != nil {
-				return err
-			}
-			err = terminateProcess(process, process.Pid, targetExeName)
-			if err != nil {
-				return err
-			}
-		}
 		err = windows.Process32Next(snapshot, &procEntry)
 		if err != nil {
-			return err
+			break
 		}
 	}
 
