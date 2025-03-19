@@ -3,6 +3,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -52,6 +53,10 @@ func createHttpServer() error {
 					render.JSON(w, r, render.M{
 						"err": err.Error(),
 					})
+					if httpServer != nil {
+						httpServer.Close()
+						httpServer = nil
+					}
 					go func() {
 						time.Sleep(1 * time.Second)
 						terminateCurrentProcess()
@@ -66,6 +71,10 @@ func createHttpServer() error {
 		})
 		r.Route("/stop", func(r chi.Router) {
 			r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+				if httpServer != nil {
+					httpServer.Close()
+					httpServer = nil
+				}
 				if boxService != nil {
 					boxService.Close()
 					boxService = nil
@@ -82,7 +91,7 @@ func createHttpServer() error {
 		}
 		go func() {
 			err := httpServer.ListenAndServe()
-			if err != nil && !E.IsClosed(err) {
+			if err != nil && !errors.Is(err, http.ErrServerClosed) && !E.IsClosed(err) {
 				log.Fatal(E.Cause(err, "serve HTTP server"))
 			}
 		}()
