@@ -124,7 +124,7 @@ func createService() (err error) {
 		go func() {
 			err := httpServer.ListenAndServe()
 			if err != nil && !E.IsClosed(err) {
-				//log.Fatal(E.Cause(err, "serve HTTP server"))
+				log.Fatal(E.Cause(err, "serve HTTP server"))
 			}
 		}()
 	}
@@ -132,11 +132,10 @@ func createService() (err error) {
 	if connectedPort != 0 {
 		conn, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", connectedPort))
 		if err != nil {
-			//return  err
+			return err
 		} else {
 			conn.Close()
 		}
-
 	}
 
 	return nil
