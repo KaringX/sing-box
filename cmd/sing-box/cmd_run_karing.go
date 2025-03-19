@@ -28,7 +28,9 @@ var commandRun2 = &cobra.Command{
 		err := runService()
 		if err != nil {
 			log.Error(err)
+			return
 		}
+
 	},
 }
 var httpServer *http.Server
@@ -39,56 +41,13 @@ func init() {
 	mainCommand.AddCommand(commandRun2)
 }
 
-func createService() (err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			recoverMessage := fmt.Sprintf("%v", e)
-			libbox.SentryCaptureException(recoverMessage, "panic: create service", libbox.SentryTrim(string(debug.Stack())))
-		}
-	}()
-	stacks := D.Stacks(false, false)
-	if len(stacks) > 0 {
-		for key := range stacks {
-			D.MainGoId = key
-			break
-		}
-	}
-	if len(configPaths) == 0 {
-		return E.Cause(err, "param [config] not found")
-	}
-	var configContent []byte
-	for _, path := range configPaths {
-		configContent, err = os.ReadFile(path)
-		if err != nil {
-			return err
-		}
-		if len(configContent) == 0 {
-			return E.Cause(err, "file content is empty: ", path)
-		}
-		break
-	}
-
-	boxService, err = libbox.NewService(string(configContent), nil)
-	if err != nil {
-		libbox.SentryCaptureMessage(E.Cause(err, "create service"))
-		return E.Cause(err, "create service")
-	}
-
-	err = boxService.Start()
-	if err != nil {
-		libbox.SentryCaptureMessage(E.Cause(err, "start service"))
-		return E.Cause(err, "start service")
-	}
-
+func createHttpServer() error {
 	if serviceHttpPort != 0 {
 		r := chi.NewMux()
 		r.Route("/reload", func(r chi.Router) {
 			r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-				if boxService != nil {
-					boxService.Close()
-					boxService = nil
-				}
-				err = createService()
+				destoryService()
+				err := createService()
 				if err != nil {
 					render.JSON(w, r, render.M{
 						"err": err.Error(),
@@ -137,12 +96,65 @@ func createService() (err error) {
 			conn.Close()
 		}
 	}
+	return nil
+}
+
+func destoryService() {
+	if boxService != nil {
+		boxService.Close()
+		boxService = nil
+	}
+}
+func createService() (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			recoverMessage := fmt.Sprintf("%v", e)
+			libbox.SentryCaptureException(recoverMessage, "panic: create service", libbox.SentryTrim(string(debug.Stack())))
+		}
+	}()
+	stacks := D.Stacks(false, false)
+	if len(stacks) > 0 {
+		for key := range stacks {
+			D.MainGoId = key
+			break
+		}
+	}
+	if len(configPaths) == 0 {
+		return E.Cause(err, "param [config] not found")
+	}
+	var configContent []byte
+	for _, path := range configPaths {
+		configContent, err = os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		if len(configContent) == 0 {
+			return E.Cause(err, "file content is empty: ", path)
+		}
+		break
+	}
+
+	boxService, err = libbox.NewService(string(configContent), nil)
+	if err != nil {
+		libbox.SentryCaptureMessage(E.Cause(err, "create service"))
+		return E.Cause(err, "create service")
+	}
+
+	err = boxService.Start()
+	if err != nil {
+		libbox.SentryCaptureMessage(E.Cause(err, "start service"))
+		return E.Cause(err, "start service")
+	}
 
 	return nil
 }
 
 func runService() (err error) {
 	err = createService()
+	if err != nil {
+		return err
+	}
+	err = createHttpServer()
 	if err != nil {
 		return err
 	}
