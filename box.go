@@ -44,7 +44,6 @@ type Box struct {
 	router     *route.Router
 	services   []adapter.LifecycleService
 	done       chan struct{}
-	Quit       chan struct{} //karing
 }
 
 type Options struct {
@@ -78,7 +77,6 @@ func Context(
 }
 
 func New(options Options) (*Box, error) {
-	quit := make(chan struct{}) //karing
 	createdAt := time.Now()
 	ctx := options.Context
 	if ctx == nil {
@@ -165,9 +163,7 @@ func New(options Options) (*Box, error) {
 	service.MustRegister[adapter.NetworkManager](ctx, networkManager)
 	connectionManager := route.NewConnectionManager(logFactory.NewLogger("connection"))
 	service.MustRegister[adapter.ConnectionManager](ctx, connectionManager)
-	router, err := route.NewRouter(ctx, logFactory, routeOptions, common.PtrValueOrDefault(options.DNS), func() { //karing
-		quit <- struct{}{}
-	})
+	router, err := route.NewRouter(ctx, logFactory, routeOptions, common.PtrValueOrDefault(options.DNS))
 	if err != nil {
 		return nil, E.Cause(err, "initialize router")
 	}
@@ -330,7 +326,6 @@ func New(options Options) (*Box, error) {
 		logger:     logFactory.Logger(),
 		services:   services,
 		done:       make(chan struct{}),
-		Quit:       quit, //karing
 	}, nil
 }
 

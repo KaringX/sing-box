@@ -31,20 +31,19 @@ type Router interface {
 	GeoIPReader() *geoip.Reader
 	LoadGeosite(code string) (Rule, error)
 	RuleSet(tag string) (RuleSet, bool)
-	GetRemoteRuleSetRulesCount() map[string]int  //karing
+	GetRemoteRuleSetRulesCount() map[string]int //karing
 
 	NeedWIFIState() bool
 
 	Exchange(ctx context.Context, message *mdns.Msg) (*mdns.Msg, error)
-	Lookup(ctx context.Context, domain string, strategy dns.DomainStrategy) ([]netip.Addr, string, error)  //karing
+	Lookup(ctx context.Context, domain string, strategy dns.DomainStrategy) ([]netip.Addr, string, error) //karing
 	LookupDefault(ctx context.Context, domain string) ([]netip.Addr, error)
 	ClearDNSCache()
 
-	FindProcessInfo(ctx context.Context, network string, source netip.AddrPort)(*process.Info, error)        //karing
-	GetMatchRuleChain(outboundManager OutboundManager, matchOutboundTag string) ([]string, string, string)   //karing
-	GetMatchRule(ctx context.Context, metadata *InboundContext) (Rule, error)                        //karing
-	GetAssetContent(path string)([]byte, error) //karing
-	SingalQuit() //karing
+	FindProcessInfo(ctx context.Context, network string, source netip.AddrPort) (*process.Info, error)     //karing
+	GetMatchRuleChain(outboundManager OutboundManager, matchOutboundTag string) ([]string, string, string) //karing
+	GetMatchRule(ctx context.Context, metadata *InboundContext) (Rule, error)                              //karing
+	GetAssetContent(path string) ([]byte, error)                                                           //karing
 	Rules() []Rule
 
 	SetTracker(tracker ConnectionTracker)

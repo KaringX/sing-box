@@ -73,16 +73,23 @@ func NewService(configContent string, platformInterface PlatformInterface) (boxS
 	ctx, cancel := context.WithCancel(ctx)
 	urlTestHistoryStorage := urltest.NewHistoryStorage()
 	ctx = service.ContextWithPtr(ctx, urlTestHistoryStorage)
-	platformWrapper := &platformInterfaceWrapper{
-		iif:       platformInterface,
-		useProcFS: platformInterface.UseProcFS(),
+
+	var platformLogWriter log.PlatformWriter //karing
+	if platformInterface != nil {            //karing
+		var platformWrapper *platformInterfaceWrapper //karing
+		platformWrapper = &platformInterfaceWrapper{
+			iif:       platformInterface,
+			useProcFS: platformInterface.UseProcFS(),
+		}
+		service.MustRegister[platform.Interface](ctx, platformWrapper)
+		platformLogWriter = platformWrapper
 	}
-	service.MustRegister[platform.Interface](ctx, platformWrapper)
+
 	var instance *box.Box                //karing
 	instance, err = box.New(box.Options{ //karing
 		Context:           ctx,
 		Options:           options,
-		PlatformLogWriter: platformWrapper,
+		PlatformLogWriter: platformLogWriter,
 	})
 	if err != nil {
 		cancel()

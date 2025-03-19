@@ -2,23 +2,18 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"io"
-	"net"
 	"os"
 	"os/signal"
 	"path/filepath"
-	"runtime/debug"
 	runtimeDebug "runtime/debug"
 	"sort"
 	"strings"
 	"syscall"
 	"time"
 
-	box "github.com/sagernet/sing-box"
-	D "github.com/sagernet/sing-box/common/debug"
+	"github.com/sagernet/sing-box"
 	C "github.com/sagernet/sing-box/constant"
-	"github.com/sagernet/sing-box/experimental/libbox"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
 	E "github.com/sagernet/sing/common/exceptions"
@@ -34,7 +29,7 @@ var commandRun = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		err := run()
 		if err != nil {
-			log.Error(err) //karing
+			log.Fatal(err)
 		}
 	},
 }
@@ -127,24 +122,9 @@ func readConfigAndMerge() (option.Options, error) {
 	return mergedOptions, nil
 }
 
-func create() (instance *box.Box, cf context.CancelFunc, err error) { //karing
-	defer func() { //karing
-		if e := recover(); e != nil {
-			recoverMessage := fmt.Sprintf("%v", e)
-			libbox.SentryCaptureException(recoverMessage, "panic: create service", libbox.SentryTrim(string(debug.Stack())))
-		}
-	}()
-	stacks := D.Stacks(false, false) //karing
-	if len(stacks) > 0 {             //karing
-		for key := range stacks {
-			D.MainGoId = key
-			break
-		}
-	}
-
+func create() (*box.Box, context.CancelFunc, error) {
 	options, err := readConfigAndMerge()
 	if err != nil {
-		libbox.SentryCaptureMessage(err) //karing
 		return nil, nil, err
 	}
 	if disableColor {
@@ -154,13 +134,12 @@ func create() (instance *box.Box, cf context.CancelFunc, err error) { //karing
 		options.Log.DisableColor = true
 	}
 	ctx, cancel := context.WithCancel(globalCtx)
-	instance, err = box.New(box.Options{ //karing
+	instance, err := box.New(box.Options{
 		Context: ctx,
 		Options: options,
 	})
 	if err != nil {
 		cancel()
-		libbox.SentryCaptureMessage(E.Cause(err, "create service")) //karing
 		return nil, nil, E.Cause(err, "create service")
 	}
 
@@ -182,16 +161,8 @@ func create() (instance *box.Box, cf context.CancelFunc, err error) { //karing
 	finishStart()
 	if err != nil {
 		cancel()
-		libbox.SentryCaptureMessage(E.Cause(err, "start service")) //karing
 		return nil, nil, E.Cause(err, "start service")
 	}
-	if servicePort != 0 { //karing
-		conn, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", servicePort))
-		if err == nil {
-			conn.Close()
-		}
-	}
-
 	return instance, cancel, nil
 }
 
@@ -206,50 +177,36 @@ func run() error {
 		}
 		runtimeDebug.FreeOSMemory()
 		for {
-			select { //karing
-			case osSignal := <-osSignals:
-				if osSignal == syscall.SIGHUP {
-					err = check()
-					if err != nil {
-						log.Error(E.Cause(err, "reload service"))
-						continue
-					}
+			osSignal := <-osSignals
+			if osSignal == syscall.SIGHUP {
+				err = check()
+				if err != nil {
+					log.Error(E.Cause(err, "reload service"))
+					continue
 				}
-				cancel()
-				closeCtx, closed := context.WithCancel(context.Background())
-				go closeMonitor(closeCtx)
-				err = instance.Close()
-				closed()
-				if osSignal != syscall.SIGHUP {
-					if err != nil {
-						log.Error(E.Cause(err, "sing-box did not closed properly"))
-					}
-					return nil
+			}
+			cancel()
+			closeCtx, closed := context.WithCancel(context.Background())
+			go closeMonitor(closeCtx)
+			err = instance.Close()
+			closed()
+			if osSignal != syscall.SIGHUP {
+				if err != nil {
+					log.Error(E.Cause(err, "sing-box did not closed properly"))
 				}
-				break
-			case <-instance.Quit: //karing
-				cancel()
-				closeCtx, closed := context.WithCancel(context.Background())
-				go closeMonitor(closeCtx)
-				/*go func() {
-					time.Sleep(3 * time.Second)
-					terminateCurrentProcess()
-				}()*/
-				instance.Close()
-				closed()
 				return nil
 			}
+			break
 		}
 	}
 }
 
 func closeMonitor(ctx context.Context) {
-	time.Sleep(C.StopTimeout) //karing
+	time.Sleep(C.FatalStopTimeout)
 	select {
 	case <-ctx.Done():
 		return
 	default:
 	}
-	log.Error("sing-box did not close!") //karing
-	terminateCurrentProcess()            //karing
+	log.Fatal("sing-box did not close!")
 }

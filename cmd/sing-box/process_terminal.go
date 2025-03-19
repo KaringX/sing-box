@@ -1,4 +1,4 @@
-//go:build with_karing && !windows
+//go:build with_karing && linux
 
 package main
 

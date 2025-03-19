@@ -30,7 +30,8 @@ var (
 	workingDir        string
 	disableColor      bool
 	serviceConfigPath string
-	servicePort       int
+	serviceHttpPort   int
+	connectedPort     int
 )
 
 var mainCommand = &cobra.Command{
@@ -44,7 +45,8 @@ func init() {
 	mainCommand.PersistentFlags().StringVarP(&workingDir, "directory", "D", "", "set working directory")
 	mainCommand.PersistentFlags().BoolVarP(&disableColor, "disable-color", "", false, "disable color output")
 	mainCommand.PersistentFlags().StringVarP(&serviceConfigPath, "service-config", "s", "", "service-config")
-	mainCommand.PersistentFlags().IntVarP(&servicePort, "service-port", "p", 0, "service-port")
+	mainCommand.PersistentFlags().IntVarP(&serviceHttpPort, "service-http-port", "", 0, "service-http-port")
+	mainCommand.PersistentFlags().IntVarP(&connectedPort, "connected-port", "", 0, "connected-port")
 }
 
 func preRun(cmd *cobra.Command, args []string) error {

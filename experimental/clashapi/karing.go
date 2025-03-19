@@ -5,7 +5,6 @@ import (
 	"context"
 	"net/http"
 	"net/netip"
-	"os"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -145,7 +144,6 @@ func karingRouter(ctx context.Context, router adapter.Router, logFactory log.Fac
 	})
 
 	r := chi.NewRouter()
-	r.Get("/stop", stop(router))
 	r.Get("/dnsQueryWithDefaultRouter", dnsQueryWithDefaultRouter(ctx, router, logFactory))
 	r.Post("/dnsQuery", dnsQuery(ctx, router, logFactory))
 	r.Get("/outboundQuery", outboundQuery(ctx, router))
@@ -153,15 +151,6 @@ func karingRouter(ctx context.Context, router adapter.Router, logFactory log.Fac
 	r.Get("/resetOutboundConnections", resetOutboundConnections())
 	r.Get("/mainStack", mainStack())
 	return r
-}
-
-func stop(router adapter.Router) func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		router.SingalQuit()
-		render.JSON(w, r, render.M{
-			"pid": os.Getpid(),
-		})
-	}
 }
 
 func dnsQueryWithDefaultRouter(ctx context.Context, router adapter.Router, logFactory log.Factory) func(w http.ResponseWriter, r *http.Request) {
@@ -220,21 +209,21 @@ func outboundQuery(ctx context.Context, router adapter.Router) func(w http.Respo
 		ip := r.URL.Query().Get("ip")
 		meta := adapter.InboundContext{Domain: domain, Destination: M.ParseSocksaddr(ip)}
 		rule, err := router.GetMatchRule(ctx, &meta)
-		
+
 		if err != nil {
 			render.JSON(w, r, render.M{
-				"err":       err.Error(),
-				"rule":      nil,
-				"chain": nil,
+				"err":         err.Error(),
+				"rule":        nil,
+				"chain":       nil,
 				"action_type": nil,
-				"outbound":  nil,
+				"outbound":    nil,
 			})
 		} else {
 			outboundManager := service.FromContext[adapter.OutboundManager](ctx)
 			var ruleName string
 			var chain []string
 			var outbound string
-			var actionType string 
+			var actionType string
 			if rule != nil {
 				ruleName = rule.String()
 				actionType = rule.Action().Type()
@@ -279,9 +268,7 @@ func mainStack() func(w http.ResponseWriter, r *http.Request) {
 		}
 		render.JSON(w, r, render.M{
 			"mainGoId": D.MainGoId,
-			"result": stack,
+			"result":   stack,
 		})
 	}
 }
- 
- 

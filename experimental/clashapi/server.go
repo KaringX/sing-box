@@ -281,7 +281,7 @@ func (s *Server) CloseTicks() { //karing
 func authentication(serverSecret string) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
-			if serverSecret == "" || strings.Index(r.URL.Path, "/karing/") == 0 { //karing
+			if serverSecret == "" {
 				next.ServeHTTP(w, r)
 				return
 			}

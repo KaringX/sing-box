@@ -71,10 +71,9 @@ type Router struct {
 	platformInterface       platform.Interface
 	needWIFIState           bool
 	started                 bool
-	quitSig                 func() //karing
 }
 
-func NewRouter(ctx context.Context, logFactory log.Factory, options option.RouteOptions, dnsOptions option.DNSOptions, quitSig func()) (*Router, error) { //karing
+func NewRouter(ctx context.Context, logFactory log.Factory, options option.RouteOptions, dnsOptions option.DNSOptions) (*Router, error) { //karing
 	router := &Router{
 		ctx:                   ctx,
 		logger:                logFactory.NewLogger("router"),
@@ -97,7 +96,6 @@ func NewRouter(ctx context.Context, logFactory log.Factory, options option.Route
 		platformInterface:     service.FromContext[platform.Interface](ctx),
 		needWIFIState:         hasRule(options.Rules, isWIFIRule) || hasDNSRule(dnsOptions.Rules, isWIFIDNSRule),
 		staticDns:             createEntries(dnsOptions.StaticIPs), //hiddify
-		quitSig:               quitSig,                             //karing
 	}
 	service.MustRegister[adapter.Router](ctx, router)
 	router.dnsClient = dns.NewClient(dns.ClientOptions{
@@ -648,8 +646,4 @@ func (r *Router) GetAssetContent(path string) ([]byte, error) { //karing
 		return nil, E.New("platform interface not set")
 	}
 	return r.platformInterface.GetAssetContent(path)
-}
-
-func (r *Router) SingalQuit() { //karing
-	r.quitSig()
 }
