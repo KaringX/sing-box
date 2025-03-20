@@ -352,10 +352,6 @@ func traffic(server *Server, trafficManager *trafficontrol.Manager) func(w http.
 		closed := false //karing
 		server.AddTick(tick, func() {
 			closed = true
-			go func() {
-				time.Sleep(time.Second * 3)
-				tick.Stop()
-			}()
 		}) //karing
 		defer func() { //karing
 			server.RemoveTick(tick)
