@@ -50,7 +50,10 @@ func memory(server *Server, trafficManager *trafficontrol.Manager) func(w http.R
 		closed := false //karing
 		server.AddTick(tick, func() {
 			closed = true
-			tick.Stop()
+			go func() {
+				time.Sleep(time.Second * 3)
+				tick.Stop()
+			}()
 		}) //karing
 		defer func() { //karing
 			server.RemoveTick(tick)
