@@ -46,6 +46,3 @@ func FreeIdleThread() {
 func ThreadNum() int {
 	return pprof.Lookup("threadcreate").Count()
 }
-
-//runtime.GC
-//debug.FreeOSMemory

@@ -24,10 +24,6 @@ import (
 	//"github.com/sagernet/sing-box/log"
 )
 
-var (
-	dnsClient *dns.Client
-)
-
 type DNSServer struct {
 	Tag       string   `json:"tag"`
 	Address   string   `json:"address"`
@@ -68,6 +64,7 @@ func LookupWithDefaultRouter(ctx context.Context, router adapter.Router, logFact
 	return duration, addr, tag, nil
 }
 func Lookup(ctx context.Context, router adapter.Router, logFactory log.Factory, req DNSQueryRequest) (uint16, []netip.Addr, error) {
+	var dnsClient = router.GetDNSClient()
 	ctx, _ = adapter.ExtendContext(ctx)
 	outboundManager := service.FromContext[adapter.OutboundManager](ctx)
 	var resolverTransport dns.Transport
@@ -136,13 +133,6 @@ func Lookup(ctx context.Context, router adapter.Router, logFactory log.Factory, 
 }
 
 func karingRouter(ctx context.Context, router adapter.Router, logFactory log.Factory) http.Handler {
-	dnsClient = dns.NewClient(dns.ClientOptions{
-		DisableCache:     true,
-		DisableExpire:    false,
-		IndependentCache: true,
-		//Logger:           router.dns,
-	})
-
 	r := chi.NewRouter()
 	r.Get("/dnsQueryWithDefaultRouter", dnsQueryWithDefaultRouter(ctx, router, logFactory))
 	r.Post("/dnsQuery", dnsQuery(ctx, router, logFactory))

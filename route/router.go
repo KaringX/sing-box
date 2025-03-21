@@ -579,6 +579,28 @@ func (r *Router) Close() error {
 		})
 		monitor.Finish()
 	}
+	r.inbound = nil                                                        //karing
+	r.outbound = nil                                                       //karing
+	r.connection = nil                                                     //karing
+	r.network = nil                                                        //karing
+	r.rules = make([]adapter.Rule, 0)                                      //karing
+	r.dnsClient.Close()                                                    //karing
+	r.staticDns = make(map[string]StaticDNSEntry)                          //karing
+	r.dnsRules = make([]adapter.DNSRule, 0)                                //karing
+	r.ruleSetsRemoteWithLocal = make([]adapter.RuleSet, 0)                 //karing
+	r.ruleSets = make([]adapter.RuleSet, 0)                                //karing
+	r.ruleSetMap = make(map[string]adapter.RuleSet)                        //karing
+	r.defaultTransport = nil                                               //karing
+	r.transports = make([]dns.Transport, 0)                                //karing
+	r.transportMap = make(map[string]dns.Transport)                        //karing
+	r.transportDomainStrategy = make(map[dns.Transport]dns.DomainStrategy) //karing
+	r.dnsReverseMapping = nil                                              //karing
+	r.fakeIPStore = nil                                                    //karing
+	r.processSearcher = nil                                                //karing
+	r.pauseManager = nil                                                   //karing
+	r.tracker = nil                                                        //karing
+	r.platformInterface = nil                                              //karing
+
 	return err
 }
 

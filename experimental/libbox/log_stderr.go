@@ -28,6 +28,14 @@ func StderrRedirect(path string) (err error) {
 	if err != nil {
 		return E.Cause(err, "StderrRedirect:")
 	}
+	StderrCheckAndCapture()
+	return stderrRedirect(stderrLogFile)
+}
+
+func StderrCheckAndCapture() {
+	if stderrLogFile == nil {
+		return
+	}
 	content, _ := readFile(stderrLogFile, 4*1000)
 	stderrLogFile.Truncate(0)
 	stderrLogFile.Seek(0, 0)
@@ -60,10 +68,7 @@ func StderrRedirect(path string) (err error) {
 			}
 		}()
 	}
-
-	return stderrRedirect(stderrLogFile)
 }
-
 func StderrWrite(content string) {
 	if stderrLogFile == nil {
 		return

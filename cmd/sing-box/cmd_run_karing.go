@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"runtime/debug"
-	runtimeDebug "runtime/debug"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -48,6 +47,7 @@ func createHttpServer() error {
 		r.Route("/reload", func(r chi.Router) {
 			r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 				destoryService()
+				libbox.StderrCheckAndCapture()
 				err := createService()
 				if err != nil {
 					render.JSON(w, r, render.M{
@@ -62,7 +62,6 @@ func createHttpServer() error {
 						terminateCurrentProcess()
 					}()
 				} else {
-					go runtimeDebug.FreeOSMemory()
 					render.JSON(w, r, render.M{
 						"err": nil,
 					})
@@ -167,7 +166,11 @@ func runService() (err error) {
 	if err != nil {
 		return err
 	}
-	go runtimeDebug.FreeOSMemory()
+	//go func() {
+	//  time.Sleep(time.Second * 3)
+	//	destoryService()
+	//}()
+
 	<-quit
 	terminateCurrentProcess()
 	return nil

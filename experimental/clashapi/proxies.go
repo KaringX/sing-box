@@ -34,7 +34,7 @@ func proxyRouter(server *Server, router adapter.Router) http.Handler {
 		r.Use(parseProxyName, findProxyByName(server))
 		r.Get("/", getProxy(server))
 		r.Get("/delay", getProxyDelay(server))
-		r.Get("/httprequest", httpRequestByProxy(server))//karing
+		r.Get("/httprequest", httpRequestByProxy(server)) //karing
 		r.Put("/", updateProxy)
 	})
 	return r
@@ -228,13 +228,16 @@ func getProxyDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 				})
 				needUpdate := false
 				switch proxy.Type() {
-				case C.TypeHysteria:needUpdate = true
-				case C.TypeHysteria2:needUpdate = true
-				case C.TypeTUIC:needUpdate = true
+				case C.TypeHysteria:
+					needUpdate = true
+				case C.TypeHysteria2:
+					needUpdate = true
+				case C.TypeTUIC:
+					needUpdate = true
 				}
 				if isListener && needUpdate {
-					if(outbound.OutboundHasConnections != nil){
-						if(!outbound.OutboundHasConnections(realTag)){
+					if outbound.OutboundHasConnections != nil {
+						if !outbound.OutboundHasConnections(realTag) {
 							listener.InterfaceUpdated()
 						}
 					}
@@ -255,14 +258,14 @@ func getProxyDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 			render.JSON(w, r, newError(err.Error())) //karing
 			return
 		}
-		
+
 		render.JSON(w, r, render.M{
-			"delay": delay,
+			"delay":  delay,
 			"delay2": delay2,
 		})
 	}
 }
-func httpRequestByProxy(server *Server) func(w http.ResponseWriter, r *http.Request) {  //karing
+func httpRequestByProxy(server *Server) func(w http.ResponseWriter, r *http.Request) { //karing
 	return func(w http.ResponseWriter, r *http.Request) {
 		query := r.URL.Query()
 		url := query.Get("url")
@@ -277,16 +280,16 @@ func httpRequestByProxy(server *Server) func(w http.ResponseWriter, r *http.Requ
 		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*time.Duration(timeout))
 		defer cancel()
 
-		statusCode,header, body, err := URLRequest(ctx, url, proxy)
-	 
+		statusCode, header, body, err := URLRequest(ctx, url, proxy)
+
 		if ctx.Err() != nil {
-			//render.Status(r, http.StatusGatewayTimeout) 
+			//render.Status(r, http.StatusGatewayTimeout)
 			//render.JSON(w, r, ErrRequestTimeout) //karing
-			render.JSON(w, r, newError(ctx.Err().Error())) 
+			render.JSON(w, r, newError(ctx.Err().Error()))
 			return
 		}
 
-		if err != nil   {
+		if err != nil {
 			//render.Status(r, http.StatusServiceUnavailable) //karing
 			//render.JSON(w, r, newError("An error occurred in the delay test")) //karing
 			render.JSON(w, r, newError(err.Error())) //karing
@@ -294,15 +297,15 @@ func httpRequestByProxy(server *Server) func(w http.ResponseWriter, r *http.Requ
 		}
 
 		render.JSON(w, r, render.M{
-			"status_code" :statusCode,
-			"header": header,
-			"body": body,
+			"status_code": statusCode,
+			"header":      header,
+			"body":        body,
 		})
 	}
 }
-func URLRequest(ctx context.Context, link string, detour N.Dialer) (statusCode int, header map[string][]string, content [] byte, err error) {//karing
+func URLRequest(ctx context.Context, link string, detour N.Dialer) (statusCode int, header map[string][]string, content []byte, err error) { //karing
 	if link == "" {
-		return 0, nil, nil, E.New("request url is empty" )
+		return 0, nil, nil, E.New("request url is empty")
 	}
 	linkURL, err := url.Parse(link)
 	if err != nil {
@@ -347,9 +350,9 @@ func URLRequest(ctx context.Context, link string, detour N.Dialer) (statusCode i
 	if err != nil {
 		return
 	}
-	
+
 	content, err = io.ReadAll(resp.Body)
 	resp.Body.Close()
-	
-	return resp.StatusCode,resp.Header, content, err
+
+	return resp.StatusCode, resp.Header, content, err
 }

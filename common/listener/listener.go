@@ -121,10 +121,12 @@ func (l *Listener) Close() error {
 	if l.systemProxy != nil && l.systemProxy.IsEnabled() {
 		err = l.systemProxy.Disable()
 	}
-	return E.Errors(err, common.Close(
+	err = E.Errors(err, common.Close( //karing
 		l.tcpListener,
 		common.PtrOrNil(l.udpConn),
 	))
+	l.router = nil //karing
+	return err     //karing
 }
 
 func (l *Listener) TCPListener() net.Listener {

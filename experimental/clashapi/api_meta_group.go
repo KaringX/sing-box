@@ -136,7 +136,7 @@ func getGroupDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 				})
 			}
 			b.Wait()
-			gofree.FreeIdleThread()  //karing
+			gofree.FreeIdleThread() //karing
 		}
 
 		if err != nil {

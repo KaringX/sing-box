@@ -191,12 +191,20 @@ func (s *Server) Start(stage adapter.StartStage) error {
 }
 
 func (s *Server) Close() error {
-	s.CloseTicks() //karing
-	return common.Close(
+	s.CloseTicks()       //karing
+	err := common.Close( //karing
 		common.PtrOrNil(s.httpServer),
 		s.trafficManager,
 		s.urlTestHistory,
 	)
+
+	s.router = nil         //karing
+	s.outbound = nil       //karing
+	s.endpoint = nil       //karing
+	s.httpServer = nil     //karing
+	s.trafficManager = nil //karing
+
+	return err //karing
 }
 
 func (s *Server) Mode() string {
@@ -230,7 +238,10 @@ func (s *Server) SetMode(newMode string) {
 		default:
 		}
 	}
-	s.router.ClearDNSCache()
+	if s.router != nil { //karing
+		s.router.ClearDNSCache()
+	}
+
 	cacheFile := service.FromContext[adapter.CacheFile](s.ctx)
 	if cacheFile != nil {
 		err := cacheFile.StoreMode(newMode)

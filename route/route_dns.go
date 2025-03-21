@@ -216,6 +216,10 @@ func (r *Router) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS.Msg, er
 	return response, nil
 }
 
+func (r *Router) GetDNSClient() *dns.Client { //karing
+	return r.dnsClient
+}
+
 func (r *Router) Lookup(ctx context.Context, domain string, strategy dns.DomainStrategy) ([]netip.Addr, string, error) { //karing
 	var (
 		responseAddrs []netip.Addr

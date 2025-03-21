@@ -60,7 +60,7 @@ func NewLocalRuleSet(ctx context.Context, logger logger.Logger, options option.R
 		//filePath, _ = filepath.Abs(filePath)//karing
 		//err := ruleSet.reloadFile(filePath)//karing
 
-		filePath := filemanager.WorkPath(ctx, options.LocalOptions.Path)//karing
+		filePath := filemanager.WorkPath(ctx, options.LocalOptions.Path)  //karing
 		err := ruleSet.reloadFile(filePath, options.LocalOptions.IsAsset) //karing
 		if err != nil {
 			return nil, err
@@ -108,8 +108,8 @@ func (s *LocalRuleSet) reloadFile(path string, isAsset bool) error { //karing
 	switch s.fileFormat {
 	case C.RuleSetFormatSource, "":
 		var content []byte //karing
-		var err error //karing
-		if(isAsset){ //karing
+		var err error      //karing
+		if isAsset {       //karing
 			router := service.FromContext[adapter.Router](s.ctx) //karing
 			content, err = router.GetAssetContent(path)
 		} else { //karing
@@ -124,7 +124,7 @@ func (s *LocalRuleSet) reloadFile(path string, isAsset bool) error { //karing
 		}
 
 	case C.RuleSetFormatBinary:
-		if(isAsset){ //karing
+		if isAsset { //karing
 			router := service.FromContext[adapter.Router](s.ctx) //karing
 			content, err := router.GetAssetContent(path)
 			if err != nil {
@@ -220,6 +220,7 @@ func (s *LocalRuleSet) UnregisterCallback(element *list.Element[adapter.RuleSetU
 }
 
 func (s *LocalRuleSet) Close() error {
+	s.watcher = nil //karing
 	s.rules = nil
 	return common.Close(common.PtrOrNil(s.watcher))
 }

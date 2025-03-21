@@ -203,6 +203,11 @@ func (r *NetworkManager) Close() error {
 		})
 		monitor.Finish()
 	}
+
+	r.endpoint = nil //karing
+	r.inbound = nil  //karing
+	r.outbound = nil //karing
+
 	return err
 }
 
@@ -370,25 +375,28 @@ func (r *NetworkManager) UpdateWIFIState() {
 func (r *NetworkManager) ResetNetwork() {
 	r.logger.Info("NetworkManager:ResetNetwork") //karing
 	conntrack.Close()
-
-	for _, endpoint := range r.endpoint.Endpoints() {
-		listener, isListener := endpoint.(adapter.InterfaceUpdateListener)
-		if isListener {
-			listener.InterfaceUpdated()
+	if r.endpoint != nil { //karing
+		for _, endpoint := range r.endpoint.Endpoints() {
+			listener, isListener := endpoint.(adapter.InterfaceUpdateListener)
+			if isListener {
+				listener.InterfaceUpdated()
+			}
 		}
 	}
-
-	for _, inbound := range r.inbound.Inbounds() {
-		listener, isListener := inbound.(adapter.InterfaceUpdateListener)
-		if isListener {
-			listener.InterfaceUpdated()
+	if r.inbound != nil { //karing
+		for _, inbound := range r.inbound.Inbounds() {
+			listener, isListener := inbound.(adapter.InterfaceUpdateListener)
+			if isListener {
+				listener.InterfaceUpdated()
+			}
 		}
 	}
-
-	for _, outbound := range r.outbound.Outbounds() {
-		listener, isListener := outbound.(adapter.InterfaceUpdateListener)
-		if isListener {
-			listener.InterfaceUpdated()
+	if r.outbound != nil { //karing
+		for _, outbound := range r.outbound.Outbounds() {
+			listener, isListener := outbound.(adapter.InterfaceUpdateListener)
+			if isListener {
+				listener.InterfaceUpdated()
+			}
 		}
 	}
 }

@@ -128,6 +128,11 @@ func (s *BoxService) Start() (err error) { //karing
 	}
 	if err != nil { //karing
 		SentryCaptureMessage(E.Cause(err, "start service"))
+	} else {
+		go func() {
+			runtime.GC()                //karing
+			runtimeDebug.FreeOSMemory() //karing
+		}()
 	}
 	return err
 }
@@ -140,6 +145,13 @@ func (s *BoxService) Close() error {
 	go func() {
 		err = s.instance.Close()
 		close(done)
+		s.urlTestHistoryStorage = nil //karing
+		s.clashServer = nil           //karing
+		s.pauseManager = nil          //karing
+		s.instance = nil              //karing
+
+		runtime.GC()                //karing
+		runtimeDebug.FreeOSMemory() //karing
 	}()
 	select {
 	case <-done:

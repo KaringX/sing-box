@@ -31,7 +31,6 @@ type TrackerMetadata struct {
 	Protocol     string //karing
 }
 
-
 func (t TrackerMetadata) MarshalJSON() ([]byte, error) {
 	var inbound string
 	if t.Metadata.Inbound != "" {
@@ -81,9 +80,9 @@ func (t TrackerMetadata) MarshalJSON() ([]byte, error) {
 			"host":            domain,
 			"dnsMode":         "normal",
 			"processPath":     processPath,
-			"packageName":     packageName,//karing
-			"user":            t.User,     //karing
-			"protocol":        t.Protocol, //karing
+			"packageName":     packageName, //karing
+			"user":            t.User,      //karing
+			"protocol":        t.Protocol,  //karing
 		},
 		"upload":      t.Upload.Load(),
 		"download":    t.Download.Load(),
@@ -270,6 +269,7 @@ func NewUDPTracker(conn N.PacketConn, manager *Manager, metadata adapter.Inbound
 	manager.Join(trackerConn)
 	return trackerConn
 }
+
 func GetMatchRuleChain(outboundManager adapter.OutboundManager, matchOutboundTag string) ([]string, string, string) { //karing
 	var (
 		chain        []string
@@ -277,6 +277,9 @@ func GetMatchRuleChain(outboundManager adapter.OutboundManager, matchOutboundTag
 		outbound     string
 		outboundType string
 	)
+	if outboundManager == nil {
+		return chain, outbound, outboundType
+	}
 	if len(matchOutboundTag) != 0 {
 		next = matchOutboundTag
 	} else {
@@ -298,4 +301,3 @@ func GetMatchRuleChain(outboundManager adapter.OutboundManager, matchOutboundTag
 	}
 	return chain, outbound, outboundType
 }
-

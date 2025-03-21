@@ -86,10 +86,15 @@ func (s *HistoryStorage) notifyUpdated() {
 
 func (s *HistoryStorage) Close() error {
 	s.updateHook = nil
+	s.access.Lock() //kariing
+	for k := range s.delayHistory {
+		delete(s.delayHistory, k)
+	}
+	s.access.Unlock()
 	return nil
 }
 
-func URLTest(ctx context.Context, link string, detour N.Dialer) (t uint16, t2 uint16, err error) {//karing
+func URLTest(ctx context.Context, link string, detour N.Dialer) (t uint16, t2 uint16, err error) { //karing
 	if link == "" {
 		link = "https://www.gstatic.com/generate_204"
 	}
@@ -137,7 +142,7 @@ func URLTest(ctx context.Context, link string, detour N.Dialer) (t uint16, t2 ui
 	if err != nil {
 		return
 	}
-	t2 = uint16(time.Since(start).Milliseconds())  //karing
+	t2 = uint16(time.Since(start).Milliseconds()) //karing
 	resp.Body.Close()
 	{ //karing
 		start2 := time.Now()

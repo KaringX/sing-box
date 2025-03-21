@@ -158,7 +158,10 @@ func (m *Manager) Close() error {
 	}
 	m.started = false
 	outbounds := m.outbounds
-	m.outbounds = nil
+	m.outbounds = make([]adapter.Outbound, 0)           //karing
+	m.outboundByTag = make(map[string]adapter.Outbound) //karing
+	m.dependByTag = make(map[string][]string)           //karing
+	m.endpoint = nil                                    //karing
 	m.access.Unlock()
 	var err error
 	for _, outbound := range outbounds {
@@ -185,6 +188,9 @@ func (m *Manager) Outbound(tag string) (adapter.Outbound, bool) {
 	m.access.Unlock()
 	if found {
 		return outbound, true
+	}
+	if m.endpoint == nil { //karing
+		return nil, false
 	}
 	return m.endpoint.Get(tag)
 }
@@ -257,7 +263,7 @@ func (m *Manager) Create(ctx context.Context, router adapter.Router, logger log.
 		err = parseErr
 	}
 	if err != nil {
-		outbound.SetParseErr(err) //karing
+		outbound.SetParseErr(err)                                               //karing
 		m.logger.Error("create outbound failed: ", outbound.Tag(), " -> ", err) //karing
 		//return err //karing
 	}

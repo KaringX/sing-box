@@ -45,6 +45,9 @@ type LifecycleService interface {
 
 func Start(stage StartStage, services ...Lifecycle) error {
 	for _, service := range services {
+		if service == nil { //karing
+			continue
+		}
 		err := service.Start(stage)
 		if err != nil {
 			return err
@@ -55,6 +58,9 @@ func Start(stage StartStage, services ...Lifecycle) error {
 
 func StartNamed(stage StartStage, services []LifecycleService) error {
 	for _, service := range services {
+		if service == nil { //karing
+			continue
+		}
 		err := service.Start(stage)
 		if err != nil {
 			return E.Cause(err, stage.String(), " ", service.Name())

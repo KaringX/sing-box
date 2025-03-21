@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime"
 	"runtime/debug"
 	"time"
 
@@ -76,7 +77,14 @@ func Context(
 	return ctx
 }
 
-func New(options Options) (*Box, error) {
+func New(options Options) (box *Box, err error) {
+	defer func() {
+		if box != nil {
+			runtime.SetFinalizer(box, func(box *Box) {
+				service.UnRegisterAll(options.Context)
+			})
+		}
+	}()
 	createdAt := time.Now()
 	ctx := options.Context
 	if ctx == nil {
@@ -134,17 +142,14 @@ func New(options Options) (*Box, error) {
 		return nil, E.Cause(err, "start logger")
 	}
 	var services []adapter.LifecycleService //karing
-	var cacheFile adapter.CacheFile         //karing
-	if needCacheFile {                      //karing
-		cacheFile = service.FromContext[adapter.CacheFile](ctx)
-		if cacheFile == nil {
-			cacheFile = cachefile.New(ctx, common.PtrValueOrDefault(experimentalOptions.CacheFile))
-			service.MustRegister[adapter.CacheFile](ctx, cacheFile)
-			services = append(services, cacheFile)
-			err = cacheFile.BeforeStart()
-			if err != nil {
-				return nil, E.Cause(err, "cacheFile load failed")
-			}
+
+	if needCacheFile { //karing
+		cacheFile := cachefile.New(ctx, common.PtrValueOrDefault(experimentalOptions.CacheFile))
+		service.MustRegister[adapter.CacheFile](ctx, cacheFile)
+		services = append(services, cacheFile)
+		err = cacheFile.BeforeStart()
+		if err != nil {
+			return nil, E.Cause(err, "cacheFile load failed")
 		}
 	}
 
@@ -461,6 +466,13 @@ func (s *Box) Close() error {
 	err = E.Append(err, s.logFactory.Close(), func(err error) error {
 		return E.Cause(err, "close logger")
 	})
+	s.inbound = nil    //karing
+	s.outbound = nil   //karing
+	s.endpoint = nil   //karing
+	s.connection = nil //karing
+	s.network = nil    //karing
+	s.router = nil     //karing
+	s.services = nil   //karing
 	return err
 }
 
