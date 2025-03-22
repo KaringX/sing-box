@@ -116,7 +116,7 @@ func NewServer(ctx context.Context, logFactory log.ObservableFactory, options op
 	chiRouter.Group(func(r chi.Router) {
 		r.Use(authentication(options.Secret))
 		r.Get("/", hello(options.ExternalUI != ""))
-		r.Get("/logs", getLogs(logFactory))
+		r.Get("/logs", getLogs(s, logFactory))        //karing
 		r.Get("/traffic", traffic(s, trafficManager)) //karing
 		r.Get("/version", version)
 		r.Mount("/configs", configRouter(s, logFactory))
@@ -343,7 +343,6 @@ type Traffic struct {
 
 func traffic(server *Server, trafficManager *trafficontrol.Manager) func(w http.ResponseWriter, r *http.Request) { //karing
 	return func(w http.ResponseWriter, r *http.Request) {
-		pauseManager := service.FromContext[pause.Manager](server.ctx) //karing
 		var conn net.Conn
 		if r.Header.Get("Upgrade") == "websocket" {
 			var err error
@@ -375,10 +374,9 @@ func traffic(server *Server, trafficManager *trafficontrol.Manager) func(w http.
 			if closed { //karing
 				break
 			}
-			if pauseManager != nil { //karing
-				if pauseManager.IsDevicePaused() {
-					continue
-				}
+			pauseManager := service.FromContext[pause.Manager](server.ctx) //karing
+			if pauseManager == nil || pauseManager.IsDevicePaused() {      //karing
+				break
 			}
 			uploadTotalNew, downloadTotalNew := trafficManager.Total()
 			err := json.NewEncoder(buf).Encode(Traffic{
@@ -409,7 +407,7 @@ type Log struct {
 	Payload string `json:"payload"`
 }
 
-func getLogs(logFactory log.ObservableFactory) func(w http.ResponseWriter, r *http.Request) {
+func getLogs(server *Server, logFactory log.ObservableFactory) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		levelText := r.URL.Query().Get("level")
 		if levelText == "" {
@@ -456,6 +454,10 @@ func getLogs(logFactory log.ObservableFactory) func(w http.ResponseWriter, r *ht
 				continue
 			}
 			buf.Reset()
+			pauseManager := service.FromContext[pause.Manager](server.ctx) //karing
+			if pauseManager == nil || pauseManager.IsDevicePaused() {      //karing
+				break
+			}
 			err = json.NewEncoder(buf).Encode(Log{
 				Type:    log.FormatLevel(logEntry.Level),
 				Payload: logEntry.Message,

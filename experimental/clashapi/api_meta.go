@@ -31,7 +31,6 @@ type Memory struct {
 
 func memory(server *Server, trafficManager *trafficontrol.Manager) func(w http.ResponseWriter, r *http.Request) { //karing
 	return func(w http.ResponseWriter, r *http.Request) {
-		pauseManager := service.FromContext[pause.Manager](server.ctx) //karing
 		var conn net.Conn
 		if r.Header.Get("Upgrade") == "websocket" {
 			var err error
@@ -64,10 +63,9 @@ func memory(server *Server, trafficManager *trafficontrol.Manager) func(w http.R
 			if closed { //karing
 				break
 			}
-			if pauseManager != nil { //karing
-				if pauseManager.IsDevicePaused() {
-					continue
-				}
+			pauseManager := service.FromContext[pause.Manager](server.ctx) //karing
+			if pauseManager == nil || pauseManager.IsDevicePaused() {      //karing
+				break
 			}
 			inuse := trafficManager.Snapshot(false).Memory //karing
 

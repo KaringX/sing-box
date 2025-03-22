@@ -29,8 +29,7 @@ func connectionRouter(server *Server, router adapter.Router, trafficManager *tra
 
 func getConnections(server *Server, trafficManager *trafficontrol.Manager) func(w http.ResponseWriter, r *http.Request) { //karing
 	return func(w http.ResponseWriter, r *http.Request) {
-		pauseManager := service.FromContext[pause.Manager](server.ctx) //karing
-		noConnections := r.URL.Query().Get("noConnections")            //karing
+		noConnections := r.URL.Query().Get("noConnections") //karing
 		if r.Header.Get("Upgrade") != "websocket" {
 			snapshot := trafficManager.Snapshot(noConnections != "true") //karing
 			render.JSON(w, r, snapshot)
@@ -83,10 +82,9 @@ func getConnections(server *Server, trafficManager *trafficontrol.Manager) func(
 			if closed { //karing
 				break
 			}
-			if pauseManager != nil { //karing
-				if pauseManager.IsDevicePaused() {
-					continue
-				}
+			pauseManager := service.FromContext[pause.Manager](server.ctx) //karing
+			if pauseManager == nil || pauseManager.IsDevicePaused() {      //karing
+				break
 			}
 			if err = sendSnapshot(); err != nil {
 				break
