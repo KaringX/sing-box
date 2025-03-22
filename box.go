@@ -288,6 +288,9 @@ func New(options Options) (box *Box, err error) {
 
 		outbound.OutboundHasConnections = func(tag string) bool { //karing
 			clashServer := service.FromContext[adapter.ClashServer](ctx)
+			if clashServer == nil {
+				return false
+			}
 			trafficManager := clashServer.(*clashapi.Server).TrafficManager()
 			if trafficManager == nil {
 				return false

@@ -49,6 +49,9 @@ func (s *CommandServer) handleConnectionsConn(conn net.Conn) error {
 	for {
 		service := s.service
 		if service != nil {
+			if service.clashServer == nil { //karing
+				return E.New("service.clashServer closed")
+			}
 			trafficManager = service.clashServer.(*clashapi.Server).TrafficManager()
 			break
 		}
