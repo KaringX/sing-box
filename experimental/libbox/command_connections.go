@@ -58,6 +58,9 @@ func (s *CommandServer) handleConnectionsConn(conn net.Conn) error {
 		case <-ticker.C:
 		}
 	}
+	if trafficManager == nil { //karing
+		return E.New("clashapi.Server.trafficManager closed")
+	}
 	var (
 		connections    = make(map[uuid.UUID]*Connection)
 		outConnections []Connection

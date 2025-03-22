@@ -282,7 +282,12 @@ func New(options Options) (box *Box, err error) {
 			return nil, E.Cause(err, "create clash-server")
 		}
 
+		router.SetTracker(clashServer)
+		service.MustRegister[adapter.ClashServer](ctx, clashServer)
+		services = append(services, clashServer)
+
 		outbound.OutboundHasConnections = func(tag string) bool { //karing
+			clashServer := service.FromContext[adapter.ClashServer](ctx)
 			trafficManager := clashServer.(*clashapi.Server).TrafficManager()
 			if trafficManager == nil {
 				return false
@@ -290,9 +295,6 @@ func New(options Options) (box *Box, err error) {
 			hasConn := trafficManager.OutboundHasConnections(tag)
 			return hasConn
 		}
-		router.SetTracker(clashServer)
-		service.MustRegister[adapter.ClashServer](ctx, clashServer)
-		services = append(services, clashServer)
 	}
 	if needV2RayAPI {
 		v2rayServer, err := experimental.NewV2RayServer(logFactory.NewLogger("v2ray-api"), common.PtrValueOrDefault(experimentalOptions.V2RayAPI))
