@@ -636,7 +636,10 @@ func (r *Router) SetTracker(tracker adapter.ConnectionTracker) {
 }
 
 func (r *Router) ResetNetwork() {
-	r.network.ResetNetwork()
+	if r.network != nil { //karing
+		r.network.ResetNetwork()
+	}
+
 	for _, transport := range r.transports {
 		transport.Reset()
 	}

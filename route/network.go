@@ -402,6 +402,9 @@ func (r *NetworkManager) ResetNetwork() {
 }
 
 func (r *NetworkManager) notifyInterfaceUpdate(defaultInterface *control.Interface, flags int) {
+	if r.pauseManager == nil { //karing
+		return
+	}
 	if defaultInterface == nil {
 		r.logger.Error("NetworkManager NetworkPause: missing default interface or network is not reachable") //karing
 		r.pauseManager.NetworkPause()
@@ -447,16 +450,22 @@ func (r *NetworkManager) notifyInterfaceUpdate(defaultInterface *control.Interfa
 func (r *NetworkManager) notifyWindowsPowerEvent(event int) {
 	switch event {
 	case winpowrprof.EVENT_SUSPEND:
-		r.ResetNetwork()             //karing
-		r.pauseManager.DevicePause() //karing
+		r.ResetNetwork()           //karing
+		if r.pauseManager != nil { //karing
+			r.pauseManager.DevicePause() //karing
+		}
 	case winpowrprof.EVENT_RESUME:
-		if !r.pauseManager.IsDevicePaused() {
-			return
+		if r.pauseManager != nil { //karing
+			if !r.pauseManager.IsDevicePaused() {
+				return
+			}
 		}
 		fallthrough
 	case winpowrprof.EVENT_RESUME_AUTOMATIC:
-		r.ResetNetwork()            //karing
-		r.pauseManager.DeviceWake() //karing
+		r.ResetNetwork()           //karing
+		if r.pauseManager != nil { //karing
+			r.pauseManager.DeviceWake() //karing
+		}
 	}
 }
 

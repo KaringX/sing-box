@@ -90,7 +90,7 @@ func createHttpServer() error {
 		}
 		go func() {
 			err := httpServer.ListenAndServe()
-			if err != nil && !errors.Is(err, http.ErrServerClosed) && !E.IsClosed(err) {
+			if err != nil && !errors.Is(err, http.ErrServerClosed) && !E.IsClosed(err) && boxService != nil {
 				log.Fatal(E.Cause(err, "serve HTTP server"))
 			}
 		}()

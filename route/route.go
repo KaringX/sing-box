@@ -60,6 +60,9 @@ func (r *Router) RouteConnectionEx(ctx context.Context, conn net.Conn, metadata 
 }
 
 func (r *Router) routeConnection(ctx context.Context, conn net.Conn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) error {
+	if r.pauseManager == nil { //karing
+		return E.New("TCP: route.pauseManager closed")
+	}
 	if r.pauseManager.IsNetworkPaused() { //karing
 		return E.New("reject connection to ", metadata.Destination, " while network paused")
 	}
@@ -71,6 +74,9 @@ func (r *Router) routeConnection(ctx context.Context, conn net.Conn, metadata ad
 	if metadata.InboundDetour != "" {
 		if metadata.LastInbound == metadata.InboundDetour {
 			return E.New("routing loop on detour: ", metadata.InboundDetour)
+		}
+		if r.inbound == nil { //karing
+			return E.New("TCP: route.inbound closed")
 		}
 		detour, loaded := r.inbound.Get(metadata.InboundDetour)
 		if !loaded {
@@ -109,6 +115,9 @@ func (r *Router) routeConnection(ctx context.Context, conn net.Conn, metadata ad
 	if selectedRule != nil {
 		switch action := selectedRule.Action().(type) {
 		case *rule.RuleActionRoute:
+			if r.outbound == nil { //karing
+				return E.New("TCP: route.outbound closed")
+			}
 			var loaded bool
 			selectedOutbound, loaded = r.outbound.Outbound(action.Outbound)
 			if !loaded {
@@ -132,6 +141,9 @@ func (r *Router) routeConnection(ctx context.Context, conn net.Conn, metadata ad
 		}
 	}
 	if selectedRule == nil {
+		if r.outbound == nil { //karing
+			return E.New("TCP: route.outbound closed")
+		}
 		defaultOutbound := r.outbound.Default()
 		if !common.Contains(defaultOutbound.Network(), N.NetworkTCP) {
 			buf.ReleaseMulti(buffers)
@@ -149,6 +161,9 @@ func (r *Router) routeConnection(ctx context.Context, conn net.Conn, metadata ad
 	if outboundHandler, isHandler := selectedOutbound.(adapter.ConnectionHandlerEx); isHandler {
 		outboundHandler.NewConnectionEx(ctx, conn, metadata, onClose)
 	} else {
+		if r.connection == nil { //karing
+			return E.New("TCP: route.connection closed")
+		}
 		r.connection.NewConnection(ctx, selectedOutbound, conn, metadata, onClose)
 	}
 	return nil
@@ -189,6 +204,9 @@ func (r *Router) RoutePacketConnectionEx(ctx context.Context, conn N.PacketConn,
 }
 
 func (r *Router) routePacketConnection(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) error {
+	if r.pauseManager == nil { //karing
+		return E.New("UDP: route.pauseManager closed")
+	}
 	if r.pauseManager.IsNetworkPaused() { //karing
 		return E.New("reject packet connection to ", metadata.Destination, " while network paused")
 	}
@@ -199,6 +217,9 @@ func (r *Router) routePacketConnection(ctx context.Context, conn N.PacketConn, m
 	if metadata.InboundDetour != "" {
 		if metadata.LastInbound == metadata.InboundDetour {
 			return E.New("routing loop on detour: ", metadata.InboundDetour)
+		}
+		if r.inbound == nil { //karing
+			return E.New("UDP: route.inbound closed")
 		}
 		detour, loaded := r.inbound.Get(metadata.InboundDetour)
 		if !loaded {
@@ -233,6 +254,9 @@ func (r *Router) routePacketConnection(ctx context.Context, conn N.PacketConn, m
 	if selectedRule != nil {
 		switch action := selectedRule.Action().(type) {
 		case *rule.RuleActionRoute:
+			if r.outbound == nil { //karing
+				return E.New("UDP: route.outbound closed")
+			}
 			var loaded bool
 			selectedOutbound, loaded = r.outbound.Outbound(action.Outbound)
 			if !loaded {
@@ -253,6 +277,9 @@ func (r *Router) routePacketConnection(ctx context.Context, conn N.PacketConn, m
 		}
 	}
 	if selectedRule == nil || selectReturn {
+		if r.outbound == nil { //karing
+			return E.New("UDP: route.outbound closed")
+		}
 		defaultOutbound := r.outbound.Default()
 		if !common.Contains(defaultOutbound.Network(), N.NetworkUDP) {
 			N.ReleaseMultiPacketBuffer(packetBuffers)
@@ -273,6 +300,9 @@ func (r *Router) routePacketConnection(ctx context.Context, conn N.PacketConn, m
 	if outboundHandler, isHandler := selectedOutbound.(adapter.PacketConnectionHandlerEx); isHandler {
 		outboundHandler.NewPacketConnectionEx(ctx, conn, metadata, onClose)
 	} else {
+		if r.connection == nil { //karing
+			return E.New("UDP: route.connection closed")
+		}
 		r.connection.NewPacketConnection(ctx, selectedOutbound, conn, metadata, onClose)
 	}
 	return nil
