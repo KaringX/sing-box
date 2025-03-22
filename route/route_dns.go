@@ -267,6 +267,9 @@ func (r *Router) Lookup(ctx context.Context, domain string, strategy dns.DomainS
 				strategy = r.defaultDomainStrategy
 			}
 		}
+		if transport == nil { //karing
+			return nil, "", E.New("route.transport closed")
+		}
 		responseAddrs, err = r.dnsClient.Lookup(ctx, transport, domain, dns.QueryOptions{Strategy: strategy})
 	} else {
 		var (
@@ -302,6 +305,9 @@ func (r *Router) Lookup(ctx context.Context, domain string, strategy dns.DomainS
 					return rule.MatchAddressLimit(metadata)
 				})
 			} else {
+				if transport == nil { //karing
+					return nil, "", E.New("route.transport closed")
+				}
 				addressLimit = false
 				responseAddrs, err = r.dnsClient.Lookup(dnsCtx, transport, domain, options)
 			}
