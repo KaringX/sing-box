@@ -2,14 +2,12 @@ package dialer
 
 //hiddify
 import (
-	"encoding/binary"
-	"errors"
 	"io"
 	"net"
 	"os"
 	"time"
 
-	opt "github.com/sagernet/sing-box/option"
+	opts "github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/bufio"
 	M "github.com/sagernet/sing/common/metadata"
@@ -17,18 +15,19 @@ import (
 
 type TLSFragment struct {
 	Enabled bool
-	Sleep   opt.IntRange
-	Size    opt.IntRange
+	Sleep   opts.IntRange
+	Size    opts.IntRange
 }
 
 type fragmentConn struct {
-	dialer      net.Dialer
-	fragment    TLSFragment
-	network     string
-	destination M.Socksaddr
 	conn        net.Conn
 	err         error
+	dialer      net.Dialer
+	destination M.Socksaddr
+	network     string
+	fragment    TLSFragment
 }
+
 
 // isClientHelloPacket checks if data resembles a TLS clientHello packet
 func isClientHelloPacket(b []byte) bool {
@@ -51,157 +50,82 @@ func isClientHelloPacket(b []byte) bool {
 	return true
 }
 
-// parseSniInfo parses the ClientHello message and extracts the SNI info
-func parseSniInfo(data []byte) (sni string, startIndex int, length int, err error) {
-	// Skip the first 5 bytes of the TLS record header
-	data = data[5:]
-
-	messageLen := int(data[1])<<16 | int(data[2])<<8 | int(data[3])
-	if len(data) < 4+messageLen {
-		return "", 0, 0, errors.New("data too short for complete handshake message")
+func (c *fragmentConn) writeFragments(b []byte) (n int, err error) {
+	recordLen := 5 + ((int(b[3]) << 8) | int(b[4]))
+	if len(b) < recordLen { // maybe already fragmented somehow
+		return c.conn.Write(b)
 	}
 
-	// Skip the handshake message header
-	data = data[4 : 4+messageLen]
-
-	if len(data) < 34 {
-		return "", 0, 0, errors.New("data too short for ClientHello fixed part")
-	}
-
-	sessionIDLen := int(data[34])
-	offset := 35 + sessionIDLen
-
-	if len(data) < offset+2 {
-		return "", 0, 0, errors.New("data too short for cipher suites length")
-	}
-
-	cipherSuitesLen := int(binary.BigEndian.Uint16(data[offset : offset+2]))
-	offset += 2 + cipherSuitesLen
-
-	if len(data) < offset+1 {
-		return "", 0, 0, errors.New("data too short for compression methods length")
-	}
-
-	compressionMethodsLen := int(data[offset])
-	offset += 1 + compressionMethodsLen
-
-	if len(data) < offset+2 {
-		return "", 0, 0, errors.New("data too short for extensions length")
-	}
-
-	extensionsLen := int(binary.BigEndian.Uint16(data[offset : offset+2]))
-	offset += 2
-
-	if len(data) < offset+extensionsLen {
-		return "", 0, 0, errors.New("data too short for complete extensions")
-	}
-
-	extensions := data[offset : offset+extensionsLen]
-	for len(extensions) >= 4 {
-		extType := binary.BigEndian.Uint16(extensions[:2])
-		extLen := int(binary.BigEndian.Uint16(extensions[2:4]))
-		if len(extensions) < 4+extLen {
-			return "", 0, 0, errors.New("extension length mismatch")
+	var bytesWritten int
+	data := b[5:recordLen]
+	buf := make([]byte, 1024)
+	queue := make([]byte, 2048)
+	n_queue := int(opts.GetRandomIntFromRange(1, 4))
+	L_queue := 0
+	c_queue := 0
+	for from := 0; ; {
+		to := from + int(opts.GetRandomIntFromRange(c.fragment.Size.Min, c.fragment.Size.Max))
+		if to > len(data) {
+			to = len(data)
 		}
-		if extType == 0x00 { // SNI extension
-			sniData := extensions[4 : 4+extLen]
-			if len(sniData) < 2 {
-				return "", 0, 0, errors.New("invalid SNI extension data")
+		copy(buf[:3], b)
+		copy(buf[5:], data[from:to])
+		l := to - from
+		from = to
+		buf[3] = byte(l >> 8)
+		buf[4] = byte(l)
+
+		if c_queue < n_queue {
+			if l > 0 {
+				copy(queue[L_queue:], buf[:5+l])
+				L_queue = L_queue + 5 + l
 			}
-			serverNameListLen := int(binary.BigEndian.Uint16(sniData[:2]))
-			if len(sniData) < 2+serverNameListLen {
-				return "", 0, 0, errors.New("SNI list length mismatch")
+			c_queue = c_queue + 1
+		} else {
+			if l > 0 {
+				copy(queue[L_queue:], buf[:5+l])
+				L_queue = L_queue + 5 + l
 			}
-			serverNameList := sniData[2 : 2+serverNameListLen]
-			for len(serverNameList) >= 3 {
-				nameType := serverNameList[0]
-				nameLen := int(binary.BigEndian.Uint16(serverNameList[1:3]))
-				if len(serverNameList) < 3+nameLen {
-					return "", 0, 0, errors.New("server name length mismatch")
+
+			if L_queue > 0 {
+				n, err := c.conn.Write(queue[:L_queue])
+				if err != nil {
+					return 0, err
 				}
-				if nameType == 0 { // host_name
-					sni = string(serverNameList[3 : 3+nameLen])
-					startIndex = offset + 4 + 2 + 3
-					length = nameLen
-					return sni, startIndex, length, nil
+				bytesWritten += n
+				if c.fragment.Sleep.Max != 0 {
+					time.Sleep(time.Duration(opts.GetRandomIntFromRange(c.fragment.Sleep.Min, c.fragment.Sleep.Max)) * time.Millisecond)
 				}
-				serverNameList = serverNameList[3+nameLen:]
+
 			}
-		}
-		extensions = extensions[4+extLen:]
-	}
 
-	return "", 0, 0, errors.New("SNI not found")
-}
+			L_queue = 0
+			c_queue = 0
 
-// selectRandomIndices selects random indices to chunk data into fragments based on a given range
-func selectRandomIndices(dataLen int, sizeRange opt.IntRange) []int {
-	var indices []int
-
-	for current := 0; current < dataLen; {
-		// Ensure the chunk size does not exceed the remaining length
-		chunkSize := int(sizeRange.UniformRand())
-		if current+chunkSize > dataLen {
-			chunkSize = dataLen - current
 		}
 
-		current += chunkSize
-		indices = append(indices, current)
-	}
+		if from == len(data) {
+			if L_queue > 0 {
+				n, err := c.conn.Write(queue[:L_queue])
+				if err != nil {
+					return 0, err
+				}
+				bytesWritten += n
+				if c.fragment.Sleep.Max != 0 {
+					time.Sleep(time.Duration(opts.GetRandomIntFromRange(c.fragment.Sleep.Min, c.fragment.Sleep.Max)) * time.Millisecond)
+				}
 
-	return indices
-}
-
-func fragmentTLSClientHello(b []byte, sizeRange opt.IntRange) [][]byte {
-	var fragments [][]byte
-	var fragmentIndices []int
-	clientHelloLen := int(binary.BigEndian.Uint16(b[3:5]))
-	clientHelloData := b[5:]
-
-	_, sniStartIdx, sniLen, err := parseSniInfo(b)
-	if err != nil {
-		fragmentIndices = selectRandomIndices(clientHelloLen, sizeRange)
-	} else {
-		// select random indices in two parts, 0-randomIndexOfSni and randomIndexOfSni-packetEnd, ensuring the SNI ext is fragmented
-		sniExtFragmentIdx := opt.IntRange{Min: uint64(sniStartIdx), Max: uint64(sniStartIdx + sniLen)}.UniformRand()
-		preSniExtIdx := selectRandomIndices(int(sniExtFragmentIdx), sizeRange)
-		postSniExtIdx := selectRandomIndices(clientHelloLen-(sniStartIdx+sniLen), sizeRange)
-		for i := range postSniExtIdx {
-			postSniExtIdx[i] += sniStartIdx + sniLen
-		}
-		fragmentIndices = append(fragmentIndices, preSniExtIdx...)
-		fragmentIndices = append(fragmentIndices, postSniExtIdx...)
-	}
-
-	fragmentStart := 0
-	for _, fragmentEnd := range fragmentIndices {
-		header := make([]byte, 5)
-		header[0] = b[0]
-		binary.BigEndian.PutUint16(header[1:], binary.BigEndian.Uint16(b[1:3]))
-		binary.BigEndian.PutUint16(header[3:], uint16(fragmentEnd-fragmentStart))
-		payload := append(header, clientHelloData[fragmentStart:fragmentEnd]...)
-		fragments = append(fragments, payload)
-		fragmentStart = fragmentEnd
-	}
-
-	return fragments
-}
-
-func (c *fragmentConn) writeFragments(fragments [][]byte) (n int, err error) {
-	var totalWrittenBytes int
-	for _, fragment := range fragments {
-		lastWrittenBytes, err := c.conn.Write(fragment)
-		if err != nil {
-			c.err = err
-			return totalWrittenBytes, c.err
-		}
-		totalWrittenBytes += lastWrittenBytes
-
-		if c.fragment.Sleep.Max != 0 {
-			time.Sleep(time.Duration(c.fragment.Sleep.UniformRand()) * time.Millisecond)
+			}
+			if len(b) > recordLen {
+				n, err := c.conn.Write(b[recordLen:])
+				if err != nil {
+					return recordLen + n, err
+				}
+				bytesWritten += n
+			}
+			return bytesWritten, nil
 		}
 	}
-	return totalWrittenBytes, nil
 }
 
 func (c *fragmentConn) Write(b []byte) (n int, err error) {
@@ -210,8 +134,7 @@ func (c *fragmentConn) Write(b []byte) (n int, err error) {
 	}
 
 	if isClientHelloPacket(b) {
-		fragments := fragmentTLSClientHello(b, c.fragment.Size)
-		return c.writeFragments(fragments)
+		return c.writeFragments(b)
 	}
 
 	return c.conn.Write(b)

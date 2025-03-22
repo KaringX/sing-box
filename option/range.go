@@ -82,3 +82,17 @@ func (r IntRange) UniformRand() int64 {
 	randomInt, _ := rand.Int(rand.Reader, big.NewInt(int64(r.Max-r.Min)+1))
 	return int64(r.Min) + randomInt.Int64()
 }
+
+
+
+// GetRandomIntFromRange generate a uniform random number given the range
+func GetRandomIntFromRange(min uint64, max uint64) int64 {
+	if max == 0 {
+		return 0
+	}
+	if min == max {
+		return int64(min)
+	}
+	randomInt, _ := rand.Int(rand.Reader, big.NewInt(int64(max-min)+1))
+	return int64(min) + randomInt.Int64()
+}
