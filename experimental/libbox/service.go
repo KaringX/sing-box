@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/netip"
-	"os"
 	"runtime"
 	"runtime/debug"
 	runtimeDebug "runtime/debug"
@@ -157,8 +156,9 @@ func (s *BoxService) Close() error {
 	case <-done:
 		return err
 	case <-time.After(C.FatalStopTimeout):
-		os.Exit(1)
-		return nil
+		return E.New("service close timeout") //karing
+		//os.Exit(1) //karing
+		//return nil //karing
 	}
 }
 

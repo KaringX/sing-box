@@ -46,7 +46,17 @@ func createHttpServer() error {
 		r := chi.NewMux()
 		r.Route("/reload", func(r chi.Router) {
 			r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-				destoryService()
+				err := destoryService()
+				if err != nil {
+					render.JSON(w, r, render.M{
+						"err": err,
+					})
+					go func() {
+						time.Sleep(1 * time.Second)
+						terminateCurrentProcess()
+					}()
+					return
+				}
 				libbox.StderrCheckAndCapture()
 				err := createService()
 				if err != nil {
@@ -107,9 +117,9 @@ func createHttpServer() error {
 	return nil
 }
 
-func destoryService() {
+func destoryService() (err error) {
 	if boxService != nil {
-		boxService.Close()
+		err = boxService.Close()
 		boxService = nil
 	}
 }
