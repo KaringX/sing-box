@@ -58,7 +58,7 @@ func createHttpServer() error {
 					return
 				}
 				libbox.StderrCheckAndCapture()
-				err := createService()
+				err = createService()
 				if err != nil {
 					render.JSON(w, r, render.M{
 						"err": err.Error(),
@@ -122,6 +122,7 @@ func destoryService() (err error) {
 		err = boxService.Close()
 		boxService = nil
 	}
+	return nil
 }
 func createService() (err error) {
 	defer func() {
