@@ -107,6 +107,11 @@ func Lookup(ctx context.Context, router adapter.Router, logFactory log.Factory, 
 		}
 		resolverTransport = transport
 	}
+	defer func() {
+		if resolverTransport != nil {
+			resolverTransport.Close()
+		}
+	}()
 
 	tag := req.Query.Tag + "_" + req.Query.Detour
 	var detour N.Dialer
