@@ -128,7 +128,7 @@ func createService() (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			recoverMessage := fmt.Sprintf("%v", e)
-			libbox.SentryCaptureException(recoverMessage, "panic: create service", libbox.SentryTrim(string(debug.Stack())))
+			libbox.SentryCaptureException(recoverMessage, "panic: createService", libbox.SentryTrim(string(debug.Stack())))
 		}
 	}()
 	stacks := D.Stacks(false, false)
@@ -155,14 +155,12 @@ func createService() (err error) {
 
 	boxService, err = libbox.NewService(string(configContent), nil)
 	if err != nil {
-		libbox.SentryCaptureMessage(E.Cause(err, "create service"))
-		return E.Cause(err, "create service")
+		return err
 	}
 
 	err = boxService.Start()
 	if err != nil {
-		libbox.SentryCaptureMessage(E.Cause(err, "start service"))
-		return E.Cause(err, "start service")
+		return err
 	}
 
 	return nil
