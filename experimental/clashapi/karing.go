@@ -37,6 +37,18 @@ type DNSQueryRequest struct {
 	Domain   string    `json:"domain"`
 }
 
+var (
+	dnsClient *dns.Client
+)
+
+func init() {
+	dnsClient = dns.NewClient(dns.ClientOptions{
+		DisableCache:     true,
+		DisableExpire:    false,
+		IndependentCache: true,
+		//Logger:           router.dns,
+	})
+}
 func transStrategy(strategy string) dns.DomainStrategy {
 	switch strategy {
 	case "", "as_is":
@@ -63,8 +75,9 @@ func LookupWithDefaultRouter(ctx context.Context, router adapter.Router, logFact
 	duration := uint16(time.Since(start) / time.Millisecond)
 	return duration, addr, tag, nil
 }
+
 func Lookup(ctx context.Context, router adapter.Router, logFactory log.Factory, req DNSQueryRequest) (uint16, []netip.Addr, error) {
-	var dnsClient = router.GetDNSClient()
+	//var dnsClient = router.GetDNSClient()
 	ctx, _ = adapter.ExtendContext(ctx)
 	outboundManager := service.FromContext[adapter.OutboundManager](ctx)
 	var resolverTransport dns.Transport
@@ -122,6 +135,7 @@ func Lookup(ctx context.Context, router adapter.Router, logFactory log.Factory, 
 	if err != nil {
 		return 0, nil, err
 	}
+	defer transport.Close()
 
 	start := time.Now()
 	addr, err := dnsClient.Lookup(ctx, transport, req.Domain, dns.QueryOptions{Strategy: transStrategy(req.Query.Strategy)})
