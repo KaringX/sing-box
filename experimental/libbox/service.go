@@ -138,7 +138,10 @@ func (s *BoxService) Start() (err error) { //karing
 
 func (s *BoxService) Close() error {
 	s.cancel()
-	s.urlTestHistoryStorage.Close()
+	if s.urlTestHistoryStorage != nil { //karing
+		s.urlTestHistoryStorage.Close()
+	}
+
 	var err error
 	done := make(chan struct{})
 	go func() {
