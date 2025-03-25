@@ -269,14 +269,9 @@ func resetOutboundConnections() func(w http.ResponseWriter, r *http.Request) {
 }
 func mainStack() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		stacks := D.Stacks(true, true)
-		stackBody, ok := stacks[D.MainGoId]
-		stack := ""
-		if ok {
-			stack = stackBody
-		}
+		stack := D.GetGoroutineStack(D.MainGoroutineId)
 		render.JSON(w, r, render.M{
-			"mainGoId": D.MainGoId,
+			"mainGoId": D.MainGoroutineId,
 			"result":   stack,
 		})
 	}

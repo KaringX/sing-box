@@ -13,7 +13,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
-	D "github.com/sagernet/sing-box/common/debug"
 	"github.com/sagernet/sing-box/experimental/libbox"
 	"github.com/sagernet/sing-box/log"
 	E "github.com/sagernet/sing/common/exceptions"
@@ -46,48 +45,21 @@ func createHttpServer() error {
 		r := chi.NewMux()
 		r.Route("/reload", func(r chi.Router) {
 			r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-				err := destoryService()
+				err := restartService()
+				render.JSON(w, r, render.M{
+					"err": err,
+				})
+
 				if err != nil {
-					render.JSON(w, r, render.M{
-						"err": err,
-					})
 					go func() {
 						time.Sleep(1 * time.Second)
-						terminateCurrentProcess()
+						quit <- struct{}{}
 					}()
-					return
-				}
-				libbox.StderrCheckAndCapture()
-				err = createService()
-				if err != nil {
-					render.JSON(w, r, render.M{
-						"err": err.Error(),
-					})
-					if httpServer != nil {
-						httpServer.Close()
-						httpServer = nil
-					}
-					go func() {
-						time.Sleep(1 * time.Second)
-						terminateCurrentProcess()
-					}()
-				} else {
-					render.JSON(w, r, render.M{
-						"err": nil,
-					})
 				}
 			})
 		})
 		r.Route("/stop", func(r chi.Router) {
 			r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-				if httpServer != nil {
-					httpServer.Close()
-					httpServer = nil
-				}
-				if boxService != nil {
-					boxService.Close()
-					boxService = nil
-				}
 				quit <- struct{}{}
 				render.JSON(w, r, render.M{
 					"err": nil,
@@ -117,14 +89,33 @@ func createHttpServer() error {
 	return nil
 }
 
-func destoryService() error {
-	var err error
-	if boxService != nil {
-		err = boxService.Close()
-		boxService = nil
+func destoryServer() {
+	server := httpServer
+	httpServer = nil
+	if server != nil {
+		server.Close()
 	}
+}
+
+func restartService() error {
+	err := destoryService()
+	if err != nil {
+		return err
+	}
+	libbox.StderrCheckAndCapture()
+	err = createService()
 	return err
 }
+
+func destoryService() error {
+	service := boxService
+	boxService = nil
+	if service != nil {
+		return service.Close()
+	}
+	return nil
+}
+
 func createService() (err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -132,13 +123,7 @@ func createService() (err error) {
 			libbox.SentryCaptureException(recoverMessage, "panic: createService", libbox.SentryTrim(string(debug.Stack())))
 		}
 	}()
-	stacks := D.Stacks(false, false)
-	if len(stacks) > 0 {
-		for key := range stacks {
-			D.MainGoId = key
-			break
-		}
-	}
+
 	if len(configPaths) == 0 {
 		return E.Cause(err, "param [config] not found")
 	}
@@ -176,12 +161,21 @@ func runService() (err error) {
 	if err != nil {
 		return err
 	}
-	//go func() {
-	//  time.Sleep(time.Second * 3)
-	//	destoryService()
-	//}()
 
 	<-quit
+	destoryAll()
 	terminateCurrentProcess()
 	return nil
+}
+
+func destoryAll() {
+	defer func() {
+		if e := recover(); e != nil {
+			recoverMessage := fmt.Sprintf("%v", e)
+			log.Error("panic: ", recoverMessage)
+		}
+		terminateCurrentProcess()
+	}()
+	destoryServer()
+	destoryService()
 }

@@ -52,13 +52,7 @@ func NewService(configContent string, platformInterface PlatformInterface) (boxS
 			SentryCaptureException(recoverMessage, "panic: create service", SentryTrim(string(debug.Stack())))
 		}
 	}()
-	stacks := D.Stacks(false, false) //karing
-	if len(stacks) > 0 {             //karing
-		for key := range stacks {
-			D.MainGoId = key
-			break
-		}
-	}
+	D.MainGoroutineId = D.GetCurrentGoroutineId() //karing
 	ctx := box.Context(context.Background(), include.InboundRegistry(), include.OutboundRegistry(), include.EndpointRegistry())
 	ctx = filemanager.WithDefault(ctx, sWorkingPath, sBasePath, sTempPath, sUserID, sGroupID) //karing
 	service.MustRegister[deprecated.Manager](ctx, new(deprecatedManager))
@@ -113,6 +107,7 @@ func (s *BoxService) Start() (err error) { //karing
 			SentryCaptureException(recoverMessage, "panic: start service", SentryTrim(string(debug.Stack())))
 		}
 	}()
+	D.MainGoroutineId = D.GetCurrentGoroutineId() //karing
 	if sFixAndroidStack {
 		//var err error
 		done := make(chan struct{})
@@ -142,9 +137,11 @@ func (s *BoxService) Close() error {
 		s.urlTestHistoryStorage.Close()
 	}
 
+	var goroutineId int
 	var err error
 	done := make(chan struct{})
 	go func() {
+		goroutineId = D.GetCurrentGoroutineId()
 		err = s.instance.Close()
 		close(done)
 		s.urlTestHistoryStorage = nil //karing
@@ -162,7 +159,8 @@ func (s *BoxService) Close() error {
 		}
 		return err
 	case <-time.After(C.FatalStopTimeout):
-		SentryCaptureMessage(E.New("close service timeout"))
+		stack := D.GetGoroutineStack(goroutineId)
+		SentryCaptureMessage(E.New("close service timeout: " + stack))
 		return E.New("close service timeout") //karing
 		//os.Exit(1) //karing
 		//return nil //karing

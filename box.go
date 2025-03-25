@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"runtime"
 	"runtime/debug"
 	"time"
@@ -459,7 +458,7 @@ func (s *Box) Close() error {
 	closeDebug() //karing
 	select {
 	case <-s.done:
-		return os.ErrClosed
+		return nil //karing
 	default:
 		close(s.done)
 	}
