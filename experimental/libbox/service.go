@@ -154,9 +154,13 @@ func (s *BoxService) Close() error {
 	}()
 	select {
 	case <-done:
+		if err != nil {
+			SentryCaptureMessage(E.Cause(err, "close service"))
+		}
 		return err
 	case <-time.After(C.FatalStopTimeout):
-		return E.New("service close timeout") //karing
+		SentryCaptureMessage(E.New("close service timeout"))
+		return E.New("close service timeout") //karing
 		//os.Exit(1) //karing
 		//return nil //karing
 	}
