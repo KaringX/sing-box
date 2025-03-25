@@ -117,12 +117,13 @@ func createHttpServer() error {
 	return nil
 }
 
-func destoryService() (err error) {
+func destoryService() error {
+	var err error
 	if boxService != nil {
 		err = boxService.Close()
 		boxService = nil
 	}
-	return nil
+	return err
 }
 func createService() (err error) {
 	defer func() {
