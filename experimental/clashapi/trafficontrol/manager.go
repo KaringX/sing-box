@@ -51,9 +51,6 @@ func NewManager() *Manager {
 
 func (m *Manager) Join(c Tracker) {
 	m.connections.Store(c.Metadata().ID, c)
-	if m.connections.Len() > 10 {
-		m.connections.Clear()
-	}
 }
 
 func (m *Manager) Leave(c Tracker) {
