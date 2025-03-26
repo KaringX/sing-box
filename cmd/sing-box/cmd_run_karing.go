@@ -116,7 +116,6 @@ func restartService() (map[string]string, error) {
 }
 
 func destoryService() error {
-
 	service := boxService
 	boxService = nil
 	if service != nil {
