@@ -103,11 +103,11 @@ func destoryServer() {
 	}
 }
 
-func restartService() (map[string]any, error) {
+func restartService() (map[string]string, error) {
 	err := destoryService()
 	if err != nil {
-		var extra = make(map[string]any)
-		extra["is_close_error"] = true
+		var extra = make(map[string]string)
+		extra["is_close_error"] = "true"
 		return extra, err
 	}
 	libbox.StderrCheckAndCapture()
