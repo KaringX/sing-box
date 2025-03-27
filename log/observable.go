@@ -8,6 +8,7 @@ import (
 	"path"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/getsentry/sentry-go"
@@ -146,8 +147,11 @@ func (l *observableLogger) log(ctx context.Context, level Level, deep int, args 
 		}
 		l.writer.Write([]byte(message))
 		if level == LevelFatal {
-			sentry.CaptureMessage(message) //karing
-			sentry.Flush(time.Second * 3)  //karing
+			index := strings.Index(message, "FATAL")
+			if index >= 0 {
+				sentry.CaptureMessage(message[index:]) //karing
+				sentry.Flush(time.Second * 3)          //karing
+			}
 			log.Fatal(message)
 		}
 		l.subscriber.Emit(Entry{level, messageSimple})
@@ -158,8 +162,11 @@ func (l *observableLogger) log(ctx context.Context, level Level, deep int, args 
 		}
 		l.writer.Write([]byte(message))
 		if level == LevelFatal {
-			sentry.CaptureMessage(message) //karing
-			sentry.Flush(time.Second * 3)  //karing
+			index := strings.Index(message, "FATAL")
+			if index >= 0 {
+				sentry.CaptureMessage(message[index:]) //karing
+				sentry.Flush(time.Second * 3)          //karing
+			}
 			log.Fatal(message)
 		}
 	}
