@@ -7,8 +7,8 @@ import (
 )
 
 type SentryInitCallbackFunc func(configPath string) ([]byte, error)
-type SentryCaptureMessageCallbackFunc func(message error)
-type SentryCaptureExceptionCallbackFunc func(recoverMessage string, attachMessage string, stack string)
+type SentryCaptureMessageCallbackFunc func(message error) bool
+type SentryCaptureExceptionCallbackFunc func(recoverMessage string, attachMessage string, stack string) bool
 
 var (
 	SentryInitCallback             SentryInitCallbackFunc
@@ -37,6 +37,7 @@ func SentryInit(configPath string) ([]byte, error) {
 	}
 	return SentryInitCallback(configPath)
 }
+
 func SentryCaptureMessage(message error) {
 	if SentryCaptureMessageCallback == nil {
 		return

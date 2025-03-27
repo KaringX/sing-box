@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/getsentry/sentry-go"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing/common"
 	F "github.com/sagernet/sing/common/format"
@@ -20,7 +19,7 @@ import (
 )
 
 var _ Factory = (*defaultFactory)(nil)
-
+var CaptureFatalMessageFunc func(message string) //karing
 type defaultFactory struct {
 	ctx               context.Context
 	formatter         Formatter
@@ -147,10 +146,9 @@ func (l *observableLogger) log(ctx context.Context, level Level, deep int, args 
 		}
 		l.writer.Write([]byte(message))
 		if level == LevelFatal {
-			index := strings.Index(message, "FATAL")
-			if index >= 0 {
-				sentry.CaptureMessage(message[index:]) //karing
-				sentry.Flush(time.Second * 3)          //karing
+			index := strings.Index(message, "FATAL") //karing
+			if index >= 0 {                          //karing
+				CaptureFatalMessageFunc(message[index:])
 			}
 			log.Fatal(message)
 		}
@@ -162,10 +160,9 @@ func (l *observableLogger) log(ctx context.Context, level Level, deep int, args 
 		}
 		l.writer.Write([]byte(message))
 		if level == LevelFatal {
-			index := strings.Index(message, "FATAL")
-			if index >= 0 {
-				sentry.CaptureMessage(message[index:]) //karing
-				sentry.Flush(time.Second * 3)          //karing
+			index := strings.Index(message, "FATAL") //karing
+			if index >= 0 {                          //karing
+				CaptureFatalMessageFunc(message[index:])
 			}
 			log.Fatal(message)
 		}
