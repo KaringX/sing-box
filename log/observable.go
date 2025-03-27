@@ -146,8 +146,8 @@ func (l *observableLogger) log(ctx context.Context, level Level, deep int, args 
 		}
 		l.writer.Write([]byte(message))
 		if level == LevelFatal {
-			index := strings.Index(message, "FATAL") //karing
-			if index >= 0 {                          //karing
+			index := strings.Index(message, "FATAL")          //karing
+			if index >= 0 && CaptureFatalMessageFunc != nil { //karing
 				CaptureFatalMessageFunc(message[index:])
 			}
 			log.Fatal(message)
@@ -160,8 +160,8 @@ func (l *observableLogger) log(ctx context.Context, level Level, deep int, args 
 		}
 		l.writer.Write([]byte(message))
 		if level == LevelFatal {
-			index := strings.Index(message, "FATAL") //karing
-			if index >= 0 {                          //karing
+			index := strings.Index(message, "FATAL")          //karing
+			if index >= 0 && CaptureFatalMessageFunc != nil { //karing
 				CaptureFatalMessageFunc(message[index:])
 			}
 			log.Fatal(message)
