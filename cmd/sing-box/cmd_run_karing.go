@@ -133,7 +133,7 @@ func createService() (err error) {
 	}()
 
 	if len(configPaths) == 0 {
-		return E.Cause(err, "param [config] not found")
+		return E.New("param [config] not found")
 	}
 	var configContent []byte
 	for _, path := range configPaths {
@@ -142,7 +142,7 @@ func createService() (err error) {
 			return err
 		}
 		if len(configContent) == 0 {
-			return E.Cause(err, "file content is empty: ", path)
+			return E.New("file content is empty: ", path)
 		}
 		break
 	}
