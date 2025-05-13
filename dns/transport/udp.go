@@ -7,11 +7,13 @@ import (
 	"sync"
 
 	"github.com/sagernet/sing-box/adapter"
+	"github.com/sagernet/sing-box/common/dialer"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/dns"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing/common/buf"
+	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/logger"
 	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
@@ -42,9 +44,12 @@ func NewUDP(ctx context.Context, logger log.ContextLogger, tag string, options o
 	if err != nil {
 		return nil, err
 	}
-	serverAddr := options.ServerOptions.Build()
+	serverAddr := options.DNSServerAddressOptions.Build()
 	if serverAddr.Port == 0 {
 		serverAddr.Port = 53
+	}
+	if !serverAddr.IsValid() {
+		return nil, E.New("invalid server address: ", serverAddr)
 	}
 	return NewUDPRaw(logger, dns.NewTransportAdapterWithRemoteOptions(C.DNSTypeUDP, tag, options), transportDialer, serverAddr), nil
 }
@@ -64,11 +69,19 @@ func NewUDPRaw(logger logger.ContextLogger, adapter dns.TransportAdapter, dialer
 	}
 }
 
-func (t *UDPTransport) Reset() {
+func (t *UDPTransport) Start(stage adapter.StartStage) error {
+	if stage != adapter.StartStateStart {
+		return nil
+	}
+	return dialer.InitializeDetour(t.dialer)
+}
+
+func (t *UDPTransport) Close() error {
 	t.access.Lock()
 	defer t.access.Unlock()
 	close(t.done)
 	t.done = make(chan struct{})
+	return nil
 }
 
 func (t *UDPTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS.Msg, error) {
@@ -108,7 +121,7 @@ func (t *UDPTransport) exchange(ctx context.Context, message *mDNS.Msg) (*mDNS.M
 	conn.access.Unlock()
 	defer func() {
 		conn.access.Lock()
-		delete(conn.callbacks, messageId)
+		delete(conn.callbacks, exMessage.Id)
 		conn.access.Unlock()
 	}()
 	rawMessage, err := exMessage.PackBuffer(buffer.FreeBytes())
@@ -203,8 +216,8 @@ type dnsConnection struct {
 
 func (c *dnsConnection) Close(err error) {
 	c.closeOnce.Do(func() {
-		close(c.done)
 		c.err = err
+		close(c.done)
 	})
 	c.Conn.Close()
 }

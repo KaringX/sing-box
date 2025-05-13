@@ -39,7 +39,7 @@ type BoxService struct {
 	clashServer           adapter.ClashServer
 	pauseManager          pause.Manager
 
-	servicePauseFields
+	iOSPauseFields
 }
 
 func NewService(configContent string, platformInterface PlatformInterface) (*BoxService, error) {
@@ -164,6 +164,7 @@ func (w *platformInterfaceWrapper) OpenTun(options *tun.Options, platformOptions
 	if err != nil {
 		return nil, E.Cause(err, "query tun name")
 	}
+	options.InterfaceMonitor.RegisterMyInterface(options.Name)
 	dupFd, err := dup(int(tunFd))
 	if err != nil {
 		return nil, E.Cause(err, "dup tun file descriptor")

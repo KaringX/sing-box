@@ -2,9 +2,12 @@ package route
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net"
 	"net/netip"
+	"os"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -14,6 +17,7 @@ import (
 	"github.com/sagernet/sing-box/common/tlsfragment"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing/common"
+	"github.com/sagernet/sing/common/buf"
 	"github.com/sagernet/sing/common/bufio"
 	"github.com/sagernet/sing/common/canceler"
 	E "github.com/sagernet/sing/common/exceptions"
@@ -63,7 +67,17 @@ func (m *ConnectionManager) NewConnection(ctx context.Context, this N.Dialer, co
 		remoteConn, err = this.DialContext(ctx, N.NetworkTCP, metadata.Destination)
 	}
 	if err != nil {
-		err = E.Cause(err, "open outbound connection")
+		var remoteString string
+		if len(metadata.DestinationAddresses) > 0 {
+			remoteString = "[" + strings.Join(common.Map(metadata.DestinationAddresses, netip.Addr.String), ",") + "]"
+		} else {
+			remoteString = metadata.Destination.String()
+		}
+		var dialerString string
+		if outbound, isOutbound := this.(adapter.Outbound); isOutbound {
+			dialerString = " using outbound/" + outbound.Type() + "[" + outbound.Tag() + "]"
+		}
+		err = E.Cause(err, "open connection to ", remoteString, dialerString)
 		N.CloseOnHandshakeFailure(conn, onClose, err)
 		m.logger.ErrorContext(ctx, err)
 		return
@@ -81,15 +95,9 @@ func (m *ConnectionManager) NewConnection(ctx context.Context, this N.Dialer, co
 		if fallbackDelay == 0 {
 			fallbackDelay = C.TLSFragmentFallbackDelay
 		}
-		var newConn *tf.Conn
-		newConn, err = tf.NewConn(remoteConn, ctx, fallbackDelay)
-		if err != nil {
-			conn.Close()
-			remoteConn.Close()
-			m.logger.ErrorContext(ctx, err)
-			return
-		}
-		remoteConn = newConn
+		remoteConn = tf.NewConn(remoteConn, ctx, false, fallbackDelay)
+	} else if metadata.TLSRecordFragment {
+		remoteConn = tf.NewConn(remoteConn, ctx, true, 0)
 	}
 	m.access.Lock()
 	element := m.connections.PushBack(conn)
@@ -130,8 +138,19 @@ func (m *ConnectionManager) NewPacketConnection(ctx context.Context, this N.Dial
 			remoteConn, err = this.DialContext(ctx, N.NetworkUDP, metadata.Destination)
 		}
 		if err != nil {
+			var remoteString string
+			if len(metadata.DestinationAddresses) > 0 {
+				remoteString = "[" + strings.Join(common.Map(metadata.DestinationAddresses, netip.Addr.String), ",") + "]"
+			} else {
+				remoteString = metadata.Destination.String()
+			}
+			var dialerString string
+			if outbound, isOutbound := this.(adapter.Outbound); isOutbound {
+				dialerString = " using outbound/" + outbound.Type() + "[" + outbound.Tag() + "]"
+			}
+			err = E.Cause(err, "open packet connection to ", remoteString, dialerString)
 			N.CloseOnHandshakeFailure(conn, onClose, err)
-			m.logger.ErrorContext(ctx, "open outbound packet connection: ", err)
+			m.logger.ErrorContext(ctx, err)
 			return
 		}
 		remotePacketConn = bufio.NewUnbindPacketConn(remoteConn)
@@ -146,8 +165,13 @@ func (m *ConnectionManager) NewPacketConnection(ctx context.Context, this N.Dial
 			remotePacketConn, err = this.ListenPacket(ctx, metadata.Destination)
 		}
 		if err != nil {
+			var dialerString string
+			if outbound, isOutbound := this.(adapter.Outbound); isOutbound {
+				dialerString = " using outbound/" + outbound.Type() + "[" + outbound.Tag() + "]"
+			}
+			err = E.Cause(err, "listen packet connection using ", dialerString)
 			N.CloseOnHandshakeFailure(conn, onClose, err)
-			m.logger.ErrorContext(ctx, "listen outbound packet connection: ", err)
+			m.logger.ErrorContext(ctx, err)
 			return
 		}
 	}
@@ -206,14 +230,16 @@ func (m *ConnectionManager) NewPacketConnection(ctx context.Context, this N.Dial
 	go m.packetConnectionCopy(ctx, destination, conn, true, &done, onClose)
 }
 
-func (m *ConnectionManager) connectionCopy(ctx context.Context, source io.Reader, destination io.Writer, direction bool, done *atomic.Bool, onClose N.CloseHandlerFunc) {
-	originSource := source
-	originDestination := destination
+func (m *ConnectionManager) connectionCopy(ctx context.Context, source net.Conn, destination net.Conn, direction bool, done *atomic.Bool, onClose N.CloseHandlerFunc) {
+	var (
+		sourceReader      io.Reader = source
+		destinationWriter io.Writer = destination
+	)
 	var readCounters, writeCounters []N.CountFunc
 	for {
-		source, readCounters = N.UnwrapCountReader(source, readCounters)
-		destination, writeCounters = N.UnwrapCountWriter(destination, writeCounters)
-		if cachedSrc, isCached := source.(N.CachedReader); isCached {
+		sourceReader, readCounters = N.UnwrapCountReader(sourceReader, readCounters)
+		destinationWriter, writeCounters = N.UnwrapCountWriter(destinationWriter, writeCounters)
+		if cachedSrc, isCached := sourceReader.(N.CachedReader); isCached {
 			cachedBuffer := cachedSrc.ReadCached()
 			if cachedBuffer != nil {
 				dataLen := cachedBuffer.Len()
@@ -223,7 +249,7 @@ func (m *ConnectionManager) connectionCopy(ctx context.Context, source io.Reader
 					if done.Swap(true) {
 						onClose(err)
 					}
-					common.Close(originSource, originDestination)
+					common.Close(source, destination)
 					if !direction {
 						m.logger.ErrorContext(ctx, "connection upload payload: ", err)
 					} else {
@@ -242,9 +268,13 @@ func (m *ConnectionManager) connectionCopy(ctx context.Context, source io.Reader
 		}
 		break
 	}
-	if earlyConn, isEarlyConn := common.Cast[N.EarlyConn](destination); isEarlyConn && earlyConn.NeedHandshake() {
-		_, err := destination.Write(nil)
+	if earlyConn, isEarlyConn := common.Cast[N.EarlyConn](destinationWriter); isEarlyConn && earlyConn.NeedHandshake() {
+		err := m.connectionCopyEarly(source, destination)
 		if err != nil {
+			if done.Swap(true) {
+				onClose(err)
+			}
+			common.Close(source, destination)
 			if !direction {
 				m.logger.ErrorContext(ctx, "connection upload handshake: ", err)
 			} else {
@@ -253,20 +283,20 @@ func (m *ConnectionManager) connectionCopy(ctx context.Context, source io.Reader
 			return
 		}
 	}
-	_, err := bufio.CopyWithCounters(destination, source, originSource, readCounters, writeCounters)
+	_, err := bufio.CopyWithCounters(destinationWriter, sourceReader, source, readCounters, writeCounters)
 	if err != nil {
-		common.Close(originDestination)
+		common.Close(source, destination)
 	} else if duplexDst, isDuplex := destination.(N.WriteCloser); isDuplex {
 		err = duplexDst.CloseWrite()
 		if err != nil {
-			common.Close(originSource, originDestination)
+			common.Close(source, destination)
 		}
 	} else {
-		common.Close(originDestination)
+		destination.Close()
 	}
 	if done.Swap(true) {
 		onClose(err)
-		common.Close(originSource, originDestination)
+		common.Close(source, destination)
 	}
 	if !direction {
 		if err == nil {
@@ -285,6 +315,28 @@ func (m *ConnectionManager) connectionCopy(ctx context.Context, source io.Reader
 			m.logger.TraceContext(ctx, "connection download closed")
 		}
 	}
+}
+
+func (m *ConnectionManager) connectionCopyEarly(source net.Conn, destination io.Writer) error {
+	payload := buf.NewPacket()
+	defer payload.Release()
+	err := source.SetReadDeadline(time.Now().Add(C.ReadPayloadTimeout))
+	if err != nil {
+		if err == os.ErrInvalid {
+			return common.Error(destination.Write(nil))
+		}
+		return err
+	}
+	_, err = payload.ReadOnceFrom(source)
+	if err != nil && !(E.IsTimeout(err) || errors.Is(err, io.EOF)) {
+		return E.Cause(err, "read payload")
+	}
+	_ = source.SetReadDeadline(time.Time{})
+	_, err = destination.Write(payload.Bytes())
+	if err != nil {
+		return E.Cause(err, "write payload")
+	}
+	return nil
 }
 
 func (m *ConnectionManager) packetConnectionCopy(ctx context.Context, source N.PacketReader, destination N.PacketWriter, direction bool, done *atomic.Bool, onClose N.CloseHandlerFunc) {

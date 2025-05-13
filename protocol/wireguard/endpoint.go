@@ -26,11 +26,6 @@ func RegisterEndpoint(registry *endpoint.Registry) {
 	endpoint.Register[option.WireGuardEndpointOptions](registry, C.TypeWireGuard, NewEndpoint)
 }
 
-var (
-	_ adapter.Endpoint                = (*Endpoint)(nil)
-	_ adapter.InterfaceUpdateListener = (*Endpoint)(nil)
-)
-
 type Endpoint struct {
 	endpoint.Adapter
 	ctx            context.Context
@@ -50,8 +45,8 @@ func NewEndpoint(ctx context.Context, router adapter.Router, logger log.ContextL
 		logger:         logger,
 		localAddresses: options.Address,
 	}
-	if options.Detour == "" {
-		options.IsWireGuardListener = true
+	if options.Detour != "" && options.ListenPort != 0 {
+		return nil, E.New("`listen_port` is conflict with `detour`")
 	}
 	outboundDialer, err := dialer.NewWithOptions(dialer.Options{
 		Context: ctx,
@@ -125,11 +120,6 @@ func (w *Endpoint) Start(stage adapter.StartStage) error {
 
 func (w *Endpoint) Close() error {
 	return w.endpoint.Close()
-}
-
-func (w *Endpoint) InterfaceUpdated() {
-	w.endpoint.BindUpdate()
-	return
 }
 
 func (w *Endpoint) PrepareConnection(network string, source M.Socksaddr, destination M.Socksaddr) error {

@@ -5,7 +5,8 @@ icon: material/new-box
 !!! quote "sing-box 1.12.0 中的更改"
 
     :material-plus: [domain_resolver](#domain_resolver)  
-    :material-delete-clock: [domain_strategy](#domain_strategy)
+    :material-delete-clock: [domain_strategy](#domain_strategy)  
+    :material-plus: [netns](#netns)
 
 !!! quote "sing-box 1.11.0 中的更改"
 
@@ -18,13 +19,14 @@ icon: material/new-box
 
 ```json
 {
-  "detour": "upstream-out",
-  "bind_interface": "en0",
-  "inet4_bind_address": "0.0.0.0",
-  "inet6_bind_address": "::",
-  "routing_mark": 1234,
+  "detour": "",
+  "bind_interface": "",
+  "inet4_bind_address": "",
+  "inet6_bind_address": "",
+  "routing_mark": 0,
   "reuse_addr": false,
-  "connect_timeout": "5s",
+  "netns": "",
+  "connect_timeout": "",
   "tcp_fast_open": false,
   "tcp_multi_path": false,
   "udp_fragment": false,
@@ -32,11 +34,11 @@ icon: material/new-box
   "network_strategy": "",
   "network_type": [],
   "fallback_network_type": [],
-  "fallback_delay": "300ms",
+  "fallback_delay": "",
   
   // 废弃的
 
-  "domain_strategy": "prefer_ipv6"
+  "domain_strategy": ""
 }
 ```
 
@@ -72,9 +74,28 @@ icon: material/new-box
 
 设置 netfilter 路由标记。
 
+支持数字 (如 `1234`) 和十六进制字符串 (如 `"0x1234"`)。
+
 #### reuse_addr
 
 重用监听地址。
+
+#### netns
+
+!!! question "自 sing-box 1.12.0 起"
+
+!!! quote ""
+
+    仅支持 Linux。
+
+设置网络命名空间，名称或路径。
+
+#### connect_timeout
+
+连接超时，采用 golang 的 Duration 格式。
+
+持续时间字符串是一个可能有符号的序列十进制数，每个都有可选的分数和单位后缀， 例如 "300ms"、"-1.5h" 或 "2h45m"。
+有效时间单位为 "ns"、"us"（或 "µs"）、"ms"、"s"、"m"、"h"。
 
 #### tcp_fast_open
 
@@ -92,18 +113,15 @@ icon: material/new-box
 
 启用 UDP 分段。
 
-#### connect_timeout
-
-连接超时，采用 golang 的 Duration 格式。
-
-持续时间字符串是一个可能有符号的序列十进制数，每个都有可选的分数和单位后缀， 例如 "300ms"、"-1.5h" 或 "2h45m"。
-有效时间单位为 "ns"、"us"（或 "µs"）、"ms"、"s"、"m"、"h"。
-
 #### domain_resolver
 
 !!! warning ""
 
     `outbound` DNS 规则项已弃用，且将在 sing-box 1.14.0 中被移除。因此，从 sing-box 1.14.0 版本开始，所有在服务器地址中使用域名的出站/端点均需配置此项。
+
+!!! info ""
+
+    当只有一个 DNS 服务器已配置时，`domain_resolver` 或 `route.default_domain_resolver` 是可选的。 
 
 用于设置解析域名的域名解析器。
 
@@ -177,6 +195,10 @@ icon: material/new-box
 默认使用 `300ms`。
 
 #### domain_strategy
+
+!!! failure "已在 sing-box 1.12.0 废弃"
+
+    `domain_strategy` 已废弃且将在 sing-box 1.14.0 中被移除，参阅 [迁移指南](/migration/#migrate-outbound-domain-strategy-option-to-domain-resolver)。
 
 可选值：`prefer_ipv4` `prefer_ipv6` `ipv4_only` `ipv6_only`。
 

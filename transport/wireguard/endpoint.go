@@ -30,7 +30,7 @@ type Endpoint struct {
 	allowedAddress []netip.Prefix
 	tunDevice      Device
 	device         *device.Device
-	pauseManager   pause.Manager
+	pause          pause.Manager
 	pauseCallback  *list.Element[pause.Callback]
 }
 
@@ -141,7 +141,7 @@ func (e *Endpoint) Start(resolve bool) error {
 		return nil
 	}
 	var bind conn.Bind
-	wgListener, isWgListener := e.options.Dialer.(conn.Listener)
+	wgListener, isWgListener := common.Cast[conn.Listener](e.options.Dialer)
 	if isWgListener {
 		bind = conn.NewStdNetBind(wgListener)
 	} else {
@@ -150,7 +150,7 @@ func (e *Endpoint) Start(resolve bool) error {
 			connectAddr netip.AddrPort
 			reserved    [3]uint8
 		)
-		if len(e.peers) == 1 {
+		if len(e.peers) == 1 && e.peers[0].endpoint.IsValid() {
 			isConnect = true
 			connectAddr = e.peers[0].endpoint
 			reserved = e.peers[0].reserved
@@ -187,9 +187,9 @@ func (e *Endpoint) Start(resolve bool) error {
 		return E.Cause(err, "setup wireguard: \n", ipcConf)
 	}
 	e.device = wgDevice
-	e.pauseManager = service.FromContext[pause.Manager](e.options.Context)
-	if e.pauseManager != nil {
-		e.pauseCallback = e.pauseManager.RegisterCallback(e.onPauseUpdated)
+	e.pause = service.FromContext[pause.Manager](e.options.Context)
+	if e.pause != nil {
+		e.pauseCallback = e.pause.RegisterCallback(e.onPauseUpdated)
 	}
 	return nil
 }
@@ -208,25 +208,21 @@ func (e *Endpoint) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
 	return e.tunDevice.ListenPacket(ctx, destination)
 }
 
-func (e *Endpoint) BindUpdate() error {
-	return e.device.BindUpdate()
-}
-
 func (e *Endpoint) Close() error {
 	if e.device != nil {
 		e.device.Close()
 	}
 	if e.pauseCallback != nil {
-		e.pauseManager.UnregisterCallback(e.pauseCallback)
+		e.pause.UnregisterCallback(e.pauseCallback)
 	}
 	return nil
 }
 
 func (e *Endpoint) onPauseUpdated(event int) {
 	switch event {
-	case pause.EventDevicePaused:
+	case pause.EventDevicePaused, pause.EventNetworkPause:
 		e.device.Down()
-	case pause.EventDeviceWake:
+	case pause.EventDeviceWake, pause.EventNetworkWake:
 		e.device.Up()
 	}
 }

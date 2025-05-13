@@ -10,6 +10,7 @@ import (
 	"strconv"
 
 	"github.com/sagernet/sing-box/adapter"
+	"github.com/sagernet/sing-box/common/dialer"
 	"github.com/sagernet/sing-box/common/tls"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/dns"
@@ -91,9 +92,12 @@ func NewHTTPS(ctx context.Context, logger log.ContextLogger, tag string, options
 	if err != nil {
 		return nil, err
 	}
-	serverAddr := options.ServerOptions.Build()
+	serverAddr := options.DNSServerAddressOptions.Build()
 	if serverAddr.Port == 0 {
 		serverAddr.Port = 443
+	}
+	if !serverAddr.IsValid() {
+		return nil, E.New("invalid server address: ", serverAddr)
 	}
 	return NewHTTPSRaw(
 		dns.NewTransportAdapterWithRemoteOptions(C.DNSTypeHTTPS, tag, options.RemoteDNSServerOptions),
@@ -149,9 +153,17 @@ func NewHTTPSRaw(
 	}
 }
 
-func (t *HTTPSTransport) Reset() {
+func (t *HTTPSTransport) Start(stage adapter.StartStage) error {
+	if stage != adapter.StartStateStart {
+		return nil
+	}
+	return dialer.InitializeDetour(t.dialer)
+}
+
+func (t *HTTPSTransport) Close() error {
 	t.transport.CloseIdleConnections()
 	t.transport = t.transport.Clone()
+	return nil
 }
 
 func (t *HTTPSTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS.Msg, error) {

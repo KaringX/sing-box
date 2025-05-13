@@ -22,10 +22,11 @@
 |   UDP   |    `dtls`    |      /      |     /      |
 |   TCP   |    `ssh`     |      /      | SSH 客户端名称  |
 |   TCP   |    `rdp`     |      /      |     /      |
+|   UDP   |    `ntp`     |      /      |     /      |
 
 |         QUIC 客户端         |     类型     |
 |:------------------------:|:----------:|
-|     Chromium/Cronet      | `chrimium` |
+|     Chromium/Cronet      | `chromium` |
 | Safari/Apple Network API |  `safari`  |
 | Firefox / uquic firefox  | `firefox`  |
 |  quic-go / uquic chrome  | `quic-go`  |

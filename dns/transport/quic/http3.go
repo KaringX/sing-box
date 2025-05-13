@@ -88,9 +88,12 @@ func NewHTTP3(ctx context.Context, logger log.ContextLogger, tag string, options
 	if err != nil {
 		return nil, err
 	}
-	serverAddr := options.ServerOptions.Build()
+	serverAddr := options.DNSServerAddressOptions.Build()
 	if serverAddr.Port == 0 {
 		serverAddr.Port = 443
+	}
+	if !serverAddr.IsValid() {
+		return nil, E.New("invalid server address: ", serverAddr)
 	}
 	return &HTTP3Transport{
 		TransportAdapter: dns.NewTransportAdapterWithRemoteOptions(C.DNSTypeHTTP3, tag, options.RemoteDNSServerOptions),
@@ -111,8 +114,12 @@ func NewHTTP3(ctx context.Context, logger log.ContextLogger, tag string, options
 	}, nil
 }
 
-func (t *HTTP3Transport) Reset() {
-	t.transport.Close()
+func (t *HTTP3Transport) Start(stage adapter.StartStage) error {
+	return nil
+}
+
+func (t *HTTP3Transport) Close() error {
+	return t.transport.Close()
 }
 
 func (t *HTTP3Transport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS.Msg, error) {

@@ -1,16 +1,14 @@
 NAME = sing-box
 COMMIT = $(shell git rev-parse --short HEAD)
-TAGS_GO120 = with_gvisor,with_dhcp,with_wireguard,with_reality_server,with_clash_api,with_quic,with_utls
-TAGS_GO123 = with_tailscale
-TAGS ?= $(TAGS_GO120),$(TAGS_GO123)
-TAGS_TEST ?= with_gvisor,with_quic,with_wireguard,with_grpc,with_utls,with_reality_server
+TAGS ?= with_gvisor,with_dhcp,with_wireguard,with_clash_api,with_quic,with_utls,with_tailscale
+TAGS_TEST ?= with_gvisor,with_quic,with_wireguard,with_grpc,with_utls
 
 GOHOSTOS = $(shell go env GOHOSTOS)
 GOHOSTARCH = $(shell go env GOHOSTARCH)
 VERSION=$(shell CGO_ENABLED=0 GOOS=$(GOHOSTOS) GOARCH=$(GOHOSTARCH) go run ./cmd/internal/read_tag)
 
 PARAMS = -v -trimpath -ldflags "-X 'github.com/sagernet/sing-box/constant.Version=$(VERSION)' -s -w -buildid="
-MAIN_PARAMS = $(PARAMS) -tags $(TAGS)
+MAIN_PARAMS = $(PARAMS) -tags "$(TAGS)"
 MAIN = ./cmd/sing-box
 PREFIX ?= $(shell go env GOPATH)
 
@@ -20,18 +18,13 @@ build:
 	export GOTOOLCHAIN=local && \
 	go build $(MAIN_PARAMS) $(MAIN)
 
-ci_build_go120:
-	export GOTOOLCHAIN=local && \
-	go build $(PARAMS) $(MAIN) && \
-	go build $(PARAMS) -tags "$(TAGS_GO120)" $(MAIN)
-
 ci_build:
 	export GOTOOLCHAIN=local && \
 	go build $(PARAMS) $(MAIN) && \
 	go build $(MAIN_PARAMS) $(MAIN)
 
 generate_completions:
-	go run -v --tags $(TAGS),generate,generate_completions $(MAIN)
+	go run -v --tags "$(TAGS),generate,generate_completions" $(MAIN)
 
 install:
 	go build -o $(PREFIX)/bin/$(NAME) $(MAIN_PARAMS) $(MAIN)
@@ -233,8 +226,8 @@ lib:
 	go run ./cmd/internal/build_libbox -target ios
 
 lib_install:
-	go install -v github.com/sagernet/gomobile/cmd/gomobile@v0.1.4
-	go install -v github.com/sagernet/gomobile/cmd/gobind@v0.1.4
+	go install -v github.com/sagernet/gomobile/cmd/gomobile@v0.1.6
+	go install -v github.com/sagernet/gomobile/cmd/gobind@v0.1.6
 
 docs:
 	venv/bin/mkdocs serve

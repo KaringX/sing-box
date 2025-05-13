@@ -2,8 +2,10 @@ package tailscale
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net"
+	"net/http"
 	"net/netip"
 	"net/url"
 	"os"
@@ -39,6 +41,7 @@ import (
 	"github.com/sagernet/sing/service"
 	"github.com/sagernet/sing/service/filemanager"
 	"github.com/sagernet/tailscale/ipn"
+	tsDNS "github.com/sagernet/tailscale/net/dns"
 	"github.com/sagernet/tailscale/net/netmon"
 	"github.com/sagernet/tailscale/net/tsaddr"
 	"github.com/sagernet/tailscale/tsnet"
@@ -69,6 +72,7 @@ type Endpoint struct {
 	filter            *atomic.Pointer[filter.Filter]
 	onReconfig        wgengine.ReconfigListener
 
+	acceptRoutes           bool
 	exitNode               string
 	exitNodeAllowLANAccess bool
 	advertiseRoutes        []netip.Prefix
@@ -145,6 +149,18 @@ func NewEndpoint(ctx context.Context, router adapter.Router, logger log.ContextL
 		LookupHook: func(ctx context.Context, host string) ([]netip.Addr, error) {
 			return dnsRouter.Lookup(ctx, host, outboundDialer.(dialer.ResolveDialer).QueryOptions())
 		},
+		DNS: &dnsConfigurtor{},
+		HTTPClient: &http.Client{
+			Transport: &http.Transport{
+				ForceAttemptHTTP2: true,
+				DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
+					return outboundDialer.DialContext(ctx, network, M.ParseSocksaddr(address))
+				},
+				TLSClientConfig: &tls.Config{
+					RootCAs: adapter.RootPoolFromContext(ctx),
+				},
+			},
+		},
 	}
 	return &Endpoint{
 		Adapter:                endpoint.NewAdapter(C.TypeTailscale, tag, []string{N.NetworkTCP, N.NetworkUDP}, nil),
@@ -155,6 +171,7 @@ func NewEndpoint(ctx context.Context, router adapter.Router, logger log.ContextL
 		network:                service.FromContext[adapter.NetworkManager](ctx),
 		platformInterface:      service.FromContext[platform.Interface](ctx),
 		server:                 server,
+		acceptRoutes:           options.AcceptRoutes,
 		exitNode:               options.ExitNode,
 		exitNodeAllowLANAccess: options.ExitNodeAllowLANAccess,
 		advertiseRoutes:        options.AdvertiseRoutes,
@@ -211,6 +228,10 @@ func (t *Endpoint) Start(stage adapter.StartStage) error {
 
 	localBackend := t.server.ExportLocalBackend()
 	perfs := &ipn.MaskedPrefs{
+		Prefs: ipn.Prefs{
+			RouteAll: t.acceptRoutes,
+		},
+		RouteAllSet:        true,
 		ExitNodeIPSet:      true,
 		AdvertiseRoutesSet: true,
 	}
@@ -444,6 +465,10 @@ func (t *Endpoint) NewPacketConnectionEx(ctx context.Context, conn N.PacketConn,
 	t.router.RoutePacketConnectionEx(ctx, conn, metadata, onClose)
 }
 
+func (t *Endpoint) Server() *tsnet.Server {
+	return t.server
+}
+
 func addressFromAddr(destination netip.Addr) tcpip.Address {
 	if destination.Is6() {
 		return tcpip.AddrFrom16(destination.As16())
@@ -470,4 +495,25 @@ func (d *endpointDialer) DialContext(ctx context.Context, network string, destin
 func (d *endpointDialer) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
 	d.logger.InfoContext(ctx, "output packet connection")
 	return d.Dialer.ListenPacket(ctx, destination)
+}
+
+type dnsConfigurtor struct {
+	baseConfig tsDNS.OSConfig
+}
+
+func (c *dnsConfigurtor) SetDNS(cfg tsDNS.OSConfig) error {
+	c.baseConfig = cfg
+	return nil
+}
+
+func (c *dnsConfigurtor) SupportsSplitDNS() bool {
+	return true
+}
+
+func (c *dnsConfigurtor) GetBaseConfig() (tsDNS.OSConfig, error) {
+	return c.baseConfig, nil
+}
+
+func (c *dnsConfigurtor) Close() error {
+	return nil
 }

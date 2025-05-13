@@ -17,7 +17,6 @@ builds:
       - with_dhcp
       - with_wireguard
       - with_utls
-      - with_reality_server
       - with_acme
       - with_clash_api
       - with_tailscale
@@ -47,7 +46,6 @@ builds:
       - with_dhcp
       - with_wireguard
       - with_utls
-      - with_reality_server
       - with_acme
       - with_clash_api
       - with_tailscale
@@ -126,13 +124,13 @@ nfpms:
       - deb
       - rpm
       - archlinux
-    #      - apk
-    #      - ipk
+#      - apk
+#      - ipk
     priority: extra
     contents:
       - src: release/config/config.json
         dst: /etc/sing-box/config.json
-        type: config
+        type: "config|noreplace"
 
       - src: release/config/sing-box.service
         dst: /usr/lib/systemd/system/sing-box.service

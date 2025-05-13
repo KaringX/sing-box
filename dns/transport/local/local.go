@@ -3,6 +3,7 @@ package local
 import (
 	"context"
 	"math/rand"
+	"net/netip"
 	"time"
 
 	"github.com/sagernet/sing-box/adapter"
@@ -35,12 +36,18 @@ func NewTransport(ctx context.Context, logger log.ContextLogger, tag string, opt
 	}
 	return &Transport{
 		TransportAdapter: dns.NewTransportAdapterWithLocalOptions(C.DNSTypeLocal, tag, options),
+		ctx:              ctx,
 		hosts:            hosts.NewFile(hosts.DefaultPath),
 		dialer:           transportDialer,
 	}, nil
 }
 
-func (t *Transport) Reset() {
+func (t *Transport) Start(stage adapter.StartStage) error {
+	return nil
+}
+
+func (t *Transport) Close() error {
+	return nil
 }
 
 func (t *Transport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS.Msg, error) {
@@ -52,7 +59,7 @@ func (t *Transport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS.Msg,
 			return dns.FixedResponse(message.Id, question, addresses, C.DefaultDNSTTL), nil
 		}
 	}
-	systemConfig := getSystemDNSConfig()
+	systemConfig := getSystemDNSConfig(t.ctx)
 	if systemConfig.singleRequest || !(message.Question[0].Qtype == mDNS.TypeA || message.Question[0].Qtype == mDNS.TypeAAAA) {
 		return t.exchangeSingleRequest(ctx, systemConfig, message, domain)
 	} else {
@@ -84,8 +91,9 @@ func (t *Transport) exchangeParallel(ctx context.Context, systemConfig *dnsConfi
 	startRacer := func(ctx context.Context, fqdn string) {
 		response, err := t.tryOneName(ctx, systemConfig, fqdn, message)
 		if err == nil {
-			addresses, _ := dns.MessageToAddresses(response)
-			if len(addresses) == 0 {
+			var addresses []netip.Addr
+			addresses, err = dns.MessageToAddresses(response)
+			if err == nil && len(addresses) == 0 {
 				err = E.New(fqdn, ": empty result")
 			}
 		}

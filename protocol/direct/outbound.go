@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 	"net/netip"
+	"reflect"
 	"time"
 
 	"github.com/sagernet/sing-box/adapter"
@@ -27,6 +28,7 @@ func RegisterOutbound(registry *outbound.Registry) {
 var (
 	_ N.ParallelDialer             = (*Outbound)(nil)
 	_ dialer.ParallelNetworkDialer = (*Outbound)(nil)
+	_ dialer.DirectDialer          = (*Outbound)(nil)
 )
 
 type Outbound struct {
@@ -37,6 +39,7 @@ type Outbound struct {
 	fallbackDelay       time.Duration
 	overrideOption      int
 	overrideDestination M.Socksaddr
+	isEmpty             bool
 	// loopBack *loopBackDetector
 }
 
@@ -45,7 +48,12 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 	if options.Detour != "" {
 		return nil, E.New("`detour` is not supported in direct context")
 	}
-	outboundDialer, err := dialer.New(ctx, options.DialerOptions, true)
+	outboundDialer, err := dialer.NewWithOptions(dialer.Options{
+		Context:        ctx,
+		Options:        options.DialerOptions,
+		RemoteIsDomain: true,
+		DirectOutbound: true,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -56,6 +64,8 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		domainStrategy: C.DomainStrategy(options.DomainStrategy),
 		fallbackDelay:  time.Duration(options.FallbackDelay),
 		dialer:         outboundDialer.(dialer.ParallelInterfaceDialer),
+		//nolint:staticcheck
+		isEmpty: reflect.DeepEqual(options.DialerOptions, option.DialerOptions{UDPFragmentDefault: true}) && options.OverrideAddress == "" && options.OverridePort == 0,
 		// loopBack:       newLoopBackDetector(router),
 	}
 	//nolint:staticcheck
@@ -240,6 +250,10 @@ func (h *Outbound) ListenSerialNetworkPacket(ctx context.Context, destination M.
 		return nil, netip.Addr{}, err
 	}
 	return conn, newDestination, nil
+}
+
+func (h *Outbound) IsEmpty() bool {
+	return h.isEmpty
 }
 
 /*func (h *Outbound) NewConnection(ctx context.Context, conn net.Conn, metadata adapter.InboundContext) error {

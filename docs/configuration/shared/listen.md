@@ -1,6 +1,13 @@
 ---
-icon: material/delete-clock
+icon: material/new-box
 ---
+
+!!! quote "Changes in sing-box 1.12.0"
+
+    :material-plus: [netns](#netns)  
+    :material-plus: [bind_interface](#bind_interface)  
+    :material-plus: [routing_mark](#routing_mark)  
+    :material-plus: [reuse_addr](#reuse_addr)
 
 !!! quote "Changes in sing-box 1.11.0"
 
@@ -14,31 +21,29 @@ icon: material/delete-clock
 
 ```json
 {
-  "listen": "::",
-  "listen_port": 5353,
+  "listen": "",
+  "listen_port": 0,
+  "bind_interface": "",
+  "routing_mark": 0,
+  "reuse_addr": false,
+  "netns": "",
   "tcp_fast_open": false,
   "tcp_multi_path": false,
   "udp_fragment": false,
-  "udp_timeout": "5m",
-  "detour": "another-in",
+  "udp_timeout": "",
+  "detour": "",
+
+  // Deprecated
+  
   "sniff": false,
   "sniff_override_destination": false,
-  "sniff_timeout": "300ms",
-  "domain_strategy": "prefer_ipv6",
+  "sniff_timeout": "",
+  "domain_strategy": "",
   "udp_disable_domain_unmapping": false
 }
 ```
 
 ### Fields
-
-| Field                          | Available Context                                       |
-|--------------------------------|---------------------------------------------------------|
-| `listen`                       | Needs to listen on TCP or UDP.                          |
-| `listen_port`                  | Needs to listen on TCP or UDP.                          |
-| `tcp_fast_open`                | Needs to listen on TCP.                                 |
-| `tcp_multi_path`               | Needs to listen on TCP.                                 |
-| `udp_timeout`                  | Needs to assemble UDP connections.                      |
-| `udp_disable_domain_unmapping` | Needs to listen on UDP and accept domain UDP addresses. |
 
 #### listen
 
@@ -49,6 +54,40 @@ Listen address.
 #### listen_port
 
 Listen port.
+
+#### bind_interface
+
+!!! question "Since sing-box 1.12.0"
+
+The network interface to bind to.
+
+#### routing_mark
+
+!!! question "Since sing-box 1.12.0"
+
+!!! quote ""
+
+    Only supported on Linux.
+
+Set netfilter routing mark.
+
+Integers (e.g. `1234`) and string hexadecimals (e.g. `"0x1234"`) are supported.
+
+#### reuse_addr
+
+!!! question "Since sing-box 1.12.0"
+
+Reuse listener address.
+
+#### netns
+
+!!! question "Since sing-box 1.12.0"
+
+!!! quote ""
+
+    Only supported on Linux.
+
+Set network namespace, name or path.
 
 #### tcp_fast_open
 

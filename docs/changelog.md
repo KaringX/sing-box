@@ -2,15 +2,144 @@
 icon: material/alert-decagram
 ---
 
-#### 1.12.0-alpha.15
+#### 1.12.0-beta.14
 
 * Fixes and improvements
+
+#### 1.12.0-beta.13
+
+* Add TLS record fragment route options **1**
+* Add missing `accept_routes` option for Tailscale **2**
+* Fixes and improvements
+
+**1**:
+
+See [Route Action](/configuration/route/rule_action/#tls_record_fragment).
+
+**2**:
+
+See [Tailscale](/configuration/endpoint/tailscale/#accept_routes).
+
+#### 1.12.0-beta.10
+
+* Add control options for listeners **1**
+* Fixes and improvements
+
+**1**:
+
+You can now set `bind_interface`, `routing_mark` and `reuse_addr` in Listen Fields.
+
+See [Listen Fields](/configuration/shared/listen/).
+
+### 1.11.10
+
+* Undeprecate the `block` outbound **1**
+* Fixes and improvements
+
+**1**:
+
+Since we don’t have a replacement for using the `block` outbound in selectors yet,
+we decided to temporarily undeprecate the `block` outbound until a replacement is available in the future.
+
+_We are temporarily unable to update sing-box apps on the App Store because the reviewer mistakenly found that we
+violated the rules (TestFlight users are not affected)._
+
+#### 1.12.0-beta.9
+
+* Update quic-go to v0.51.0
+* Fixes and improvements
+
+### 1.11.9
+
+* Fixes and improvements
+
+_We are temporarily unable to update sing-box apps on the App Store because the reviewer mistakenly found that we
+violated the rules (TestFlight users are not affected)._
+
+#### 1.12.0-beta.5
+
+* Fixes and improvements
+
+### 1.11.8
+
+* Improve `auto_redirect` **1**
+* Fixes and improvements
+
+**1**:
+
+Now `auto_redirect` fixes compatibility issues between TUN and Docker bridge networks,
+see [Tun](/configuration/inbound/tun/#auto_redirect).
+
+_We are temporarily unable to update sing-box apps on the App Store because the reviewer mistakenly found that we
+violated the rules (TestFlight users are not affected)._
+
+#### 1.12.0-beta.3
+
+* Fixes and improvements
+
+### 1.11.7
+
+* Fixes and improvements
+
+_We are temporarily unable to update sing-box apps on the App Store because the reviewer mistakenly found that we
+violated the rules (TestFlight users are not affected)._
+
+#### 1.12.0-beta.1
+
+* Fixes and improvements
+
+**1**:
+
+Now `auto_redirect` fixes compatibility issues between tun and Docker bridge networks,
+see [Tun](/configuration/inbound/tun/#auto_redirect).
+
+### 1.11.6
+
+* Fixes and improvements
+
+_We are temporarily unable to update sing-box apps on the App Store because the reviewer mistakenly found that we
+violated the rules (TestFlight users are not affected)._
+
+#### 1.12.0-alpha.19
+
+* Update gVisor to 20250319.0
+* Fixes and improvements
+
+#### 1.12.0-alpha.18
+
+* Add wildcard SNI support for ShadowTLS inbound **1**
+* Fixes and improvements
+
+**1**:
+
+See [ShadowTLS](/configuration/inbound/shadowtls/#wildcard_sni).
+
+#### 1.12.0-alpha.17
+
+* Add NTP sniffer **1**
+* Fixes and improvements
+
+**1**:
+
+See [Protocol Sniff](/configuration/route/sniff/).
+
+#### 1.12.0-alpha.16
+
+* Update `domain_resolver` behavior **1**
+* Fixes and improvements
+
+**1**:
+
+`route.default_domain_resolver` or `outbound.domain_resolver` is now optional when only one DNS server is configured.
+
+See [Dial Fields](/configuration/shared/dial/#domain_resolver).
 
 ### 1.11.5
 
 * Fixes and improvements
 
-_We are temporarily unable to update sing-box apps on the App Store because the reviewer mistakenly found that we violated the rules (TestFlight users are not affected)._
+_We are temporarily unable to update sing-box apps on the App Store because the reviewer mistakenly found that we
+violated the rules (TestFlight users are not affected)._
 
 #### 1.12.0-alpha.13
 
@@ -81,7 +210,8 @@ For Windows 7 users, legacy binaries now continue to compile with Go 1.23 and pa
 
 * Fixes and improvements
 
-_This version overwrites 1.11.2, as incorrect binaries were released due to a bug in the continuous integration process._
+_This version overwrites 1.11.2, as incorrect binaries were released due to a bug in the continuous integration
+process._
 
 #### 1.12.0-alpha.5
 

@@ -105,7 +105,7 @@ func (c *Client) Exchange(ctx context.Context, transport adapter.DNSTransport, m
 	}
 	question := message.Question[0]
 	if options.ClientSubnet.IsValid() {
-		message = SetClientSubnet(message, options.ClientSubnet, true)
+		message = SetClientSubnet(message, options.ClientSubnet)
 	}
 	isSimpleRequest := len(message.Question) == 1 &&
 		len(message.Ns) == 0 &&
@@ -232,9 +232,19 @@ func (c *Client) Exchange(ctx context.Context, transport adapter.DNSTransport, m
 			record.Header().Ttl = timeToLive
 		}
 	}
-	response.Id = messageId
 	if !disableCache {
 		c.storeCache(transport, question, response, timeToLive)
+	}
+	response.Id = messageId
+	requestEDNSOpt := message.IsEdns0()
+	responseEDNSOpt := response.IsEdns0()
+	if responseEDNSOpt != nil && (requestEDNSOpt == nil || requestEDNSOpt.Version() < responseEDNSOpt.Version()) {
+		response.Extra = common.Filter(response.Extra, func(it dns.RR) bool {
+			return it.Header().Rrtype != dns.TypeOPT
+		})
+		if requestEDNSOpt != nil {
+			response.SetEdns0(responseEDNSOpt.UDPSize(), responseEDNSOpt.Do())
+		}
 	}
 	logExchangedResponse(c.logger, ctx, response, timeToLive)
 	return response, err
@@ -483,7 +493,7 @@ func (c *Client) loadResponse(question dns.Question, transport adapter.DNSTransp
 }
 
 func MessageToAddresses(response *dns.Msg) ([]netip.Addr, error) {
-	if response.Rcode != dns.RcodeSuccess && response.Rcode != dns.RcodeNameError {
+	if response.Rcode != dns.RcodeSuccess {
 		return nil, RcodeError(response.Rcode)
 	}
 	addresses := make([]netip.Addr, 0, len(response.Answer))

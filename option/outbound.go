@@ -39,7 +39,7 @@ func (h *Outbound) UnmarshalJSONContext(ctx context.Context, content []byte) err
 		return E.New("missing outbound options registry in context")
 	}
 	switch h.Type {
-	case C.TypeBlock, C.TypeDNS:
+	case C.TypeDNS:
 		deprecated.Report(ctx, deprecated.OptionSpecialOutbounds)
 	}
 	options, loaded := registry.CreateOptions(h.Type)
@@ -72,6 +72,7 @@ type DialerOptions struct {
 	ProtectPath         string                            `json:"protect_path,omitempty"`
 	RoutingMark         FwMark                            `json:"routing_mark,omitempty"`
 	ReuseAddr           bool                              `json:"reuse_addr,omitempty"`
+	NetNs               string                            `json:"netns,omitempty"`
 	ConnectTimeout      badoption.Duration                `json:"connect_timeout,omitempty"`
 	TCPFastOpen         bool                              `json:"tcp_fast_open,omitempty"`
 	TCPMultiPath        bool                              `json:"tcp_multi_path,omitempty"`
@@ -82,7 +83,6 @@ type DialerOptions struct {
 	NetworkType         badoption.Listable[InterfaceType] `json:"network_type,omitempty"`
 	FallbackNetworkType badoption.Listable[InterfaceType] `json:"fallback_network_type,omitempty"`
 	FallbackDelay       badoption.Duration                `json:"fallback_delay,omitempty"`
-	IsWireGuardListener bool                              `json:"-"`
 
 	// Deprecated: migrated to domain resolver
 	DomainStrategy DomainStrategy `json:"domain_strategy,omitempty"`
@@ -99,7 +99,9 @@ type _DomainResolveOptions struct {
 type DomainResolveOptions _DomainResolveOptions
 
 func (o DomainResolveOptions) MarshalJSON() ([]byte, error) {
-	if o.Strategy == DomainStrategy(C.DomainStrategyAsIS) &&
+	if o.Server == "" {
+		return []byte("{}"), nil
+	} else if o.Strategy == DomainStrategy(C.DomainStrategyAsIS) &&
 		!o.DisableCache &&
 		o.RewriteTTL == nil &&
 		o.ClientSubnet == nil {
@@ -116,7 +118,14 @@ func (o *DomainResolveOptions) UnmarshalJSON(bytes []byte) error {
 		o.Server = stringValue
 		return nil
 	}
-	return json.Unmarshal(bytes, (*_DomainResolveOptions)(o))
+	err = json.Unmarshal(bytes, (*_DomainResolveOptions)(o))
+	if err != nil {
+		return err
+	}
+	if o.Server == "" {
+		return E.New("empty domain_resolver.server")
+	}
+	return nil
 }
 
 func (o *DialerOptions) TakeDialerOptions() DialerOptions {

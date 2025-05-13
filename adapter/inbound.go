@@ -53,10 +53,11 @@ type InboundContext struct {
 
 	// sniffer
 
-	Protocol     string
-	Domain       string
-	Client       string
-	SniffContext any
+	Protocol         string
+	Domain           string
+	Client           string
+	SniffContext     any
+	PacketSniffError error
 
 	// cache
 
@@ -73,6 +74,7 @@ type InboundContext struct {
 	UDPTimeout                time.Duration
 	TLSFragment               bool
 	TLSFragmentFallbackDelay  time.Duration
+	TLSRecordFragment         bool
 
 	NetworkStrategy     *C.NetworkStrategy
 	NetworkType         []C.InterfaceType

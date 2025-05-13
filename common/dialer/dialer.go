@@ -23,6 +23,8 @@ type Options struct {
 	DirectResolver   bool
 	ResolverOnDetour bool
 	NewDialer        bool
+	LegacyDNSDialer  bool
+	DirectOutbound   bool
 }
 
 // TODO: merge with NewWithOptions
@@ -45,14 +47,14 @@ func NewWithOptions(options Options) (N.Dialer, error) {
 		if outboundManager == nil {
 			return nil, E.New("missing outbound manager")
 		}
-		dialer = NewDetour(outboundManager, dialOptions.Detour)
+		dialer = NewDetour(outboundManager, dialOptions.Detour, options.LegacyDNSDialer)
 	} else {
 		dialer, err = NewDefault(options.Context, dialOptions)
 		if err != nil {
 			return nil, err
 		}
 	}
-	if options.RemoteIsDomain && (dialOptions.Detour == "" || options.ResolverOnDetour) {
+	if options.RemoteIsDomain && (dialOptions.Detour == "" || options.ResolverOnDetour || dialOptions.DomainResolver != nil && dialOptions.DomainResolver.Server != "") {
 		networkManager := service.FromContext[adapter.NetworkManager](options.Context)
 		dnsTransport := service.FromContext[adapter.DNSTransportManager](options.Context)
 		var defaultOptions adapter.NetworkOptions
@@ -81,6 +83,7 @@ func NewWithOptions(options Options) (N.Dialer, error) {
 			dialOptions.DomainStrategy != option.DomainStrategy(C.DomainStrategyAsIS) {
 				//nolint:staticcheck
 				strategy = C.DomainStrategy(dialOptions.DomainStrategy)
+				deprecated.Report(options.Context, deprecated.OptionLegacyDomainStrategyOptions)
 			}
 			server = dialOptions.DomainResolver.Server
 			dnsQueryOptions = adapter.DNSQueryOptions{
@@ -93,18 +96,32 @@ func NewWithOptions(options Options) (N.Dialer, error) {
 			resolveFallbackDelay = time.Duration(dialOptions.FallbackDelay)
 		} else if options.DirectResolver {
 			return nil, E.New("missing domain resolver for domain server address")
-		} else if defaultOptions.DomainResolver != "" {
-			dnsQueryOptions = defaultOptions.DomainResolveOptions
-			transport, loaded := dnsTransport.Transport(defaultOptions.DomainResolver)
-			if !loaded {
-				return nil, E.New("default domain resolver not found: " + defaultOptions.DomainResolver)
-			}
-			dnsQueryOptions.Transport = transport
-			resolveFallbackDelay = time.Duration(dialOptions.FallbackDelay)
-		} else if options.NewDialer {
-			return nil, E.New("missing domain resolver for domain server address")
 		} else {
-			deprecated.Report(options.Context, deprecated.OptionMissingDomainResolver)
+			if defaultOptions.DomainResolver != "" {
+				dnsQueryOptions = defaultOptions.DomainResolveOptions
+				transport, loaded := dnsTransport.Transport(defaultOptions.DomainResolver)
+				if !loaded {
+					return nil, E.New("default domain resolver not found: " + defaultOptions.DomainResolver)
+				}
+				dnsQueryOptions.Transport = transport
+				resolveFallbackDelay = time.Duration(dialOptions.FallbackDelay)
+			} else {
+				transports := dnsTransport.Transports()
+				if len(transports) < 2 {
+					dnsQueryOptions.Transport = dnsTransport.Default()
+				} else if options.NewDialer {
+					return nil, E.New("missing domain resolver for domain server address")
+				} else if !options.DirectOutbound {
+					deprecated.Report(options.Context, deprecated.OptionMissingDomainResolver)
+				}
+			}
+			if
+			//nolint:staticcheck
+			dialOptions.DomainStrategy != option.DomainStrategy(C.DomainStrategyAsIS) {
+				//nolint:staticcheck
+				dnsQueryOptions.Strategy = C.DomainStrategy(dialOptions.DomainStrategy)
+				deprecated.Report(options.Context, deprecated.OptionLegacyDomainStrategyOptions)
+			}
 		}
 		dialer = NewResolveDialer(
 			options.Context,

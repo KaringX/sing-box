@@ -263,20 +263,7 @@ func (r *Router) Exchange(ctx context.Context, message *mDNS.Msg, options adapte
 							return nil, tun.ErrDrop
 						}
 					case *R.RuleActionPredefined:
-						return &mDNS.Msg{
-							MsgHdr: mDNS.MsgHdr{
-								Id:                 message.Id,
-								Response:           true,
-								Authoritative:      true,
-								RecursionDesired:   true,
-								RecursionAvailable: true,
-								Rcode:              action.Rcode,
-							},
-							Question: message.Question,
-							Answer:   action.Answer,
-							Ns:       action.Ns,
-							Extra:    action.Extra,
-						}, nil
+						return action.Response(message), nil
 					}
 				}
 				var responseCheck func(responseAddrs []netip.Addr) bool
@@ -336,6 +323,9 @@ func (r *Router) Lookup(ctx context.Context, domain string, options adapter.DNSQ
 		err           error
 	)
 	printResult := func() {
+		if err == nil && len(responseAddrs) == 0 {
+			err = E.New("empty result")
+		}
 		if err != nil {
 			if errors.Is(err, ErrResponseRejectedCached) {
 				r.logger.DebugContext(ctx, "response rejected for ", domain, " (cached)")
@@ -344,15 +334,15 @@ func (r *Router) Lookup(ctx context.Context, domain string, options adapter.DNSQ
 			} else {
 				r.logger.ErrorContext(ctx, E.Cause(err, "lookup failed for ", domain))
 			}
-		} else if len(responseAddrs) == 0 {
-			r.logger.ErrorContext(ctx, "lookup failed for ", domain, ": empty result")
-			err = RcodeNameError
+		}
+		if err != nil {
+			err = E.Cause(err, "lookup ", domain)
 		}
 	}
 	responseAddrs, cached = r.client.LookupCache(domain, options.Strategy)
 	if cached {
 		if len(responseAddrs) == 0 {
-			return nil, RcodeNameError
+			return nil, E.New("lookup ", domain, ": empty result (cached)")
 		}
 		return responseAddrs, nil
 	}
@@ -462,6 +452,6 @@ func (r *Router) LookupReverseMapping(ip netip.Addr) (string, bool) {
 func (r *Router) ResetNetwork() {
 	r.ClearCache()
 	for _, transport := range r.transport.Transports() {
-		transport.Reset()
+		transport.Close()
 	}
 }
