@@ -2,6 +2,7 @@ package libbox
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/netip"
 	"runtime"
@@ -17,6 +18,7 @@ import (
 	"github.com/sagernet/sing-box/common/process"
 	"github.com/sagernet/sing-box/common/urltest"
 	C "github.com/sagernet/sing-box/constant"
+	"github.com/sagernet/sing-box/experimental/clashapi"
 	"github.com/sagernet/sing-box/experimental/deprecated"
 	"github.com/sagernet/sing-box/experimental/libbox/internal/procfs"
 	"github.com/sagernet/sing-box/experimental/libbox/platform"
@@ -164,6 +166,21 @@ func (s *BoxService) Close() error {
 
 func (s *BoxService) NeedWIFIState() bool {
 	return s.instance.Router().NeedWIFIState()
+}
+
+func (s *BoxService) GetConnections(includeConnections bool) string { //karing
+	if s.clashServer != nil {
+		trafficManager := s.clashServer.(*clashapi.Server).TrafficManager()
+		if trafficManager != nil {
+			snapshot := trafficManager.Snapshot(includeConnections)
+			data, err := json.Marshal(snapshot)
+			if err != nil {
+				return fmt.Sprintf("{err:%s}", err.Error())
+			}
+			return string(data)
+		}
+	}
+	return "{}"
 }
 
 var (
