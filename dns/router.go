@@ -258,7 +258,14 @@ func (r *Router) Exchange(ctx context.Context, message *mDNS.Msg, options adapte
 					case *R.RuleActionReject:
 						switch action.Method {
 						case C.RuleActionRejectMethodDefault:
-							return FixedResponse(message.Id, message.Question[0], nil, 0), nil
+							return &mDNS.Msg{
+								MsgHdr: mDNS.MsgHdr{
+									Id:       message.Id,
+									Rcode:    mDNS.RcodeRefused,
+									Response: true,
+								},
+								Question: []mDNS.Question{message.Question[0]},
+							}, nil
 						case C.RuleActionRejectMethodDrop:
 							return nil, tun.ErrDrop
 						}
@@ -285,7 +292,12 @@ func (r *Router) Exchange(ctx context.Context, message *mDNS.Msg, options adapte
 					} else if errors.Is(err, ErrResponseRejected) {
 						rejected = true
 						r.logger.DebugContext(ctx, E.Cause(err, "response rejected for ", FormatQuestion(message.Question[0].String())))
+						/*} else if responseCheck!= nil && errors.Is(err, RcodeError(mDNS.RcodeNameError)) {
+						rejected = true
+						r.logger.DebugContext(ctx, E.Cause(err, "response rejected for ", FormatQuestion(message.Question[0].String())))
+						*/
 					} else if len(message.Question) > 0 {
+						rejected = true
 						r.logger.ErrorContext(ctx, E.Cause(err, "exchange failed for ", FormatQuestion(message.Question[0].String())))
 					} else {
 						r.logger.ErrorContext(ctx, E.Cause(err, "exchange failed for <empty query>"))
