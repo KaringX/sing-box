@@ -244,9 +244,6 @@ func (s *Server) SetMode(newMode string) {
 		}
 	}
 	s.dnsRouter.ClearCache()
-	if s.router != nil { //karing
-		s.router.ClearDNSCache()
-	}
 
 	cacheFile := service.FromContext[adapter.CacheFile](s.ctx)
 	if cacheFile != nil {

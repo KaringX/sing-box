@@ -29,7 +29,7 @@ import (
 	"github.com/sagernet/sing-box/experimental/libbox/platform"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
-	"github.com/sagernet/sing-tun"
+	tun "github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/bufio"
 	"github.com/sagernet/sing/common/control"
@@ -79,6 +79,7 @@ type Endpoint struct {
 	advertiseExitNode      bool
 
 	udpTimeout time.Duration
+	parseErr   error //karing
 }
 
 func NewEndpoint(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.TailscaleEndpointOptions) (adapter.Endpoint, error) {
@@ -475,6 +476,10 @@ func (t *Endpoint) NewPacketConnectionEx(ctx context.Context, conn N.PacketConn,
 
 func (t *Endpoint) Server() *tsnet.Server {
 	return t.server
+}
+
+func (h *Endpoint) SetParseErr(err error) { //karing
+	h.parseErr = err
 }
 
 func addressFromAddr(destination netip.Addr) tcpip.Address {

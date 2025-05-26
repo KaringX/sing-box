@@ -66,9 +66,13 @@ func transStrategy(strategy string) dns.DomainStrategy {
 	}
 }
 
-func LookupWithDefaultRouter(ctx context.Context, router adapter.Router, logFactory log.Factory, domain string, strategy dns.DomainStrategy) (uint16, []netip.Addr, string, error) {
+func LookupWithDefaultRouter(ctx context.Context, logFactory log.Factory, domain string, strategy dns.DomainStrategy) (uint16, []netip.Addr, string, error) {
 	start := time.Now()
-	addr, tag, err := router.Lookup(ctx, domain, strategy)
+	dnsRouter := service.FromContext[adapter.DNSRouter](ctx)
+	addr, tag, err := dnsRouter.Lookup(ctx, domain, adapter.DNSQueryOptions{ //karing
+		//Transport: d.transport,
+		Strategy: strategy,
+	})
 	if err != nil {
 		return 0, nil, tag, err
 	}
@@ -167,7 +171,7 @@ func dnsQueryWithDefaultRouter(ctx context.Context, router adapter.Router, logFa
 		domain := r.URL.Query().Get("domain")
 		strategy := r.URL.Query().Get("strategy")
 
-		duration, addr, tag, err := LookupWithDefaultRouter(ctx, router, logFactory, domain, transStrategy(strategy))
+		duration, addr, tag, err := LookupWithDefaultRouter(ctx, logFactory, domain, transStrategy(strategy))
 		if err != nil {
 			render.JSON(w, r, render.M{
 				"err":     err.Error(),

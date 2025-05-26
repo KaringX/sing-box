@@ -12,8 +12,6 @@ import (
 
 	"github.com/sagernet/sing-box/common/process"
 
-	dns "github.com/sagernet/sing-dns"
-
 	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
 	"github.com/sagernet/sing/common/ntp"
@@ -29,10 +27,6 @@ type Router interface {
 	ConnectionRouterEx
 	RuleSet(tag string) (RuleSet, bool)
 	NeedWIFIState() bool
-
-	//GetDNSClient() *dns.Client                                                                            //karing
-	Lookup(ctx context.Context, domain string, strategy dns.DomainStrategy) ([]netip.Addr, string, error) //karing
-	LookupDefault(ctx context.Context, domain string) ([]netip.Addr, error)
 
 	GetRemoteRuleSetRulesCount() map[string]int                                                            //karing
 	FindProcessInfo(ctx context.Context, network string, source netip.AddrPort) (*process.Info, error)     //karing
