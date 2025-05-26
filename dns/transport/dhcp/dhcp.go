@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	tun "github.com/metacubex/sing-tun"
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/common/dialer"
 	C "github.com/sagernet/sing-box/constant"
@@ -15,7 +16,6 @@ import (
 	"github.com/sagernet/sing-box/dns/transport"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
-	"github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/buf"
 	"github.com/sagernet/sing/common/control"
@@ -66,17 +66,28 @@ func NewTransport(ctx context.Context, logger log.ContextLogger, tag string, opt
 }
 
 func (t *Transport) Start(stage adapter.StartStage) error {
-	if stage != adapter.StartStateStart {
+	/*if stage != adapter.StartStateStart { //karing
 		return nil
 	}
 	err := t.fetchServers()
 	if err != nil {
 		return err
-	}
+	}*/
+	go func() { //karing
+		t.fetchServers()
+	}()
 	if t.interfaceName == "" {
 		t.interfaceCallback = t.networkManager.InterfaceMonitor().RegisterCallback(t.interfaceUpdated)
 	}
 	return nil
+}
+
+func (t *Transport) Name() string { //karing
+	return t.options.Name
+}
+
+func (t *Transport) Address() string { //karing
+	return t.options.Address
 }
 
 func (t *Transport) Close() error {
@@ -225,7 +236,9 @@ func (t *Transport) fetchServersResponse(iface *control.Interface, packetConn ne
 
 		dns := dhcpPacket.DNS()
 		if len(dns) == 0 {
-			return nil
+			dns = make([]net.IP, 1)                //karing
+			dns[0] = dhcpPacket.ServerIdentifier() //karing
+			//return nil //karing
 		}
 		return t.recreateServers(iface, common.Map(dns, func(it net.IP) M.Socksaddr {
 			return M.SocksaddrFrom(M.AddrFromIP(it), 53)

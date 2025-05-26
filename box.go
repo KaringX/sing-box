@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
+	"runtime"
 	"runtime/debug"
 	"time"
 
@@ -15,13 +15,13 @@ import (
 	boxService "github.com/sagernet/sing-box/adapter/service"
 	"github.com/sagernet/sing-box/common/certificate"
 	"github.com/sagernet/sing-box/common/dialer"
-	"github.com/sagernet/sing-box/common/taskmonitor"
 	"github.com/sagernet/sing-box/common/tls"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/dns"
 	"github.com/sagernet/sing-box/dns/transport/local"
 	"github.com/sagernet/sing-box/experimental"
 	"github.com/sagernet/sing-box/experimental/cachefile"
+	"github.com/sagernet/sing-box/experimental/clashapi"
 	"github.com/sagernet/sing-box/experimental/libbox/platform"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
@@ -94,7 +94,14 @@ func Context(
 	return ctx
 }
 
-func New(options Options) (*Box, error) {
+func New(options Options) (box *Box, err error) {
+	defer func() {
+		if box != nil {
+			runtime.SetFinalizer(box, func(box *Box) {
+				service.UnRegisterAll(options.Context)
+			})
+		}
+	}()
 	createdAt := time.Now()
 	ctx := options.Context
 	if ctx == nil {
@@ -130,7 +137,7 @@ func New(options Options) (*Box, error) {
 	var needCacheFile bool
 	var needClashAPI bool
 	var needV2RayAPI bool
-	if experimentalOptions.CacheFile != nil && experimentalOptions.CacheFile.Enabled || options.PlatformLogWriter != nil {
+	if experimentalOptions.CacheFile != nil && experimentalOptions.CacheFile.Enabled /*|| options.PlatformLogWriter != nil*/ { //karing
 		needCacheFile = true
 	}
 	if experimentalOptions.ClashAPI != nil || options.PlatformLogWriter != nil {
@@ -154,6 +161,21 @@ func New(options Options) (*Box, error) {
 	})
 	if err != nil {
 		return nil, E.Cause(err, "create log factory")
+	}
+	err = logFactory.Start() //karing
+	if err != nil {          //karing
+		return nil, E.Cause(err, "start logger")
+	}
+	var services []adapter.LifecycleService //karing
+
+	if needCacheFile { //karing
+		cacheFile := cachefile.New(ctx, common.PtrValueOrDefault(experimentalOptions.CacheFile))
+		service.MustRegister[adapter.CacheFile](ctx, cacheFile)
+		services = append(services, cacheFile)
+		err = cacheFile.BeforeStart()
+		if err != nil {
+			return nil, E.Cause(err, "cacheFile load failed")
+		}
 	}
 
 	var internalServices []adapter.LifecycleService
@@ -246,9 +268,10 @@ func New(options Options) (*Box, error) {
 			tag,
 			endpointOptions.Type,
 			endpointOptions.Options,
+			endpointOptions.ParseErr, //karing
 		)
 		if err != nil {
-			return nil, E.Cause(err, "initialize endpoint[", i, "]")
+			return nil, E.Cause(err, "initialize endpoint[", i, "][", tag, "]") //karing
 		}
 	}
 	for i, inboundOptions := range options.Inbounds {
@@ -267,7 +290,7 @@ func New(options Options) (*Box, error) {
 			inboundOptions.Options,
 		)
 		if err != nil {
-			return nil, E.Cause(err, "initialize inbound[", i, "]")
+			return nil, E.Cause(err, "initialize inbound[", i, "][", tag, "]") //karing
 		}
 	}
 	for i, outboundOptions := range options.Outbounds {
@@ -291,9 +314,10 @@ func New(options Options) (*Box, error) {
 			tag,
 			outboundOptions.Type,
 			outboundOptions.Options,
+			outboundOptions.ParseErr, //karing
 		)
 		if err != nil {
-			return nil, E.Cause(err, "initialize outbound[", i, "]")
+			return nil, E.Cause(err, "initialize outbound[", i, "][", tag, "]") //karing
 		}
 	}
 	for i, serviceOptions := range options.Services {
@@ -336,11 +360,13 @@ func New(options Options) (*Box, error) {
 			return nil, E.Cause(err, "initialize platform interface")
 		}
 	}
-	if needCacheFile {
+
+	/*if needCacheFile {//karing
 		cacheFile := cachefile.New(ctx, common.PtrValueOrDefault(experimentalOptions.CacheFile))
 		service.MustRegister[adapter.CacheFile](ctx, cacheFile)
 		internalServices = append(internalServices, cacheFile)
-	}
+	}*/
+
 	if needClashAPI {
 		clashAPIOptions := common.PtrValueOrDefault(experimentalOptions.ClashAPI)
 		clashAPIOptions.ModeList = experimental.CalculateClashModeList(options.Options)
@@ -351,6 +377,19 @@ func New(options Options) (*Box, error) {
 		router.AppendTracker(clashServer)
 		service.MustRegister[adapter.ClashServer](ctx, clashServer)
 		internalServices = append(internalServices, clashServer)
+
+		outbound.OutboundHasConnections = func(tag string) bool { //karing
+			clashServer := service.FromContext[adapter.ClashServer](ctx)
+			if clashServer == nil {
+				return false
+			}
+			trafficManager := clashServer.(*clashapi.Server).TrafficManager()
+			if trafficManager == nil {
+				return false
+			}
+			hasConn := trafficManager.OutboundHasConnections(tag)
+			return hasConn
+		}
 	}
 	if needV2RayAPI {
 		v2rayServer, err := experimental.NewV2RayServer(logFactory.NewLogger("v2ray-api"), common.PtrValueOrDefault(experimentalOptions.V2RayAPI))
@@ -374,6 +413,7 @@ func New(options Options) (*Box, error) {
 			Logger:        logFactory.NewLogger("ntp"),
 			Server:        ntpOptions.ServerOptions.Build(),
 			Interval:      time.Duration(ntpOptions.Interval),
+			Timeout:       time.Duration(5 * time.Second), //karing
 			WriteToSystem: ntpOptions.WriteToSystem,
 		})
 		timeService.TimeService = ntpService
@@ -431,19 +471,20 @@ func (s *Box) Start() error {
 		s.Close()
 		return err
 	}
-	s.logger.Info("sing-box started (", F.Seconds(time.Since(s.createdAt).Seconds()), "s)")
+	s.logger.Info("started (", F.Seconds(time.Since(s.createdAt).Seconds()), "s) since ", s.createdAt) //karing
 	return nil
 }
 
 func (s *Box) preStart() error {
+	/*//karing
 	monitor := taskmonitor.New(s.logger, C.StartTimeout)
 	monitor.Start("start logger")
 	err := s.logFactory.Start()
 	monitor.Finish()
 	if err != nil {
 		return E.Cause(err, "start logger")
-	}
-	err = adapter.StartNamed(adapter.StartStateInitialize, s.internalService) // cache-file clash-api v2ray-api
+	}*/
+	err := adapter.StartNamed(adapter.StartStateInitialize, s.internalService) // cache-file clash-api v2ray-api
 	if err != nil {
 		return err
 	}
@@ -467,22 +508,33 @@ func (s *Box) start() error {
 	if err != nil {
 		return err
 	}
-	err = adapter.Start(adapter.StartStateStart, s.inbound, s.endpoint, s.service)
+
+	err = adapter.Start(adapter.StartStateStart /*s.inbound,*/, s.endpoint, s.service) //karing
 	if err != nil {
 		return err
 	}
-	err = adapter.Start(adapter.StartStatePostStart, s.outbound, s.network, s.dnsTransport, s.dnsRouter, s.connection, s.router, s.inbound, s.endpoint, s.service)
+	err = adapter.Start(adapter.StartStatePostStart, s.outbound, s.network, s.dnsTransport, s.dnsRouter, s.connection, s.router /*, s.inbound*/, s.endpoint, s.service) //karing
 	if err != nil {
 		return err
 	}
-	err = adapter.StartNamed(adapter.StartStatePostStart, s.internalService)
+	err = adapter.Start(adapter.StartStateStarted, s.network, s.dnsTransport, s.dnsRouter, s.connection, s.router, s.outbound /*s.inbound,*/, s.endpoint, s.service) //karing
 	if err != nil {
 		return err
 	}
-	err = adapter.Start(adapter.StartStateStarted, s.network, s.dnsTransport, s.dnsRouter, s.connection, s.router, s.outbound, s.inbound, s.endpoint, s.service)
+	//karing begin
+	err = adapter.Start(adapter.StartStateStart, s.inbound)
 	if err != nil {
 		return err
 	}
+	err = adapter.Start(adapter.StartStatePostStart, s.inbound)
+	if err != nil {
+		return err
+	}
+	err = adapter.Start(adapter.StartStateStarted, s.inbound)
+	if err != nil {
+		return err
+	}
+	//karing end
 	err = adapter.StartNamed(adapter.StartStateStarted, s.internalService)
 	if err != nil {
 		return err
@@ -491,9 +543,10 @@ func (s *Box) start() error {
 }
 
 func (s *Box) Close() error {
+	closeDebug() //karing
 	select {
 	case <-s.done:
-		return os.ErrClosed
+		return nil //karing
 	default:
 		close(s.done)
 	}
@@ -508,6 +561,13 @@ func (s *Box) Close() error {
 	err = E.Append(err, s.logFactory.Close(), func(err error) error {
 		return E.Cause(err, "close logger")
 	})
+	s.inbound = nil    //karing
+	s.outbound = nil   //karing
+	s.endpoint = nil   //karing
+	s.connection = nil //karing
+	s.network = nil    //karing
+	s.router = nil     //karing
+	s.services = nil   //karing
 	return err
 }
 
@@ -525,4 +585,8 @@ func (s *Box) Inbound() adapter.InboundManager {
 
 func (s *Box) Outbound() adapter.OutboundManager {
 	return s.outbound
+}
+
+func (s *Box) Logger() log.ContextLogger { //karing
+	return s.logger
 }

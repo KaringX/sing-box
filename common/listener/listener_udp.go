@@ -38,6 +38,7 @@ func (l *Listener) ListenUDP() (net.PacketConn, error) {
 	if !udpFragment {
 		listenConfig.Control = control.Append(listenConfig.Control, control.DisableUDPFragment())
 	}
+
 	if l.tproxy {
 		listenConfig.Control = control.Append(listenConfig.Control, func(network, address string, conn syscall.RawConn) error {
 			return control.Raw(conn, func(fd uintptr) error {
@@ -48,7 +49,11 @@ func (l *Listener) ListenUDP() (net.PacketConn, error) {
 	udpConn, err := ListenNetworkNamespace[net.PacketConn](l.listenOptions.NetNs, func() (net.PacketConn, error) {
 		return listenConfig.ListenPacket(l.ctx, M.NetworkFromNetAddr(N.NetworkUDP, bindAddr.Addr), bindAddr.String())
 	})
-	if err != nil {
+	if err != nil { //karing
+		info, err1 := l.router.FindProcessInfo(l.ctx, N.NetworkTCP, bindAddr.AddrPort())
+		if err1 == nil {
+			err = E.Cause(err, "port[", bindAddr.AddrPort().Port(), "] is occupied by[", info.ProcessPath, info.PackageName, "] ")
+		}
 		return nil, err
 	}
 	l.udpConn = udpConn.(*net.UDPConn)

@@ -21,10 +21,15 @@ type abstractDefaultRule struct {
 	ruleSetItem             RuleItem
 	invert                  bool
 	action                  adapter.RuleAction
+	name                    string //karing
 }
 
 func (r *abstractDefaultRule) Type() string {
 	return C.RuleTypeDefault
+}
+
+func (r *abstractDefaultRule) Name() string { //karing
+	return r.name
 }
 
 func (r *abstractDefaultRule) Start() error {
@@ -143,6 +148,9 @@ func (r *abstractDefaultRule) Action() adapter.RuleAction {
 }
 
 func (r *abstractDefaultRule) String() string {
+	if len(r.name) > 0 { //karing
+		return r.name
+	}
 	if !r.invert {
 		return strings.Join(F.MapToString(r.allItems), " ")
 	} else {
@@ -155,10 +163,28 @@ type abstractLogicalRule struct {
 	mode   string
 	invert bool
 	action adapter.RuleAction
+	name   string //karing
 }
 
 func (r *abstractLogicalRule) Type() string {
 	return C.RuleTypeLogical
+}
+
+func (r *abstractLogicalRule) Name() string { //karing
+	return r.name
+}
+
+func (r *abstractLogicalRule) UpdateGeosite() error {
+	for _, rule := range common.FilterIsInstance(r.rules, func(it adapter.HeadlessRule) (adapter.Rule, bool) {
+		rule, loaded := it.(adapter.Rule)
+		return rule, loaded
+	}) {
+		err := rule.UpdateGeosite()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (r *abstractLogicalRule) Start() error {
@@ -211,6 +237,9 @@ func (r *abstractLogicalRule) Action() adapter.RuleAction {
 }
 
 func (r *abstractLogicalRule) String() string {
+	if len(r.name) > 0 { //karing
+		return r.name
+	}
 	var op string
 	switch r.mode {
 	case C.LogicalTypeAnd:

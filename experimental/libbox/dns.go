@@ -42,6 +42,10 @@ func (p *platformTransport) Start(stage adapter.StartStage) error {
 	return nil
 }
 
+func (t *platformTransport) Address() string { //karing
+	return "local"
+}
+
 func (p *platformTransport) Close() error {
 	return nil
 }

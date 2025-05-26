@@ -10,5 +10,5 @@ function updateClient() {
   git add clients/$1
 }
 
-updateClient "apple"
-updateClient "android"
+# updateClient "apple" #karing
+# updateClient "android" #karing

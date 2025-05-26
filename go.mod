@@ -56,7 +56,53 @@ require (
 	howett.net/plist v1.0.1
 )
 
-//replace github.com/sagernet/sing => ../sing
+require ( //hiddify
+	github.com/pion/logging v0.2.2
+	github.com/pion/turn/v3 v3.0.3
+	github.com/pires/go-proxyproto v0.8.0
+//github.com/sagernet/tfo-go v0.0.0-20230816093905-5a5c285d44a6
+)
+
+require ( //karing
+	github.com/Dreamacro/clash v1.18.0
+	github.com/alitto/pond v1.9.2
+	github.com/getsentry/sentry-go v0.29.1
+	github.com/klauspost/compress v1.17.11
+	github.com/shirou/gopsutil/v3 v3.24.5
+	github.com/valyala/fastjson v1.6.4
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1
+)
+
+replace github.com/Dreamacro/clash => github.com/KaringX/clash v0.0.0-20241101044429-f71df89d4091
+
+//go get github.com/KaringX/sing@50a9c2efd67210376bb718ef766d53710768d5ae
+replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20250321073240-c466411ff3ef //karing_v0.6.3
+
+//replace github.com/sagernet/sing => ../../KaringX/sing
+
+replace github.com/sagernet/sing-dns => github.com/KaringX/sing-dns v0.3.0-beta.14.0.20250322092745-a19c132b0b61 //karing_v0.4.0
+
+//replace github.com/sagernet/sing-dns => ../../KaringX/sing-dns
+
+replace github.com/sagernet/sing-quic => github.com/KaringX/sing-quic v0.2.0-beta.12.0.20250321072913-5ec836db5636 //karing_v0.4.0
+
+//replace github.com/sagernet/sing-quic => ../../KaringX/sing-quic
+
+replace github.com/sagernet/quic-go => github.com/KaringX/quic-go v0.49.0-beta.1.0.20250321073417-794cf581222e //karing_v0.49.0-beta1
+
+//replace github.com/sagernet/quic-go => ../../KaringX/quic-go
+
+replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.20250224122437-2421005a71b2 //karing_v0.6.1
+
+//replace github.com/sagernet/sing-tun => ../../KaringX/sing-tun
+
+replace github.com/sagernet/ws => github.com/KaringX/ws v0.0.0-20250301004503-082f57b5c845 //karing_fork
+
+//replace github.com/sagernet/ws => ../../KaringX/ws
+
+replace github.com/sagernet/wireguard-go => github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20250223050301-4b516c388c7f //karing_v0.0.1-beta.5
+
+//replace github.com/sagernet/wireguard-go => ../../KaringX/wireguard-go
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect

@@ -24,6 +24,10 @@ type RawDNSOptions struct {
 	Final          string             `json:"final,omitempty"`
 	ReverseMapping bool               `json:"reverse_mapping,omitempty"`
 	DNSClientOptions
+
+	FakeIP    *DNSFakeIPOptions   `json:"fakeip,omitempty"`
+	StaticIPs map[string][]string `json:"static_ips,omitempty"` //hiddify
+	DNSClientOptions
 }
 
 type LegacyDNSOptions struct {
@@ -101,6 +105,7 @@ func rewriteRcodeAction(rcodeMap map[string]int, ruleAction *DNSRuleAction) {
 	ruleAction.Action = C.RuleActionTypePredefined
 	ruleAction.PredefinedOptions.Rcode = common.Ptr(DNSRCode(rcode))
 	return
+
 }
 
 type DNSClientOptions struct {
@@ -125,7 +130,21 @@ type _DNSServerOptions struct {
 	Type    string `json:"type,omitempty"`
 	Tag     string `json:"tag,omitempty"`
 	Options any    `json:"-"`
+	//Addresses []string `json:"addresses"` //karing
 }
+
+/*
+type DNSServerOptions struct {
+	Tag                  string                `json:"tag,omitempty"`
+	Address              string                `json:"address"`
+	Addresses            []string              `json:"addresses"` //karing
+	AddressResolver      string                `json:"address_resolver,omitempty"`
+	AddressStrategy      DomainStrategy        `json:"address_strategy,omitempty"`
+	AddressFallbackDelay badoption.Duration    `json:"address_fallback_delay,omitempty"`
+	Strategy             DomainStrategy        `json:"strategy,omitempty"`
+	Detour               string                `json:"detour,omitempty"`
+	ClientSubnet         *badoption.Prefixable `json:"client_subnet,omitempty"`
+}*/
 
 type DNSServerOptions _DNSServerOptions
 

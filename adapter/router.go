@@ -5,9 +5,15 @@ import (
 	"crypto/tls"
 	"net"
 	"net/http"
+	"net/netip"
 	"sync"
 
 	C "github.com/sagernet/sing-box/constant"
+
+	"github.com/sagernet/sing-box/common/process"
+	C "github.com/sagernet/sing-box/constant"
+	dns "github.com/sagernet/sing-dns"
+
 	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
 	"github.com/sagernet/sing/common/ntp"
@@ -23,6 +29,18 @@ type Router interface {
 	ConnectionRouterEx
 	RuleSet(tag string) (RuleSet, bool)
 	NeedWIFIState() bool
+
+	GetDNSClient() *dns.Client                                                                            //karing
+	Lookup(ctx context.Context, domain string, strategy dns.DomainStrategy) ([]netip.Addr, string, error) //karing
+	LookupDefault(ctx context.Context, domain string) ([]netip.Addr, error)
+	ClearDNSCache()
+
+	GetRemoteRuleSetRulesCount() map[string]int                                                            //karing
+	FindProcessInfo(ctx context.Context, network string, source netip.AddrPort) (*process.Info, error)     //karing
+	GetMatchRuleChain(outboundManager OutboundManager, matchOutboundTag string) ([]string, string, string) //karing
+	GetMatchRule(ctx context.Context, metadata *InboundContext) (Rule, error)                              //karing
+	GetAssetContent(path string) ([]byte, error)                                                           //karing
+
 	Rules() []Rule
 	AppendTracker(tracker ConnectionTracker)
 	ResetNetwork()

@@ -24,6 +24,7 @@ type PlatformInterface interface {
 	SystemCertificates() StringIterator
 	ClearDNSCache()
 	SendNotification(notification *Notification) error
+	GetAssetContent(path string)([]byte, error) //karing
 }
 
 type TunInterface interface {

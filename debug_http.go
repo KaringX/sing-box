@@ -1,6 +1,7 @@
 package box
 
 import (
+	"errors"
 	"net/http"
 	"net/http/pprof"
 	"runtime"
@@ -69,8 +70,15 @@ func applyDebugListenOption(options option.DebugOptions) {
 	}
 	go func() {
 		err := debugHTTPServer.ListenAndServe()
-		if err != nil && !E.IsClosed(err) {
-			log.Error(E.Cause(err, "serve debug HTTP server"))
+		if err != nil && !errors.Is(err, http.ErrServerClosed) && !E.IsClosed(err) { //karing
+			log.Warn(E.Cause(err, "serve debug HTTP server")) //karing
 		}
 	}()
+}
+
+func closeDebugListen() { //karing
+	if debugHTTPServer != nil {
+		debugHTTPServer.Close()
+		debugHTTPServer = nil
+	}
 }

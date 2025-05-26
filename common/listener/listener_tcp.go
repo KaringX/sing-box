@@ -70,6 +70,10 @@ func (l *Listener) ListenTCP() (net.Listener, error) {
 		}
 	})
 	if err != nil {
+		info, err1 := l.router.FindProcessInfo(l.ctx, N.NetworkTCP, bindAddr.AddrPort())
+		if err1 == nil {
+			err = E.Cause(err, "port[", bindAddr.AddrPort().Port(), "] is occupied by[", info.ProcessPath, info.PackageName, "] ")
+		}
 		return nil, err
 	}
 	l.logger.Info("tcp server started at ", tcpListener.Addr())

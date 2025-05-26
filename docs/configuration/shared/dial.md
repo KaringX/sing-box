@@ -29,6 +29,7 @@ icon: material/new-box
   "connect_timeout": "",
   "tcp_fast_open": false,
   "tcp_multi_path": false,
+  "tls_fragment": {},
   "udp_fragment": false,
   
   "domain_resolver": "", // or {}
@@ -111,6 +112,10 @@ Enable TCP Fast Open.
     Go 1.21 required.
 
 Enable TCP Multi Path.
+
+#### tls_fragment
+
+Enable TLS fragmentation, see [TLS Fragment](/configuration/shared/tls-fragment) for details.
 
 #### udp_fragment
 
