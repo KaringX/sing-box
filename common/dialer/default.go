@@ -203,13 +203,7 @@ func NewDefault(ctx context.Context, options option.DialerOptions) (*DefaultDial
 		tlsFragment.Size = size
 
 	}
-	if options.IsWireGuardListener {
-		for _, controlFn := range WgControlFns {
-			listener.Control = control.Append(listener.Control, controlFn)
-		}
-	}
 	tcpDialer4, err := newTCPDialer(dialer4, options.TCPFastOpen, tlsFragment) //hiddify
-
 	if err != nil {
 		return nil, err
 	}
@@ -257,31 +251,24 @@ func (d *DefaultDialer) DialContext(ctx context.Context, network string, address
 	} else if address.IsFqdn() {
 		return nil, E.New("domain not resolved")
 	}
-
 	if d.networkStrategy == nil {
-		return trackConn(listener.ListenNetworkNamespace[net.Conn](d.netns, func() (net.Conn, error, M.Socksaddr, *adapter.InboundContext) { //karing
-			inbound := adapter.ContextFrom(ctx) //karing
-			var (                               //karing
-				conn net.Conn
-				err  error
-			)
-
+		conn, err := listener.ListenNetworkNamespace[net.Conn](d.netns, func() (net.Conn, error) { //karing
 			switch N.NetworkName(network) {
 			case N.NetworkUDP:
 				if !address.IsIPv6() {
-					conn, err = d.udpDialer4.DialContext(ctx, network, address.String()) //karing
+					return d.udpDialer4.DialContext(ctx, network, address.String())
 				} else {
-					conn, err = d.udpDialer6.DialContext(ctx, network, address.String()) //karing
+					return d.udpDialer6.DialContext(ctx, network, address.String())
 				}
-				return conn, err, address, inbound //karing
 			}
 			if !address.IsIPv6() {
-				conn, err = DialSlowContext(&d.dialer4, ctx, network, address) //karing
+				return DialSlowContext(&d.dialer4, ctx, network, address)
 			} else {
-				conn, err = DialSlowContext(&d.dialer6, ctx, network, address) //karing
+				return DialSlowContext(&d.dialer6, ctx, network, address)
 			}
-			return conn, err, address, inbound //karing
-		}))
+		})
+		inbound := adapter.ContextFrom(ctx)
+		return trackConn(conn, err, address, inbound) //karing
 	} else {
 		return d.DialParallelInterface(ctx, network, address, d.networkStrategy, d.networkType, d.fallbackNetworkType, d.networkFallbackDelay)
 	}
@@ -338,21 +325,17 @@ func (d *DefaultDialer) DialParallelInterface(ctx context.Context, network strin
 
 func (d *DefaultDialer) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
 	if d.networkStrategy == nil {
-		return trackPacketConn(listener.ListenNetworkNamespace[net.PacketConn](d.netns, func() (net.PacketConn, error, M.Socksaddr, *adapter.InboundContext) { //karing
-			inbound := adapter.ContextFrom(ctx) //karing
-			var (                               //karing
-				conn net.PacketConn
-				err  error
-			)
+		conn, err := listener.ListenNetworkNamespace[net.PacketConn](d.netns, func() (net.PacketConn, error) { //karing
 			if destination.IsIPv6() {
-				conn, err = d.udpListener.ListenPacket(ctx, N.NetworkUDP, d.udpAddr6) //karing
+				return d.udpListener.ListenPacket(ctx, N.NetworkUDP, d.udpAddr6)
 			} else if destination.IsIPv4() && !destination.Addr.IsUnspecified() {
-				conn, err = d.udpListener.ListenPacket(ctx, N.NetworkUDP+"4", d.udpAddr4) //karing
+				return d.udpListener.ListenPacket(ctx, N.NetworkUDP+"4", d.udpAddr4)
 			} else {
-				conn, err = d.udpListener.ListenPacket(ctx, N.NetworkUDP, d.udpAddr4) //karing
+				return d.udpListener.ListenPacket(ctx, N.NetworkUDP, d.udpAddr4)
 			}
-			return conn, err, destination, inbound //karing
-		}))
+		})
+		inbound := adapter.ContextFrom(ctx)                     //karing
+		return trackPacketConn(conn, err, destination, inbound) //karing
 	} else {
 		return d.ListenSerialInterfacePacket(ctx, destination, d.networkStrategy, d.networkType, d.fallbackNetworkType, d.networkFallbackDelay)
 	}
