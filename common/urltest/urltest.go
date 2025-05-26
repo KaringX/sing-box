@@ -19,11 +19,6 @@ import (
 
 var _ adapter.URLTestHistoryStorage = (*HistoryStorage)(nil)
 
-type URLTestResult struct { // karing
-	Delay uint16 `json:"delay,omitempty"`
-	Err   string `json:"err,omitempty"`
-}
-
 type History struct {
 	Time  time.Time `json:"time"`
 	Delay uint16    `json:"delay"`

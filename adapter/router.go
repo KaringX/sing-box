@@ -11,7 +11,7 @@ import (
 	C "github.com/sagernet/sing-box/constant"
 
 	"github.com/sagernet/sing-box/common/process"
-	C "github.com/sagernet/sing-box/constant"
+
 	dns "github.com/sagernet/sing-dns"
 
 	M "github.com/sagernet/sing/common/metadata"

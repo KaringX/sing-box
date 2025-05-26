@@ -86,7 +86,7 @@ replace github.com/sagernet/sing => ../../KaringX/sing
 
 replace github.com/sagernet/sing-dns => ../../KaringX/sing-dns
 
-//replace github.com/sagernet/sing-quic => github.com/KaringX/sing-quic v0.2.0-beta.12.0.20250526050144-f1b78d623eee //karing_v0.5.0-beta.1
+//replace github.com/sagernet/sing-quic => github.com/KaringX/sing-quic v0.2.0-beta.12.0.20250526073635-c53770bb59f0 //karing_v0.5.0-beta.1
 
 replace github.com/sagernet/sing-quic => ../../KaringX/sing-quic
 

@@ -30,6 +30,11 @@ type URLTestHistoryStorage interface {
 	Close() error
 }
 
+type URLTestResult struct { // karing
+	Delay uint16 `json:"delay,omitempty"`
+	Err   string `json:"err,omitempty"`
+}
+
 type V2RayServer interface {
 	LifecycleService
 	StatsService() ConnectionTracker
@@ -117,8 +122,8 @@ type OutboundGroup interface {
 
 type URLTestGroup interface {
 	OutboundGroup
-	URLTest(ctx context.Context) (map[string]urltest.URLTestResult, error) //karing
-	UpdateCheck()                                                          //karing
+	URLTest(ctx context.Context) (map[string]URLTestResult, error) //karing
+	UpdateCheck()                                                  //karing
 }
 
 func OutboundTag(detour Outbound) string {
