@@ -6,8 +6,6 @@ import (
 	"encoding/binary"
 	"time"
 
-	"github.com/sagernet/sing-box/common/urltest"
-
 	"github.com/sagernet/sing/common/varbin"
 )
 
