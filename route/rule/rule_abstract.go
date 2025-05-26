@@ -174,19 +174,6 @@ func (r *abstractLogicalRule) Name() string { //karing
 	return r.name
 }
 
-func (r *abstractLogicalRule) UpdateGeosite() error {
-	for _, rule := range common.FilterIsInstance(r.rules, func(it adapter.HeadlessRule) (adapter.Rule, bool) {
-		rule, loaded := it.(adapter.Rule)
-		return rule, loaded
-	}) {
-		err := rule.UpdateGeosite()
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func (r *abstractLogicalRule) Start() error {
 	for _, rule := range common.FilterIsInstance(r.rules, func(it adapter.HeadlessRule) (interface {
 		Start() error

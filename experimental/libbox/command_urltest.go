@@ -75,7 +75,7 @@ func (s *CommandServer) handleURLTest(conn net.Conn) error {
 				t, _, err := urltest.URLTest(serviceNow.ctx, "", outboundToTest)
 				if err != nil {
 					//historyStorage.DeleteURLTestHistory(outboundTag)
-					historyStorage.StoreURLTestHistory(outboundTag, &urltest.History{ //karing
+					historyStorage.StoreURLTestHistory(outboundTag, &adapter.URLTestHistory{ //karing
 						Time:  time.Now(),
 						Delay: 0,
 						Err:   err.Error(),

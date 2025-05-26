@@ -14,7 +14,7 @@ import (
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
 	R "github.com/sagernet/sing-box/route/rule"
-	"github.com/sagernet/sing-tun"
+	tun "github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common"
 	E "github.com/sagernet/sing/common/exceptions"
 	F "github.com/sagernet/sing/common/format"
@@ -328,11 +328,12 @@ func (r *Router) Exchange(ctx context.Context, message *mDNS.Msg, options adapte
 	return response, nil
 }
 
-func (r *Router) Lookup(ctx context.Context, domain string, options adapter.DNSQueryOptions) ([]netip.Addr, error) {
+func (r *Router) Lookup(ctx context.Context, domain string, options adapter.DNSQueryOptions) ([]netip.Addr, string, error) { //karing
 	var (
 		responseAddrs []netip.Addr
 		cached        bool
 		err           error
+		transportName string //karing
 	)
 	printResult := func() {
 		if err == nil && len(responseAddrs) == 0 {
@@ -354,9 +355,9 @@ func (r *Router) Lookup(ctx context.Context, domain string, options adapter.DNSQ
 	responseAddrs, cached = r.client.LookupCache(domain, options.Strategy)
 	if cached {
 		if len(responseAddrs) == 0 {
-			return nil, E.New("lookup ", domain, ": empty result (cached)")
+			return nil, "", E.New("lookup ", domain, ": empty result (cached)") //karing
 		}
-		return responseAddrs, nil
+		return responseAddrs, "", nil //karing
 	}
 	r.logger.DebugContext(ctx, "lookup domain ", domain)
 	ctx, metadata := adapter.ExtendContext(ctx)
@@ -392,9 +393,9 @@ func (r *Router) Lookup(ctx context.Context, domain string, options adapter.DNSQ
 				case *R.RuleActionReject:
 					switch action.Method {
 					case C.RuleActionRejectMethodDefault:
-						return nil, nil
+						return nil, transport.Name(), nil //karing
 					case C.RuleActionRejectMethodDrop:
-						return nil, tun.ErrDrop
+						return nil, "", tun.ErrDrop //karing
 					}
 				case *R.RuleActionPredefined:
 					if action.Rcode != mDNS.RcodeSuccess {
@@ -434,7 +435,7 @@ response:
 	if len(responseAddrs) > 0 {
 		r.logger.InfoContext(ctx, "lookup succeed for ", domain, ": ", strings.Join(F.MapToString(responseAddrs), " "))
 	}
-	return responseAddrs, err
+	return responseAddrs, transportName, err
 }
 
 func isAddressQuery(message *mDNS.Msg) bool {

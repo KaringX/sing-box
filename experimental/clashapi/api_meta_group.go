@@ -84,7 +84,7 @@ func getGroupDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 		ctx, cancel := context.WithTimeout(r.Context(), time.Millisecond*time.Duration(timeout))
 		defer cancel()
 
-		var result map[string]urltest.URLTestResult //karing
+		var result map[string]adapter.URLTestResult //karing
 		if urlTestGroup, isURLTestGroup := outboundGroup.(adapter.URLTestGroup); isURLTestGroup {
 			result, err = urlTestGroup.URLTest(ctx)
 		} else {
@@ -94,7 +94,7 @@ func getGroupDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 			}))
 			b, _ := batch.New(ctx, batch.WithConcurrencyNum[any](10))
 			checked := make(map[string]bool)
-			result = make(map[string]urltest.URLTestResult) //karing
+			result = make(map[string]adapter.URLTestResult) //karing
 			var resultAccess sync.Mutex
 			for _, detour := range outbounds {
 				tag := detour.Tag()
@@ -112,7 +112,7 @@ func getGroupDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 					if err != nil {
 						server.logger.Debug("outbound ", tag, " unavailable: ", err)
 						//server.urlTestHistory.DeleteURLTestHistory(realTag)
-						server.urlTestHistory.StoreURLTestHistory(realTag, &urltest.History{ //karing
+						server.urlTestHistory.StoreURLTestHistory(realTag, &adapter.URLTestHistory{ //karing
 							Time:  time.Now(),
 							Delay: 0,
 							Err:   err.Error(),
@@ -127,9 +127,9 @@ func getGroupDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 					}
 					resultAccess.Lock() //karing
 					if err == nil {
-						result[tag] = urltest.URLTestResult{Delay: t, Err: ""}
+						result[tag] = adapter.URLTestResult{Delay: t, Err: ""}
 					} else {
-						result[tag] = urltest.URLTestResult{Delay: t, Err: err.Error()}
+						result[tag] = adapter.URLTestResult{Delay: t, Err: err.Error()}
 					}
 					resultAccess.Unlock() //karing
 					return nil, nil

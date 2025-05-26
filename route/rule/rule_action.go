@@ -13,10 +13,7 @@ import (
 	"github.com/sagernet/sing-box/common/sniff"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/option"
-
-	dns "github.com/sagernet/sing-dns"
 	tun "github.com/sagernet/sing-tun"
-
 	"github.com/sagernet/sing/common"
 	E "github.com/sagernet/sing/common/exceptions"
 	F "github.com/sagernet/sing/common/format"
@@ -493,6 +490,10 @@ func (r *RuleActionPredefined) String() string {
 	options = append(options, common.Map(r.Ns, dns.RR.String)...)
 	options = append(options, common.Map(r.Extra, dns.RR.String)...)
 	return F.ToString("predefined(", strings.Join(options, ","), ")")
+}
+
+func (r *RuleActionPredefined) Target() string { //karing
+	return ""
 }
 
 func (r *RuleActionPredefined) Response(request *dns.Msg) *dns.Msg {

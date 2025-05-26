@@ -19,12 +19,6 @@ import (
 
 var _ adapter.URLTestHistoryStorage = (*HistoryStorage)(nil)
 
-type History struct {
-	Time  time.Time `json:"time"`
-	Delay uint16    `json:"delay"`
-	Err   string    `json:"err"` //karing
-}
-
 type HistoryStorage struct {
 	access       sync.RWMutex
 	delayHistory map[string]*adapter.URLTestHistory
@@ -64,8 +58,8 @@ func (s *HistoryStorage) StoreURLTestHistory(tag string, history *adapter.URLTes
 	s.notifyUpdated()
 }
 
-func (s *HistoryStorage) GetURLTestHistory() map[string]*History { // karing
-	history := make(map[string]*History)
+func (s *HistoryStorage) GetURLTestHistory() map[string]*adapter.URLTestHistory { // karing
+	history := make(map[string]*adapter.URLTestHistory)
 	s.access.Lock()
 	for k, v := range s.delayHistory {
 		history[k] = v

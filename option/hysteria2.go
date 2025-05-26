@@ -124,13 +124,12 @@ type Hysteria2OutboundOptions struct {
 	Password    string                     `json:"password,omitempty"`
 	Network     NetworkList                `json:"network,omitempty"`
 	OutboundTLSOptionsContainer
-	BrutalDebug bool `json:"brutal_debug,omitempty"`
+	BrutalDebug bool              `json:"brutal_debug,omitempty"`
 	TurnRelay   *TurnRelayOptions `json:"turn_relay,omitempty"` //hiddify
 	HopPorts    HopPortsValue     `json:"hop_ports,omitempty"`  //https://github.com/morgenanno/sing-box //"114,514,810-1919"
-	//HopInterval int   //`json:"hop_interval,omitempty"`  //https://github.com/morgenanno/sing-box
 }
 
-type HopPortsValue string //karing
+type HopPortsValue string                //karing
 type HopIntervalValue badoption.Duration //karing
 
 type _Hysteria2OutboundOptions Hysteria2OutboundOptions //karing
@@ -139,7 +138,7 @@ func (m *Hysteria2OutboundOptions) UnmarshalJSON(bytes []byte) error { //karing
 	if err != nil {
 		return err
 	}
-    
+
 	if len(m.ServerPorts) == 0 && len(m.HopPorts) > 0 {
 		ports := strings.Split(string(m.HopPorts), ",")
 		for i := 0; i < len(ports); i++ {
@@ -147,7 +146,7 @@ func (m *Hysteria2OutboundOptions) UnmarshalJSON(bytes []byte) error { //karing
 			parts := strings.Split(ports[i], ":")
 			if len(parts) == 1 {
 				m.ServerPorts = append(m.ServerPorts, fmt.Sprintf("%s:%s", parts[0], parts[0]))
-			} else if len (parts) == 2 {
+			} else if len(parts) == 2 {
 				m.ServerPorts = append(m.ServerPorts, fmt.Sprintf("%s:%s", parts[0], parts[1]))
 			} else {
 				return E.New("invalid hop_ports format: ", string(m.HopPorts))
@@ -155,30 +154,30 @@ func (m *Hysteria2OutboundOptions) UnmarshalJSON(bytes []byte) error { //karing
 		}
 	}
 	m.HopPorts = ""
-    return nil
+	return nil
 }
 func (m *HopIntervalValue) UnmarshalJSON(bytes []byte) error { //karing
 	var stringValue string
-    if err := json.Unmarshal(bytes, &stringValue); err == nil {
-        duration, err := time.ParseDuration(stringValue)
-        if err != nil {
-            return fmt.Errorf("invalid duration string: %w", err)
-        }
-        *m = HopIntervalValue(duration)
-        return nil
-    }
+	if err := json.Unmarshal(bytes, &stringValue); err == nil {
+		duration, err := time.ParseDuration(stringValue)
+		if err != nil {
+			return fmt.Errorf("invalid duration string: %w", err)
+		}
+		*m = HopIntervalValue(duration)
+		return nil
+	}
 	var intValue int64
 	if err := json.Unmarshal(bytes, &intValue); err == nil {
 		if intValue < 0 {
-            return fmt.Errorf("negative duration not allowed")
-        }
-        if intValue > math.MaxInt64/int64(time.Second) {
-            return fmt.Errorf("integer overflow for duration")
-        }
+			return fmt.Errorf("negative duration not allowed")
+		}
+		if intValue > math.MaxInt64/int64(time.Second) {
+			return fmt.Errorf("integer overflow for duration")
+		}
 
-        *m = HopIntervalValue(time.Duration(intValue) * time.Second)
+		*m = HopIntervalValue(time.Duration(intValue) * time.Second)
 		return nil
 	}
-	 
-    return nil
+
+	return nil
 }

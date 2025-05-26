@@ -175,7 +175,7 @@ func (o *Outbound) DialContext(ctx context.Context, network string, destination 
 		o.logger.InfoContext(ctx, "outbound packet connection to ", destination)
 	}
 	if destination.IsFqdn() {
-		destinationAddresses, err := o.dnsRouter.Lookup(ctx, destination.Fqdn, adapter.DNSQueryOptions{})
+		destinationAddresses, _, err := o.dnsRouter.Lookup(ctx, destination.Fqdn, adapter.DNSQueryOptions{}) //karing
 		if err != nil {
 			return nil, err
 		}
@@ -192,7 +192,7 @@ func (o *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
 	}
 	o.logger.InfoContext(ctx, "outbound packet connection to ", destination)
 	if destination.IsFqdn() {
-		destinationAddresses, err := o.dnsRouter.Lookup(ctx, destination.Fqdn, adapter.DNSQueryOptions{})
+		destinationAddresses, _, err := o.dnsRouter.Lookup(ctx, destination.Fqdn, adapter.DNSQueryOptions{}) //karing
 		if err != nil {
 			return nil, err
 		}

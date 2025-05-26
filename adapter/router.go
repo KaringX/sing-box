@@ -30,10 +30,9 @@ type Router interface {
 	RuleSet(tag string) (RuleSet, bool)
 	NeedWIFIState() bool
 
-	GetDNSClient() *dns.Client                                                                            //karing
+	//GetDNSClient() *dns.Client                                                                            //karing
 	Lookup(ctx context.Context, domain string, strategy dns.DomainStrategy) ([]netip.Addr, string, error) //karing
 	LookupDefault(ctx context.Context, domain string) ([]netip.Addr, error)
-	ClearDNSCache()
 
 	GetRemoteRuleSetRulesCount() map[string]int                                                            //karing
 	FindProcessInfo(ctx context.Context, network string, source netip.AddrPort) (*process.Info, error)     //karing

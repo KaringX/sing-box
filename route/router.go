@@ -15,7 +15,6 @@ import (
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
 	R "github.com/sagernet/sing-box/route/rule"
-
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/task"
 	"github.com/sagernet/sing/service"
@@ -75,7 +74,6 @@ func (r *Router) Initialize(rules []option.Rule, ruleSets []option.RuleSet) erro
 		}
 		r.rules = append(r.rules, rule)
 	}
-
 	for i, options := range ruleSets {
 		if _, exists := r.ruleSetMap[options.Tag]; exists {
 			return E.New("duplicate rule-set tag: ", options.Tag)
@@ -256,7 +254,7 @@ func (r *Router) Start(stage adapter.StartStage) error {
 			cacheContext.Close()
 		}
 		if len(r.ruleSetsRemoteWithLocal) > 0 { //karing
-			cacheRemoteContext := adapter.NewHTTPStartContext()
+			cacheRemoteContext := adapter.NewHTTPStartContext(r.ctx)
 			var ruleSetStartGroup task.Group
 			for _, ruleSet := range r.ruleSetsRemoteWithLocal { //karing
 				ruleSetInPlace := ruleSet

@@ -33,7 +33,7 @@ type Outbound struct {
 	client    *socks.Client
 	resolve   bool
 	uotClient *uot.Client
-	parseErr  error                //karing
+	parseErr  error //karing
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.SOCKSOutboundOptions) (adapter.Outbound, error) {
@@ -49,7 +49,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		version = socks.Version5
 	}
 	if err != nil {
-		return empty, err  //karing
+		return empty, err //karing
 	}
 	outboundDialer, err := dialer.New(ctx, options.DialerOptions, options.ServerIsDomain())
 	if err != nil {
@@ -73,7 +73,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 }
 
 func (h *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
-	if(h.parseErr != nil){ //karing
+	if h.parseErr != nil { //karing
 		return nil, h.parseErr
 	}
 	ctx, metadata := adapter.ExtendContext(ctx)
@@ -92,7 +92,7 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 		return nil, E.Extend(N.ErrUnknownNetwork, network)
 	}
 	if h.resolve && destination.IsFqdn() {
-		destinationAddresses, err := h.dnsRouter.Lookup(ctx, destination.Fqdn, adapter.DNSQueryOptions{})
+		destinationAddresses, _, err := h.dnsRouter.Lookup(ctx, destination.Fqdn, adapter.DNSQueryOptions{})
 		if err != nil {
 			return nil, err
 		}
@@ -102,7 +102,7 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 }
 
 func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
-	if(h.parseErr != nil){ //karing
+	if h.parseErr != nil { //karing
 		return nil, h.parseErr
 	}
 	ctx, metadata := adapter.ExtendContext(ctx)
@@ -113,7 +113,7 @@ func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
 		return h.uotClient.ListenPacket(ctx, destination)
 	}
 	if h.resolve && destination.IsFqdn() {
-		destinationAddresses, err := h.dnsRouter.Lookup(ctx, destination.Fqdn, adapter.DNSQueryOptions{})
+		destinationAddresses, _, err := h.dnsRouter.Lookup(ctx, destination.Fqdn, adapter.DNSQueryOptions{}) //karing
 		if err != nil {
 			return nil, err
 		}
@@ -127,6 +127,6 @@ func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
 	return h.client.ListenPacket(ctx, destination)
 }
 
-func (h *Outbound) SetParseErr(err error){ //karing
+func (h *Outbound) SetParseErr(err error) { //karing
 	h.parseErr = err
 }

@@ -85,13 +85,13 @@ func Lookup(ctx context.Context, router adapter.Router, logFactory log.Factory, 
 		tag := req.Resolver.Tag + "_" + req.Resolver.Detour
 		var detour N.Dialer
 		if req.Resolver.Detour == "" {
-			detour = dialer.NewDefaultOutbound(outboundManager)
+			detour = dialer.NewDefaultOutbound(ctx)
 		} else {
 			_, detourExist := outboundManager.Outbound(req.Resolver.Detour)
 			if !detourExist {
 				return 0, nil, E.New("resolver.detour not found: " + req.Resolver.Detour)
 			}
-			detour = dialer.NewDetour(outboundManager, req.Resolver.Detour)
+			detour = dialer.NewDetour(outboundManager, req.Resolver.Detour, false)
 		}
 
 		transport, err := dns.CreateTransport(dns.TransportOptions{
@@ -116,13 +116,13 @@ func Lookup(ctx context.Context, router adapter.Router, logFactory log.Factory, 
 	tag := req.Query.Tag + "_" + req.Query.Detour
 	var detour N.Dialer
 	if req.Query.Detour == "" {
-		detour = dialer.NewDefaultOutbound(outboundManager)
+		detour = dialer.NewDefaultOutbound(ctx)
 	} else {
 		_, detourExist := outboundManager.Outbound(req.Query.Detour)
 		if !detourExist {
 			return 0, nil, E.New("query.detour not found: " + req.Query.Detour)
 		}
-		detour = dialer.NewDetour(outboundManager, req.Query.Detour)
+		detour = dialer.NewDetour(outboundManager, req.Query.Detour, false)
 	}
 	if len(req.Resolver.Addresses) != 0 {
 		detour = dns.NewDialerWrapper(detour, dnsClient, resolverTransport, transStrategy(req.Query.Strategy), time.Duration(0))

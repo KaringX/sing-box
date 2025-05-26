@@ -93,8 +93,6 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		Password:            password,
 		TLSConfig:           tlsConfig,
 		UDPDisabled:         !common.Contains(networkList, N.NetworkUDP),
-		HopPorts:            options.HopPorts,    //https://github.com/morgenanno/sing-box
-		HopInterval:         options.HopInterval, //https://github.com/morgenanno/sing-box
 		ConnReceiveWindow:   options.ReceiveWindowConn,
 		StreamReceiveWindow: options.ReceiveWindow,
 		DisableMTUDiscovery: options.DisableMTUDiscovery,
@@ -150,6 +148,7 @@ func (h *Outbound) Close() error {
 	}
 	return h.client.CloseWithError(os.ErrClosed)
 }
+
 func (h *Outbound) SetParseErr(err error) { //karing
 	h.parseErr = err
 }

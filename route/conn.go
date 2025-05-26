@@ -14,7 +14,7 @@ import (
 
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/common/dialer"
-	tf "github.com/sagernet/sing-box/common/tlsfragment"
+	"github.com/sagernet/sing-box/common/tlsfragment"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/buf"
@@ -77,7 +77,7 @@ func (m *ConnectionManager) NewConnection(ctx context.Context, this N.Dialer, co
 		if outbound, isOutbound := this.(adapter.Outbound); isOutbound {
 			dialerString = " using outbound/" + outbound.Type() + "[" + outbound.Tag() + "]"
 		}
-		err = E.Cause(err, "open outbound connection from ", metadata.Inbound, " source: ", metadata.Source, " to ", metadata.Outbound, " destination: ", metadata.Destination) //karing
+		err = E.Cause(err, "open connection to ", remoteString, dialerString)
 		N.CloseOnHandshakeFailure(conn, onClose, err)
 		m.logger.ErrorContext(ctx, err)
 		return

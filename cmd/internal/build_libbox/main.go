@@ -63,7 +63,7 @@ func init() {
 	debugFlags = append(debugFlags, "-ldflags", "-X github.com/sagernet/sing-box/constant.Version="+currentTag+" "+ldflags+" -checklinkname=0 ")                      //karing
 
 	sharedTags = append(sharedTags, "with_gvisor", "with_quic", "with_wireguard", "with_utls", "with_clash_api", "with_conntrack")
-	sharedTags = append(sharedTags, "with_acme", "with_ech", "with_karing", "with_shadowsocksr", "with_grpc") //karing
+	sharedTags = append(sharedTags, "with_acme", "with_karing", "with_shadowsocksr", "with_grpc") //karing
 
 	iosTags = append(iosTags, "with_dhcp", "with_low_memory")
 	memcTags = append(memcTags, "with_tailscale")

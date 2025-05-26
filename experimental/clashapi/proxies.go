@@ -215,13 +215,13 @@ func getProxyDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 			realTag := group.RealTag(proxy)
 			if err != nil {
 				//server.urlTestHistory.DeleteURLTestHistory(realTag)
-				server.urlTestHistory.StoreURLTestHistory(realTag, &urltest.History{ //karing
+				server.urlTestHistory.StoreURLTestHistory(realTag, &adapter.URLTestHistory{ //karing
 					Time:  time.Now(),
 					Delay: 0,
 					Err:   err.Error(),
 				})
 			} else {
-				server.urlTestHistory.StoreURLTestHistory(realTag, &urltest.History{
+				server.urlTestHistory.StoreURLTestHistory(realTag, &adapter.URLTestHistory{
 					Time:  time.Now(),
 					Delay: delay,
 					Err:   "", //karing

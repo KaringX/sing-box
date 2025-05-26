@@ -9,7 +9,7 @@ import (
 	"net"
 	"strings"
 
-	utls "github.com/sagernet/utls"
+	utls "github.com/metacubex/utls"
 )
 
 const (

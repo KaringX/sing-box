@@ -129,7 +129,7 @@ func (s *URLTest) All() []string {
 	return s.tags
 }
 
-func (s *URLTest) URLTest(ctx context.Context) (map[string]urltest.URLTestResult, error) { //karing
+func (s *URLTest) URLTest(ctx context.Context) (map[string]adapter.URLTestResult, error) { //karing
 	return s.group.URLTest(ctx)
 }
 
@@ -184,18 +184,18 @@ func (s *URLTest) DialContext(ctx context.Context, network string, destination M
 	//karing
 	tag := "[" + outbound.Tag() + "] "
 	s.logger.ErrorContext(ctx, tag, err)
-
+	pauseManager := service.FromContext[pause.Manager](s.ctx) //karing
 	if outbound == s.group.selectedOutboundUDP {
 		s.logger.Warn("UDP URLTest dial ", s.Tag(), " (", outboundToString(s.group.selectedOutboundUDP), ") failed to connect for ", s.group.udpConnectionFailureCount.count, " times")
 		if s.group.udpConnectionFailureCount.IncrementConditionReset(MinFailureToReset) {
-			s.group.history.StoreURLTestHistory(realTag, &urltest.History{
+			s.group.history.StoreURLTestHistory(realTag, &adapter.URLTestHistory{
 				Time:  time.Now(),
 				Delay: 0,
 				Err:   err.Error(),
 			})
 			s.group.selectedOutboundUDP = nil
 			s.group.performUpdateCheck()
-			if !s.group.pauseManager.IsNetworkPaused() && !s.group.pauseManager.IsDevicePaused() {
+			if pauseManager != nil && !pauseManager.IsNetworkPaused() && !pauseManager.IsDevicePaused() {
 				if outbound == s.group.selectedOutboundUDP && !s.Checking() {
 					s.logger.Warn("UDP URLTest dial ", s.Tag(), " (", outboundToString(s.group.selectedOutboundUDP), ") failed to connect for ", MinFailureToReset, " times -> recheck")
 					s.CheckOutbounds()
@@ -206,14 +206,14 @@ func (s *URLTest) DialContext(ctx context.Context, network string, destination M
 		s.logger.Warn("TCP URLTest dial ", s.Tag(), " (", outboundToString(s.group.selectedOutboundTCP), ") failed to connect for ", s.group.tcpConnectionFailureCount.count, " times")
 		if s.group.tcpConnectionFailureCount.IncrementConditionReset(MinFailureToReset) {
 
-			s.group.history.StoreURLTestHistory(realTag, &urltest.History{
+			s.group.history.StoreURLTestHistory(realTag, &adapter.URLTestHistory{
 				Time:  time.Now(),
 				Delay: 0,
 				Err:   err.Error(),
 			})
 			s.group.selectedOutboundTCP = nil
 			s.group.performUpdateCheck()
-			if !s.group.pauseManager.IsNetworkPaused() && !s.group.pauseManager.IsDevicePaused() {
+			if pauseManager != nil && !pauseManager.IsNetworkPaused() && !pauseManager.IsDevicePaused() {
 				if outbound == s.group.selectedOutboundTCP && !s.Checking() {
 					s.logger.Warn("TCP URLTest dial ", s.Tag(), " (", outboundToString(s.group.selectedOutboundTCP), ") failed to connect for ", MinFailureToReset, " times -> recheck")
 					s.CheckOutbounds()
@@ -244,21 +244,22 @@ func (s *URLTest) ListenPacket(ctx context.Context, destination M.Socksaddr) (ne
 		return s.group.interruptGroup.NewPacketConn(conn, interrupt.IsExternalConnectionFromContext(ctx)), nil
 	}
 	tag := "[" + outbound.Tag() + "] "
-	realTag := RealTag(outbound)                                   //karing
-	s.logger.ErrorContext(ctx, tag, err)                           //karing
-	s.group.history.StoreURLTestHistory(realTag, &urltest.History{ //karing
+	realTag := RealTag(outbound)                                          //karing
+	s.logger.ErrorContext(ctx, tag, err)                                  //karing
+	s.group.history.StoreURLTestHistory(realTag, &adapter.URLTestHistory{ //karing
 		Time:  time.Now(),
 		Delay: 0,
 		Err:   err.Error(),
 	})
 	//s.group.history.DeleteURLTestHistory(outbound.Tag())
 	//karing
+	pauseManager := service.FromContext[pause.Manager](s.ctx) //karing
 	if outbound == s.group.selectedOutboundUDP {
 		s.logger.Warn("TCP URLTest listen ", s.Tag(), " (", outboundToString(s.group.selectedOutboundUDP), ") failed to connect for ", s.group.udpConnectionFailureCount.count, " times")
 		if s.group.udpConnectionFailureCount.IncrementConditionReset(MinFailureToReset) {
 			s.group.selectedOutboundUDP = nil
 			s.group.performUpdateCheck()
-			if !s.group.pauseManager.IsNetworkPaused() && !s.group.pauseManager.IsDevicePaused() {
+			if pauseManager != nil && !pauseManager.IsNetworkPaused() && !pauseManager.IsDevicePaused() {
 				if outbound == s.group.selectedOutboundUDP && !s.Checking() {
 					s.logger.Warn("UDP URLTest listen ", s.Tag(), " (", outboundToString(s.group.selectedOutboundUDP), ") failed to connect for ", MinFailureToReset, " times -> recheck")
 					s.CheckOutbounds()
@@ -288,10 +289,11 @@ func (s *URLTest) NewPacketConnectionEx(ctx context.Context, conn N.PacketConn, 
 }
 
 func (s *URLTest) InterfaceUpdated() {
-	if s.group == nil || s.group.pauseManager == nil { //karing
+	pauseManager := service.FromContext[pause.Manager](s.ctx) //karing
+	if pauseManager == nil {                                  //karing
 		return
 	}
-	if s.group.pauseManager.IsNetworkPaused() { //karing
+	if pauseManager.IsNetworkPaused() { //karing
 		return
 	}
 	if !s.reTestIfNetworkUpdate { //karing
@@ -498,7 +500,7 @@ func (g *URLTestGroup) CheckOutbounds(force bool) {
 	_, _ = g.urlTest(g.ctx, force)
 }
 
-func (g *URLTestGroup) URLTest(ctx context.Context) (map[string]urltest.URLTestResult, error) { //karing
+func (g *URLTestGroup) URLTest(ctx context.Context) (map[string]adapter.URLTestResult, error) { //karing
 	return g.urlTest(ctx, false)
 }
 
@@ -506,16 +508,17 @@ func (g *URLTestGroup) UpdateCheck() { //karing
 	g.performUpdateCheck()
 }
 
-func (g *URLTestGroup) urlTest(ctx context.Context, force bool) (map[string]urltest.URLTestResult, error) { //karing
-	result := make(map[string]urltest.URLTestResult) //karing
+func (g *URLTestGroup) urlTest(ctx context.Context, force bool) (map[string]adapter.URLTestResult, error) { //karing
+	result := make(map[string]adapter.URLTestResult) //karing
 	if g.checking.Swap(true) {
 		return result, nil
 	}
 	defer g.checking.Store(false)
 	//b, _ := batch.New(ctx, batch.WithConcurrencyNum[any](10))
-	pool := pond.New(10, 20) //karing
-	group := pool.Group()    //karing
-	count := 0               //karing
+	pool := pond.New(10, 20)                                  //karing
+	group := pool.Group()                                     //karing
+	count := 0                                                //karing
+	pauseManager := service.FromContext[pause.Manager](g.ctx) //karing
 	checked := make(map[string]bool)
 	var resultAccess sync.Mutex
 	for _, detour := range g.outbounds {
@@ -534,8 +537,11 @@ func (g *URLTestGroup) urlTest(ctx context.Context, force bool) (map[string]urlt
 		if !loaded {
 			continue
 		}
-		if g.pauseManager.IsNetworkPaused() { //karing
-			g.pauseManager.WaitActive()
+		if pauseManager == nil {
+			return result, nil
+		}
+		if pauseManager.IsNetworkPaused() { //karing
+			pauseManager.WaitActive()
 		}
 		group.Submit(func() { //karing
 			//b.Go(realTag, func() (any, error) {
@@ -545,7 +551,7 @@ func (g *URLTestGroup) urlTest(ctx context.Context, force bool) (map[string]urlt
 			if err != nil {
 				g.logger.Debug("outbound ", tag, " unavailable: ", err)
 				//g.history.DeleteURLTestHistory(realTag)
-				g.history.StoreURLTestHistory(realTag, &urltest.History{ //karing
+				g.history.StoreURLTestHistory(realTag, &adapter.URLTestHistory{ //karing
 					Time:  time.Now(),
 					Delay: 0,
 					Err:   err.Error(),
@@ -576,9 +582,9 @@ func (g *URLTestGroup) urlTest(ctx context.Context, force bool) (map[string]urlt
 			}
 			resultAccess.Lock()
 			if err == nil { //karing
-				result[tag] = urltest.URLTestResult{Delay: t, Err: ""}
+				result[tag] = adapter.URLTestResult{Delay: t, Err: ""}
 			} else {
-				result[tag] = urltest.URLTestResult{Delay: t, Err: err.Error()}
+				result[tag] = adapter.URLTestResult{Delay: t, Err: err.Error()}
 			}
 			resultAccess.Unlock()
 			//return nil, nil//karing

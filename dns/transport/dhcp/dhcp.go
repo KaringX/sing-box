@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	tun "github.com/metacubex/sing-tun"
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/common/dialer"
 	C "github.com/sagernet/sing-box/constant"
@@ -16,6 +15,7 @@ import (
 	"github.com/sagernet/sing-box/dns/transport"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
+	"github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/buf"
 	"github.com/sagernet/sing/common/control"

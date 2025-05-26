@@ -20,6 +20,7 @@ type ClashServer interface {
 type URLTestHistory struct {
 	Time  time.Time `json:"time"`
 	Delay uint16    `json:"delay"`
+	Err   string    `json:"err,omitempty"`
 }
 
 type URLTestHistoryStorage interface {
@@ -27,6 +28,7 @@ type URLTestHistoryStorage interface {
 	LoadURLTestHistory(tag string) *URLTestHistory
 	DeleteURLTestHistory(tag string)
 	StoreURLTestHistory(tag string, history *URLTestHistory)
+	GetURLTestHistory() map[string]*URLTestHistory // karing
 	Close() error
 }
 
