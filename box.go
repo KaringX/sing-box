@@ -567,7 +567,7 @@ func (s *Box) Close() error {
 	s.connection = nil //karing
 	s.network = nil    //karing
 	s.router = nil     //karing
-	s.services = nil   //karing
+	s.service = nil    //karing
 	return err
 }
 

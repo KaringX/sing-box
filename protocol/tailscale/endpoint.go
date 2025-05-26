@@ -148,7 +148,8 @@ func NewEndpoint(ctx context.Context, router adapter.Router, logger log.ContextL
 		ControlURL: options.ControlURL,
 		Dialer:     &endpointDialer{Dialer: outboundDialer, logger: logger},
 		LookupHook: func(ctx context.Context, host string) ([]netip.Addr, error) {
-			return dnsRouter.Lookup(ctx, host, outboundDialer.(dialer.ResolveDialer).QueryOptions())
+			addr, _, err := dnsRouter.Lookup(ctx, host, outboundDialer.(dialer.ResolveDialer).QueryOptions()) //karing
+			return addr, err                                                                                  //karing
 		},
 		DNS: &dnsConfigurtor{},
 		HTTPClient: &http.Client{
@@ -334,7 +335,7 @@ func (t *Endpoint) DialContext(ctx context.Context, network string, destination 
 		t.logger.InfoContext(ctx, "outbound packet connection to ", destination)
 	}
 	if destination.IsFqdn() {
-		destinationAddresses, err := t.dnsRouter.Lookup(ctx, destination.Fqdn, adapter.DNSQueryOptions{})
+		destinationAddresses, _, err := t.dnsRouter.Lookup(ctx, destination.Fqdn, adapter.DNSQueryOptions{}) //karing
 		if err != nil {
 			return nil, err
 		}
@@ -372,7 +373,7 @@ func (t *Endpoint) DialContext(ctx context.Context, network string, destination 
 func (t *Endpoint) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
 	t.logger.InfoContext(ctx, "outbound packet connection to ", destination)
 	if destination.IsFqdn() {
-		destinationAddresses, err := t.dnsRouter.Lookup(ctx, destination.Fqdn, adapter.DNSQueryOptions{})
+		destinationAddresses, _, err := t.dnsRouter.Lookup(ctx, destination.Fqdn, adapter.DNSQueryOptions{}) //karing
 		if err != nil {
 			return nil, err
 		}

@@ -434,7 +434,7 @@ func handleBootstrapDNS(ctx context.Context) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Connection", "close")
 		if queryDomain := r.URL.Query().Get("q"); queryDomain != "" {
-			addresses, err := dnsRouter.Lookup(ctx, queryDomain, adapter.DNSQueryOptions{})
+			addresses, _, err := dnsRouter.Lookup(ctx, queryDomain, adapter.DNSQueryOptions{}) //karing
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
