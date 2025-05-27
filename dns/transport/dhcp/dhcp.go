@@ -15,7 +15,7 @@ import (
 	"github.com/sagernet/sing-box/dns/transport"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
-	"github.com/sagernet/sing-tun"
+	tun "github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/buf"
 	"github.com/sagernet/sing/common/control"
@@ -83,11 +83,7 @@ func (t *Transport) Start(stage adapter.StartStage) error {
 }
 
 func (t *Transport) Name() string { //karing
-	return t.options.Name
-}
-
-func (t *Transport) Address() string { //karing
-	return t.options.Address
+	return "dhcp" //karing todo
 }
 
 func (t *Transport) Close() error {

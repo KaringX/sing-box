@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"time"
 
-	box "github.com/sagernet/sing-box"
 	"github.com/sagernet/sing-box/experimental/deprecated"
 	"github.com/sagernet/sing-box/experimental/libbox"
 	"github.com/sagernet/sing-box/include"
@@ -95,8 +94,7 @@ func preRun(cmd *cobra.Command, args []string) error {
 	if len(configPaths) == 0 && len(configDirectories) == 0 {
 		configPaths = append(configPaths, "config.json")
 	}
-	globalCtx = service.ContextWith(globalCtx, deprecated.NewStderrManager(log.StdLogger()))
-	globalCtx = box.Context(globalCtx, include.InboundRegistry(), include.OutboundRegistry(), include.EndpointRegistry())
+	globalCtx = include.Context(service.ContextWith(globalCtx, deprecated.NewStderrManager(log.StdLogger())))
 	return nil
 }
 
