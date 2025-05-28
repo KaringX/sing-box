@@ -114,12 +114,15 @@ func (r *Router) Close() error {
 		})
 		monitor.Finish()
 	}
+	if r.client != nil { //karing
+		r.client.Close()
+	}
 	r.transport = nil                    //karing
 	r.outbound = nil                     //karing
 	r.client = nil                       //karing
 	r.rules = make([]adapter.DNSRule, 0) //karing
 	r.dnsReverseMapping = nil            //karing
-	r.client.Close()                     //karing
+
 	return err
 }
 
