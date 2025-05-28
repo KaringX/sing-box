@@ -30,6 +30,7 @@ type DNSClient interface {
 	LookupCache(domain string, strategy C.DomainStrategy) ([]netip.Addr, bool)
 	ExchangeCache(ctx context.Context, message *dns.Msg) (*dns.Msg, bool)
 	ClearCache()
+	Close() //karing
 }
 
 type DNSQueryOptions struct {

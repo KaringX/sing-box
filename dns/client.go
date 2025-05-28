@@ -299,6 +299,13 @@ func (c *Client) ClearCache() {
 	}
 }
 
+func (c *Client) Close() { //karing
+	c.ClearCache()
+	c.cache = nil
+	c.transportCache = nil
+	c.rdrc = nil
+}
+
 func (c *Client) LookupCache(domain string, strategy C.DomainStrategy) ([]netip.Addr, bool) {
 	if c.disableCache || c.independentCache {
 		return nil, false
@@ -371,8 +378,14 @@ func (c *Client) storeCache(transport adapter.DNSTransport, question dns.Questio
 	}
 	if c.disableExpire {
 		if !c.independentCache {
+			if c.cache == nil { //karing
+				return
+			}
 			c.cache.Add(question, message)
 		} else {
+			if c.transportCache == nil { //karing
+				return
+			}
 			c.transportCache.Add(transportCacheKey{
 				Question:     question,
 				transportTag: transport.Tag(),
@@ -381,8 +394,14 @@ func (c *Client) storeCache(transport adapter.DNSTransport, question dns.Questio
 		return
 	}
 	if !c.independentCache {
+		if c.cache == nil { //karing
+			return
+		}
 		c.cache.AddWithLifetime(question, message, time.Second*time.Duration(timeToLive))
 	} else {
+		if c.transportCache == nil { //karing
+			return
+		}
 		c.transportCache.AddWithLifetime(transportCacheKey{
 			Question:     question,
 			transportTag: transport.Tag(),
@@ -431,8 +450,14 @@ func (c *Client) loadResponse(question dns.Question, transport adapter.DNSTransp
 	)
 	if c.disableExpire {
 		if !c.independentCache {
+			if c.cache == nil { //karing
+				return nil, 0
+			}
 			response, loaded = c.cache.Get(question)
 		} else {
+			if c.transportCache == nil { //karing
+				return nil, 0
+			}
 			response, loaded = c.transportCache.Get(transportCacheKey{
 				Question:     question,
 				transportTag: transport.Tag(),
@@ -445,8 +470,14 @@ func (c *Client) loadResponse(question dns.Question, transport adapter.DNSTransp
 	} else {
 		var expireAt time.Time
 		if !c.independentCache {
+			if c.cache == nil { //karing
+				return nil, 0
+			}
 			response, expireAt, loaded = c.cache.GetWithLifetime(question)
 		} else {
+			if c.transportCache == nil { //karing
+				return nil, 0
+			}
 			response, expireAt, loaded = c.transportCache.GetWithLifetime(transportCacheKey{
 				Question:     question,
 				transportTag: transport.Tag(),
@@ -458,8 +489,14 @@ func (c *Client) loadResponse(question dns.Question, transport adapter.DNSTransp
 		timeNow := time.Now()
 		if timeNow.After(expireAt) {
 			if !c.independentCache {
+				if c.cache == nil { //karing
+					return nil, 0
+				}
 				c.cache.Remove(question)
 			} else {
+				if c.transportCache == nil { //karing
+					return nil, 0
+				}
 				c.transportCache.Remove(transportCacheKey{
 					Question:     question,
 					transportTag: transport.Tag(),
