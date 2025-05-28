@@ -128,7 +128,6 @@ type _DNSServerOptions struct {
 	Type    string `json:"type,omitempty"`
 	Tag     string `json:"tag,omitempty"`
 	Options any    `json:"-"`
-	//Addresses []string `json:"addresses"` //karing
 }
 
 /*
@@ -324,6 +323,10 @@ func (o *DNSServerOptions) Upgrade(ctx context.Context) error {
 			fakeipOptions.Inet6Range = legacyOptions.Inet6Range
 		}
 		o.Options = &fakeipOptions
+	case C.DNSTypeBatch: //karing
+		o.Type = C.DNSTypeBatch
+		batchOptions := BatchDNSServerOptions{}
+		o.Options = &batchOptions
 	default:
 		return E.New("unsupported DNS server scheme: ", serverType)
 	}
@@ -402,4 +405,8 @@ type FakeIPDNSServerOptions struct {
 type DHCPDNSServerOptions struct {
 	LocalDNSServerOptions
 	Interface string `json:"interface,omitempty"`
+}
+
+type BatchDNSServerOptions struct { //karing
+	Servers []string `json:"servers,omitempty"`
 }
