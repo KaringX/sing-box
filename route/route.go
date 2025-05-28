@@ -533,7 +533,7 @@ match:
 	meta := "[" + "inbound:" + metadata.Inbound
 	if metadata.ProcessInfo != nil {
 		if len(metadata.ProcessInfo.ProcessPath) > 0 {
-			meta += ",processName:" + metadata.ProcessInfo.ProcessPath
+			meta += ",processPath:" + metadata.ProcessInfo.ProcessPath
 		}
 		if len(metadata.ProcessInfo.PackageName) > 0 {
 			meta += ",packageName:" + metadata.ProcessInfo.PackageName
