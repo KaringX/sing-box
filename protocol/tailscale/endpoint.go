@@ -327,6 +327,9 @@ func (t *Endpoint) Close() error {
 }
 
 func (t *Endpoint) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
+	if t.GetParseErr() != nil { //karing
+		return nil, t.GetParseErr()
+	}
 	switch network {
 	case N.NetworkTCP:
 		t.logger.InfoContext(ctx, "outbound connection to ", destination)
@@ -370,6 +373,9 @@ func (t *Endpoint) DialContext(ctx context.Context, network string, destination 
 }
 
 func (t *Endpoint) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
+	if t.GetParseErr() != nil { //karing
+		return nil, t.GetParseErr()
+	}
 	t.logger.InfoContext(ctx, "outbound packet connection to ", destination)
 	if destination.IsFqdn() {
 		destinationAddresses, err := t.dnsRouter.Lookup(ctx, destination.Fqdn, adapter.DNSQueryOptions{})
