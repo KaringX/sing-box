@@ -333,7 +333,7 @@ func (r *Router) Lookup(ctx context.Context, domain string, options adapter.DNSQ
 		responseAddrs []netip.Addr
 		cached        bool
 		err           error
-		transportName string //karing
+		transportTag  string //karing
 	)
 	printResult := func() {
 		if err == nil && len(responseAddrs) == 0 {
@@ -365,6 +365,7 @@ func (r *Router) Lookup(ctx context.Context, domain string, options adapter.DNSQ
 	metadata.Domain = FqdnToDomain(domain)
 	if options.Transport != nil {
 		transport := options.Transport
+		transportTag = transport.Tag() //karing
 		if legacyTransport, isLegacy := transport.(adapter.LegacyDNSTransport); isLegacy {
 			if options.Strategy == C.DomainStrategyAsIS {
 				options.Strategy = r.defaultDomainStrategy
@@ -393,7 +394,7 @@ func (r *Router) Lookup(ctx context.Context, domain string, options adapter.DNSQ
 				case *R.RuleActionReject:
 					switch action.Method {
 					case C.RuleActionRejectMethodDefault:
-						return nil, transport.Name(), nil //karing
+						return nil, transport.Tag(), nil //karing
 					case C.RuleActionRejectMethodDrop:
 						return nil, "", tun.ErrDrop //karing
 					}
@@ -413,6 +414,7 @@ func (r *Router) Lookup(ctx context.Context, domain string, options adapter.DNSQ
 					goto response
 				}
 			}
+			transportTag = transport.Tag() //karing
 			var responseCheck func(responseAddrs []netip.Addr) bool
 			if rule != nil && rule.WithAddressLimit() {
 				responseCheck = func(responseAddrs []netip.Addr) bool {
@@ -435,7 +437,7 @@ response:
 	if len(responseAddrs) > 0 {
 		r.logger.InfoContext(ctx, "lookup succeed for ", domain, ": ", strings.Join(F.MapToString(responseAddrs), " "))
 	}
-	return responseAddrs, transportName, err
+	return responseAddrs, transportTag, err
 }
 
 func isAddressQuery(message *mDNS.Msg) bool {

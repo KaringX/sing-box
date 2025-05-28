@@ -82,10 +82,6 @@ func (t *Transport) Start(stage adapter.StartStage) error {
 	return nil
 }
 
-func (t *Transport) Name() string { //karing
-	return "dhcp" //karing todo
-}
-
 func (t *Transport) Close() error {
 	for _, transport := range t.transports {
 		transport.Close()

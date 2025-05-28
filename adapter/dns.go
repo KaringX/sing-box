@@ -69,7 +69,6 @@ type DNSTransport interface {
 	Lifecycle
 	Type() string
 	Tag() string
-	Name() string //karing
 	Dependencies() []string
 	Exchange(ctx context.Context, message *dns.Msg) (*dns.Msg, error)
 }

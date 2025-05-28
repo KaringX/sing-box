@@ -65,10 +65,6 @@ func (a *TransportAdapter) Tag() string {
 	return a.transportTag
 }
 
-func (a *TransportAdapter) Name() string { //karing
-	return "" //karing todo
-}
-
 func (a *TransportAdapter) Dependencies() []string {
 	return a.dependencies
 }
