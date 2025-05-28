@@ -50,7 +50,6 @@ type URLTest struct {
 	interruptExternalConnections bool
 	defaultTag                   string //karing
 	reTestIfNetworkUpdate        bool   //karing
-	parseErr                     error  //karing
 }
 
 func NewURLTest(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.URLTestOutboundOptions) (adapter.Outbound, error) {
@@ -77,8 +76,8 @@ func NewURLTest(ctx context.Context, router adapter.Router, logger log.ContextLo
 }
 
 func (s *URLTest) Start() error {
-	if s.parseErr != nil { //karing
-		return s.parseErr
+	if s.GetParseErr() != nil { //karing
+		return s.GetParseErr()
 	}
 	outbounds := make([]adapter.Outbound, 0, len(s.tags))
 	for i, tag := range s.tags {
@@ -97,8 +96,8 @@ func (s *URLTest) Start() error {
 }
 
 func (s *URLTest) PostStart() error {
-	if s.parseErr != nil { //karing
-		return s.parseErr
+	if s.GetParseErr() != nil { //karing
+		return s.GetParseErr()
 	}
 	if s.interval < 0 { //karing
 		return nil
@@ -108,7 +107,7 @@ func (s *URLTest) PostStart() error {
 }
 
 func (s *URLTest) Close() error {
-	if s.parseErr != nil { //karing
+	if s.GetParseErr() != nil { //karing
 		return nil
 	}
 	return common.Close(
@@ -145,8 +144,8 @@ func (s *URLTest) CheckOutbounds() {
 }
 
 func (s *URLTest) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
-	if s.parseErr != nil { //karing
-		return nil, s.parseErr
+	if s.GetParseErr() != nil { //karing
+		return nil, s.GetParseErr()
 	}
 	s.group.Touch()
 	var outbound adapter.Outbound
@@ -227,8 +226,8 @@ func (s *URLTest) DialContext(ctx context.Context, network string, destination M
 }
 
 func (s *URLTest) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
-	if s.parseErr != nil { //karing
-		return nil, s.parseErr
+	if s.GetParseErr() != nil { //karing
+		return nil, s.GetParseErr()
 	}
 	s.group.Touch()
 	outbound := s.group.selectedOutboundUDP
@@ -273,7 +272,7 @@ func (s *URLTest) ListenPacket(ctx context.Context, destination M.Socksaddr) (ne
 }
 
 func (s *URLTest) NewConnectionEx(ctx context.Context, conn net.Conn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) {
-	if s.parseErr != nil { //karing
+	if s.GetParseErr() != nil { //karing
 		return
 	}
 	ctx = interrupt.ContextWithIsExternalConnection(ctx)
@@ -281,7 +280,7 @@ func (s *URLTest) NewConnectionEx(ctx context.Context, conn net.Conn, metadata a
 }
 
 func (s *URLTest) NewPacketConnectionEx(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) {
-	if s.parseErr != nil { //karing
+	if s.GetParseErr() != nil { //karing
 		return
 	}
 	ctx = interrupt.ContextWithIsExternalConnection(ctx)
@@ -300,9 +299,6 @@ func (s *URLTest) InterfaceUpdated() {
 		return
 	}
 	go s.group.CheckOutbounds(true)
-}
-func (s *URLTest) SetParseErr(err error) { //karing
-	s.parseErr = err
 }
 
 type URLTestGroup struct {
@@ -396,7 +392,6 @@ func (g *URLTestGroup) Touch() {
 		g.lastActive.Store(time.Now())
 		return
 	}
-
 	g.ticker = time.NewTicker(g.interval)
 	go g.loopCheck()
 	g.pauseCallback = pause.RegisterTicker(g.pause, g.ticker, g.interval, nil)

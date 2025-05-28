@@ -79,7 +79,6 @@ type Endpoint struct {
 	advertiseExitNode      bool
 
 	udpTimeout time.Duration
-	parseErr   error //karing
 }
 
 func NewEndpoint(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.TailscaleEndpointOptions) (adapter.Endpoint, error) {
@@ -148,8 +147,8 @@ func NewEndpoint(ctx context.Context, router adapter.Router, logger log.ContextL
 		ControlURL: options.ControlURL,
 		Dialer:     &endpointDialer{Dialer: outboundDialer, logger: logger},
 		LookupHook: func(ctx context.Context, host string) ([]netip.Addr, error) {
-			addr, _, err := dnsRouter.Lookup(ctx, host, outboundDialer.(dialer.ResolveDialer).QueryOptions()) //karing
-			return addr, err                                                                                  //karing
+			addr, err := dnsRouter.Lookup(ctx, host, outboundDialer.(dialer.ResolveDialer).QueryOptions())
+			return addr, err //karing
 		},
 		DNS: &dnsConfigurtor{},
 		HTTPClient: &http.Client{
@@ -335,7 +334,7 @@ func (t *Endpoint) DialContext(ctx context.Context, network string, destination 
 		t.logger.InfoContext(ctx, "outbound packet connection to ", destination)
 	}
 	if destination.IsFqdn() {
-		destinationAddresses, _, err := t.dnsRouter.Lookup(ctx, destination.Fqdn, adapter.DNSQueryOptions{}) //karing
+		destinationAddresses, err := t.dnsRouter.Lookup(ctx, destination.Fqdn, adapter.DNSQueryOptions{})
 		if err != nil {
 			return nil, err
 		}
@@ -373,7 +372,7 @@ func (t *Endpoint) DialContext(ctx context.Context, network string, destination 
 func (t *Endpoint) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
 	t.logger.InfoContext(ctx, "outbound packet connection to ", destination)
 	if destination.IsFqdn() {
-		destinationAddresses, _, err := t.dnsRouter.Lookup(ctx, destination.Fqdn, adapter.DNSQueryOptions{}) //karing
+		destinationAddresses, err := t.dnsRouter.Lookup(ctx, destination.Fqdn, adapter.DNSQueryOptions{})
 		if err != nil {
 			return nil, err
 		}
@@ -477,10 +476,6 @@ func (t *Endpoint) NewPacketConnectionEx(ctx context.Context, conn N.PacketConn,
 
 func (t *Endpoint) Server() *tsnet.Server {
 	return t.server
-}
-
-func (h *Endpoint) SetParseErr(err error) { //karing
-	h.parseErr = err
 }
 
 func addressFromAddr(destination netip.Addr) tcpip.Address {

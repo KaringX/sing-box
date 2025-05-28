@@ -40,7 +40,6 @@ type Outbound struct {
 	events      chan control.Event
 	instance    *tor.Tor
 	socksClient *socks.Client
-	parseErr     error                //karing
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.TorOutboundOptions) (adapter.Outbound, error) {
@@ -75,14 +74,14 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		if !rw.IsFile(torrcFile) {
 			err := os.WriteFile(torrcFile, []byte(""), 0o600)
 			if err != nil {
-				return empty, err  //karing
+				return empty, err //karing
 			}
 		}
 		startConf.TorrcFile = torrcFile
 	}
 	outboundDialer, err := dialer.New(ctx, options.DialerOptions, false)
 	if err != nil {
-		return empty, err  //karing
+		return empty, err //karing
 	}
 	return &Outbound{
 		Adapter:   outbound.NewAdapterWithDialerOptions(C.TypeTor, tag, []string{N.NetworkTCP}, options.DialerOptions),
@@ -111,8 +110,8 @@ var torLogEvents = []control.EventCode{
 }
 
 func (t *Outbound) start() error {
-	if(t.parseErr != nil){ //karing
-		return t.parseErr
+	if t.GetParseErr() != nil { //karing
+		return t.GetParseErr()
 	}
 	torInstance, err := tor.Start(t.ctx, t.startConf)
 	if err != nil {
@@ -211,8 +210,8 @@ func (t *Outbound) Close() error {
 }
 
 func (t *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
-	if(t.parseErr != nil){ //karing
-		return nil, t.parseErr
+	if t.GetParseErr() != nil { //karing
+		return nil, t.GetParseErr()
 	}
 	t.logger.InfoContext(ctx, "outbound connection to ", destination)
 	return t.socksClient.DialContext(ctx, network, destination)
@@ -220,8 +219,4 @@ func (t *Outbound) DialContext(ctx context.Context, network string, destination 
 
 func (t *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
 	return nil, os.ErrInvalid
-}
-
-func (t *Outbound) SetParseErr(err error){ //karing
-	t.parseErr = err
 }

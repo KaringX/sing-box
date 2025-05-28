@@ -69,7 +69,7 @@ func transStrategy(strategy string) dns.DomainStrategy {
 func LookupWithDefaultRouter(ctx context.Context, logFactory log.Factory, domain string, strategy dns.DomainStrategy) (uint16, []netip.Addr, string, error) {
 	start := time.Now()
 	dnsRouter := service.FromContext[adapter.DNSRouter](ctx)
-	addr, tag, err := dnsRouter.Lookup(ctx, domain, adapter.DNSQueryOptions{ //karing
+	addr, tag, err := dnsRouter.LookupTag(ctx, domain, adapter.DNSQueryOptions{ //karing
 		//Transport: d.transport,
 		Strategy: strategy,
 	})

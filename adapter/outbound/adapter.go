@@ -9,6 +9,7 @@ type Adapter struct {
 	outboundTag  string
 	network      []string
 	dependencies []string
+	parseErr     error //karing
 }
 
 func NewAdapter(outboundType string, outboundTag string, network []string, dependencies []string) Adapter {
@@ -42,4 +43,12 @@ func (a *Adapter) Network() []string {
 
 func (a *Adapter) Dependencies() []string {
 	return a.dependencies
+}
+
+func (h *Adapter) SetParseErr(err error) { //karing
+	h.parseErr = err
+}
+
+func (h *Adapter) GetParseErr() error { //karing
+	return h.parseErr
 }

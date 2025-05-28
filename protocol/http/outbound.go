@@ -25,9 +25,8 @@ func RegisterOutbound(registry *outbound.Registry) {
 
 type Outbound struct {
 	outbound.Adapter
-	logger   logger.ContextLogger
-	client   *sHTTP.Client
-	parseErr error //karing
+	logger logger.ContextLogger
+	client *sHTTP.Client
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.HTTPOutboundOptions) (adapter.Outbound, error) {
@@ -58,8 +57,8 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 }
 
 func (h *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
-	if h.parseErr != nil { //karing
-		return nil, h.parseErr
+	if h.GetParseErr() != nil { //karing
+		return nil, h.GetParseErr()
 	}
 	ctx, metadata := adapter.ExtendContext(ctx)
 	metadata.Outbound = h.Tag()
@@ -70,8 +69,4 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 
 func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
 	return nil, os.ErrInvalid
-}
-
-func (h *Outbound) SetParseErr(err error) { //karing
-	h.parseErr = err
 }

@@ -38,7 +38,6 @@ type Outbound struct {
 	transport       adapter.V2RayClientTransport
 	packetAddr      bool
 	xudp            bool
-	parseErr        error //karing
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.VMessOutboundOptions) (adapter.Outbound, error) {
@@ -120,13 +119,9 @@ func (h *Outbound) Close() error {
 	return common.Close(common.PtrOrNil(h.multiplexDialer), h.transport)
 }
 
-func (h *Outbound) SetParseErr(err error) { //karing
-	h.parseErr = err
-}
-
 func (h *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
-	if h.parseErr != nil { //karing
-		return nil, h.parseErr
+	if h.GetParseErr() != nil { //karing
+		return nil, h.GetParseErr()
 	}
 	if h.multiplexDialer == nil {
 		switch N.NetworkName(network) {
@@ -148,8 +143,8 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 }
 
 func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
-	if h.parseErr != nil { //karing
-		return nil, h.parseErr
+	if h.GetParseErr() != nil { //karing
+		return nil, h.GetParseErr()
 	}
 	if h.multiplexDialer == nil {
 		h.logger.InfoContext(ctx, "outbound packet connection to ", destination)

@@ -34,11 +34,10 @@ var _ adapter.InterfaceUpdateListener = (*Outbound)(nil)
 
 type Outbound struct {
 	outbound.Adapter
-	logger    logger.ContextLogger
-	client    *tuic.Client
-	udpStream bool
+	logger     logger.ContextLogger
+	client     *tuic.Client
+	udpStream  bool
 	hforwarder *houtbound.Forwarder //hiddify
-	parseErr  error                //karing
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.TUICOutboundOptions) (adapter.Outbound, error) {
@@ -88,17 +87,17 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		return empty, err //karing
 	}
 	return &Outbound{
-		Adapter:   outbound.NewAdapterWithDialerOptions(C.TypeTUIC, tag, options.Network.Build(), options.DialerOptions),
-		logger:    logger,
-		client:    client,
-		udpStream: options.UDPOverStream,
+		Adapter:    outbound.NewAdapterWithDialerOptions(C.TypeTUIC, tag, options.Network.Build(), options.DialerOptions),
+		logger:     logger,
+		client:     client,
+		udpStream:  options.UDPOverStream,
 		hforwarder: hforwarder, //hiddify
 	}, nil
 }
 
 func (h *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
-	if(h.parseErr != nil){ //karing
-		return nil, h.parseErr
+	if h.GetParseErr() != nil { //karing
+		return nil, h.GetParseErr()
 	}
 	switch N.NetworkName(network) {
 	case N.NetworkTCP:
@@ -128,8 +127,8 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 }
 
 func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
-	if(h.parseErr != nil){ //karing
-		return nil, h.parseErr
+	if h.GetParseErr() != nil { //karing
+		return nil, h.GetParseErr()
 	}
 	if h.udpStream {
 		h.logger.InfoContext(ctx, "outbound stream packet connection to ", destination)
@@ -162,7 +161,4 @@ func (h *Outbound) Close() error {
 		return nil
 	}
 	return h.client.CloseWithError(os.ErrClosed)
-}
-func (h *Outbound) SetParseErr(err error){ //karing
-	h.parseErr = err
 }

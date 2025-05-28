@@ -100,7 +100,6 @@ func (r *Router) Initialize(rules []option.Rule, ruleSets []option.RuleSet) erro
 		r.ruleSets = append(r.ruleSets, ruleSet)
 		r.ruleSetMap[options.Tag] = ruleSet
 	}
-
 	return nil
 }
 

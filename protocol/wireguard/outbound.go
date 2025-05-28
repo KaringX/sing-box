@@ -35,7 +35,7 @@ type Outbound struct {
 	localAddresses []netip.Prefix
 	endpoint       *wireguard.Endpoint
 	hforwarder     *houtbound.Forwarder //hiddify
-	parseErr       error                //karing
+
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.LegacyWireGuardOutboundOptions) (adapter.Outbound, error) {
@@ -112,7 +112,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		Address:    options.LocalAddress,
 		PrivateKey: options.PrivateKey,
 		ResolvePeer: func(domain string) (netip.Addr, error) {
-			endpointAddresses, _, lookupErr := outbound.dnsRouter.Lookup(ctx, domain, outboundDialer.(dialer.ResolveDialer).QueryOptions()) //karing
+			endpointAddresses, lookupErr := outbound.dnsRouter.Lookup(ctx, domain, outboundDialer.(dialer.ResolveDialer).QueryOptions())
 			if lookupErr != nil {
 				return netip.Addr{}, lookupErr
 			}
@@ -152,10 +152,6 @@ func (o *Outbound) Close() error {
 	return o.endpoint.Close()
 }
 
-func (h *Outbound) SetParseErr(err error) { //karing
-	h.parseErr = err
-}
-
 func (o *Outbound) InterfaceUpdated() {
 	if o.endpoint == nil { //karing
 		return
@@ -165,8 +161,8 @@ func (o *Outbound) InterfaceUpdated() {
 }
 
 func (o *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
-	if o.parseErr != nil { //karing
-		return nil, o.parseErr
+	if o.GetParseErr() != nil { //karing
+		return nil, o.GetParseErr()
 	}
 	switch network {
 	case N.NetworkTCP:
@@ -175,7 +171,7 @@ func (o *Outbound) DialContext(ctx context.Context, network string, destination 
 		o.logger.InfoContext(ctx, "outbound packet connection to ", destination)
 	}
 	if destination.IsFqdn() {
-		destinationAddresses, _, err := o.dnsRouter.Lookup(ctx, destination.Fqdn, adapter.DNSQueryOptions{}) //karing
+		destinationAddresses, err := o.dnsRouter.Lookup(ctx, destination.Fqdn, adapter.DNSQueryOptions{})
 		if err != nil {
 			return nil, err
 		}
@@ -187,12 +183,12 @@ func (o *Outbound) DialContext(ctx context.Context, network string, destination 
 }
 
 func (o *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
-	if o.parseErr != nil { //karing
-		return nil, o.parseErr
+	if o.GetParseErr() != nil { //karing
+		return nil, o.GetParseErr()
 	}
 	o.logger.InfoContext(ctx, "outbound packet connection to ", destination)
 	if destination.IsFqdn() {
-		destinationAddresses, _, err := o.dnsRouter.Lookup(ctx, destination.Fqdn, adapter.DNSQueryOptions{}) //karing
+		destinationAddresses, err := o.dnsRouter.Lookup(ctx, destination.Fqdn, adapter.DNSQueryOptions{})
 		if err != nil {
 			return nil, err
 		}

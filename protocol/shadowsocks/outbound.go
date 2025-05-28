@@ -12,7 +12,7 @@ import (
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing-box/transport/sip003"
-	"github.com/sagernet/sing-shadowsocks2"
+	shadowsocks "github.com/sagernet/sing-shadowsocks2"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/bufio"
 	E "github.com/sagernet/sing/common/exceptions"
@@ -35,11 +35,10 @@ type Outbound struct {
 	plugin          sip003.Plugin
 	uotClient       *uot.Client
 	multiplexDialer *mux.Client
-	parseErr         error                //karing
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.ShadowsocksOutboundOptions) (adapter.Outbound, error) {
-	empty := &Outbound{  //karing
+	empty := &Outbound{ //karing
 		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeShadowsocks, tag, []string{}, options.DialerOptions),
 		logger:  logger,
 	}
@@ -83,8 +82,8 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 }
 
 func (h *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
-	if(h.parseErr != nil){ //karing
-		return nil, h.parseErr
+	if h.GetParseErr() != nil { //karing
+		return nil, h.GetParseErr()
 	}
 	ctx, metadata := adapter.ExtendContext(ctx)
 	metadata.Outbound = h.Tag()
@@ -114,8 +113,8 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 }
 
 func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
-	if(h.parseErr != nil){ //karing
-		return nil, h.parseErr
+	if h.GetParseErr() != nil { //karing
+		return nil, h.GetParseErr()
 	}
 	ctx, metadata := adapter.ExtendContext(ctx)
 	metadata.Outbound = h.Tag()
@@ -145,9 +144,7 @@ func (h *Outbound) InterfaceUpdated() {
 func (h *Outbound) Close() error {
 	return common.Close(common.PtrOrNil(h.multiplexDialer))
 }
-func (h *Outbound) SetParseErr(err error){ //karing
-	h.parseErr = err
-}
+
 var _ N.Dialer = (*shadowsocksDialer)(nil)
 
 type shadowsocksDialer Outbound

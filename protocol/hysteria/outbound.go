@@ -38,7 +38,6 @@ type Outbound struct {
 	logger     logger.ContextLogger
 	client     *hysteria.Client
 	hforwarder *houtbound.Forwarder //hiddify
-	parseErr   error                //karing
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.HysteriaOutboundOptions) (adapter.Outbound, error) {
@@ -109,8 +108,8 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 }
 
 func (h *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
-	if h.parseErr != nil { //karing
-		return nil, h.parseErr
+	if h.GetParseErr() != nil { //karing
+		return nil, h.GetParseErr()
 	}
 	switch N.NetworkName(network) {
 	case N.NetworkTCP:
@@ -128,8 +127,8 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 }
 
 func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
-	if h.parseErr != nil { //karing
-		return nil, h.parseErr
+	if h.GetParseErr() != nil { //karing
+		return nil, h.GetParseErr()
 	}
 	h.logger.InfoContext(ctx, "outbound packet connection to ", destination)
 	return h.client.ListenPacket(ctx, destination)
@@ -147,8 +146,4 @@ func (h *Outbound) Close() error {
 		return nil
 	}
 	return h.client.CloseWithError(os.ErrClosed)
-}
-
-func (h *Outbound) SetParseErr(err error) { //karing
-	h.parseErr = err
 }

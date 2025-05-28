@@ -17,7 +17,8 @@ import (
 type DNSRouter interface {
 	Lifecycle
 	Exchange(ctx context.Context, message *dns.Msg, options DNSQueryOptions) (*dns.Msg, error)
-	Lookup(ctx context.Context, domain string, options DNSQueryOptions) ([]netip.Addr, string, error) //karing
+	Lookup(ctx context.Context, domain string, options DNSQueryOptions) ([]netip.Addr, error)            //karing
+	LookupTag(ctx context.Context, domain string, options DNSQueryOptions) ([]netip.Addr, string, error) //karing
 	ClearCache()
 	LookupReverseMapping(ip netip.Addr) (string, bool)
 	ResetNetwork()

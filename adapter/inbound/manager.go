@@ -62,9 +62,9 @@ func (m *Manager) Close() error {
 	}
 	m.started = false
 	inbounds := m.inbounds
-	m.inbounds = make([]adapter.Inbound, 0)           //karing
-	m.inboundByTag = make(map[string]adapter.Inbound) //karing
+	m.inbounds = nil
 	m.endpoint = nil                                  //karing
+	m.inboundByTag = make(map[string]adapter.Inbound) //karing
 	monitor := taskmonitor.New(m.logger, C.StopTimeout)
 	var err error
 	for _, inbound := range inbounds {

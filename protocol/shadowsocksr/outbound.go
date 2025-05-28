@@ -40,7 +40,6 @@ type Outbound struct {
 	cipher     core.Cipher
 	obfs       obfs.Obfs
 	protocol   protocol.Protocol
-	parseErr   error //karing
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.ShadowsocksROutboundOptions) (adapter.Outbound, error) {
@@ -111,8 +110,8 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 }
 
 func (h *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
-	if h.parseErr != nil { //karing
-		return nil, h.parseErr
+	if h.GetParseErr() != nil { //karing
+		return nil, h.GetParseErr()
 	}
 	ctx, metadata := adapter.ExtendContext(ctx)
 	metadata.Outbound = h.Tag()
@@ -149,8 +148,8 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 }
 
 func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
-	if h.parseErr != nil { //karing
-		return nil, h.parseErr
+	if h.GetParseErr() != nil { //karing
+		return nil, h.GetParseErr()
 	}
 	ctx, metadata := adapter.ExtendContext(ctx)
 	metadata.Outbound = h.Tag()
@@ -164,10 +163,6 @@ func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
 	packetConn = h.protocol.PacketConn(packetConn)
 	packetConn = &ssPacketConn{packetConn, outConn.RemoteAddr()}
 	return packetConn, nil
-}
-
-func (h *Outbound) SetParseErr(err error) { //karing
-	h.parseErr = err
 }
 
 type ssPacketConn struct {

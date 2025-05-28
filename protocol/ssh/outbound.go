@@ -49,7 +49,7 @@ type Outbound struct {
 	clientConn        net.Conn
 	client            *ssh.Client
 	uotClient         *uot.Client //hiddify
-	parseErr          error       //karing
+
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.SSHOutboundOptions) (adapter.Outbound, error) {
@@ -202,8 +202,8 @@ func (s *Outbound) Close() error {
 }
 
 func (s *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
-	if s.parseErr != nil { //karing
-		return nil, s.parseErr
+	if s.GetParseErr() != nil { //karing
+		return nil, s.GetParseErr()
 	}
 	client, err := s.connect()
 	if err != nil {
@@ -246,9 +246,4 @@ func (c *chanConnWrapper) SetReadDeadline(t time.Time) error {
 
 func (c *chanConnWrapper) SetWriteDeadline(t time.Time) error {
 	return os.ErrInvalid
-}
-
-func (s *Outbound) SetParseErr(err error) { //karing
-	s.parseErr = err
-
 }

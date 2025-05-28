@@ -158,7 +158,7 @@ func (m *Manager) Close() error {
 	}
 	m.started = false
 	outbounds := m.outbounds
-	m.outbounds = make([]adapter.Outbound, 0)           //karing
+	m.outbounds = nil
 	m.outboundByTag = make(map[string]adapter.Outbound) //karing
 	m.dependByTag = make(map[string][]string)           //karing
 	m.endpoint = nil                                    //karing

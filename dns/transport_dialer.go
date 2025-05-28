@@ -75,7 +75,7 @@ func (d *legacyTransportDialer) DialContext(ctx context.Context, network string,
 	if destination.IsIP() {
 		return d.dialer.DialContext(ctx, network, destination)
 	}
-	addresses, _, err := d.dnsRouter.Lookup(ctx, destination.Fqdn, adapter.DNSQueryOptions{ //karing
+	addresses, err := d.dnsRouter.Lookup(ctx, destination.Fqdn, adapter.DNSQueryOptions{
 		Transport: d.transport,
 		Strategy:  d.strategy,
 	})
@@ -89,7 +89,7 @@ func (d *legacyTransportDialer) ListenPacket(ctx context.Context, destination M.
 	if destination.IsIP() {
 		return d.dialer.ListenPacket(ctx, destination)
 	}
-	addresses, _, err := d.dnsRouter.Lookup(ctx, destination.Fqdn, adapter.DNSQueryOptions{ //karing
+	addresses, err := d.dnsRouter.Lookup(ctx, destination.Fqdn, adapter.DNSQueryOptions{
 		Transport: d.transport,
 		Strategy:  d.strategy,
 	})

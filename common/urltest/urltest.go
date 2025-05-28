@@ -80,11 +80,11 @@ func (s *HistoryStorage) notifyUpdated() {
 
 func (s *HistoryStorage) Close() error {
 	s.updateHook = nil
-	s.access.Lock() //kariing
-	for k := range s.delayHistory {
+	s.access.Lock()                 //kariing
+	for k := range s.delayHistory { //kariing
 		delete(s.delayHistory, k)
 	}
-	s.access.Unlock()
+	s.access.Unlock() //kariing
 	return nil
 }
 

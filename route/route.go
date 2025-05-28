@@ -717,7 +717,7 @@ func (r *Router) actionResolve(ctx context.Context, metadata *adapter.InboundCon
 				return E.New("DNS server not found: ", action.Server)
 			}
 		}
-		addresses, _, err := r.dns.Lookup(adapter.WithContext(ctx, metadata), metadata.Destination.Fqdn, adapter.DNSQueryOptions{
+		addresses, err := r.dns.Lookup(adapter.WithContext(ctx, metadata), metadata.Destination.Fqdn, adapter.DNSQueryOptions{
 			Transport:    transport,
 			Strategy:     action.Strategy,
 			DisableCache: action.DisableCache,

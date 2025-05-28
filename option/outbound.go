@@ -131,7 +131,6 @@ func (o *DomainResolveOptions) UnmarshalJSON(bytes []byte) error {
 		return E.New("empty domain_resolver.server")
 	}
 	return nil
-
 }
 
 func (o *DialerOptions) TakeDialerOptions() DialerOptions {
