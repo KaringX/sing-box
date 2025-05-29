@@ -34,8 +34,7 @@ type Router struct {
 	network                 adapter.NetworkManager
 	rules                   []adapter.Rule
 	needFindProcess         bool
-	staticDns               map[string]StaticDNSEntry //hiddify
-	ruleSetsRemoteWithLocal []adapter.RuleSet         //karing
+	ruleSetsRemoteWithLocal []adapter.RuleSet //karing
 	ruleSets                []adapter.RuleSet
 	ruleSetMap              map[string]adapter.RuleSet
 	processSearcher         process.Searcher
@@ -62,7 +61,6 @@ func NewRouter(ctx context.Context, logFactory log.Factory, options option.Route
 		pauseManager:      service.FromContext[pause.Manager](ctx),
 		platformInterface: service.FromContext[platform.Interface](ctx),
 		needWIFIState:     hasRule(options.Rules, isWIFIRule) || hasDNSRule(dnsOptions.Rules, isWIFIDNSRule),
-		staticDns:         createEntries(dnsOptions.StaticIPs), //hiddify
 	}
 }
 
@@ -239,7 +237,6 @@ func (r *Router) Close() error {
 	r.connection = nil                                     //karing
 	r.network = nil                                        //karing
 	r.rules = make([]adapter.Rule, 0)                      //karing
-	r.staticDns = make(map[string]StaticDNSEntry)          //karing
 	r.ruleSetsRemoteWithLocal = make([]adapter.RuleSet, 0) //karing
 	r.ruleSets = make([]adapter.RuleSet, 0)                //karing
 	r.ruleSetMap = make(map[string]adapter.RuleSet)        //karing

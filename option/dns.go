@@ -24,8 +24,6 @@ type RawDNSOptions struct {
 	Final          string             `json:"final,omitempty"`
 	ReverseMapping bool               `json:"reverse_mapping,omitempty"`
 	DNSClientOptions
-
-	StaticIPs map[string][]string `json:"static_ips,omitempty"` //hiddify
 }
 
 type LegacyDNSOptions struct {
