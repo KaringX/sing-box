@@ -12,29 +12,24 @@ import (
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/common/conntrack"
 	D "github.com/sagernet/sing-box/common/debug"
-	"github.com/sagernet/sing-box/common/dialer"
 	C "github.com/sagernet/sing-box/constant"
+	"github.com/sagernet/sing-box/dns"
+	"github.com/sagernet/sing-box/dns/transport/local"
 	"github.com/sagernet/sing-box/log"
-	dns "github.com/sagernet/sing-dns"
+	"github.com/sagernet/sing-box/option"
+	"github.com/sagernet/sing/common"
 	E "github.com/sagernet/sing/common/exceptions"
 	F "github.com/sagernet/sing/common/format"
 	M "github.com/sagernet/sing/common/metadata"
-	N "github.com/sagernet/sing/common/network"
 	"github.com/sagernet/sing/service"
 	//"github.com/sagernet/sing-box/log"
 )
 
-type DNSServer struct {
-	Tag       string   `json:"tag"`
-	Address   string   `json:"address"`
-	Addresses []string `json:"addresses"`
-	Strategy  string   `json:"strategy"`
-	Detour    string   `json:"detour"`
-}
 type DNSQueryRequest struct {
-	Resolver DNSServer `json:"resolver"`
-	Query    DNSServer `json:"query"`
-	Domain   string    `json:"domain"`
+	Servers  []option.DNSServerOptions `json:"servers,omitempty"`
+	Tag      string                    `json:"Tag"`
+	Domain   string                    `json:"domain"`
+	Strategy C.DomainStrategy          `json:"strategy"`
 }
 
 var (
@@ -49,28 +44,11 @@ func init() {
 		//Logger:           router.dns,
 	})
 }
-func transStrategy(strategy string) dns.DomainStrategy {
-	switch strategy {
-	case "", "as_is":
-		return dns.DomainStrategy(dns.DomainStrategyAsIS)
-	case "prefer_ipv4":
-		return dns.DomainStrategy(dns.DomainStrategyPreferIPv4)
-	case "prefer_ipv6":
-		return dns.DomainStrategy(dns.DomainStrategyPreferIPv6)
-	case "ipv4_only":
-		return dns.DomainStrategy(dns.DomainStrategyUseIPv4)
-	case "ipv6_only":
-		return dns.DomainStrategy(dns.DomainStrategyUseIPv6)
-	default:
-		return dns.DomainStrategy(dns.DomainStrategyPreferIPv4)
-	}
-}
 
-func LookupWithDefaultRouter(ctx context.Context, logFactory log.Factory, domain string, strategy dns.DomainStrategy) (uint16, []netip.Addr, string, error) {
+func LookupWithDefaultRouter(ctx context.Context, logFactory log.Factory, domain string, strategy C.DomainStrategy) (uint16, []netip.Addr, string, error) {
 	start := time.Now()
 	dnsRouter := service.FromContext[adapter.DNSRouter](ctx)
-	addr, tag, err := dnsRouter.LookupTag(ctx, domain, adapter.DNSQueryOptions{ //karing
-		//Transport: d.transport,
+	addr, tag, err := dnsRouter.LookupTag(ctx, domain, adapter.DNSQueryOptions{
 		Strategy: strategy,
 	})
 	if err != nil {
@@ -84,70 +62,44 @@ func Lookup(ctx context.Context, router adapter.Router, logFactory log.Factory, 
 	//var dnsClient = router.GetDNSClient()
 	ctx, _ = adapter.ExtendContext(ctx)
 	outboundManager := service.FromContext[adapter.OutboundManager](ctx)
-	var resolverTransport dns.Transport
-	if len(req.Resolver.Addresses) != 0 {
-		tag := req.Resolver.Tag + "_" + req.Resolver.Detour
-		var detour N.Dialer
-		if req.Resolver.Detour == "" {
-			detour = dialer.NewDefaultOutbound(ctx)
-		} else {
-			_, detourExist := outboundManager.Outbound(req.Resolver.Detour)
-			if !detourExist {
-				return 0, nil, E.New("resolver.detour not found: " + req.Resolver.Detour)
-			}
-			detour = dialer.NewDetour(outboundManager, req.Resolver.Detour, false)
-		}
-
-		transport, err := dns.CreateTransport(dns.TransportOptions{
-			Context:   ctx,
-			Logger:    logFactory.NewLogger(F.ToString("dns_query_resolver/transport[", tag, "]")),
-			Name:      req.Resolver.Tag,
-			Dialer:    detour,
-			Address:   req.Resolver.Address,
-			Addresses: req.Resolver.Addresses,
-		})
-		if err != nil {
-			return 0, nil, err
-		}
-		resolverTransport = transport
-	}
+	dnsTransportRegistry := service.FromContext[adapter.DNSTransportRegistry](ctx)
+	dnsTransportManager := dns.NewTransportManager(logFactory.NewLogger("dns/transport"), dnsTransportRegistry, outboundManager, "")
 	defer func() {
-		if resolverTransport != nil {
-			resolverTransport.Close()
-		}
+		dnsTransportManager.Close()
 	}()
-
-	tag := req.Query.Tag + "_" + req.Query.Detour
-	var detour N.Dialer
-	if req.Query.Detour == "" {
-		detour = dialer.NewDefaultOutbound(ctx)
-	} else {
-		_, detourExist := outboundManager.Outbound(req.Query.Detour)
-		if !detourExist {
-			return 0, nil, E.New("query.detour not found: " + req.Query.Detour)
+	for i, transportOptions := range req.Servers {
+		var tag string
+		if transportOptions.Tag != "" {
+			tag = transportOptions.Tag
+		} else {
+			tag = F.ToString(i)
 		}
-		detour = dialer.NewDetour(outboundManager, req.Query.Detour, false)
+		err := dnsTransportManager.Create(
+			ctx,
+			logFactory.NewLogger(F.ToString("dns/", transportOptions.Type, "[", tag, "]")),
+			tag,
+			transportOptions.Type,
+			transportOptions.Options,
+		)
+		if err != nil {
+			return 0, nil, E.Cause(err, "initialize DNS server[", i, "]")
+		}
 	}
-	if len(req.Resolver.Addresses) != 0 {
-		detour = dns.NewDialerWrapper(detour, dnsClient, resolverTransport, transStrategy(req.Query.Strategy), time.Duration(0))
+	dnsTransportManager.Initialize(common.Must1(
+		local.NewTransport(
+			ctx,
+			logFactory.NewLogger("dns/local"),
+			"local",
+			option.LocalDNSServerOptions{},
+		)))
+	transport, ok := dnsTransportManager.Transport(req.Tag)
+	if !ok {
+		return 0, nil, E.New("server tag[", req.Tag, "] not found")
 	}
-
-	transport, err := dns.CreateTransport(dns.TransportOptions{
-		Context:   ctx,
-		Logger:    logFactory.NewLogger(F.ToString("dns_query/transport[", tag, "]")),
-		Name:      req.Query.Tag,
-		Dialer:    detour,
-		Address:   req.Query.Address,
-		Addresses: req.Query.Addresses,
-	})
-
-	if err != nil {
-		return 0, nil, err
-	}
-	defer transport.Close()
-
 	start := time.Now()
-	addr, err := dnsClient.Lookup(ctx, transport, req.Domain, dns.QueryOptions{Strategy: transStrategy(req.Query.Strategy)})
+	addr, err := dnsClient.Lookup(ctx, transport, req.Domain, adapter.DNSQueryOptions{
+		Strategy: req.Strategy,
+	}, nil)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -170,8 +122,9 @@ func dnsQueryWithDefaultRouter(ctx context.Context, router adapter.Router, logFa
 	return func(w http.ResponseWriter, r *http.Request) {
 		domain := r.URL.Query().Get("domain")
 		strategy := r.URL.Query().Get("strategy")
-
-		duration, addr, tag, err := LookupWithDefaultRouter(ctx, logFactory, domain, transStrategy(strategy))
+		var domainStrategy option.DomainStrategy
+		domainStrategy.UnmarshalJSON([]byte(strategy))
+		duration, addr, tag, err := LookupWithDefaultRouter(ctx, logFactory, domain, C.DomainStrategy(domainStrategy))
 		if err != nil {
 			render.JSON(w, r, render.M{
 				"err":     err.Error(),
