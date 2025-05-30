@@ -394,3 +394,7 @@ type DHCPDNSServerOptions struct {
 type BatchDNSServerOptions struct { //karing
 	Servers []string `json:"servers,omitempty"`
 }
+
+type PredefinedDNSServerOptions struct { //karing
+	Rcode *DNSRCode `json:"rcode,omitempty"`
+}

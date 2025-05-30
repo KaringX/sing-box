@@ -93,10 +93,14 @@ func (t *Transport) Close() error {
 }
 
 func (t *Transport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS.Msg, error) {
-	err := t.fetchServers()
+	var err error //karing
+	/*err := t.fetchServers()//karing
 	if err != nil {
 		return nil, err
-	}
+	}*/
+	go func() { //karing
+		t.fetchServers()
+	}()
 
 	if len(t.transports) == 0 {
 		return nil, E.New("dhcp: empty DNS servers from response")

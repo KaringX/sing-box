@@ -28,7 +28,8 @@ const (
 	DNSTypeFakeIP      = "fakeip"
 	DNSTypeDHCP        = "dhcp"
 	DNSTypeTailscale   = "tailscale"
-	DNSTypeBatch       = "batch" //karing
+	DNSTypeBatch       = "batch"      //karing
+	DNSTypePredefined  = "predefined" //karing
 )
 
 const (
