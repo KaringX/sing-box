@@ -60,18 +60,14 @@ require ( //hiddify
 	github.com/pion/logging v0.2.2
 	github.com/pion/turn/v3 v3.0.3
 	github.com/pires/go-proxyproto v0.8.0
+	github.com/valyala/fastjson v1.6.4
 //github.com/sagernet/tfo-go v0.0.0-20230816093905-5a5c285d44a6
 )
 
 require ( //karing
 	github.com/Dreamacro/clash v1.18.0
 	github.com/alitto/pond v1.9.2
-	github.com/metacubex/sing-tun v0.4.5
-	github.com/sagernet/cloudflare-tls v0.0.0-20230829051644-4a68352d0c4a
-	github.com/sagernet/sing-dns v0.0.0-00010101000000-000000000000
-	github.com/sagernet/utls v1.6.7
 	github.com/shirou/gopsutil/v3 v3.24.5
-	github.com/valyala/fastjson v1.6.4
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
 
@@ -84,7 +80,7 @@ replace github.com/sagernet/sing => ../../KaringX/sing
 
 //replace github.com/sagernet/sing-dns => github.com/KaringX/sing-dns v0.3.0-beta.14.0.20250526050402-9bb1b165b9f0 //karing_v0.4.5
 
-replace github.com/sagernet/sing-dns => ../../KaringX/sing-dns
+//replace github.com/sagernet/sing-dns => ../../KaringX/sing-dns
 
 //replace github.com/sagernet/sing-quic => github.com/KaringX/sing-quic v0.2.0-beta.12.0.20250526073635-c53770bb59f0 //karing_v0.5.0-beta.1
 
@@ -128,7 +124,6 @@ require (
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
-	github.com/gobwas/ws v1.4.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/google/btree v1.1.3 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
@@ -151,7 +146,6 @@ require (
 	github.com/mdlayher/netlink v1.7.3-0.20250113171957-fbb4dce95f42 // indirect
 	github.com/mdlayher/sdnotify v1.0.0 // indirect
 	github.com/mdlayher/socket v0.5.1 // indirect
-	github.com/metacubex/gvisor v0.0.0-20241126021258-5b028898cc5a // indirect
 	github.com/mitchellh/go-ps v1.0.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.21 // indirect
 	github.com/pion/dtls/v2 v2.2.7 // indirect

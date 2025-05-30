@@ -48,8 +48,10 @@ func init() {
 }
 
 func LookupWithDefaultRouter(ctx context.Context, logFactory log.Factory, domain string, strategy C.DomainStrategy) (uint16, []netip.Addr, string, error) {
-	start := time.Now()
+	ctx, cancel := context.WithTimeout(ctx, C.DNSTimeout)
+	defer cancel()
 	dnsRouter := service.FromContext[adapter.DNSRouter](ctx)
+	start := time.Now()
 	addr, tag, err := dnsRouter.LookupTag(ctx, domain, adapter.DNSQueryOptions{
 		Strategy: strategy,
 	})
@@ -64,6 +66,8 @@ func Lookup(ctx context.Context, router adapter.Router, logFactory log.Factory, 
 	//var dnsClient = router.GetDNSClient()
 	ctxClone := service.Clone(ctx)
 	defer service.UnRegisterAll(ctxClone)
+	ctxClone, cancel := context.WithTimeout(ctxClone, C.DNSTimeout)
+	defer cancel()
 	outboundManager := service.FromContext[adapter.OutboundManager](ctxClone)
 	dnsTransportRegistry := service.FromContext[adapter.DNSTransportRegistry](ctxClone)
 	dnsTransportManager := dns.NewTransportManager(logFactory.NewLogger("dns_Lookup/transport"), dnsTransportRegistry, outboundManager, "")

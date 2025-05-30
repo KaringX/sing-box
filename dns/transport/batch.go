@@ -56,6 +56,9 @@ func (t *BatchTransport) Close() error {
 func (t *BatchTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS.Msg, error) {
 	var transports []adapter.DNSTransport
 	transportManager := service.FromContext[adapter.DNSTransportManager](ctx)
+	if transportManager == nil {
+		return nil, E.New("dns transportManager is nil:", t.Tag())
+	}
 	for _, server := range t.servers {
 		transport, loaded := transportManager.Transport(server)
 		if loaded {
