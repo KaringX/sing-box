@@ -3,6 +3,7 @@ package clashapi
 //karing
 import (
 	"context"
+	"io"
 	"net/http"
 	"net/netip"
 	"time"
@@ -20,6 +21,7 @@ import (
 	"github.com/sagernet/sing/common"
 	E "github.com/sagernet/sing/common/exceptions"
 	F "github.com/sagernet/sing/common/format"
+	"github.com/sagernet/sing/common/json"
 	M "github.com/sagernet/sing/common/metadata"
 	"github.com/sagernet/sing/service"
 	//"github.com/sagernet/sing-box/log"
@@ -27,9 +29,9 @@ import (
 
 type DNSQueryRequest struct {
 	Servers  []option.DNSServerOptions `json:"servers,omitempty"`
-	Tag      string                    `json:"Tag"`
+	Tag      string                    `json:"tag"`
 	Domain   string                    `json:"domain"`
-	Strategy C.DomainStrategy          `json:"strategy"`
+	Strategy option.DomainStrategy     `json:"strategy"`
 }
 
 var (
@@ -98,7 +100,7 @@ func Lookup(ctx context.Context, router adapter.Router, logFactory log.Factory, 
 	}
 	start := time.Now()
 	addr, err := dnsClient.Lookup(ctx, transport, req.Domain, adapter.DNSQueryOptions{
-		Strategy: req.Strategy,
+		Strategy: C.DomainStrategy(req.Strategy),
 	}, nil)
 	if err != nil {
 		return 0, nil, err
@@ -145,13 +147,21 @@ func dnsQueryWithDefaultRouter(ctx context.Context, router adapter.Router, logFa
 
 func dnsQuery(ctx context.Context, router adapter.Router, logFactory log.Factory) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		req := DNSQueryRequest{}
-		if err := render.DecodeJSON(r.Body, &req); err != nil {
+		rawMessage, err := io.ReadAll(r.Body)
+		if err != nil {
 			render.JSON(w, r, render.M{
-				"err": "invalid json data",
+				"err": err.Error(),
 			})
 			return
 		}
+		req, err := json.UnmarshalExtendedContext[DNSQueryRequest](ctx, rawMessage)
+		if err != nil {
+			render.JSON(w, r, render.M{
+				"err": err.Error(),
+			})
+			return
+		}
+
 		duration, addr, err := Lookup(ctx, router, logFactory, req)
 		if err != nil {
 			render.JSON(w, r, render.M{
