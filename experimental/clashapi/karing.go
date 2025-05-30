@@ -62,10 +62,14 @@ func LookupWithDefaultRouter(ctx context.Context, logFactory log.Factory, domain
 
 func Lookup(ctx context.Context, router adapter.Router, logFactory log.Factory, req DNSQueryRequest) (uint16, []netip.Addr, error) {
 	//var dnsClient = router.GetDNSClient()
-	ctx, _ = adapter.ExtendContext(ctx)
-	outboundManager := service.FromContext[adapter.OutboundManager](ctx)
-	dnsTransportRegistry := service.FromContext[adapter.DNSTransportRegistry](ctx)
+	ctxClone := service.Clone(ctx)
+	defer func() {
+		//service.UnRegisterAll(ctxClone)
+	}()
+	outboundManager := service.FromContext[adapter.OutboundManager](ctxClone)
+	dnsTransportRegistry := service.FromContext[adapter.DNSTransportRegistry](ctxClone)
 	dnsTransportManager := dns.NewTransportManager(logFactory.NewLogger("dns/transport"), dnsTransportRegistry, outboundManager, "")
+	service.MustRegister[adapter.DNSTransportManager](ctxClone, dnsTransportManager)
 	defer func() {
 		dnsTransportManager.Close()
 	}()
@@ -77,7 +81,7 @@ func Lookup(ctx context.Context, router adapter.Router, logFactory log.Factory, 
 			tag = F.ToString(i)
 		}
 		err := dnsTransportManager.Create(
-			ctx,
+			ctxClone,
 			logFactory.NewLogger(F.ToString("dns/", transportOptions.Type, "[", tag, "]")),
 			tag,
 			transportOptions.Type,
@@ -89,7 +93,7 @@ func Lookup(ctx context.Context, router adapter.Router, logFactory log.Factory, 
 	}
 	dnsTransportManager.Initialize(common.Must1(
 		local.NewTransport(
-			ctx,
+			ctxClone,
 			logFactory.NewLogger("dns/local"),
 			"local",
 			option.LocalDNSServerOptions{},
@@ -99,7 +103,7 @@ func Lookup(ctx context.Context, router adapter.Router, logFactory log.Factory, 
 		return 0, nil, E.New("server tag[", req.Tag, "] not found")
 	}
 	start := time.Now()
-	addr, err := dnsClient.Lookup(ctx, transport, req.Domain, adapter.DNSQueryOptions{
+	addr, err := dnsClient.Lookup(ctxClone, transport, req.Domain, adapter.DNSQueryOptions{
 		Strategy: C.DomainStrategy(req.Strategy),
 	}, nil)
 	if err != nil {
