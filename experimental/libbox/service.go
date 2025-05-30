@@ -66,8 +66,8 @@ func NewService(configContent string, platformInterface PlatformInterface) (boxS
 	runtimeDebug.FreeOSMemory()
 	ctx, cancel := context.WithCancel(ctx)
 	urlTestHistoryStorage := urltest.NewHistoryStorage()
-	ctx = service.ContextWithPtr(ctx, urlTestHistoryStorage)
-
+	service.MustRegister[adapter.URLTestHistoryStorage](ctx, urlTestHistoryStorage) //karing
+	//ctx = service.ContextWithPtr(ctx, urlTestHistoryStorage)//karing
 	var platformLogWriter log.PlatformWriter //karing
 	if platformInterface != nil {            //karing
 		var platformWrapper *platformInterfaceWrapper //karing
