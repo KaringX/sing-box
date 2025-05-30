@@ -128,8 +128,8 @@ func (s *URLTest) All() []string {
 	return s.tags
 }
 
-func (s *URLTest) URLTest(ctx context.Context) (map[string]adapter.URLTestResult, error) { //karing
-	return s.group.URLTest(ctx)
+func (s *URLTest) URLTest(ctx context.Context, force bool) (map[string]adapter.URLTestResult, error) { //karing
+	return s.group.URLTest(ctx, force) //karing
 }
 
 func (s *URLTest) UpdateCheck() { //karing
@@ -495,8 +495,8 @@ func (g *URLTestGroup) CheckOutbounds(force bool) {
 	_, _ = g.urlTest(g.ctx, force)
 }
 
-func (g *URLTestGroup) URLTest(ctx context.Context) (map[string]adapter.URLTestResult, error) { //karing
-	return g.urlTest(ctx, false)
+func (g *URLTestGroup) URLTest(ctx context.Context, force bool) (map[string]adapter.URLTestResult, error) { //karing
+	return g.urlTest(ctx, force)
 }
 
 func (g *URLTestGroup) UpdateCheck() { //karing

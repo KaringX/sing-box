@@ -86,7 +86,7 @@ func getGroupDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 
 		var result map[string]adapter.URLTestResult //karing
 		if urlTestGroup, isURLTestGroup := outboundGroup.(adapter.URLTestGroup); isURLTestGroup {
-			result, err = urlTestGroup.URLTest(ctx)
+			result, err = urlTestGroup.URLTest(ctx, true)
 		} else {
 			outbounds := common.FilterNotNil(common.Map(outboundGroup.All(), func(it string) adapter.Outbound {
 				itOutbound, _ := server.outbound.Outbound(it)
@@ -144,8 +144,11 @@ func getGroupDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 			render.JSON(w, r, newError(err.Error()))
 			return
 		}
-
-		render.JSON(w, r, result)
+		var testResult map[string]uint16 = make(map[string]uint16) //karing
+		for key, value := range result {                           //karing
+			testResult[key] = value.Delay
+		}
+		render.JSON(w, r, testResult)
 	}
 }
 

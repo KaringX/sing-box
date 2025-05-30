@@ -124,8 +124,8 @@ type OutboundGroup interface {
 
 type URLTestGroup interface {
 	OutboundGroup
-	URLTest(ctx context.Context) (map[string]URLTestResult, error) //karing
-	UpdateCheck()                                                  //karing
+	URLTest(ctx context.Context, force bool) (map[string]URLTestResult, error) //karing
+	UpdateCheck()                                                              //karing
 }
 
 func OutboundTag(detour Outbound) string {
