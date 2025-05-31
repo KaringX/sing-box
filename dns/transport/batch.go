@@ -25,22 +25,24 @@ func RegisterBatch(registry *dns.TransportRegistry) {
 
 type BatchTransport struct {
 	dns.TransportAdapter
-	logger  logger.ContextLogger
-	servers []string
+	logger     logger.ContextLogger
+	transports []adapter.DNSTransport
 }
 
 func NewBatch(ctx context.Context, logger log.ContextLogger, tag string, options option.BatchDNSServerOptions) (adapter.DNSTransport, error) {
+	var transports []adapter.DNSTransport
 	transportManager := service.FromContext[adapter.DNSTransportManager](ctx)
 	for _, server := range options.Servers {
-		_, loaded := transportManager.Transport(server)
+		transport, loaded := transportManager.Transport(server)
 		if !loaded {
 			return nil, E.New("dns dependencies server not found: " + server)
 		}
+		transports = append(transports, transport)
 	}
 	return &BatchTransport{
 		TransportAdapter: dns.NewTransportAdapter(C.DNSTypeBatch, tag, nil),
 		logger:           logger,
-		servers:          options.Servers,
+		transports:       transports,
 	}, nil
 }
 
@@ -49,23 +51,12 @@ func (t *BatchTransport) Start(stage adapter.StartStage) error {
 }
 
 func (t *BatchTransport) Close() error {
-	t.servers = make([]string, 0)
+	t.transports = make([]adapter.DNSTransport, 0)
 	return nil
 }
 
 func (t *BatchTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS.Msg, error) {
-	var transports []adapter.DNSTransport
-	transportManager := service.FromContext[adapter.DNSTransportManager](ctx)
-	if transportManager == nil {
-		return nil, E.New("dns transportManager is nil:", t.Tag())
-	}
-	for _, server := range t.servers {
-		transport, loaded := transportManager.Transport(server)
-		if loaded {
-			transports = append(transports, transport)
-		}
-	}
-	if len(transports) == 0 {
+	if len(t.transports) == 0 {
 		return nil, E.New("dns transport empty :", t.Tag())
 	}
 	question := message.Question[0]
@@ -80,7 +71,7 @@ func (t *BatchTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS
 	var errOnce sync.Once
 	done := make(chan struct{})
 	ctx, cancel := context.WithCancel(ctx)
-	for _, transport := range transports {
+	for _, transport := range t.transports {
 		count.Add(1)
 		transport := transport
 		go func() {
