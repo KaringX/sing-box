@@ -74,33 +74,37 @@ require ( //karing
 replace github.com/Dreamacro/clash => github.com/KaringX/clash v0.0.0-20241101044429-f71df89d4091
 
 //go get github.com/KaringX/sing@50a9c2efd67210376bb718ef766d53710768d5ae
-//replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20250526044854-4dbf8fcf2f53 //karing_v0.6.11
+replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20250530123122-a32538bd4bd9 //karing_v0.6.11
 
-replace github.com/sagernet/sing => ../../KaringX/sing
+//replace github.com/sagernet/sing => ../../KaringX/sing
 
-//replace github.com/sagernet/sing-dns => github.com/KaringX/sing-dns v0.3.0-beta.14.0.20250526050402-9bb1b165b9f0 //karing_v0.4.5
+replace github.com/sagernet/sing-dns => github.com/KaringX/sing-dns v0.3.0-beta.14.0.20250530212309-a733af0f5878 //karing_v0.4.5
 
 //replace github.com/sagernet/sing-dns => ../../KaringX/sing-dns
 
-//replace github.com/sagernet/sing-quic => github.com/KaringX/sing-quic v0.2.0-beta.12.0.20250526073635-c53770bb59f0 //karing_v0.5.0-beta.1
+replace github.com/sagernet/sing-quic => github.com/KaringX/sing-quic v0.2.0-beta.12.0.20250526073635-c53770bb59f0 //karing_v0.5.0-beta.1
 
-replace github.com/sagernet/sing-quic => ../../KaringX/sing-quic
+//replace github.com/sagernet/sing-quic => ../../KaringX/sing-quic
 
-//replace github.com/sagernet/quic-go => github.com/KaringX/quic-go 0.49.0-beta.1.0.20250526071200-3ebf3605e6f1 //karing_v0.52.0-beta1
+replace github.com/sagernet/quic-go => github.com/KaringX/quic-go v0.49.0-beta.1.0.20250528041323-b571ce42d479 //karing_v0.52.0-beta1
 
-replace github.com/sagernet/quic-go => ../../KaringX/quic-go
+//replace github.com/sagernet/quic-go => ../../KaringX/quic-go
 
-//replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.20250527052038-4ec901c3e6ae //karing_v0.6.6
+replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.20250527052038-4ec901c3e6ae //karing_v0.6.6
 
-replace github.com/sagernet/sing-tun => ../../KaringX/sing-tun
+//replace github.com/sagernet/sing-tun => ../../KaringX/sing-tun
 
-//replace github.com/sagernet/ws => github.com/KaringX/ws v0.0.0-20250301004503-082f57b5c845 //karing_fork
+replace github.com/sagernet/ws => github.com/KaringX/ws v0.0.0-20250301004503-082f57b5c845 //karing_fork
 
-replace github.com/sagernet/ws => ../../KaringX/ws
+//replace github.com/sagernet/ws => ../../KaringX/ws
 
-//replace github.com/sagernet/wireguard-go => github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20250526051537-cda680d25219 //karing_v0.0.1-beta.7
+replace github.com/sagernet/wireguard-go => github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20250531024932-ebfb2f0492e2 //karing_v0.0.1-beta.7-2
 
-replace github.com/sagernet/wireguard-go => ../../KaringX/wireguard-go
+//replace github.com/sagernet/wireguard-go => ../../KaringX/wireguard-go
+
+replace github.com/sagernet/tailscale => github.com/KaringX/tailscale v1.80.3-mod.5.0.20250531025012-b525f2db9b5f //karing_v1.80.3-mod.5
+
+//replace github.com/sagernet/tailscale => ../../KaringX/tailscale
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
