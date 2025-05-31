@@ -21,7 +21,7 @@ type Formatter struct {
 	DisableLineBreak bool
 }
 
-func (f Formatter) Format(ctx context.Context, level Level, tag string, message string, timestamp time.Time) string {
+func (f Formatter) Format(ctx context.Context, contextId string, level Level, tag string, message string, timestamp time.Time) string {
 	levelString := strings.ToUpper(FormatLevel(level))
 	if !f.DisableColors {
 		switch level {
@@ -72,11 +72,11 @@ func (f Formatter) Format(ctx context.Context, level Level, tag string, message 
 	}
 	switch {
 	case f.DisableTimestamp:
-		message = F.ToString("[", os.Getpid(), "] ") + levelString + " " + message //karing
+		message = F.ToString("[", os.Getpid(), "] ") + " [" + contextId + "] " + levelString + " " + message //karing
 	case f.FullTimestamp:
-		message = timestamp.Format(f.TimestampFormat) + " " + F.ToString("[", os.Getpid(), "] ") + levelString + " " + message //karing
+		message = timestamp.Format(f.TimestampFormat) + " " + F.ToString("[", os.Getpid(), "] ") + " [" + contextId + "] " + levelString + " " + message //karing
 	default:
-		message = F.ToString("[", os.Getpid(), "] ") + levelString + "[" + xd(int(timestamp.Sub(f.BaseTime)/time.Second), 4) + "] " + message //karing
+		message = F.ToString("[", os.Getpid(), "] ") + " [" + contextId + "] " + levelString + "[" + xd(int(timestamp.Sub(f.BaseTime)/time.Second), 4) + "] " + message //karing
 	}
 	if f.DisableLineBreak {
 		if message[len(message)-1] == '\n' {
@@ -90,7 +90,7 @@ func (f Formatter) Format(ctx context.Context, level Level, tag string, message 
 	return message
 }
 
-func (f Formatter) FormatWithSimple(ctx context.Context, level Level, tag string, message string, timestamp time.Time) (string, string) {
+func (f Formatter) FormatWithSimple(ctx context.Context, contextId string, level Level, tag string, message string, timestamp time.Time) (string, string) { //karing
 	levelString := strings.ToUpper(FormatLevel(level))
 	if !f.DisableColors {
 		switch level {
@@ -140,15 +140,14 @@ func (f Formatter) FormatWithSimple(ctx context.Context, level Level, tag string
 			message = F.ToString("[", id.ID, " ", activeDuration, "] ", message)
 		}
 		messageSimple = F.ToString("[", id.ID, " ", activeDuration, "] ", messageSimple)
-
 	}
 	switch {
 	case f.DisableTimestamp:
-		message = F.ToString("[", os.Getpid(), "] ") + levelString + " " + message //karing
+		message = F.ToString("[", os.Getpid(), "] ") + " [" + contextId + "] " + levelString + " " + message //karing
 	case f.FullTimestamp:
-		message = timestamp.Format(f.TimestampFormat) + " " + F.ToString("[", os.Getpid(), "] ") + levelString + " " + message //karing
+		message = timestamp.Format(f.TimestampFormat) + " " + F.ToString("[", os.Getpid(), "] ") + " [" + contextId + "] " + levelString + " " + message //karing
 	default:
-		message = F.ToString("[", os.Getpid(), "] ") + levelString + "[" + xd(int(timestamp.Sub(f.BaseTime)/time.Second), 4) + "] " + message //karing
+		message = F.ToString("[", os.Getpid(), "] ") + " [" + contextId + "] " + levelString + "[" + xd(int(timestamp.Sub(f.BaseTime)/time.Second), 4) + "] " + message //karing
 	}
 	if message[len(message)-1] != '\n' {
 		message += "\n"

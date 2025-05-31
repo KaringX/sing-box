@@ -9,6 +9,19 @@ import (
 
 var MainGoroutineId int
 
+func StackCurrent() string {
+	buf := make([]byte, 2048)
+	for {
+		n := runtime.Stack(buf, false)
+		if n < len(buf) {
+			buf = buf[:n]
+			break
+		}
+		buf = make([]byte, 2*len(buf))
+	}
+	return string(buf)
+}
+
 func Stacks(all bool, includeStackBody bool) map[int]string {
 	buf := make([]byte, 2048)
 	for {

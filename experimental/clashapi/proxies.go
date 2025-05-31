@@ -207,7 +207,7 @@ func getProxyDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 		proxy := r.Context().Value(CtxKeyProxy).(adapter.Outbound)
 		listener, isListener := proxy.(adapter.InterfaceUpdateListener)
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*time.Duration(timeout))
+		ctx, cancel := context.WithTimeout(server.ctx, time.Millisecond*time.Duration(timeout))
 		defer cancel()
 
 		delay, delay2, err := urltest.URLTest(ctx, url, proxy)
@@ -277,7 +277,7 @@ func httpRequestByProxy(server *Server) func(w http.ResponseWriter, r *http.Requ
 		}
 
 		proxy := r.Context().Value(CtxKeyProxy).(adapter.Outbound)
-		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*time.Duration(timeout))
+		ctx, cancel := context.WithTimeout(server.ctx, time.Millisecond*time.Duration(timeout))
 		defer cancel()
 
 		statusCode, header, body, err := URLRequest(ctx, url, proxy)
@@ -327,8 +327,6 @@ func URLRequest(ctx context.Context, link string, detour N.Dialer) (statusCode i
 		return
 	}
 	defer instance.Close()
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
 	req, err := http.NewRequest(http.MethodGet, link, nil)
 	if err != nil {
 		return

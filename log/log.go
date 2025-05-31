@@ -20,6 +20,10 @@ type Options struct {
 	PlatformWriter PlatformWriter
 }
 
+var (
+	CtxKeyLogContextIdName = "log contextId name"
+)
+
 func New(options Options) (Factory, error) {
 	logOptions := options.Options
 

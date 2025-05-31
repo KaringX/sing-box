@@ -105,7 +105,7 @@ func (t *DNSTransport) onReconfig(cfg *wgcfg.Config, routerCfg *router.Config, d
 	t.dnsCfg = dnsCfg
 	err := t.updateDNSServers(routerCfg, dnsCfg)
 	if err != nil {
-		t.logger.Error(E.Cause(err, "update DNS servers"))
+		t.logger.ErrorContext(t.ctx, E.Cause(err, "update DNS servers")) //karing
 	}
 }
 
@@ -143,10 +143,10 @@ func (t *DNSTransport) updateDNSServers(routeConfig *router.Config, dnsConfig *n
 	t.hosts = hosts
 	t.defaultResolvers = defaultResolvers
 	if len(defaultResolvers) > 0 {
-		t.logger.Info("updated ", len(routes), " routes, ", len(hosts), " hosts, default resolvers: ",
-			strings.Join(common.Map(dnsConfig.DefaultResolvers, func(it *dnstype.Resolver) string { return it.Addr }), " "))
+		t.logger.InfoContext(t.ctx, "updated ", len(routes), " routes, ", len(hosts), " hosts, default resolvers: ",
+			strings.Join(common.Map(dnsConfig.DefaultResolvers, func(it *dnstype.Resolver) string { return it.Addr }), " ")) //karing
 	} else {
-		t.logger.Info("updated ", len(routes), " routes, ", len(hosts), " hosts")
+		t.logger.InfoContext(t.ctx, "updated ", len(routes), " routes, ", len(hosts), " hosts") //karing
 	}
 	return nil
 }

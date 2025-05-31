@@ -38,6 +38,7 @@ import (
 var _ adapter.SimpleLifecycle = (*Box)(nil)
 
 type Box struct {
+	ctx             context.Context //karing
 	createdAt       time.Time
 	logFactory      log.Factory
 	logger          log.ContextLogger
@@ -95,20 +96,23 @@ func Context(
 }
 
 func New(options Options) (box *Box, err error) {
-	defer func() {
-		if box != nil {
-			runtime.SetFinalizer(box, func(box *Box) {
-				service.UnRegisterAll(options.Context)
-			})
-		}
-	}()
 	createdAt := time.Now()
 	ctx := options.Context
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	ctx = service.ContextWithDefaultRegistry(ctx)
-
+	var logFactory log.Factory //karing
+	defer func() {             //karing
+		if box != nil {
+			runtime.SetFinalizer(box, func(box *Box) {
+				if logFactory != nil {
+					logFactory.Logger().InfoContext(ctx, "box finalizered")
+				}
+				service.UnRegisterAll(options.Context)
+			})
+		}
+	}()
 	endpointRegistry := service.FromContext[adapter.EndpointRegistry](ctx)
 	inboundRegistry := service.FromContext[adapter.InboundRegistry](ctx)
 	outboundRegistry := service.FromContext[adapter.OutboundRegistry](ctx)
@@ -151,7 +155,7 @@ func New(options Options) (box *Box, err error) {
 	if platformInterface != nil {
 		defaultLogWriter = io.Discard
 	}
-	logFactory, err := log.New(log.Options{
+	logFactory, err = log.New(log.Options{
 		Context:        ctx,
 		Options:        common.PtrValueOrDefault(options.Log),
 		Observable:     needClashAPI,
@@ -166,19 +170,18 @@ func New(options Options) (box *Box, err error) {
 	if err != nil {          //karing
 		return nil, E.Cause(err, "start logger")
 	}
-	var services []adapter.LifecycleService //karing
+	logFactory.Logger().InfoContext(ctx, "box new") //karing
 
+	var internalServices []adapter.LifecycleService
 	if needCacheFile { //karing
 		cacheFile := cachefile.New(ctx, common.PtrValueOrDefault(experimentalOptions.CacheFile))
 		service.MustRegister[adapter.CacheFile](ctx, cacheFile)
-		services = append(services, cacheFile)
+		internalServices = append(internalServices, cacheFile)
 		err = cacheFile.BeforeStart()
 		if err != nil {
 			return nil, E.Cause(err, "cacheFile load failed")
 		}
 	}
-
-	var internalServices []adapter.LifecycleService
 	certificateOptions := common.PtrValueOrDefault(options.Certificate)
 	if C.IsAndroid || certificateOptions.Store != "" && certificateOptions.Store != C.CertificateStoreSystem ||
 		len(certificateOptions.Certificate) > 0 ||
@@ -420,6 +423,7 @@ func New(options Options) (box *Box, err error) {
 		internalServices = append(internalServices, adapter.NewLifecycleService(ntpService, "ntp service"))
 	}
 	return &Box{
+		ctx:             ctx, //karing
 		network:         networkManager,
 		endpoint:        endpointManager,
 		inbound:         inboundManager,
@@ -452,7 +456,7 @@ func (s *Box) PreStart() error {
 		s.Close()
 		return err
 	}
-	s.logger.Info("sing-box pre-started (", F.Seconds(time.Since(s.createdAt).Seconds()), "s)")
+	s.logger.InfoContext(s.ctx, "box pre-started (", F.Seconds(time.Since(s.createdAt).Seconds()), "s)") //karing
 	return nil
 }
 
@@ -471,7 +475,7 @@ func (s *Box) Start() error {
 		s.Close()
 		return err
 	}
-	s.logger.Info("started (", F.Seconds(time.Since(s.createdAt).Seconds()), "s) since ", s.createdAt) //karing
+	s.logger.InfoContext(s.ctx, "box started (", F.Seconds(time.Since(s.createdAt).Seconds()), "s) since ", s.createdAt) //karing
 	return nil
 }
 
@@ -558,9 +562,10 @@ func (s *Box) Close() error {
 			return E.Cause(err, "close ", lifecycleService.Name())
 		})
 	}
-	err = E.Append(err, s.logFactory.Close(), func(err error) error {
-		return E.Cause(err, "close logger")
-	})
+	s.logger.InfoContext(s.ctx, "box closed") //karing
+	//err = E.Append(err, s.logFactory.Close(), func(err error) error {
+	//	return E.Cause(err, "close logger")
+	//})
 	s.inbound = nil    //karing
 	s.outbound = nil   //karing
 	s.endpoint = nil   //karing
@@ -568,6 +573,7 @@ func (s *Box) Close() error {
 	s.network = nil    //karing
 	s.router = nil     //karing
 	s.service = nil    //karing
+
 	return err
 }
 

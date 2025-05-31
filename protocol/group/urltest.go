@@ -307,7 +307,7 @@ type URLTestGroup struct {
 	outbound                     adapter.OutboundManager
 	pause                        pause.Manager
 	pauseCallback                *list.Element[pause.Callback]
-	logger                       log.Logger
+	logger                       log.ContextLogger //karing
 	outbounds                    []adapter.Outbound
 	link                         string
 	interval                     time.Duration
@@ -331,7 +331,7 @@ type URLTestGroup struct {
 	udpConnectionFailureCount MinZeroAtomicInt64 //hiddify
 }
 
-func NewURLTestGroup(ctx context.Context, outboundManager adapter.OutboundManager, logger log.Logger, outbounds []adapter.Outbound, link string, interval time.Duration, tolerance uint16, idleTimeout time.Duration, interruptExternalConnections bool, defaultTag string) (*URLTestGroup, error) { //karing
+func NewURLTestGroup(ctx context.Context, outboundManager adapter.OutboundManager, logger log.ContextLogger, outbounds []adapter.Outbound, link string, interval time.Duration, tolerance uint16, idleTimeout time.Duration, interruptExternalConnections bool, defaultTag string) (*URLTestGroup, error) { //karing
 	if interval == 0 {
 		interval = C.DefaultURLTestInterval
 	}
@@ -510,10 +510,10 @@ func (g *URLTestGroup) urlTest(ctx context.Context, force bool) (map[string]adap
 	}
 	defer g.checking.Store(false)
 	//b, _ := batch.New(ctx, batch.WithConcurrencyNum[any](10))
-	pool := pond.New(10, 20)                                  //karing
-	group := pool.Group()                                     //karing
-	count := 0                                                //karing
-	pauseManager := service.FromContext[pause.Manager](g.ctx) //karing
+	pool := pond.New(10, 20) //karing
+	group := pool.Group()    //karing
+	count := 0               //karing
+
 	checked := make(map[string]bool)
 	var resultAccess sync.Mutex
 	for _, detour := range g.outbounds {
@@ -532,6 +532,7 @@ func (g *URLTestGroup) urlTest(ctx context.Context, force bool) (map[string]adap
 		if !loaded {
 			continue
 		}
+		pauseManager := service.FromContext[pause.Manager](g.ctx) //karing
 		if pauseManager == nil {
 			return result, nil
 		}
@@ -543,8 +544,12 @@ func (g *URLTestGroup) urlTest(ctx context.Context, force bool) (map[string]adap
 			testCtx, cancel := context.WithTimeout(g.ctx, C.TCPTimeout)
 			defer cancel()
 			t, _, err := urltest.URLTest(testCtx, g.link, p)
+			pauseManager := service.FromContext[pause.Manager](g.ctx) //karing
+			if pauseManager == nil {
+				return
+			}
 			if err != nil {
-				g.logger.Debug("outbound ", tag, " unavailable: ", err)
+				g.logger.DebugContext(g.ctx, "outbound ", tag, " unavailable: ", err) //karing
 				//g.history.DeleteURLTestHistory(realTag)
 				g.history.StoreURLTestHistory(realTag, &adapter.URLTestHistory{ //karing
 					Time:  time.Now(),
@@ -552,7 +557,7 @@ func (g *URLTestGroup) urlTest(ctx context.Context, force bool) (map[string]adap
 					Err:   err.Error(),
 				})
 			} else {
-				g.logger.Debug("outbound ", tag, " available: ", t, "ms")
+				g.logger.DebugContext(g.ctx, "outbound ", tag, " available: ", t, "ms") //karing
 				g.history.StoreURLTestHistory(realTag, &adapter.URLTestHistory{
 					Time:  time.Now(),
 					Delay: t,
@@ -584,7 +589,11 @@ func (g *URLTestGroup) urlTest(ctx context.Context, force bool) (map[string]adap
 			resultAccess.Unlock()
 			//return nil, nil//karing
 		})
-		count++                                         //karing
+		count++
+		pauseManager = service.FromContext[pause.Manager](g.ctx) //karing
+		if pauseManager == nil {
+			return result, nil
+		} //karing
 		if count%20 == 0 || count == len(g.outbounds) { //karing
 			group.Wait()           //karing
 			g.performUpdateCheck() //karing

@@ -47,7 +47,7 @@ type Server struct {
 	dnsRouter      adapter.DNSRouter
 	outbound       adapter.OutboundManager
 	endpoint       adapter.EndpointManager
-	logger         log.Logger
+	logger         log.ContextLogger //karing
 	httpServer     *http.Server
 	trafficManager *trafficontrol.Manager
 	urlTestHistory adapter.URLTestHistoryStorage
@@ -181,11 +181,11 @@ func (s *Server) Start(stage adapter.StartStage) error {
 			if err != nil {
 				return E.Cause(err, "external controller listen error")
 			}
-			s.logger.Info("restful api listening at ", listener.Addr())
+			s.logger.InfoContext(s.ctx, "restful api listening at ", listener.Addr()) //karing
 			go func() {
 				err = s.httpServer.Serve(listener)
 				if err != nil && !errors.Is(err, http.ErrServerClosed) {
-					s.logger.Error("external controller serve error: ", err)
+					s.logger.ErrorContext(s.ctx, "external controller serve error: ", err) //karing
 				}
 			}()
 		}
@@ -251,7 +251,7 @@ func (s *Server) SetMode(newMode string) {
 			s.logger.Error(E.Cause(err, "save mode"))
 		}
 	}
-	s.logger.Info("updated mode: ", newMode)
+	s.logger.InfoContext(s.ctx, "updated mode: ", newMode) //karing
 }
 
 func (s *Server) HistoryStorage() adapter.URLTestHistoryStorage {

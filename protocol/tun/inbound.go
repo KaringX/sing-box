@@ -310,7 +310,7 @@ func (t *Inbound) Start(stage adapter.StartStage) error {
 			for _, routeRuleSet := range t.routeRuleSet {
 				ipSets := routeRuleSet.ExtractIPSet()
 				if len(ipSets) == 0 {
-					t.logger.Warn("route_address_set: no destination IP CIDR rules found in rule-set: ", routeRuleSet.Name())
+					t.logger.WarnContext(t.ctx, "route_address_set: no destination IP CIDR rules found in rule-set: ", routeRuleSet.Name()) //karing
 				}
 				routeRuleSet.IncRef()
 				t.routeAddressSet = append(t.routeAddressSet, ipSets...)
@@ -322,7 +322,7 @@ func (t *Inbound) Start(stage adapter.StartStage) error {
 			for _, routeExcludeRuleSet := range t.routeExcludeRuleSet {
 				ipSets := routeExcludeRuleSet.ExtractIPSet()
 				if len(ipSets) == 0 {
-					t.logger.Warn("route_address_set: no destination IP CIDR rules found in rule-set: ", routeExcludeRuleSet.Name())
+					t.logger.WarnContext(t.ctx, "route_address_set: no destination IP CIDR rules found in rule-set: ", routeExcludeRuleSet.Name()) //karing
 				}
 				routeExcludeRuleSet.IncRef()
 				t.routeExcludeAddressSet = append(t.routeExcludeAddressSet, ipSets...)
@@ -371,7 +371,7 @@ func (t *Inbound) Start(stage adapter.StartStage) error {
 		if err != nil {
 			return E.Cause(err, "configure tun interface")
 		}
-		t.logger.Trace("creating stack")
+		t.logger.TraceContext(t.ctx, "creating stack") //karing
 		t.tunIf = tunInterface
 		var (
 			forwarderBindInterface bool
@@ -396,7 +396,7 @@ func (t *Inbound) Start(stage adapter.StartStage) error {
 			return err
 		}
 		t.tunStack = tunStack
-		t.logger.Info("started at ", t.tunOptions.Name)
+		t.logger.InfoContext(t.ctx, "started at ", t.tunOptions.Name) //karing
 	case adapter.StartStatePostStart:
 		monitor := taskmonitor.New(t.logger, C.StartTimeout)
 		monitor.Start("starting tun stack")

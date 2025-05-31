@@ -149,7 +149,7 @@ func (t *Transport) updateServers() error {
 		return E.Cause(err, "dhcp: prepare interface")
 	}
 
-	t.logger.Info("dhcp: query DNS servers on ", iface.Name)
+	t.logger.InfoContext(t.ctx, "dhcp: query DNS servers on ", iface.Name) //karing
 	fetchCtx, cancel := context.WithTimeout(t.ctx, C.DHCPTimeout)
 	err = t.fetchServers0(fetchCtx, iface)
 	cancel()
@@ -166,7 +166,7 @@ func (t *Transport) updateServers() error {
 func (t *Transport) interfaceUpdated(defaultInterface *control.Interface, flags int) {
 	err := t.updateServers()
 	if err != nil {
-		t.logger.Error("update servers: ", err)
+		t.logger.ErrorContext(t.ctx, "update servers: ", err) //karing
 	}
 }
 
@@ -216,17 +216,17 @@ func (t *Transport) fetchServersResponse(iface *control.Interface, packetConn ne
 
 		dhcpPacket, err := dhcpv4.FromBytes(buffer.Bytes())
 		if err != nil {
-			t.logger.Trace("dhcp: parse DHCP response: ", err)
+			t.logger.TraceContext(t.ctx, "dhcp: parse DHCP response: ", err) //karing
 			return err
 		}
 
 		if dhcpPacket.MessageType() != dhcpv4.MessageTypeOffer {
-			t.logger.Trace("dhcp: expected OFFER response, but got ", dhcpPacket.MessageType())
+			t.logger.TraceContext(t.ctx, "dhcp: expected OFFER response, but got ", dhcpPacket.MessageType()) //karing
 			continue
 		}
 
 		if dhcpPacket.TransactionID != transactionID {
-			t.logger.Trace("dhcp: expected transaction ID ", transactionID, ", but got ", dhcpPacket.TransactionID)
+			t.logger.TraceContext(t.ctx, "dhcp: expected transaction ID ", transactionID, ", but got ", dhcpPacket.TransactionID) //karing
 			continue
 		}
 
@@ -244,7 +244,7 @@ func (t *Transport) fetchServersResponse(iface *control.Interface, packetConn ne
 
 func (t *Transport) recreateServers(iface *control.Interface, serverAddrs []M.Socksaddr) error {
 	if len(serverAddrs) > 0 {
-		t.logger.Info("dhcp: updated DNS servers from ", iface.Name, ": [", strings.Join(common.Map(serverAddrs, M.Socksaddr.String), ","), "]")
+		t.logger.InfoContext(t.ctx, "dhcp: updated DNS servers from ", iface.Name, ": [", strings.Join(common.Map(serverAddrs, M.Socksaddr.String), ","), "]") //karing
 	}
 	serverDialer := common.Must1(dialer.NewDefault(t.ctx, option.DialerOptions{
 		BindInterface:      iface.Name,

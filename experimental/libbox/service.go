@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"runtime/debug"
 	runtimeDebug "runtime/debug"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -46,6 +47,8 @@ type BoxService struct {
 	iOSPauseFields
 }
 
+var contextId int
+
 func NewService(configContent string, platformInterface PlatformInterface) (boxService *BoxService, err error) {
 	defer func() { //karing
 		if e := recover(); e != nil {
@@ -53,9 +56,10 @@ func NewService(configContent string, platformInterface PlatformInterface) (boxS
 			SentryCaptureException(recoverMessage, "panic: create service", SentryTrim(string(debug.Stack())))
 		}
 	}()
-	D.MainGoroutineId = D.GetCurrentGoroutineId() //karing
-	ctx := BaseContext(platformInterface)
-	ctx = filemanager.WithDefault(ctx, sWorkingPath, sBasePath, sTempPath, sUserID, sGroupID) //karing
+	D.MainGoroutineId = D.GetCurrentGoroutineId()                                                                 //karing
+	ctx := context.WithValue(BaseContext(platformInterface), log.CtxKeyLogContextIdName, strconv.Itoa(contextId)) //karing
+	contextId++                                                                                                   //karing
+	ctx = filemanager.WithDefault(ctx, sWorkingPath, sBasePath, sTempPath, sUserID, sGroupID)                     //karing
 	service.MustRegister[deprecated.Manager](ctx, new(deprecatedManager))
 	var options option.Options                     //karing
 	options, err = parseConfig(ctx, configContent) //karing

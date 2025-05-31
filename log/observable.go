@@ -136,11 +136,15 @@ func (l *observableLogger) log(ctx context.Context, level Level, deep int, args 
 	if l.writer == nil { //karing
 		return
 	}
+	contextId, ok := ctx.Value(CtxKeyLogContextIdName).(string) // karing
+	if !ok {                                                    // karing
+		contextId = ""
+	}
 	_, file, line, _ := runtime.Caller(deep)                              // karing
 	tag := " " + path.Base(file) + ":" + strconv.Itoa(line) + " " + l.tag // karing
 	nowTime := time.Now()
 	if l.needObservable {
-		message, messageSimple := l.formatter.FormatWithSimple(ctx, level, tag, F.ToString(args...), nowTime)
+		message, messageSimple := l.formatter.FormatWithSimple(ctx, contextId, level, tag, F.ToString(args...), nowTime) //karing
 		if level == LevelPanic {
 			panic(message)
 		}
@@ -154,7 +158,7 @@ func (l *observableLogger) log(ctx context.Context, level Level, deep int, args 
 		}
 		l.subscriber.Emit(Entry{level, messageSimple})
 	} else {
-		message := l.formatter.Format(ctx, level, tag, F.ToString(args...), nowTime)
+		message := l.formatter.Format(ctx, contextId, level, tag, F.ToString(args...), nowTime) //karing
 		if level == LevelPanic {
 			panic(message)
 		}
@@ -169,7 +173,7 @@ func (l *observableLogger) log(ctx context.Context, level Level, deep int, args 
 	}
 	if C.Build != "release" { //karing
 		if l.platformWriter != nil {
-			l.platformWriter.WriteMessage(level, l.platformFormatter.Format(ctx, level, l.tag, F.ToString(args...), nowTime))
+			l.platformWriter.WriteMessage(level, l.platformFormatter.Format(ctx, contextId, level, l.tag, F.ToString(args...), nowTime)) //karing
 		}
 	}
 
