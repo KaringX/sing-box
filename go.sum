@@ -10,8 +10,8 @@ github.com/KaringX/sing v0.5.0-alpha.11.0.20250530123122-a32538bd4bd9 h1:66hKSXN
 github.com/KaringX/sing v0.5.0-alpha.11.0.20250530123122-a32538bd4bd9/go.mod h1:ARkL0gM13/Iv5VCZmci/NuoOlePoIsW0m7BWfln/Hak=
 github.com/KaringX/sing-quic v0.2.0-beta.12.0.20250526073635-c53770bb59f0 h1:n7lsdnCC2nwT4sbYz6Ns7ZQEb+TEFh2sbncBwmHzt6k=
 github.com/KaringX/sing-quic v0.2.0-beta.12.0.20250526073635-c53770bb59f0/go.mod h1:SAv/qdeDN+75msGG5U5ZIwG+3Ua50jVIKNrRSY8pkx0=
-github.com/KaringX/sing-tun v0.6.2-0.20250527052038-4ec901c3e6ae h1:KpD8WFX2DBdXj/ikt8zMrjmG98/f0WBfe9hSCLsPohI=
-github.com/KaringX/sing-tun v0.6.2-0.20250527052038-4ec901c3e6ae/go.mod h1:fisFCbC4Vfb6HqQNcwPJi2CDK2bf0Xapyz3j3t4cnHE=
+github.com/KaringX/sing-tun v0.6.2-0.20250531033733-97a26ba6eb67 h1:3hkROkjQO3athzekpweOxu/gRcJr9gJ8PVHVKd9C0yI=
+github.com/KaringX/sing-tun v0.6.2-0.20250531033733-97a26ba6eb67/go.mod h1:fisFCbC4Vfb6HqQNcwPJi2CDK2bf0Xapyz3j3t4cnHE=
 github.com/KaringX/tailscale v1.80.3-mod.5.0.20250531025012-b525f2db9b5f h1:Mt7hFngHk7x4ta+WvOLi5DbhqA3iSv29AaWEIuch+nI=
 github.com/KaringX/tailscale v1.80.3-mod.5.0.20250531025012-b525f2db9b5f/go.mod h1:EBxXsWu4OH2ELbQLq32WoBeIubG8KgDrg4/Oaxjs6lI=
 github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20250531024932-ebfb2f0492e2 h1:2mHFfrNKRVE0ihBELtNU7BONQoEHDwtc/S5tvf9SEIM=
