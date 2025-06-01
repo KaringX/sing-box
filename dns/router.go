@@ -119,7 +119,6 @@ func (r *Router) Close() error {
 	}
 	r.transport = nil                    //karing
 	r.outbound = nil                     //karing
-	r.client = nil                       //karing
 	r.rules = make([]adapter.DNSRule, 0) //karing
 	r.dnsReverseMapping = nil            //karing
 
@@ -208,6 +207,9 @@ func (r *Router) matchDNS(ctx context.Context, allowFakeIP bool, ruleIndex int, 
 }
 
 func (r *Router) Exchange(ctx context.Context, message *mDNS.Msg, options adapter.DNSQueryOptions) (*mDNS.Msg, error) {
+	if r.transport == nil { //karing
+		return nil, E.New("router closed")
+	}
 	if len(message.Question) != 1 {
 		r.logger.WarnContext(ctx, "bad question size: ", len(message.Question))
 		responseMessage := mDNS.Msg{
@@ -338,6 +340,9 @@ func (r *Router) Exchange(ctx context.Context, message *mDNS.Msg, options adapte
 }
 
 func (r *Router) Lookup(ctx context.Context, domain string, options adapter.DNSQueryOptions) ([]netip.Addr, error) {
+	if r.transport == nil { //karing
+		return nil, E.New("router closed")
+	}
 	var (
 		responseAddrs []netip.Addr
 		cached        bool
@@ -584,6 +589,9 @@ func (r *Router) LookupReverseMapping(ip netip.Addr) (string, bool) {
 
 func (r *Router) ResetNetwork() {
 	r.ClearCache()
+	if r.transport == nil { //karing
+		return
+	}
 	for _, transport := range r.transport.Transports() {
 		transport.Close()
 	}
