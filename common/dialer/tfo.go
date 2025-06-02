@@ -40,7 +40,7 @@ func DialSlowContext(dialer *tcpDialer, ctx context.Context, network string, des
 		}
 	}
 	return &slowOpenConn{
-		//dialer:      dialer, //hiddify
+		dialer:      &tfo.Dialer{Dialer: dialer.Dialer, DisableTFO: dialer.DisableTFO}, //hiddify
 		ctx:         ctx,
 		network:     network,
 		destination: destination,
