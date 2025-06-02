@@ -299,19 +299,19 @@ func (r *Router) Exchange(ctx context.Context, message *mDNS.Msg, options adapte
 				if err != nil {
 					if errors.Is(err, ErrResponseRejectedCached) {
 						rejected = true
-						r.logger.DebugContext(ctx, E.Cause(err, "response rejected for ", FormatQuestion(message.Question[0].String())), " (cached)")
+						r.logger.DebugContext(ctx, E.Cause(err, "response rejected for ", FormatQuestion(message.Question[0].String())), " (cached)", " by ", transport.Tag()) //karing
 					} else if errors.Is(err, ErrResponseRejected) {
 						rejected = true
-						r.logger.DebugContext(ctx, E.Cause(err, "response rejected for ", FormatQuestion(message.Question[0].String())))
+						r.logger.DebugContext(ctx, E.Cause(err, "response rejected for ", FormatQuestion(message.Question[0].String()), " by ", transport.Tag())) //karing
 						/*} else if responseCheck!= nil && errors.Is(err, RcodeError(mDNS.RcodeNameError)) {
 						rejected = true
 						r.logger.DebugContext(ctx, E.Cause(err, "response rejected for ", FormatQuestion(message.Question[0].String())))
 						*/
 					} else if len(message.Question) > 0 {
 						rejected = true
-						r.logger.ErrorContext(ctx, E.Cause(err, "exchange failed for ", FormatQuestion(message.Question[0].String())))
+						r.logger.ErrorContext(ctx, E.Cause(err, "exchange failed for ", FormatQuestion(message.Question[0].String()), " by ", transport.Tag())) //karing
 					} else {
-						r.logger.ErrorContext(ctx, E.Cause(err, "exchange failed for <empty query>"))
+						r.logger.ErrorContext(ctx, E.Cause(err, "exchange failed for <empty query>", " by ", transport.Tag())) //karing
 					}
 				}
 				if responseCheck != nil && rejected {
