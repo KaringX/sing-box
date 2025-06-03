@@ -89,6 +89,9 @@ func (c *Client) Start() {
 }
 
 func (c *Client) Exchange(ctx context.Context, transport adapter.DNSTransport, message *dns.Msg, options adapter.DNSQueryOptions, responseChecker func(responseAddrs []netip.Addr) bool) (*dns.Msg, error) {
+	if transport == nil { //karing
+		return nil, E.New("transport closed")
+	}
 	if len(message.Question) == 0 {
 		if c.logger != nil {
 			c.logger.WarnContext(ctx, "bad question size: ", len(message.Question))
@@ -251,6 +254,9 @@ func (c *Client) Exchange(ctx context.Context, transport adapter.DNSTransport, m
 }
 
 func (c *Client) Lookup(ctx context.Context, transport adapter.DNSTransport, domain string, options adapter.DNSQueryOptions, responseChecker func(responseAddrs []netip.Addr) bool) ([]netip.Addr, error) {
+	if transport == nil { //karing
+		return nil, E.New("transport closed")
+	}
 	domain = FqdnToDomain(domain)
 	dnsName := dns.Fqdn(domain)
 	var strategy C.DomainStrategy

@@ -203,6 +203,9 @@ func (r *Router) matchDNS(ctx context.Context, allowFakeIP bool, ruleIndex int, 
 			}
 		}
 	}
+	if r.transport == nil { //karing
+		return nil, nil, -1
+	}
 	return r.transport.Default(), nil, -1
 }
 
