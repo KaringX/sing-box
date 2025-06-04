@@ -2,6 +2,8 @@ module github.com/sagernet/sing-box
 
 go 1.23.1
 
+toolchain go1.24.0
+
 require (
 	github.com/anytls/sing-anytls v0.0.8
 	github.com/caddyserver/certmagic v0.23.0
