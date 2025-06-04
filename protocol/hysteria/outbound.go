@@ -59,9 +59,6 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		return empty, err //karing
 	}
 	networkList := options.Network.Build()
-	if options.HopInterval < 5 { //https://github.com/morgenanno/sing-box
-		options.HopInterval = 5
-	}
 	var password string
 	if options.AuthString != "" {
 		password = options.AuthString

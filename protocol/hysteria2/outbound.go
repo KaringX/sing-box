@@ -50,9 +50,6 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 	if options.TLS == nil || !options.TLS.Enabled {
 		return empty, C.ErrTLSRequired //karing
 	}
-	if options.HopInterval < 5 { //https://github.com/morgenanno/sing-box
-		options.HopInterval = 5
-	}
 	hforwarder := houtbound.ApplyTurnRelay(houtbound.CommonTurnRelayOptions{ServerOptions: options.ServerOptions, TurnRelayOptions: options.TurnRelay}) //hiddify
 
 	tlsConfig, err := tls.NewClient(ctx, options.Server, common.PtrValueOrDefault(options.TLS))
