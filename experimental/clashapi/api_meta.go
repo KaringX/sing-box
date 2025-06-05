@@ -9,6 +9,8 @@ import (
 
 	"github.com/sagernet/sing-box/experimental/clashapi/trafficontrol"
 	"github.com/sagernet/sing/common/json"
+	"github.com/sagernet/sing/service"
+	"github.com/sagernet/sing/service/pause"
 	"github.com/sagernet/ws"
 	"github.com/sagernet/ws/wsutil"
 
@@ -27,9 +29,9 @@ func (s *Server) setupMetaAPI(r chi.Router) {
 		})
 		r.Mount("/", middleware.Profiler())
 	}
-	r.Get("/memory", memory(s.trafficManager))
+	r.Get("/memory", memory(s, s.trafficManager)) //karing
 	r.Mount("/group", groupRouter(s))
-	r.Mount("/upgrade", upgradeRouter(s))
+	//r.Mount("/upgrade", upgradeRouter(s)) //karing
 }
 
 type Memory struct {
@@ -37,7 +39,7 @@ type Memory struct {
 	OSLimit uint64 `json:"oslimit"` // maybe we need it in the future
 }
 
-func memory(trafficManager *trafficontrol.Manager) func(w http.ResponseWriter, r *http.Request) {
+func memory(server *Server, trafficManager *trafficontrol.Manager) func(w http.ResponseWriter, r *http.Request) { //karing
 	return func(w http.ResponseWriter, r *http.Request) {
 		var conn net.Conn
 		if r.Header.Get("Upgrade") == "websocket" {
@@ -54,14 +56,28 @@ func memory(trafficManager *trafficontrol.Manager) func(w http.ResponseWriter, r
 		}
 
 		tick := time.NewTicker(time.Second)
-		defer tick.Stop()
+		closed := false //karing
+		server.AddTick(tick, func() {
+			closed = true
+		}) //karing
+		defer func() { //karing
+			server.RemoveTick(tick)
+			tick.Stop()
+		}()
+
 		buf := &bytes.Buffer{}
 		var err error
 		first := true
 		for range tick.C {
 			buf.Reset()
-
-			inuse := trafficManager.Snapshot().Memory
+			if closed { //karing
+				break
+			}
+			pauseManager := service.FromContext[pause.Manager](server.ctx) //karing
+			if pauseManager == nil || pauseManager.IsDevicePaused() {      //karing
+				break
+			}
+			inuse := trafficManager.Snapshot(false).Memory //karing
 
 			// make chat.js begin with zero
 			// this is shit var,but we need output 0 for first time

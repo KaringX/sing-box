@@ -15,4 +15,8 @@
 .DS_Store
 /config.d/
 /venv/
-
+cache.db
+*.exe
+/*.log
+/.vscode
+/experimental/libbox/sentry_private.go

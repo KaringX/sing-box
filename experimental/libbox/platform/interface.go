@@ -18,6 +18,7 @@ type Interface interface {
 	UnderNetworkExtension() bool
 	IncludeAllNetworks() bool
 	ClearDNSCache()
+	GetAssetContent(path string)([]byte, error) //karing
 	ReadWIFIState() adapter.WIFIState
 	SystemCertificates() []string
 	process.Searcher

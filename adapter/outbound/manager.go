@@ -16,6 +16,11 @@ import (
 	"github.com/sagernet/sing/common/logger"
 )
 
+type OutboundHasConnectionsFunc func(tag string) bool //karing
+var (
+	OutboundHasConnections OutboundHasConnectionsFunc //karing
+)
+
 var _ adapter.OutboundManager = (*Manager)(nil)
 
 type Manager struct {
@@ -154,6 +159,9 @@ func (m *Manager) Close() error {
 	m.started = false
 	outbounds := m.outbounds
 	m.outbounds = nil
+	m.outboundByTag = make(map[string]adapter.Outbound) //karing
+	m.dependByTag = make(map[string][]string)           //karing
+	m.endpoint = nil                                    //karing
 	m.access.Unlock()
 	var err error
 	for _, outbound := range outbounds {
@@ -180,6 +188,9 @@ func (m *Manager) Outbound(tag string) (adapter.Outbound, bool) {
 	m.access.RUnlock()
 	if found {
 		return outbound, true
+	}
+	if m.endpoint == nil { //karing
+		return nil, false
 	}
 	return m.endpoint.Get(tag)
 }
@@ -238,14 +249,25 @@ func (m *Manager) Remove(tag string) error {
 	return nil
 }
 
-func (m *Manager) Create(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, inboundType string, options any) error {
+func (m *Manager) Create(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, inboundType string, options any, parseErr error) error {
 	if tag == "" {
+		m.logger.Error("create outbound failed: empty tag") //karing
 		return os.ErrInvalid
 	}
 	outbound, err := m.registry.CreateOutbound(ctx, router, logger, tag, inboundType, options)
-	if err != nil {
+	if outbound == nil { //karing
 		return err
 	}
+
+	if parseErr != nil { //karing
+		err = parseErr
+	}
+	if err != nil {
+		outbound.SetParseErr(err)                                               //karing
+		m.logger.Error("create outbound failed: ", outbound.Tag(), " -> ", err) //karing
+		//return err //karing
+	}
+
 	if m.started {
 		for _, stage := range adapter.ListStartStages {
 			err = adapter.LegacyStart(outbound, stage)

@@ -9,6 +9,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -26,6 +27,7 @@ import (
 	N "github.com/sagernet/sing/common/network"
 	"github.com/sagernet/sing/service"
 	"github.com/sagernet/sing/service/filemanager"
+	"github.com/sagernet/sing/service/pause"
 	"github.com/sagernet/ws"
 	"github.com/sagernet/ws/wsutil"
 
@@ -45,7 +47,7 @@ type Server struct {
 	dnsRouter      adapter.DNSRouter
 	outbound       adapter.OutboundManager
 	endpoint       adapter.EndpointManager
-	logger         log.Logger
+	logger         log.ContextLogger //karing
 	httpServer     *http.Server
 	trafficManager *trafficontrol.Manager
 	urlTestHistory adapter.URLTestHistoryStorage
@@ -59,6 +61,9 @@ type Server struct {
 	externalUI               string
 	externalUIDownloadURL    string
 	externalUIDownloadDetour string
+
+	access sync.RWMutex            //karing
+	ticks  map[*time.Ticker]func() //karing
 }
 
 func NewServer(ctx context.Context, logFactory log.ObservableFactory, options option.ClashAPIOptions) (adapter.ClashServer, error) {
@@ -81,6 +86,7 @@ func NewServer(ctx context.Context, logFactory log.ObservableFactory, options op
 		externalController:       options.ExternalController != "",
 		externalUIDownloadURL:    options.ExternalUIDownloadURL,
 		externalUIDownloadDetour: options.ExternalUIDownloadDetour,
+		ticks:                    make(map[*time.Ticker]func()), //karing
 	}
 	s.urlTestHistory = service.FromContext[adapter.URLTestHistoryStorage](ctx)
 	if s.urlTestHistory == nil {
@@ -114,19 +120,20 @@ func NewServer(ctx context.Context, logFactory log.ObservableFactory, options op
 	chiRouter.Group(func(r chi.Router) {
 		r.Use(authentication(options.Secret))
 		r.Get("/", hello(options.ExternalUI != ""))
-		r.Get("/logs", getLogs(logFactory))
-		r.Get("/traffic", traffic(trafficManager))
+		r.Get("/logs", getLogs(s, logFactory))        //karing
+		r.Get("/traffic", traffic(s, trafficManager)) //karing
 		r.Get("/version", version)
 		r.Mount("/configs", configRouter(s, logFactory))
 		r.Mount("/proxies", proxyRouter(s, s.router))
 		r.Mount("/rules", ruleRouter(s.router))
-		r.Mount("/connections", connectionRouter(s.router, trafficManager))
+		r.Mount("/connections", connectionRouter(s, s.router, trafficManager)) //karing
 		r.Mount("/providers/proxies", proxyProviderRouter())
 		r.Mount("/providers/rules", ruleProviderRouter())
 		r.Mount("/script", scriptRouter())
 		r.Mount("/profile", profileRouter())
 		r.Mount("/cache", cacheRouter(ctx))
 		r.Mount("/dns", dnsRouter(s.dnsRouter))
+		r.Mount("/karing", karingRouter(ctx, s.router, logFactory)) //karing
 
 		s.setupMetaAPI(r)
 	})
@@ -174,11 +181,11 @@ func (s *Server) Start(stage adapter.StartStage) error {
 			if err != nil {
 				return E.Cause(err, "external controller listen error")
 			}
-			s.logger.Info("restful api listening at ", listener.Addr())
+			s.logger.InfoContext(s.ctx, "restful api listening at ", listener.Addr()) //karing
 			go func() {
 				err = s.httpServer.Serve(listener)
 				if err != nil && !errors.Is(err, http.ErrServerClosed) {
-					s.logger.Error("external controller serve error: ", err)
+					s.logger.ErrorContext(s.ctx, "external controller serve error: ", err) //karing
 				}
 			}()
 		}
@@ -188,11 +195,20 @@ func (s *Server) Start(stage adapter.StartStage) error {
 }
 
 func (s *Server) Close() error {
-	return common.Close(
+	s.CloseTicks()       //karing
+	err := common.Close( //karing
 		common.PtrOrNil(s.httpServer),
 		s.trafficManager,
 		s.urlTestHistory,
 	)
+
+	s.router = nil         //karing
+	s.outbound = nil       //karing
+	s.endpoint = nil       //karing
+	s.httpServer = nil     //karing
+	s.trafficManager = nil //karing
+
+	return err //karing
 }
 
 func (s *Server) Mode() string {
@@ -227,6 +243,7 @@ func (s *Server) SetMode(newMode string) {
 		}
 	}
 	s.dnsRouter.ClearCache()
+
 	cacheFile := service.FromContext[adapter.CacheFile](s.ctx)
 	if cacheFile != nil {
 		err := cacheFile.StoreMode(newMode)
@@ -234,7 +251,7 @@ func (s *Server) SetMode(newMode string) {
 			s.logger.Error(E.Cause(err, "save mode"))
 		}
 	}
-	s.logger.Info("updated mode: ", newMode)
+	s.logger.InfoContext(s.ctx, "updated mode: ", newMode) //karing
 }
 
 func (s *Server) HistoryStorage() adapter.URLTestHistoryStorage {
@@ -251,6 +268,27 @@ func (s *Server) RoutedConnection(ctx context.Context, conn net.Conn, metadata a
 
 func (s *Server) RoutedPacketConnection(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext, matchedRule adapter.Rule, matchOutbound adapter.Outbound) N.PacketConn {
 	return trafficontrol.NewUDPTracker(conn, s.trafficManager, metadata, s.outbound, matchedRule, matchOutbound)
+}
+
+func (s *Server) AddTick(tick *time.Ticker, onClose func()) { //karing
+	s.access.RLock()
+	defer s.access.RUnlock()
+	(s.ticks)[tick] = onClose
+}
+
+func (s *Server) RemoveTick(tick *time.Ticker) { //karing
+	s.access.RLock()
+	defer s.access.RUnlock()
+	delete(s.ticks, tick)
+}
+
+func (s *Server) CloseTicks() { //karing
+	s.access.RLock()
+	defer s.access.RUnlock()
+	for t, f := range s.ticks {
+		f()
+		delete(s.ticks, t)
+	}
 }
 
 func authentication(serverSecret string) func(next http.Handler) http.Handler {
@@ -305,7 +343,7 @@ type Traffic struct {
 	Down int64 `json:"down"`
 }
 
-func traffic(trafficManager *trafficontrol.Manager) func(w http.ResponseWriter, r *http.Request) {
+func traffic(server *Server, trafficManager *trafficontrol.Manager) func(w http.ResponseWriter, r *http.Request) { //karing
 	return func(w http.ResponseWriter, r *http.Request) {
 		var conn net.Conn
 		if r.Header.Get("Upgrade") == "websocket" {
@@ -323,11 +361,25 @@ func traffic(trafficManager *trafficontrol.Manager) func(w http.ResponseWriter, 
 		}
 
 		tick := time.NewTicker(time.Second)
-		defer tick.Stop()
+		closed := false //karing
+		server.AddTick(tick, func() {
+			closed = true
+		}) //karing
+		defer func() { //karing
+			server.RemoveTick(tick)
+			tick.Stop()
+		}()
 		buf := &bytes.Buffer{}
 		uploadTotal, downloadTotal := trafficManager.Total()
 		for range tick.C {
 			buf.Reset()
+			if closed { //karing
+				break
+			}
+			pauseManager := service.FromContext[pause.Manager](server.ctx) //karing
+			if pauseManager == nil || pauseManager.IsDevicePaused() {      //karing
+				break
+			}
 			uploadTotalNew, downloadTotalNew := trafficManager.Total()
 			err := json.NewEncoder(buf).Encode(Traffic{
 				Up:   uploadTotalNew - uploadTotal,
@@ -357,7 +409,7 @@ type Log struct {
 	Payload string `json:"payload"`
 }
 
-func getLogs(logFactory log.ObservableFactory) func(w http.ResponseWriter, r *http.Request) {
+func getLogs(server *Server, logFactory log.ObservableFactory) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		levelText := r.URL.Query().Get("level")
 		if levelText == "" {
@@ -404,6 +456,10 @@ func getLogs(logFactory log.ObservableFactory) func(w http.ResponseWriter, r *ht
 				continue
 			}
 			buf.Reset()
+			pauseManager := service.FromContext[pause.Manager](server.ctx) //karing
+			if pauseManager == nil || pauseManager.IsDevicePaused() {      //karing
+				break
+			}
 			err = json.NewEncoder(buf).Encode(Log{
 				Type:    log.FormatLevel(logEntry.Level),
 				Payload: logEntry.Message,

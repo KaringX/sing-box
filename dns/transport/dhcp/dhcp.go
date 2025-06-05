@@ -15,7 +15,7 @@ import (
 	"github.com/sagernet/sing-box/dns/transport"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
-	"github.com/sagernet/sing-tun"
+	tun "github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/buf"
 	"github.com/sagernet/sing/common/control"
@@ -66,13 +66,17 @@ func NewTransport(ctx context.Context, logger log.ContextLogger, tag string, opt
 }
 
 func (t *Transport) Start(stage adapter.StartStage) error {
-	if stage != adapter.StartStateStart {
+	/*if stage != adapter.StartStateStart { //karing
 		return nil
 	}
 	err := t.fetchServers()
 	if err != nil {
 		return err
 	}
+	}*/
+	go func() { //karing
+		t.fetchServers()
+	}()
 	if t.interfaceName == "" {
 		t.interfaceCallback = t.networkManager.InterfaceMonitor().RegisterCallback(t.interfaceUpdated)
 	}
@@ -90,10 +94,14 @@ func (t *Transport) Close() error {
 }
 
 func (t *Transport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS.Msg, error) {
-	err := t.fetchServers()
+	var err error //karing
+	/*err := t.fetchServers()//karing
 	if err != nil {
 		return nil, err
-	}
+	}*/
+	go func() { //karing
+		t.fetchServers()
+	}()
 
 	if len(t.transports) == 0 {
 		return nil, E.New("dhcp: empty DNS servers from response")
@@ -142,7 +150,7 @@ func (t *Transport) updateServers() error {
 		return E.Cause(err, "dhcp: prepare interface")
 	}
 
-	t.logger.Info("dhcp: query DNS servers on ", iface.Name)
+	t.logger.InfoContext(t.ctx, "dhcp: query DNS servers on ", iface.Name) //karing
 	fetchCtx, cancel := context.WithTimeout(t.ctx, C.DHCPTimeout)
 	err = t.fetchServers0(fetchCtx, iface)
 	cancel()
@@ -159,7 +167,7 @@ func (t *Transport) updateServers() error {
 func (t *Transport) interfaceUpdated(defaultInterface *control.Interface, flags int) {
 	err := t.updateServers()
 	if err != nil {
-		t.logger.Error("update servers: ", err)
+		t.logger.ErrorContext(t.ctx, "update servers: ", err) //karing
 	}
 }
 
@@ -209,23 +217,25 @@ func (t *Transport) fetchServersResponse(iface *control.Interface, packetConn ne
 
 		dhcpPacket, err := dhcpv4.FromBytes(buffer.Bytes())
 		if err != nil {
-			t.logger.Trace("dhcp: parse DHCP response: ", err)
+			t.logger.TraceContext(t.ctx, "dhcp: parse DHCP response: ", err) //karing
 			return err
 		}
 
 		if dhcpPacket.MessageType() != dhcpv4.MessageTypeOffer {
-			t.logger.Trace("dhcp: expected OFFER response, but got ", dhcpPacket.MessageType())
+			t.logger.TraceContext(t.ctx, "dhcp: expected OFFER response, but got ", dhcpPacket.MessageType()) //karing
 			continue
 		}
 
 		if dhcpPacket.TransactionID != transactionID {
-			t.logger.Trace("dhcp: expected transaction ID ", transactionID, ", but got ", dhcpPacket.TransactionID)
+			t.logger.TraceContext(t.ctx, "dhcp: expected transaction ID ", transactionID, ", but got ", dhcpPacket.TransactionID) //karing
 			continue
 		}
 
 		dns := dhcpPacket.DNS()
 		if len(dns) == 0 {
-			return nil
+			dns = make([]net.IP, 1)                //karing
+			dns[0] = dhcpPacket.ServerIdentifier() //karing
+			//return nil //karing
 		}
 		return t.recreateServers(iface, common.Map(dns, func(it net.IP) M.Socksaddr {
 			return M.SocksaddrFrom(M.AddrFromIP(it), 53)
@@ -235,7 +245,7 @@ func (t *Transport) fetchServersResponse(iface *control.Interface, packetConn ne
 
 func (t *Transport) recreateServers(iface *control.Interface, serverAddrs []M.Socksaddr) error {
 	if len(serverAddrs) > 0 {
-		t.logger.Info("dhcp: updated DNS servers from ", iface.Name, ": [", strings.Join(common.Map(serverAddrs, M.Socksaddr.String), ","), "]")
+		t.logger.InfoContext(t.ctx, "dhcp: updated DNS servers from ", iface.Name, ": [", strings.Join(common.Map(serverAddrs, M.Socksaddr.String), ","), "]") //karing
 	}
 	serverDialer := common.Must1(dialer.NewDefault(t.ctx, option.DialerOptions{
 		BindInterface:      iface.Name,

@@ -29,7 +29,7 @@ import (
 	"github.com/sagernet/sing-box/experimental/libbox/platform"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
-	"github.com/sagernet/sing-tun"
+	tun "github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/bufio"
 	"github.com/sagernet/sing/common/control"
@@ -137,10 +137,10 @@ func NewEndpoint(ctx context.Context, router adapter.Router, logger log.ContextL
 		Dir:      stateDirectory,
 		Hostname: hostname,
 		Logf: func(format string, args ...any) {
-			logger.Trace(fmt.Sprintf(format, args...))
+			logger.TraceContext(ctx, fmt.Sprintf(format, args...)) //karing
 		},
 		UserLogf: func(format string, args ...any) {
-			logger.Debug(fmt.Sprintf(format, args...))
+			logger.DebugContext(ctx, fmt.Sprintf(format, args...)) //karing
 		},
 		Ephemeral:  options.Ephemeral,
 		AuthKey:    options.AuthKey,
@@ -267,7 +267,7 @@ func (t *Endpoint) watchState() {
 		}
 		authURL := localBackend.StatusWithoutPeers().AuthURL
 		if authURL != "" {
-			t.logger.Info("Waiting for authentication: ", authURL)
+			t.logger.InfoContext(t.ctx, "Waiting for authentication: ", authURL) //karing
 			if t.platformInterface != nil {
 				err := t.platformInterface.SendNotification(&platform.Notification{
 					Identifier: "tailscale-authentication",
@@ -278,7 +278,7 @@ func (t *Endpoint) watchState() {
 					OpenURL:    authURL,
 				})
 				if err != nil {
-					t.logger.Error("send authentication notification: ", err)
+					t.logger.ErrorContext(t.ctx, "send authentication notification: ", err) //karing
 				}
 			}
 			return false
@@ -292,7 +292,7 @@ func (t *Endpoint) watchState() {
 			}
 			status, err := common.Must1(t.server.LocalClient()).Status(t.ctx)
 			if err != nil {
-				t.logger.Error("set exit node: ", err)
+				t.logger.ErrorContext(t.ctx, "set exit node: ", err) //karing
 				return
 			}
 			perfs := &ipn.MaskedPrefs{
@@ -304,12 +304,12 @@ func (t *Endpoint) watchState() {
 			}
 			err = perfs.SetExitNodeIP(t.exitNode, status)
 			if err != nil {
-				t.logger.Error("set exit node: ", err)
+				t.logger.ErrorContext(t.ctx, "set exit node: ", err) //karing
 				return true
 			}
 			_, err = localBackend.EditPrefs(perfs)
 			if err != nil {
-				t.logger.Error("set exit node: ", err)
+				t.logger.ErrorContext(t.ctx, "set exit node: ", err) //karing
 				return true
 			}
 			return false
@@ -326,6 +326,10 @@ func (t *Endpoint) Close() error {
 }
 
 func (t *Endpoint) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
+	if t.GetParseErr() != nil { //karing
+		return nil, t.GetParseErr()
+	}
+
 	switch network {
 	case N.NetworkTCP:
 		t.logger.InfoContext(ctx, "outbound connection to ", destination)
@@ -369,6 +373,9 @@ func (t *Endpoint) DialContext(ctx context.Context, network string, destination 
 }
 
 func (t *Endpoint) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
+	if t.GetParseErr() != nil { //karing
+		return nil, t.GetParseErr()
+	}
 	t.logger.InfoContext(ctx, "outbound packet connection to ", destination)
 	if destination.IsFqdn() {
 		destinationAddresses, err := t.dnsRouter.Lookup(ctx, destination.Fqdn, adapter.DNSQueryOptions{})

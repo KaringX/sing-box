@@ -34,13 +34,13 @@ func DialSlowContext(dialer *tcpDialer, ctx context.Context, network string, des
 	if dialer.DisableTFO || N.NetworkName(network) != N.NetworkTCP {
 		switch N.NetworkName(network) {
 		case N.NetworkTCP, N.NetworkUDP:
-			return dialer.Dialer.DialContext(ctx, network, destination.String())
+			return dialer.DialContext(ctx, network, destination) //hiddify
 		default:
-			return dialer.Dialer.DialContext(ctx, network, destination.AddrString())
+			return dialer.DialContext(ctx, network, destination) //hiddify
 		}
 	}
 	return &slowOpenConn{
-		dialer:      dialer,
+		dialer:      &tfo.Dialer{Dialer: dialer.Dialer, DisableTFO: dialer.DisableTFO}, //hiddify
 		ctx:         ctx,
 		network:     network,
 		destination: destination,

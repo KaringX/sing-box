@@ -70,9 +70,11 @@ Setting Array value to a string `__URL__` is equivalent to configuring:
 { "url": __URL__ }
 ```
 
+
 #### home
 
 What to serve at the root path. It may be left empty (the default, for a default homepage), `blank` for a blank page, or a URL to redirect to
+
 
 #### mesh_with
 

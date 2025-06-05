@@ -3,7 +3,8 @@ package include
 import (
 	"context"
 
-	"github.com/sagernet/sing-box"
+	box "github.com/sagernet/sing-box"
+
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/adapter/endpoint"
 	"github.com/sagernet/sing-box/adapter/inbound"
@@ -27,6 +28,7 @@ import (
 	"github.com/sagernet/sing-box/protocol/naive"
 	"github.com/sagernet/sing-box/protocol/redirect"
 	"github.com/sagernet/sing-box/protocol/shadowsocks"
+	"github.com/sagernet/sing-box/protocol/shadowsocksr"
 	"github.com/sagernet/sing-box/protocol/shadowtls"
 	"github.com/sagernet/sing-box/protocol/socks"
 	"github.com/sagernet/sing-box/protocol/ssh"
@@ -65,7 +67,7 @@ func InboundRegistry() *inbound.Registry {
 	anytls.RegisterInbound(registry)
 
 	registerQUICInbounds(registry)
-	registerStubForRemovedInbounds(registry)
+	//registerStubForRemovedInbounds(registry) //karing
 
 	return registry
 }
@@ -94,7 +96,8 @@ func OutboundRegistry() *outbound.Registry {
 
 	registerQUICOutbounds(registry)
 	registerWireGuardOutbound(registry)
-	registerStubForRemovedOutbounds(registry)
+	shadowsocksr.RegisterOutbound(registry)
+	//registerStubForRemovedOutbounds(registry) //karing
 
 	return registry
 }
@@ -115,6 +118,8 @@ func DNSTransportRegistry() *dns.TransportRegistry {
 	transport.RegisterUDP(registry)
 	transport.RegisterTLS(registry)
 	transport.RegisterHTTPS(registry)
+	transport.RegisterBatch(registry)      //karing
+	transport.RegisterPredefined(registry) //karing
 	hosts.RegisterTransport(registry)
 	local.RegisterTransport(registry)
 	fakeip.RegisterTransport(registry)
