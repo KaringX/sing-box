@@ -2,9 +2,23 @@
 icon: material/alert-decagram
 ---
 
-#### 1.12.0-beta.18
+#### 1.12.0-beta.21
+
+* Fix missing `home` option for DERP service **1**
+* Fixes and improvements
+
+**1**:
+
+You can now choose what the DERP home page shows, just like with derper's `-home` flag.
+
+See [DERP](/configuration/service/derp/#home).
+
+### 1.11.13
 
 * Fixes and improvements
+
+_We are temporarily unable to update sing-box apps on the App Store because the reviewer mistakenly found that we
+violated the rules (TestFlight users are not affected)._
 
 #### 1.12.0-beta.17
 
