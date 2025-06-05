@@ -3,6 +3,7 @@ package fakeip
 import (
 	"context"
 	"net/netip"
+	"sync"
 
 	"github.com/sagernet/sing-box/adapter"
 	E "github.com/sagernet/sing/common/exceptions"
@@ -20,6 +21,7 @@ type Store struct {
 	storage      adapter.FakeIPStorage
 	inet4Current netip.Addr
 	inet6Current netip.Addr
+	access       sync.Mutex //karing
 }
 
 func NewStore(ctx context.Context, logger logger.Logger, inet4Range netip.Prefix, inet6Range netip.Prefix) *Store {
@@ -41,25 +43,26 @@ func (s *Store) Contains(address netip.Addr) bool {
 }
 
 func (s *Store) Close() error {
-	if s.storage == nil {
+	storage := s.storage //karing
+	s.storage = nil      //karing
+	if storage == nil {  //karing
 		return nil
 	}
-	err := s.storage.FakeIPSaveMetadata(&adapter.FakeIPMetadata{ //karing
+	return storage.FakeIPSaveMetadata(&adapter.FakeIPMetadata{ //karing
 		Inet4Range:   s.inet4Range,
 		Inet6Range:   s.inet6Range,
 		Inet4Current: s.inet4Current,
 		Inet6Current: s.inet6Current,
 	})
-	s.storage = nil //karing
-	return err
 }
 
 func (s *Store) Create(domain string, isIPv6 bool) (netip.Addr, error) {
 	s.CreateStore()
-	if s.storage == nil { //karing
-		return netip.Addr{}, E.New("storage closed")
+	storage := s.storage
+	if storage == nil { //karing
+		return netip.Addr{}, E.New("storage create failed")
 	}
-	if address, loaded := s.storage.FakeIPLoadDomain(domain, isIPv6); loaded {
+	if address, loaded := storage.FakeIPLoadDomain(domain, isIPv6); loaded { //karing
 		return address, nil
 	}
 	var address netip.Addr
@@ -84,8 +87,8 @@ func (s *Store) Create(domain string, isIPv6 bool) (netip.Addr, error) {
 		s.inet6Current = nextAddress
 		address = nextAddress
 	}
-	s.storage.FakeIPStoreAsync(address, domain, s.logger)
-	s.storage.FakeIPSaveMetadataAsync(&adapter.FakeIPMetadata{
+	storage.FakeIPStoreAsync(address, domain, s.logger)      //karing
+	storage.FakeIPSaveMetadataAsync(&adapter.FakeIPMetadata{ //karing
 		Inet4Range:   s.inet4Range,
 		Inet6Range:   s.inet6Range,
 		Inet4Current: s.inet4Current,
@@ -96,20 +99,24 @@ func (s *Store) Create(domain string, isIPv6 bool) (netip.Addr, error) {
 
 func (s *Store) Lookup(address netip.Addr) (string, bool) {
 	s.CreateStore()
-	if s.storage == nil { //karing
+	storage := s.storage //karing
+	if storage == nil {  //karing
 		return "", false
 	}
-	return s.storage.FakeIPLoad(address)
+	return storage.FakeIPLoad(address)
 }
 
 func (s *Store) Reset() error {
-	if s.storage == nil { //karing
+	storage := s.storage
+	if storage == nil { //karing
 		return E.New("storage closed")
 	}
-	return s.storage.FakeIPReset()
+	return storage.FakeIPReset()
 }
 
 func (s *Store) CreateStore() { //karing
+	s.access.Lock()
+	defer s.access.Unlock()
 	if s.storage != nil {
 		return
 	}
