@@ -184,7 +184,7 @@ func New(options Options) (box *Box, err error) { //karing
 	}
 
 	//var internalServices []adapter.LifecycleService //karing
-	certificateOptions := common.PtrValueOrDefault(options.Certificate) //karing
+	certificateOptions := common.PtrValueOrDefault(options.Certificate)
 	if C.IsAndroid || certificateOptions.Store != "" && certificateOptions.Store != C.CertificateStoreSystem ||
 		len(certificateOptions.Certificate) > 0 ||
 		len(certificateOptions.CertificatePath) > 0 ||
