@@ -567,13 +567,16 @@ func (s *Box) Close() error {
 	//err = E.Append(err, s.logFactory.Close(), func(err error) error {
 	//	return E.Cause(err, "close logger")
 	//})
-	s.inbound = nil    //karing
-	s.outbound = nil   //karing
-	s.endpoint = nil   //karing
-	s.connection = nil //karing
-	s.network = nil    //karing
-	s.router = nil     //karing
-	s.service = nil    //karing
+	s.network = nil         //karing
+	s.endpoint = nil        //karing
+	s.inbound = nil         //karing
+	s.outbound = nil        //karing
+	s.service = nil         //karing
+	s.dnsTransport = nil    //karing
+	s.dnsRouter = nil       //karing
+	s.connection = nil      //karing
+	s.router = nil          //karing
+	s.internalService = nil //karing
 
 	return err
 }

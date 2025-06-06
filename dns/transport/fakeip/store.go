@@ -3,7 +3,6 @@ package fakeip
 import (
 	"context"
 	"net/netip"
-	"sync"
 
 	"github.com/sagernet/sing-box/adapter"
 	E "github.com/sagernet/sing/common/exceptions"
@@ -21,7 +20,6 @@ type Store struct {
 	storage      adapter.FakeIPStorage
 	inet4Current netip.Addr
 	inet6Current netip.Addr
-	access       sync.Mutex //karing
 }
 
 func NewStore(ctx context.Context, logger logger.Logger, inet4Range netip.Prefix, inet6Range netip.Prefix) *Store {
@@ -34,7 +32,28 @@ func NewStore(ctx context.Context, logger logger.Logger, inet4Range netip.Prefix
 }
 
 func (s *Store) Start() error {
-	s.CreateStore() //karing
+	var storage adapter.FakeIPStorage
+	cacheFile := service.FromContext[adapter.CacheFile](s.ctx)
+	if cacheFile != nil && cacheFile.StoreFakeIP() {
+		storage = cacheFile
+	}
+	if storage == nil {
+		storage = NewMemoryStorage()
+	}
+	metadata := storage.FakeIPMetadata()
+	if metadata != nil && metadata.Inet4Range == s.inet4Range && metadata.Inet6Range == s.inet6Range {
+		s.inet4Current = metadata.Inet4Current
+		s.inet6Current = metadata.Inet6Current
+	} else {
+		if s.inet4Range.IsValid() {
+			s.inet4Current = s.inet4Range.Addr().Next().Next()
+		}
+		if s.inet6Range.IsValid() {
+			s.inet6Current = s.inet6Range.Addr().Next().Next()
+		}
+		_ = storage.FakeIPReset()
+	}
+	s.storage = storage
 	return nil
 }
 
@@ -43,26 +62,21 @@ func (s *Store) Contains(address netip.Addr) bool {
 }
 
 func (s *Store) Close() error {
-	storage := s.storage //karing
-	s.storage = nil      //karing
-	if storage == nil {  //karing
+	if s.storage == nil {
 		return nil
 	}
-	return storage.FakeIPSaveMetadata(&adapter.FakeIPMetadata{ //karing
+	err := s.storage.FakeIPSaveMetadata(&adapter.FakeIPMetadata{ //karing
 		Inet4Range:   s.inet4Range,
 		Inet6Range:   s.inet6Range,
 		Inet4Current: s.inet4Current,
 		Inet6Current: s.inet6Current,
 	})
+	s.storage = nil //karing
+	return err      //karing
 }
 
 func (s *Store) Create(domain string, isIPv6 bool) (netip.Addr, error) {
-	s.CreateStore()
-	storage := s.storage
-	if storage == nil { //karing
-		return netip.Addr{}, E.New("storage create failed")
-	}
-	if address, loaded := storage.FakeIPLoadDomain(domain, isIPv6); loaded { //karing
+	if address, loaded := s.storage.FakeIPLoadDomain(domain, isIPv6); loaded {
 		return address, nil
 	}
 	var address netip.Addr
@@ -87,8 +101,8 @@ func (s *Store) Create(domain string, isIPv6 bool) (netip.Addr, error) {
 		s.inet6Current = nextAddress
 		address = nextAddress
 	}
-	storage.FakeIPStoreAsync(address, domain, s.logger)      //karing
-	storage.FakeIPSaveMetadataAsync(&adapter.FakeIPMetadata{ //karing
+	s.storage.FakeIPStoreAsync(address, domain, s.logger)
+	s.storage.FakeIPSaveMetadataAsync(&adapter.FakeIPMetadata{
 		Inet4Range:   s.inet4Range,
 		Inet6Range:   s.inet6Range,
 		Inet4Current: s.inet4Current,
@@ -98,48 +112,15 @@ func (s *Store) Create(domain string, isIPv6 bool) (netip.Addr, error) {
 }
 
 func (s *Store) Lookup(address netip.Addr) (string, bool) {
-	s.CreateStore()
-	storage := s.storage //karing
-	if storage == nil {  //karing
+	if s.storage == nil {
 		return "", false
 	}
-	return storage.FakeIPLoad(address)
+	return s.storage.FakeIPLoad(address)
 }
 
 func (s *Store) Reset() error {
-	storage := s.storage
-	if storage == nil { //karing
-		return E.New("storage closed")
+	if s.storage == nil {
+		return nil
 	}
-	return storage.FakeIPReset()
-}
-
-func (s *Store) CreateStore() { //karing
-	s.access.Lock()
-	defer s.access.Unlock()
-	if s.storage != nil {
-		return
-	}
-	var storage adapter.FakeIPStorage
-	cacheFile := service.FromContext[adapter.CacheFile](s.ctx)
-	if cacheFile != nil && cacheFile.StoreFakeIP() {
-		storage = cacheFile
-	}
-	if storage == nil {
-		storage = NewMemoryStorage()
-	}
-	metadata := storage.FakeIPMetadata()
-	if metadata != nil && metadata.Inet4Range == s.inet4Range && metadata.Inet6Range == s.inet6Range {
-		s.inet4Current = metadata.Inet4Current
-		s.inet6Current = metadata.Inet6Current
-	} else {
-		if s.inet4Range.IsValid() {
-			s.inet4Current = s.inet4Range.Addr().Next().Next()
-		}
-		if s.inet6Range.IsValid() {
-			s.inet6Current = s.inet6Range.Addr().Next().Next()
-		}
-		_ = storage.FakeIPReset()
-	}
-	s.storage = storage
+	return s.storage.FakeIPReset()
 }
