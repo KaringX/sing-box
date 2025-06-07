@@ -207,7 +207,7 @@ func getProxyDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 		proxy := r.Context().Value(CtxKeyProxy).(adapter.Outbound)
 		listener, isListener := proxy.(adapter.InterfaceUpdateListener) //karing
 
-		ctx, cancel := context.WithTimeout(server.ctx, time.Millisecond*time.Duration(timeout)) //karing
+		ctx, cancel := context.WithTimeout(server.ctx, time.Second*time.Duration(timeout)) //karing
 		defer cancel()
 
 		delay, delay2, err := urltest.URLTest(ctx, url, proxy) //karing
