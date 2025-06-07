@@ -25,8 +25,9 @@ func RegisterBatch(registry *dns.TransportRegistry) {
 
 type BatchTransport struct {
 	dns.TransportAdapter
-	logger  logger.ContextLogger
-	servers []string
+	logger    logger.ContextLogger
+	transport adapter.DNSTransportManager
+	servers   []string
 }
 
 func NewBatch(ctx context.Context, logger log.ContextLogger, tag string, options option.BatchDNSServerOptions) (adapter.DNSTransport, error) {
@@ -40,6 +41,7 @@ func NewBatch(ctx context.Context, logger log.ContextLogger, tag string, options
 	return &BatchTransport{
 		TransportAdapter: dns.NewTransportAdapter(C.DNSTypeBatch, tag, nil),
 		logger:           logger,
+		transport:        transportManager,
 		servers:          options.Servers,
 	}, nil
 }
@@ -54,12 +56,8 @@ func (t *BatchTransport) Close() error {
 
 func (t *BatchTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS.Msg, error) {
 	var transports []adapter.DNSTransport
-	transportManager := service.FromContext[adapter.DNSTransportManager](ctx)
-	if transportManager == nil {
-		return nil, E.New("dns transportManager is nil:", t.Tag())
-	}
 	for _, server := range t.servers {
-		transport, loaded := transportManager.Transport(server)
+		transport, loaded := t.transport.Transport(server)
 		if loaded {
 			transports = append(transports, transport)
 		}
