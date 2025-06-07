@@ -65,14 +65,12 @@ func (s *Store) Close() error {
 	if s.storage == nil {
 		return nil
 	}
-	err := s.storage.FakeIPSaveMetadata(&adapter.FakeIPMetadata{ //karing
+	return s.storage.FakeIPSaveMetadata(&adapter.FakeIPMetadata{
 		Inet4Range:   s.inet4Range,
 		Inet6Range:   s.inet6Range,
 		Inet4Current: s.inet4Current,
 		Inet6Current: s.inet6Current,
 	})
-	s.storage = nil //karing
-	return err      //karing
 }
 
 func (s *Store) Create(domain string, isIPv6 bool) (netip.Addr, error) {
@@ -112,15 +110,9 @@ func (s *Store) Create(domain string, isIPv6 bool) (netip.Addr, error) {
 }
 
 func (s *Store) Lookup(address netip.Addr) (string, bool) {
-	if s.storage == nil {
-		return "", false
-	}
 	return s.storage.FakeIPLoad(address)
 }
 
 func (s *Store) Reset() error {
-	if s.storage == nil {
-		return nil
-	}
 	return s.storage.FakeIPReset()
 }
