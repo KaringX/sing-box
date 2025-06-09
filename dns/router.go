@@ -302,21 +302,25 @@ func (r *Router) Exchange(ctx context.Context, message *mDNS.Msg, options adapte
 				response, err = r.client.Exchange(dnsCtx, transport, message, dnsOptions, responseCheck)
 				var rejected bool
 				if err != nil {
+					transportTag := ""    //karing
+					if transport != nil { //karing
+						transportTag = transport.Tag()
+					} //karing
 					if errors.Is(err, ErrResponseRejectedCached) {
 						rejected = true
-						r.logger.DebugContext(ctx, E.Cause(err, "response rejected for ", FormatQuestion(message.Question[0].String())), " (cached)", " by ", transport.Tag()) //karing
+						r.logger.DebugContext(ctx, E.Cause(err, "response rejected for ", FormatQuestion(message.Question[0].String())), " (cached)", " by ", transportTag) //karing
 					} else if errors.Is(err, ErrResponseRejected) {
 						rejected = true
-						r.logger.DebugContext(ctx, E.Cause(err, "response rejected for ", FormatQuestion(message.Question[0].String()), " by ", transport.Tag())) //karing
+						r.logger.DebugContext(ctx, E.Cause(err, "response rejected for ", FormatQuestion(message.Question[0].String()), " by ", transportTag)) //karing
 						/*} else if responseCheck!= nil && errors.Is(err, RcodeError(mDNS.RcodeNameError)) {
 						rejected = true
 						r.logger.DebugContext(ctx, E.Cause(err, "response rejected for ", FormatQuestion(message.Question[0].String())))
 						*/
 					} else if len(message.Question) > 0 {
 						rejected = true
-						r.logger.ErrorContext(ctx, E.Cause(err, "exchange failed for ", FormatQuestion(message.Question[0].String()), " by ", transport.Tag())) //karing
+						r.logger.ErrorContext(ctx, E.Cause(err, "exchange failed for ", FormatQuestion(message.Question[0].String()), " by ", transportTag)) //karing
 					} else {
-						r.logger.ErrorContext(ctx, E.Cause(err, "exchange failed for <empty query>", " by ", transport.Tag())) //karing
+						r.logger.ErrorContext(ctx, E.Cause(err, "exchange failed for <empty query>", " by ", transportTag)) //karing
 					}
 				}
 				if responseCheck != nil && rejected {
@@ -542,7 +546,12 @@ func (r *Router) LookupTag(ctx context.Context, domain string, options adapter.D
 					goto response
 				}
 			}
-			transportTag = transport.Tag() //karing
+			if transport != nil { //karing
+				transportTag = transport.Tag()
+			} else { //karing
+				transportTag = ""
+			}
+
 			var responseCheck func(responseAddrs []netip.Addr) bool
 			if rule != nil && rule.WithAddressLimit() {
 				responseCheck = func(responseAddrs []netip.Addr) bool {
