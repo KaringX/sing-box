@@ -51,6 +51,11 @@ func parseProxyName(next http.Handler) http.Handler {
 func findProxyByName(server *Server) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if server.outbound == nil { //karing
+				render.Status(r, http.StatusNotFound)
+				render.JSON(w, r, ErrNotFound)
+				return
+			}
 			name := r.Context().Value(CtxKeyProxyName).(string)
 			proxy, exist := server.outbound.Outbound(name)
 			if !exist {
@@ -91,6 +96,11 @@ func proxyInfo(server *Server, detour adapter.Outbound) *badjson.JSONObject {
 
 func getProxies(server *Server) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if server.outbound == nil { //karing
+			render.Status(r, http.StatusNotFound)
+			render.JSON(w, r, ErrNotFound)
+			return
+		}
 		var proxyMap badjson.JSONObject
 		outbounds := common.Filter(server.outbound.Outbounds(), func(detour adapter.Outbound) bool {
 			return detour.Tag() != ""
