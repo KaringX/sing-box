@@ -17,9 +17,9 @@ import (
 	"github.com/sagernet/sing/common/logger"
 )
 
-type OutboundHasConnectionsFunc func(tag string) (bool, time.Time, time.Time) //karing
+type OutboundGetLatestDownloadActiveConnectionFunc func(tag string) (bool, time.Time) //karing
 var (
-	OutboundHasConnections OutboundHasConnectionsFunc //karing
+	OutboundGetLatestDownloadActiveConnection OutboundGetLatestDownloadActiveConnectionFunc //karing
 )
 
 var _ adapter.OutboundManager = (*Manager)(nil)

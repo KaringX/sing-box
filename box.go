@@ -382,16 +382,16 @@ func New(options Options) (box *Box, err error) { //karing
 		service.MustRegister[adapter.ClashServer](ctx, clashServer)
 		internalServices = append(internalServices, clashServer)
 
-		outbound.OutboundHasConnections = func(tag string) (bool, time.Time, time.Time) { //karing
+		outbound.OutboundGetLatestDownloadActiveConnection = func(tag string) (bool, time.Time) { //karing
 			clashServer := service.FromContext[adapter.ClashServer](ctx)
 			if clashServer == nil {
-				return false, time.Now(), time.Now()
+				return false, time.Now()
 			}
 			trafficManager := clashServer.(*clashapi.Server).TrafficManager()
 			if trafficManager == nil {
-				return false, time.Now(), time.Now()
+				return false, time.Now()
 			}
-			return trafficManager.OutboundHasConnections(tag)
+			return trafficManager.OutboundGetLatestDownloadActiveConnection(tag)
 		}
 	}
 	if needV2RayAPI {

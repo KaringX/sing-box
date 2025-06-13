@@ -514,12 +514,12 @@ func (g *URLTestGroup) HealthCheck(realTag string) { //karing
 	if pauseManager.IsNetworkPaused() || pauseManager.IsDevicePaused() {
 		return
 	}
-	if outbound.OutboundHasConnections != nil {
-		has, uploadLast, downloadLast := outbound.OutboundHasConnections(realTag)
-		if !has || uploadLast.IsZero() {
+	if outbound.OutboundGetLatestDownloadActiveConnection != nil {
+		has, downloadLatest := outbound.OutboundGetLatestDownloadActiveConnection(realTag)
+		if !has {
 			return
 		}
-		interval := time.Since(downloadLast).Seconds()
+		interval := time.Since(downloadLatest).Seconds()
 		if interval <= 5 {
 			return
 		}
@@ -755,8 +755,8 @@ func (g *URLTestGroup) tryInterfaceUpdated(detour adapter.Outbound, realTag stri
 	listener, isListener := detour.(adapter.InterfaceUpdateListener)
 	needUpdate := detour.Type() == C.TypeHysteria || detour.Type() == C.TypeHysteria2 || detour.Type() == C.TypeTUIC
 	if isListener && needUpdate {
-		if outbound.OutboundHasConnections != nil {
-			has, _, _ := outbound.OutboundHasConnections(realTag)
+		if outbound.OutboundGetLatestDownloadActiveConnection != nil {
+			has, _ := outbound.OutboundGetLatestDownloadActiveConnection(realTag)
 			if !has {
 				listener.InterfaceUpdated()
 			}
