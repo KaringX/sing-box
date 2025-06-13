@@ -91,6 +91,8 @@ func isProxyOutbound(outboundType string) bool { //karing
 		return true
 	case C.TypeShadowTLS:
 		return true
+	case C.TypeAnyTLS:
+		return true
 	case C.TypeShadowsocksR:
 		return true
 	case C.TypeVLESS:
