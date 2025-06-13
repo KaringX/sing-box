@@ -101,6 +101,8 @@ func isProxyOutbound(outboundType string) bool { //karing
 		return true
 	case C.TypeHysteria2:
 		return true
+	case C.TypeTailscale:
+		return true
 	default:
 		return false
 	}

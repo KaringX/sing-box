@@ -162,7 +162,7 @@ func (s *URLTest) DialContext(ctx context.Context, network string, destination M
 	conn, err := outbound.DialContext(ctx, network, destination)
 	realTag := RealTag(outbound) //karing
 	if err == nil {
-		s.updateHistory(realTag) //karing
+		s.updateHistory(outbound.Type(), realTag) //karing
 		return s.group.interruptGroup.NewConn(conn, interrupt.IsExternalConnectionFromContext(ctx)), nil
 	}
 
@@ -194,7 +194,7 @@ func (s *URLTest) ListenPacket(ctx context.Context, destination M.Socksaddr) (ne
 	conn, err := outbound.ListenPacket(ctx, destination)
 	realTag := RealTag(outbound) //karing
 	if err == nil {
-		s.updateHistory(realTag) //karing
+		s.updateHistory(outbound.Type(), realTag) //karing
 		return s.group.interruptGroup.NewPacketConn(conn, interrupt.IsExternalConnectionFromContext(ctx)), nil
 	}
 
@@ -249,7 +249,10 @@ func (s *URLTest) recheckSelectedOutboundUDP(outbound adapter.Outbound, from str
 	}
 }
 
-func (s *URLTest) updateHistory(realTag string) { //karing
+func (s *URLTest) updateHistory(outboundType string, realTag string) { //karing
+	if !s.group.isProxyOutbound(outboundType) {
+		return
+	}
 	if s.group.IsHealthChecking(realTag) {
 		return
 	}
@@ -309,11 +312,6 @@ type URLTestGroup struct {
 	close                       chan struct{}
 	started                     bool
 	lastActive                  atomic.TypedValue[time.Time]
-}
-
-type URLTestGroupProxyOutboundUploadAndDownload struct { //karing
-	upload   int64
-	download int64
 }
 
 func NewURLTestGroup(ctx context.Context, outboundManager adapter.OutboundManager, logger log.ContextLogger, outbounds []adapter.Outbound, link string, interval time.Duration, tolerance uint16, idleTimeout time.Duration, interruptExternalConnections bool, defaultTag string, selectedHealthCheckInterval time.Duration) (*URLTestGroup, error) { //karing
@@ -516,6 +514,17 @@ func (g *URLTestGroup) HealthCheck(realTag string) { //karing
 	if pauseManager.IsNetworkPaused() || pauseManager.IsDevicePaused() {
 		return
 	}
+	if outbound.OutboundHasConnections != nil {
+		has, uploadLast, downloadLast := outbound.OutboundHasConnections(realTag)
+		if !has || uploadLast.IsZero() {
+			return
+		}
+		interval := time.Since(downloadLast).Seconds()
+		if interval <= 5 {
+			return
+		}
+	}
+
 	g.access.Lock()
 	defer g.access.Unlock()
 	if _, ok := g.healthChecking[realTag]; !ok {
@@ -558,14 +567,53 @@ func (g *URLTestGroup) HealthCheck(realTag string) { //karing
 
 func (g *URLTestGroup) HealthCheckSelected() { //karing
 	tags := make(map[string]bool)
-	if g.selectedOutboundTCP != nil {
+	if g.selectedOutboundTCP != nil && g.isProxyOutbound(g.selectedOutboundTCP.Type()) {
 		tags[RealTag(g.selectedOutboundTCP)] = true
 	}
-	if g.selectedOutboundUDP != nil {
+	if g.selectedOutboundUDP != nil && g.isProxyOutbound(g.selectedOutboundUDP.Type()) {
 		tags[RealTag(g.selectedOutboundUDP)] = true
 	}
 	for tag := range tags {
 		g.HealthCheck(tag)
+	}
+}
+
+func (g *URLTestGroup) isProxyOutbound(outboundType string) bool { //karing
+	switch outboundType {
+	case C.TypeSOCKS:
+		return true
+	case C.TypeHTTP:
+		return true
+	case C.TypeShadowsocks:
+		return true
+	case C.TypeVMess:
+		return true
+	case C.TypeTrojan:
+		return true
+	case C.TypeWireGuard:
+		return true
+	case C.TypeHysteria:
+		return true
+	case C.TypeTor:
+		return true
+	case C.TypeSSH:
+		return true
+	case C.TypeShadowTLS:
+		return true
+	case C.TypeAnyTLS:
+		return true
+	case C.TypeShadowsocksR:
+		return true
+	case C.TypeVLESS:
+		return true
+	case C.TypeTUIC:
+		return true
+	case C.TypeHysteria2:
+		return true
+	case C.TypeTailscale:
+		return true
+	default:
+		return false
 	}
 }
 
@@ -708,7 +756,8 @@ func (g *URLTestGroup) tryInterfaceUpdated(detour adapter.Outbound, realTag stri
 	needUpdate := detour.Type() == C.TypeHysteria || detour.Type() == C.TypeHysteria2 || detour.Type() == C.TypeTUIC
 	if isListener && needUpdate {
 		if outbound.OutboundHasConnections != nil {
-			if !outbound.OutboundHasConnections(realTag) {
+			has, _, _ := outbound.OutboundHasConnections(realTag)
+			if !has {
 				listener.InterfaceUpdated()
 			}
 		}

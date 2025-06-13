@@ -27,8 +27,10 @@ type TrackerMetadata struct {
 	Rule         adapter.Rule
 	Outbound     string
 	OutboundType string
-	User         string //karing
-	Protocol     string //karing
+	User         string     //karing
+	Protocol     string     //karing
+	UploadLast   *time.Time //karing
+	DownloadLast *time.Time //karing
 }
 
 func (t TrackerMetadata) MarshalJSON() ([]byte, error) {
@@ -157,12 +159,16 @@ func NewTCPTracker(conn net.Conn, manager *Manager, metadata adapter.InboundCont
 	*/
 	upload := new(atomic.Int64)
 	download := new(atomic.Int64)
+	uploadLast := new(time.Time)   //karing
+	downloadLast := new(time.Time) //karing
 	tracker := &TCPConn{
 		ExtendedConn: bufio.NewCounterConn(conn, []N.CountFunc{func(n int64) {
 			upload.Add(n)
+			*uploadLast = time.Now()                              //karing
 			manager.PushUploaded(n, outboundType == C.TypeDirect) //karing
 		}}, []N.CountFunc{func(n int64) {
 			download.Add(n)
+			*downloadLast = time.Now()                              //karing
 			manager.PushDownloaded(n, outboundType == C.TypeDirect) //karing
 		}}),
 		metadata: TrackerMetadata{
@@ -177,6 +183,8 @@ func NewTCPTracker(conn net.Conn, manager *Manager, metadata adapter.InboundCont
 			OutboundType: outboundType,
 			User:         metadata.User,     //karing
 			Protocol:     metadata.Protocol, //karing
+			UploadLast:   uploadLast,        //karing
+			DownloadLast: downloadLast,      //karing
 		},
 		manager: manager,
 	}
@@ -243,12 +251,16 @@ func NewUDPTracker(conn N.PacketConn, manager *Manager, metadata adapter.Inbound
 	*/
 	upload := new(atomic.Int64)
 	download := new(atomic.Int64)
+	uploadLast := new(time.Time)   //karing
+	downloadLast := new(time.Time) //karing
 	trackerConn := &UDPConn{
 		PacketConn: bufio.NewCounterPacketConn(conn, []N.CountFunc{func(n int64) {
 			upload.Add(n)
+			*uploadLast = time.Now()                              //karing
 			manager.PushUploaded(n, outboundType == C.TypeDirect) //karing
 		}}, []N.CountFunc{func(n int64) {
 			download.Add(n)
+			*downloadLast = time.Now()                              //karing
 			manager.PushDownloaded(n, outboundType == C.TypeDirect) //karing
 		}}),
 		metadata: TrackerMetadata{
@@ -263,6 +275,8 @@ func NewUDPTracker(conn N.PacketConn, manager *Manager, metadata adapter.Inbound
 			OutboundType: outboundType,
 			User:         metadata.User,     //karing
 			Protocol:     metadata.Protocol, //karing
+			UploadLast:   uploadLast,        //karing
+			DownloadLast: downloadLast,      //karing
 		},
 		manager: manager,
 	}

@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/common/taskmonitor"
@@ -16,7 +17,7 @@ import (
 	"github.com/sagernet/sing/common/logger"
 )
 
-type OutboundHasConnectionsFunc func(tag string) bool //karing
+type OutboundHasConnectionsFunc func(tag string) (bool, time.Time, time.Time) //karing
 var (
 	OutboundHasConnections OutboundHasConnectionsFunc //karing
 )

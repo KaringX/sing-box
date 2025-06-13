@@ -247,7 +247,8 @@ func getProxyDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 				}
 				if isListener && needUpdate {
 					if outbound.OutboundHasConnections != nil {
-						if !outbound.OutboundHasConnections(realTag) {
+						has, _, _ := outbound.OutboundHasConnections(realTag)
+						if !has {
 							listener.InterfaceUpdated()
 						}
 					}

@@ -157,13 +157,17 @@ func (m *Manager) Snapshot(includeConnections bool) *Snapshot { //karing
 		ThreadCount:         int32(gofree.ThreadNum()),     //karing
 	}
 }
-func (m *Manager) OutboundHasConnections(tag string) bool { //karing
+func (m *Manager) OutboundHasConnections(tag string) (bool, time.Time, time.Time) { //karing
 	hasConn := false
+	var uploadLast time.Time
+	var downloadLast time.Time
 	m.connections.Range(func(_ uuid.UUID, value Tracker) bool {
 		if info, istrack := value.(*TCPConn); istrack {
 			for _, data := range info.metadata.Chain {
 				if data == tag {
 					hasConn = true
+					uploadLast = *info.metadata.UploadLast
+					downloadLast = *info.metadata.DownloadLast
 					return false
 				}
 			}
@@ -173,6 +177,8 @@ func (m *Manager) OutboundHasConnections(tag string) bool { //karing
 			for _, data := range info.metadata.Chain {
 				if data == tag {
 					hasConn = true
+					uploadLast = *info.metadata.UploadLast
+					downloadLast = *info.metadata.DownloadLast
 					return false
 				}
 			}
@@ -181,7 +187,7 @@ func (m *Manager) OutboundHasConnections(tag string) bool { //karing
 
 		return true
 	})
-	return hasConn
+	return hasConn, uploadLast, downloadLast
 }
 func (m *Manager) ResetStatistic() {
 	m.uploadTotal.Store(0)
