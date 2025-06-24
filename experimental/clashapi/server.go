@@ -62,8 +62,8 @@ type Server struct {
 	externalUIDownloadURL    string
 	externalUIDownloadDetour string
 
-	access sync.RWMutex            //karing
-	ticks  map[*time.Ticker]func() //karing
+	access sync.RWMutex //karing
+	ticks  sync.Map     //karing
 }
 
 func NewServer(ctx context.Context, logFactory log.ObservableFactory, options option.ClashAPIOptions) (adapter.ClashServer, error) {
@@ -86,7 +86,7 @@ func NewServer(ctx context.Context, logFactory log.ObservableFactory, options op
 		externalController:       options.ExternalController != "",
 		externalUIDownloadURL:    options.ExternalUIDownloadURL,
 		externalUIDownloadDetour: options.ExternalUIDownloadDetour,
-		ticks:                    make(map[*time.Ticker]func()), //karing
+		ticks:                    sync.Map{}, //karing
 	}
 	s.urlTestHistory = service.FromContext[adapter.URLTestHistoryStorage](ctx)
 	if s.urlTestHistory == nil {
@@ -195,7 +195,7 @@ func (s *Server) Start(stage adapter.StartStage) error {
 }
 
 func (s *Server) Close() error {
-	s.CloseTicks()       //karing
+	s.RemoveTicks()      //karing
 	err := common.Close( //karing
 		common.PtrOrNil(s.httpServer),
 		s.trafficManager,
@@ -273,22 +273,19 @@ func (s *Server) RoutedPacketConnection(ctx context.Context, conn N.PacketConn, 
 func (s *Server) AddTick(tick *time.Ticker, onClose func()) { //karing
 	s.access.RLock()
 	defer s.access.RUnlock()
-	(s.ticks)[tick] = onClose
+	s.ticks.Store(tick, onClose)
 }
 
 func (s *Server) RemoveTick(tick *time.Ticker) { //karing
 	s.access.RLock()
 	defer s.access.RUnlock()
-	delete(s.ticks, tick)
+	s.ticks.Delete(tick)
 }
 
-func (s *Server) CloseTicks() { //karing
+func (s *Server) RemoveTicks() { //karing
 	s.access.RLock()
 	defer s.access.RUnlock()
-	for t, f := range s.ticks {
-		f()
-		delete(s.ticks, t)
-	}
+	s.ticks.Clear()
 }
 
 func authentication(serverSecret string) func(next http.Handler) http.Handler {
