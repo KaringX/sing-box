@@ -236,16 +236,16 @@ func (s *URLTest) Checking() bool { //karing
 
 func (s *URLTest) recheckSelectedOutboundTCP(outbound adapter.Outbound) { //karing
 	if outbound == s.group.selectedOutboundTCP {
-		s.logger.Warn("URLTest TCP failed: ", s.Tag(), " (", s.outboundToString(s.group.selectedOutboundTCP), "), will performUpdateCheck")
+		s.logger.Warn("URLTest TCP failed: ", s.Tag(), " (", s.outboundToString(outbound), "), will performUpdateCheck")
 		s.group.selectedOutboundTCP = nil
-		s.group.performUpdateCheck((outbound == s.group.selectedOutboundTCP) && !s.Checking())
+		s.group.performUpdateCheck(!s.Checking())
 	}
 }
 func (s *URLTest) recheckSelectedOutboundUDP(outbound adapter.Outbound, from string) { //karing
 	if outbound == s.group.selectedOutboundUDP {
-		s.logger.Warn("URLTest UDP ", from, " failed: ", s.Tag(), " (", s.outboundToString(s.group.selectedOutboundUDP), "), will performUpdateCheck")
+		s.logger.Warn("URLTest UDP ", from, " failed: ", s.Tag(), " (", s.outboundToString(outbound), "), will performUpdateCheck")
 		s.group.selectedOutboundUDP = nil
-		s.group.performUpdateCheck((outbound == s.group.selectedOutboundUDP) && !s.Checking())
+		s.group.performUpdateCheck(!s.Checking())
 	}
 }
 
@@ -272,6 +272,9 @@ func (s *URLTest) InterfaceUpdated() { //karing
 		return
 	}
 	if !s.reTestIfNetworkUpdate {
+		return
+	}
+	if s.group == nil {
 		return
 	}
 	go s.group.CheckOutbounds(true)
@@ -402,16 +405,18 @@ func (g *URLTestGroup) Select(network string) (adapter.Outbound, bool) {
 	var minOutbound adapter.Outbound
 	switch network {
 	case N.NetworkTCP:
-		if g.selectedOutboundTCP != nil {
-			if history := g.history.LoadURLTestHistory(RealTag(g.selectedOutboundTCP)); history != nil {
-				minOutbound = g.selectedOutboundTCP
+		selectOutbound := g.selectedOutboundTCP //karing
+		if selectOutbound != nil {              //karing
+			if history := g.history.LoadURLTestHistory(RealTag(selectOutbound)); history != nil { //karing
+				minOutbound = selectOutbound //karing
 				minDelay = history.Delay
 			}
 		}
 	case N.NetworkUDP:
-		if g.selectedOutboundUDP != nil {
-			if history := g.history.LoadURLTestHistory(RealTag(g.selectedOutboundUDP)); history != nil {
-				minOutbound = g.selectedOutboundUDP
+		selectOutbound := g.selectedOutboundUDP //karing
+		if selectOutbound != nil {
+			if history := g.history.LoadURLTestHistory(RealTag(selectOutbound)); history != nil { //karing
+				minOutbound = selectOutbound //karing
 				minDelay = history.Delay
 			}
 		}
@@ -567,11 +572,13 @@ func (g *URLTestGroup) HealthCheck(realTag string) { //karing
 
 func (g *URLTestGroup) HealthCheckSelected() { //karing
 	tags := make(map[string]bool)
-	if g.selectedOutboundTCP != nil && g.isProxyOutbound(g.selectedOutboundTCP.Type()) {
-		tags[RealTag(g.selectedOutboundTCP)] = true
+	selectedOutboundTCP := g.selectedOutboundTCP
+	selectedOutboundUDP := g.selectedOutboundUDP
+	if selectedOutboundTCP != nil && g.isProxyOutbound(selectedOutboundTCP.Type()) {
+		tags[RealTag(selectedOutboundTCP)] = true
 	}
-	if g.selectedOutboundUDP != nil && g.isProxyOutbound(g.selectedOutboundUDP.Type()) {
-		tags[RealTag(g.selectedOutboundUDP)] = true
+	if selectedOutboundUDP != nil && g.isProxyOutbound(selectedOutboundUDP.Type()) {
+		tags[RealTag(selectedOutboundUDP)] = true
 	}
 	for tag := range tags {
 		g.HealthCheck(tag)
