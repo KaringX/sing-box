@@ -119,10 +119,10 @@ func (s *URLTest) Close() error {
 }
 
 func (s *URLTest) Now() string {
-	if s.group.selectedOutboundTCP != nil {
-		return s.group.selectedOutboundTCP.Tag()
-	} else if s.group.selectedOutboundUDP != nil {
-		return s.group.selectedOutboundUDP.Tag()
+	if outbound := s.group.selectedOutboundTCP; outbound != nil { //karing
+		return outbound.Tag() //karing
+	} else if outbound := s.group.selectedOutboundUDP; outbound != nil { //karing
+		return outbound.Tag() //karing
 	}
 	return ""
 }
@@ -397,6 +397,7 @@ func (g *URLTestGroup) Close() error {
 	g.ticker.Stop()
 	g.pause.UnregisterCallback(g.pauseCallback)
 	close(g.close)
+	g.outbounds = make([]adapter.Outbound, 0) //karing
 	return nil
 }
 
@@ -437,6 +438,9 @@ func (g *URLTestGroup) Select(network string) (adapter.Outbound, bool) {
 			minDelay = history.Delay
 			minOutbound = detour
 		}
+	}
+	if len(g.outbounds) == 0 { //karing
+		return nil, false
 	}
 	if minOutbound == nil {
 		if g.defaultTag != "" { //karing
@@ -753,7 +757,7 @@ func (g *URLTestGroup) performUpdateCheck(retestGroupIfAllFailed bool) {
 		pauseManager := service.FromContext[pause.Manager](g.ctx)
 		if pauseManager != nil && !pauseManager.IsNetworkPaused() && !pauseManager.IsDevicePaused() {
 			g.logger.WarnContext(g.ctx, "URLTest performUpdateCheck need retest")
-			g.CheckOutbounds(true)
+			go g.CheckOutbounds(true)
 		}
 	}
 }

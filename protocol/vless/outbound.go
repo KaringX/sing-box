@@ -77,7 +77,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		case "xudp":
 			outbound.xudp = true
 		default:
-			return empty, E.New("unknown packet encoding: ", options.PacketEncoding) //karing
+			return empty, E.New("unknown packet encoding: ", *options.PacketEncoding) //karing
 		}
 	}
 	outbound.client, err = vless.NewClient(options.UUID, options.Flow, logger)
