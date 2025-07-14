@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"sort"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -204,9 +203,9 @@ func getProxyDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 	return func(w http.ResponseWriter, r *http.Request) {
 		query := r.URL.Query()
 		url := query.Get("url")
-		if strings.HasPrefix(url, "http://") {
-			url = ""
-		}
+		//if strings.HasPrefix(url, "http://") {//karing
+		//url = ""
+		//}
 		timeout, err := strconv.ParseInt(query.Get("timeout"), 10, 32) //karing
 		if err != nil {
 			render.Status(r, http.StatusBadRequest)
