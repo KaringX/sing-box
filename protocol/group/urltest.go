@@ -166,7 +166,7 @@ func (s *URLTest) DialContext(ctx context.Context, network string, destination M
 		return s.group.interruptGroup.NewConn(conn, interrupt.IsExternalConnectionFromContext(ctx)), nil
 	}
 
-	s.logger.ErrorContext(ctx, "["+outbound.Tag()+"] when URLTest.DialContext", err) //karing
+	s.logger.ErrorContext(ctx, "DialContext ["+outbound.Tag()+"] :", err) //karing
 	//s.group.history.DeleteURLTestHistory(outbound.Tag()) //karing
 	s.group.history.StoreURLTestHistory(realTag, &adapter.URLTestHistory{ //karing
 		Time:  time.Now(),
@@ -198,7 +198,7 @@ func (s *URLTest) ListenPacket(ctx context.Context, destination M.Socksaddr) (ne
 		return s.group.interruptGroup.NewPacketConn(conn, interrupt.IsExternalConnectionFromContext(ctx)), nil
 	}
 
-	s.logger.ErrorContext(ctx, "["+outbound.Tag()+"] when URLTest.ListenPacket", err) //karing
+	s.logger.ErrorContext(ctx, "ListenPacket ["+outbound.Tag()+"] :", err) //karing
 	//s.group.history.DeleteURLTestHistory(outbound.Tag()) //karing
 	s.group.history.StoreURLTestHistory(realTag, &adapter.URLTestHistory{ //karing
 		Time:  time.Now(),
