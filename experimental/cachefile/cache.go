@@ -171,7 +171,9 @@ func (c *CacheFile) Close() error {
 	if c.DB == nil {
 		return nil
 	}
-	return c.DB.Close()
+	err := c.DB.Close() //karing
+	c.DB = nil          //karing
+	return err          //karing
 }
 
 func (c *CacheFile) StoreFakeIP() bool {
@@ -179,6 +181,9 @@ func (c *CacheFile) StoreFakeIP() bool {
 }
 
 func (c *CacheFile) LoadMode() string {
+	if c.DB == nil { //karing
+		return ""
+	}
 	var mode string
 	c.DB.View(func(t *bbolt.Tx) error {
 		bucket := t.Bucket(bucketMode)
@@ -198,6 +203,9 @@ func (c *CacheFile) LoadMode() string {
 }
 
 func (c *CacheFile) StoreMode(mode string) error {
+	if c.DB == nil { //karing
+		return nil
+	}
 	return c.DB.Batch(func(t *bbolt.Tx) error {
 		bucket, err := t.CreateBucketIfNotExists(bucketMode)
 		if err != nil {
@@ -234,6 +242,9 @@ func (c *CacheFile) createBucket(t *bbolt.Tx, key []byte) (*bbolt.Bucket, error)
 }
 
 func (c *CacheFile) LoadSelected(group string) string {
+	if c.DB == nil { //karing
+		return ""
+	}
 	var selected string
 	c.DB.View(func(t *bbolt.Tx) error {
 		bucket := c.bucket(t, bucketSelected)
@@ -250,6 +261,9 @@ func (c *CacheFile) LoadSelected(group string) string {
 }
 
 func (c *CacheFile) StoreSelected(group, selected string) error {
+	if c.DB == nil { //karing
+		return nil
+	}
 	return c.DB.Batch(func(t *bbolt.Tx) error {
 		bucket, err := c.createBucket(t, bucketSelected)
 		if err != nil {
@@ -260,6 +274,9 @@ func (c *CacheFile) StoreSelected(group, selected string) error {
 }
 
 func (c *CacheFile) LoadGroupExpand(group string) (isExpand bool, loaded bool) {
+	if c.DB == nil { //karing
+		return false, false
+	}
 	c.DB.View(func(t *bbolt.Tx) error {
 		bucket := c.bucket(t, bucketExpand)
 		if bucket == nil {
@@ -276,6 +293,9 @@ func (c *CacheFile) LoadGroupExpand(group string) (isExpand bool, loaded bool) {
 }
 
 func (c *CacheFile) StoreGroupExpand(group string, isExpand bool) error {
+	if c.DB == nil { //karing
+		return nil
+	}
 	return c.DB.Batch(func(t *bbolt.Tx) error {
 		bucket, err := c.createBucket(t, bucketExpand)
 		if err != nil {
@@ -290,6 +310,9 @@ func (c *CacheFile) StoreGroupExpand(group string, isExpand bool) error {
 }
 
 func (c *CacheFile) LoadRuleSet(tag string) *adapter.SavedBinary {
+	if c.DB == nil { //karing
+		return nil
+	}
 	var savedSet adapter.SavedBinary
 	err := c.DB.View(func(t *bbolt.Tx) error {
 		bucket := c.bucket(t, bucketRuleSet)
@@ -309,6 +332,9 @@ func (c *CacheFile) LoadRuleSet(tag string) *adapter.SavedBinary {
 }
 
 func (c *CacheFile) SaveRuleSet(tag string, set *adapter.SavedBinary) error {
+	if c.DB == nil { //karing
+		return nil
+	}
 	return c.DB.Batch(func(t *bbolt.Tx) error {
 		bucket, err := c.createBucket(t, bucketRuleSet)
 		if err != nil {
@@ -323,6 +349,9 @@ func (c *CacheFile) SaveRuleSet(tag string, set *adapter.SavedBinary) error {
 }
 
 func (c *CacheFile) DeleteRuleSet(tag string) { //karing
+	if c.DB == nil { //karing
+		return
+	}
 	c.DB.View(func(t *bbolt.Tx) error {
 		bucket := c.bucket(t, bucketRuleSet)
 		if bucket == nil {
@@ -334,6 +363,9 @@ func (c *CacheFile) DeleteRuleSet(tag string) { //karing
 }
 
 func (c *CacheFile) HasRuleSet(tag string) bool { //karing
+	if c.DB == nil { //karing
+		return false
+	}
 	err := c.DB.View(func(t *bbolt.Tx) error {
 		bucket := c.bucket(t, bucketRuleSet)
 		if bucket == nil {
@@ -350,6 +382,9 @@ func (c *CacheFile) HasRuleSet(tag string) bool { //karing
 
 func (c *CacheFile) GetAllRuleSetKeys() map[string]bool { //karing
 	keys := make(map[string]bool)
+	if c.DB == nil {
+		return keys
+	}
 	c.DB.View(func(t *bbolt.Tx) error {
 		bucket := c.bucket(t, bucketRuleSet)
 		if bucket == nil {
