@@ -243,7 +243,6 @@ func (s *Server) SetMode(newMode string) {
 		}
 	}
 	s.dnsRouter.ClearCache()
-
 	cacheFile := service.FromContext[adapter.CacheFile](s.ctx)
 	if cacheFile != nil {
 		err := cacheFile.StoreMode(newMode)
@@ -359,9 +358,9 @@ func traffic(server *Server, trafficManager *trafficontrol.Manager) func(w http.
 
 		tick := time.NewTicker(time.Second)
 		closed := false //karing
-		server.AddTick(tick, func() {
+		server.AddTick(tick, func() { //karing
 			closed = true
-		}) //karing
+		})
 		defer func() { //karing
 			server.RemoveTick(tick)
 			tick.Stop()
@@ -406,7 +405,7 @@ type Log struct {
 	Payload string `json:"payload"`
 }
 
-func getLogs(server *Server, logFactory log.ObservableFactory) func(w http.ResponseWriter, r *http.Request) {
+func getLogs(server *Server, logFactory log.ObservableFactory) func(w http.ResponseWriter, r *http.Request) { //karing
 	return func(w http.ResponseWriter, r *http.Request) {
 		levelText := r.URL.Query().Get("level")
 		if levelText == "" {

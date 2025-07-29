@@ -172,8 +172,8 @@ func New(options Options) (box *Box, err error) { //karing
 	}
 	logFactory.Logger().InfoContext(ctx, "box new") //karing
 
-	var internalServices []adapter.LifecycleService //karing
-	if needCacheFile {                              //karing
+	var internalServices []adapter.LifecycleService
+	if needCacheFile { //karing
 		cacheFile := cachefile.New(ctx, common.PtrValueOrDefault(experimentalOptions.CacheFile))
 		service.MustRegister[adapter.CacheFile](ctx, cacheFile)
 		internalServices = append(internalServices, cacheFile)
@@ -182,22 +182,6 @@ func New(options Options) (box *Box, err error) { //karing
 			return nil, E.Cause(err, "cacheFile load failed")
 		}
 	}
-
-	//var internalServices []adapter.LifecycleService //karing
-	certificateOptions := common.PtrValueOrDefault(options.Certificate)
-	if C.IsAndroid || certificateOptions.Store != "" && certificateOptions.Store != C.CertificateStoreSystem ||
-		len(certificateOptions.Certificate) > 0 ||
-		len(certificateOptions.CertificatePath) > 0 ||
-		len(certificateOptions.CertificateDirectoryPath) > 0 {
-		certificateStore, err := certificate.NewStore(ctx, logFactory.NewLogger("certificate"), certificateOptions)
-		if err != nil {
-			return nil, err
-		}
-		service.MustRegister[adapter.CertificateStore](ctx, certificateStore)
-		internalServices = append(internalServices, certificateStore)
-	}
-
-	var internalServices []adapter.LifecycleService
 	certificateOptions := common.PtrValueOrDefault(options.Certificate)
 	if C.IsAndroid || certificateOptions.Store != "" && certificateOptions.Store != C.CertificateStoreSystem ||
 		len(certificateOptions.Certificate) > 0 ||
@@ -337,24 +321,6 @@ func New(options Options) (box *Box, err error) { //karing
 		)
 		if err != nil {
 			return nil, E.Cause(err, "initialize outbound[", i, "][", tag, "]") //karing
-		}
-	}
-	for i, serviceOptions := range options.Services {
-		var tag string
-		if serviceOptions.Tag != "" {
-			tag = serviceOptions.Tag
-		} else {
-			tag = F.ToString(i)
-		}
-		err = serviceManager.Create(
-			ctx,
-			logFactory.NewLogger(F.ToString("service/", serviceOptions.Type, "[", tag, "]")),
-			tag,
-			serviceOptions.Type,
-			serviceOptions.Options,
-		)
-		if err != nil {
-			return nil, E.Cause(err, "initialize service[", i, "]")
 		}
 	}
 	for i, serviceOptions := range options.Services {
@@ -521,8 +487,6 @@ func (s *Box) preStart() error {
 	monitor.Finish()
 	if err != nil {
 		return E.Cause(err, "start logger")
-	}
-	err = adapter.StartNamed(adapter.StartStateInitialize, s.internalService) // cache-file clash-api v2ray-api
 	}*/
 	err := adapter.StartNamed(adapter.StartStateInitialize, s.internalService) //karing cache-file clash-api v2ray-api
 	if err != nil {

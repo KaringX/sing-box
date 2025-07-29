@@ -268,7 +268,6 @@ func (m *Manager) Create(ctx context.Context, router adapter.Router, logger log.
 		m.logger.Error("create outbound failed: ", outbound.Tag(), " -> ", err) //karing
 		//return err //karing
 	}
-
 	if m.started {
 		for _, stage := range adapter.ListStartStages {
 			err = adapter.LegacyStart(outbound, stage)

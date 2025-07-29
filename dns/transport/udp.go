@@ -110,7 +110,6 @@ func (t *UDPTransport) exchange(ctx context.Context, message *mDNS.Msg) (*mDNS.M
 	if err != nil {
 		return nil, err
 	}
-
 	buffer := buf.NewSize(1 + message.Len())
 	defer buffer.Release()
 	exMessage := *message

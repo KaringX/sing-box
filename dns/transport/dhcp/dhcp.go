@@ -66,14 +66,15 @@ func NewTransport(ctx context.Context, logger log.ContextLogger, tag string, opt
 }
 
 func (t *Transport) Start(stage adapter.StartStage) error {
-	/*if stage != adapter.StartStateStart { //karing
+	/* //karing
+	if stage != adapter.StartStateStart {
 		return nil
 	}
 	err := t.fetchServers()
 	if err != nil {
 		return err
 	}
-	}*/
+	*/
 	go func() { //karing
 		t.fetchServers()
 	}()

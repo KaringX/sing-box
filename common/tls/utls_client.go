@@ -69,7 +69,8 @@ func (c *UTLSClientConfig) Client(conn net.Conn) (Conn, error) {
 			return nil, err
 		}
 	}
-	return &utlsALPNWrapper{utlsConnWrapper{utls.UClient(conn, c.config.Clone(), c.id)}, c.config.NextProtos}, nil
+	//return &utlsALPNWrapper{utlsConnWrapper{utls.UClient(conn, c.config.Clone(), c.id)}, c.config.NextProtos}, nil //karing
+	return &utlsALPNWrapper{utlsConnWrapper{UConn: uConn}, e.config.NextProtos}, nil //karing
 }
 
 func (c *UTLSClientConfig) SetSessionIDGenerator(generator func(clientHello []byte, sessionID []byte) error) {
@@ -78,7 +79,8 @@ func (c *UTLSClientConfig) SetSessionIDGenerator(generator func(clientHello []by
 
 func (c *UTLSClientConfig) Clone() Config {
 	return &UTLSClientConfig{
-		c.ctx, c.config.Clone(), c.id, c.fragment, c.fragmentFallbackDelay, c.recordFragment,
+		c.ctx, c.config.Clone(), c.id, c.fragment, c.fragmentFallbackDelay, c.recordFragment, 
+		paddingSize: e.paddingSize, //hiddify 
 	}
 }
 

@@ -3,7 +3,6 @@ package local
 import (
 	"context"
 	"math/rand"
-
 	"time"
 
 	"github.com/sagernet/sing-box/adapter"

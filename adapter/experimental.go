@@ -20,7 +20,7 @@ type ClashServer interface {
 type URLTestHistory struct {
 	Time  time.Time `json:"time"`
 	Delay uint16    `json:"delay"`
-	Err   string    `json:"err,omitempty"`
+	Err   string    `json:"err,omitempty"` // karing
 }
 
 type URLTestHistoryStorage interface {

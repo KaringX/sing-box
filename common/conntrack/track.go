@@ -65,8 +65,8 @@ func Close() {
 	connAccess.Lock()
 	defer connAccess.Unlock()
 	for element := openConnection.Front(); element != nil; element = element.Next() {
-		common.Close(element.Value.Closer)
-		element.Value.Closer = nil
+		common.Close(element.Value.Closer) //karing
+		element.Value.Closer = nil //karing
 		element.Value.Outbound = "" //karing
 	}
 	openConnection.Init()

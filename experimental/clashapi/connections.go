@@ -70,9 +70,9 @@ func getConnections(server *Server, trafficManager *trafficontrol.Manager) func(
 
 		tick := time.NewTicker(time.Millisecond * time.Duration(interval))
 		closed := false //karing
-		server.AddTick(tick, func() {
+		server.AddTick(tick, func() { //karing
 			closed = true
-		}) //karing
+		})
 		defer func() { //karing
 			server.RemoveTick(tick)
 			tick.Stop()
