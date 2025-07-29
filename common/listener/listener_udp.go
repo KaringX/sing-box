@@ -49,11 +49,17 @@ func (l *Listener) ListenUDP() (net.PacketConn, error) {
 		return listenConfig.ListenPacket(l.ctx, M.NetworkFromNetAddr(N.NetworkUDP, bindAddr.Addr), bindAddr.String())
 	})
 	if err != nil {
+		if l.router != nil { //karing
+			info, err1 := l.router.FindProcessInfo(l.ctx, N.NetworkTCP, bindAddr.AddrPort())
+			if err1 == nil {
+				err = E.Cause(err, "port[", bindAddr.AddrPort().Port(), "] is occupied by[", info.ProcessPath, info.PackageName, "] ")
+			}
+		}
 		return nil, err
 	}
 	l.udpConn = udpConn.(*net.UDPConn)
 	l.udpAddr = bindAddr
-	l.logger.Info("udp server started at ", udpConn.LocalAddr())
+	l.logger.InfoContext(l.ctx, "udp server started at ", udpConn.LocalAddr()) //karing
 	return udpConn, err
 }
 

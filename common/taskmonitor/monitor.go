@@ -8,9 +8,10 @@ import (
 )
 
 type Monitor struct {
-	logger  logger.Logger
-	timeout time.Duration
-	timer   *time.Timer
+	logger   logger.Logger
+	timeout  time.Duration
+	timer    *time.Timer
+	taskName string //karing
 }
 
 func New(logger logger.Logger, timeout time.Duration) *Monitor {
@@ -21,6 +22,7 @@ func New(logger logger.Logger, timeout time.Duration) *Monitor {
 }
 
 func (m *Monitor) Start(taskName ...any) {
+	m.taskName = F.ToString(taskName...) //karing
 	m.timer = time.AfterFunc(m.timeout, func() {
 		m.logger.Warn(F.ToString(taskName...), " take too much time to finish!")
 	})

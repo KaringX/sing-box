@@ -38,6 +38,9 @@ func (s *CommandServer) handleSetClashMode(conn net.Conn) error {
 	if service == nil {
 		return writeError(conn, E.New("service not ready"))
 	}
+	if service.clashServer == nil { //karing
+		return writeError(conn, E.New("service.clashServer closed"))
+	}
 	service.clashServer.(*clashapi.Server).SetMode(newMode)
 	return writeError(conn, nil)
 }

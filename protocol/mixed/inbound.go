@@ -50,6 +50,7 @@ func NewInbound(ctx context.Context, router adapter.Router, logger log.ContextLo
 		ConnectionHandler: inbound,
 		SetSystemProxy:    options.SetSystemProxy,
 		SystemProxySOCKS:  true,
+		Router:            router, //karing
 	})
 	return inbound, nil
 }

@@ -57,7 +57,7 @@ func NewEndpoint(ctx context.Context, router adapter.Router, logger log.ContextL
 		ResolverOnDetour: true,
 	})
 	if err != nil {
-		return nil, err
+		return ep, err //karing
 	}
 	var udpTimeout time.Duration
 	if options.UDPTimeout != 0 {
@@ -99,16 +99,26 @@ func NewEndpoint(ctx context.Context, router adapter.Router, logger log.ContextL
 				Reserved:                    it.Reserved,
 			}
 		}),
-		Workers: options.Workers,
+		Workers:          options.Workers,
+		FakePackets:      options.FakePackets,      //hiddify
+		FakePacketsSize:  options.FakePacketsSize,  //hiddify
+		FakePacketsDelay: options.FakePacketsDelay, //hiddify
+		FakePacketsMode:  options.FakePacketsMode,  //hiddify
 	})
 	if err != nil {
-		return nil, err
+		return ep, err //karing
 	}
 	ep.endpoint = wgEndpoint
 	return ep, nil
 }
 
 func (w *Endpoint) Start(stage adapter.StartStage) error {
+	if w.GetParseErr() != nil { //karing
+		return nil
+	}
+	if w.endpoint == nil { //karing
+		return nil
+	}
 	switch stage {
 	case adapter.StartStateStart:
 		return w.endpoint.Start(false)
@@ -119,7 +129,18 @@ func (w *Endpoint) Start(stage adapter.StartStage) error {
 }
 
 func (w *Endpoint) Close() error {
+	if w.endpoint == nil { //karing
+		return nil
+	}
 	return w.endpoint.Close()
+}
+
+func (w *Endpoint) InterfaceUpdated() {
+	if w.endpoint == nil { //karing
+		return
+	}
+	w.endpoint.BindUpdate()
+	return
 }
 
 func (w *Endpoint) PrepareConnection(network string, source M.Socksaddr, destination M.Socksaddr) error {
@@ -133,6 +154,9 @@ func (w *Endpoint) PrepareConnection(network string, source M.Socksaddr, destina
 }
 
 func (w *Endpoint) NewConnectionEx(ctx context.Context, conn net.Conn, source M.Socksaddr, destination M.Socksaddr, onClose N.CloseHandlerFunc) {
+	if w.GetParseErr() != nil { //karing
+		return
+	}
 	var metadata adapter.InboundContext
 	metadata.Inbound = w.Tag()
 	metadata.InboundType = w.Type()

@@ -14,6 +14,7 @@ import (
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing-box/protocol/tuic"
+	"github.com/sagernet/sing-box/protocol/wireguard/houtbound" //hiddify
 	"github.com/sagernet/sing-quic/hysteria"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/bufio"
@@ -34,22 +35,31 @@ var (
 
 type Outbound struct {
 	outbound.Adapter
-	logger logger.ContextLogger
-	client *hysteria.Client
+	logger     logger.ContextLogger
+	client     *hysteria.Client
+	hforwarder *houtbound.Forwarder //hiddify
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.HysteriaOutboundOptions) (adapter.Outbound, error) {
+	empty := &Outbound{ //karing
+		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeHysteria, tag, []string{}, options.DialerOptions),
+		logger:  logger,
+	}
 	options.UDPFragmentDefault = true
 	if options.TLS == nil || !options.TLS.Enabled {
-		return nil, C.ErrTLSRequired
+		return empty, C.ErrTLSRequired //karing
+	}
+	hforwarder, err := houtbound.ApplyTurnRelay(houtbound.CommonTurnRelayOptions{ServerOptions: options.ServerOptions, TurnRelayOptions: options.TurnRelay}) //hiddify
+	if err != nil {                                                                                                                                          //karing
+		return empty, err
 	}
 	tlsConfig, err := tls.NewClient(ctx, options.Server, common.PtrValueOrDefault(options.TLS))
 	if err != nil {
-		return nil, err
+		return empty, err //karing
 	}
 	outboundDialer, err := dialer.New(ctx, options.DialerOptions, options.ServerIsDomain())
 	if err != nil {
-		return nil, err
+		return empty, err //karing
 	}
 	networkList := options.Network.Build()
 	var password string
@@ -87,16 +97,20 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		DisableMTUDiscovery: options.DisableMTUDiscovery,
 	})
 	if err != nil {
-		return nil, err
+		return empty, err //karing
 	}
 	return &Outbound{
-		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeHysteria, tag, networkList, options.DialerOptions),
-		logger:  logger,
-		client:  client,
+		Adapter:    outbound.NewAdapterWithDialerOptions(C.TypeHysteria, tag, networkList, options.DialerOptions),
+		logger:     logger,
+		client:     client,
+		hforwarder: hforwarder, //hiddify
 	}, nil
 }
 
 func (h *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
+	if h.GetParseErr() != nil { //karing
+		return nil, h.GetParseErr()
+	}
 	switch N.NetworkName(network) {
 	case N.NetworkTCP:
 		h.logger.InfoContext(ctx, "outbound connection to ", destination)
@@ -113,14 +127,23 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 }
 
 func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
+	if h.GetParseErr() != nil { //karing
+		return nil, h.GetParseErr()
+	}
 	h.logger.InfoContext(ctx, "outbound packet connection to ", destination)
 	return h.client.ListenPacket(ctx, destination)
 }
 
 func (h *Outbound) InterfaceUpdated() {
+	if h.client == nil { //karing
+		return
+	}
 	h.client.CloseWithError(E.New("network changed"))
 }
 
 func (h *Outbound) Close() error {
+	if h.client == nil { //karing
+		return nil
+	}
 	return h.client.CloseWithError(os.ErrClosed)
 }

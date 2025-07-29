@@ -58,10 +58,20 @@ func (r *Router) RouteConnectionEx(ctx context.Context, conn net.Conn, metadata 
 }
 
 func (r *Router) routeConnection(ctx context.Context, conn net.Conn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) error {
+	if r.pauseManager == nil { //karing
+		return E.New("TCP: route.pauseManager closed")
+	}
+	if r.pauseManager.IsNetworkPaused() { //karing
+		return E.New("reject connection to ", metadata.Destination, " while network paused")
+	}
+
 	//nolint:staticcheck
 	if metadata.InboundDetour != "" {
 		if metadata.LastInbound == metadata.InboundDetour {
 			return E.New("routing loop on detour: ", metadata.InboundDetour)
+		}
+		if r.inbound == nil { //karing
+			return E.New("TCP: route.inbound closed")
 		}
 		detour, loaded := r.inbound.Get(metadata.InboundDetour)
 		if !loaded {
@@ -100,6 +110,9 @@ func (r *Router) routeConnection(ctx context.Context, conn net.Conn, metadata ad
 	if selectedRule != nil {
 		switch action := selectedRule.Action().(type) {
 		case *R.RuleActionRoute:
+			if r.outbound == nil { //karing
+				return E.New("TCP: route.outbound closed")
+			}
 			var loaded bool
 			selectedOutbound, loaded = r.outbound.Outbound(action.Outbound)
 			if !loaded {
@@ -122,6 +135,9 @@ func (r *Router) routeConnection(ctx context.Context, conn net.Conn, metadata ad
 		}
 	}
 	if selectedRule == nil {
+		if r.outbound == nil { //karing
+			return E.New("TCP: route.outbound closed")
+		}
 		defaultOutbound := r.outbound.Default()
 		if !common.Contains(defaultOutbound.Network(), N.NetworkTCP) {
 			buf.ReleaseMulti(buffers)
@@ -139,6 +155,9 @@ func (r *Router) routeConnection(ctx context.Context, conn net.Conn, metadata ad
 	if outboundHandler, isHandler := selectedOutbound.(adapter.ConnectionHandlerEx); isHandler {
 		outboundHandler.NewConnectionEx(ctx, conn, metadata, onClose)
 	} else {
+		if r.connection == nil { //karing
+			return E.New("TCP: route.connection closed")
+		}
 		r.connection.NewConnection(ctx, selectedOutbound, conn, metadata, onClose)
 	}
 	return nil
@@ -177,10 +196,19 @@ func (r *Router) RoutePacketConnectionEx(ctx context.Context, conn N.PacketConn,
 }
 
 func (r *Router) routePacketConnection(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) error {
+	if r.pauseManager == nil { //karing
+		return E.New("UDP: route.pauseManager closed")
+	}
+	if r.pauseManager.IsNetworkPaused() { //karing
+		return E.New("reject packet connection to ", metadata.Destination, " while network paused")
+	}
 	//nolint:staticcheck
 	if metadata.InboundDetour != "" {
 		if metadata.LastInbound == metadata.InboundDetour {
 			return E.New("routing loop on detour: ", metadata.InboundDetour)
+		}
+		if r.inbound == nil { //karing
+			return E.New("UDP: route.inbound closed")
 		}
 		detour, loaded := r.inbound.Get(metadata.InboundDetour)
 		if !loaded {
@@ -215,6 +243,9 @@ func (r *Router) routePacketConnection(ctx context.Context, conn N.PacketConn, m
 	if selectedRule != nil {
 		switch action := selectedRule.Action().(type) {
 		case *R.RuleActionRoute:
+			if r.outbound == nil { //karing
+				return E.New("UDP: route.outbound closed")
+			}
 			var loaded bool
 			selectedOutbound, loaded = r.outbound.Outbound(action.Outbound)
 			if !loaded {
@@ -233,6 +264,9 @@ func (r *Router) routePacketConnection(ctx context.Context, conn N.PacketConn, m
 		}
 	}
 	if selectedRule == nil || selectReturn {
+		if r.outbound == nil { //karing
+			return E.New("UDP: route.outbound closed")
+		}
 		defaultOutbound := r.outbound.Default()
 		if !common.Contains(defaultOutbound.Network(), N.NetworkUDP) {
 			N.ReleaseMultiPacketBuffer(packetBuffers)
@@ -253,6 +287,9 @@ func (r *Router) routePacketConnection(ctx context.Context, conn N.PacketConn, m
 	if outboundHandler, isHandler := selectedOutbound.(adapter.PacketConnectionHandlerEx); isHandler {
 		outboundHandler.NewPacketConnectionEx(ctx, conn, metadata, onClose)
 	} else {
+		if r.connection == nil { //karing
+			return E.New("UDP: route.connection closed")
+		}
 		r.connection.NewPacketConnection(ctx, selectedOutbound, conn, metadata, onClose)
 	}
 	return nil
@@ -289,18 +326,18 @@ func (r *Router) matchRule(
 		}
 		processInfo, fErr := process.FindProcessInfo(r.processSearcher, ctx, metadata.Network, metadata.Source.AddrPort(), originDestination)
 		if fErr != nil {
-			r.logger.InfoContext(ctx, "failed to search process: ", fErr)
+			r.logger.InfoContext(ctx, "failed to search process: ", fErr, " from: ", metadata.Network, " ", metadata.Source.AddrPort()) //karing
 		} else {
 			if processInfo.ProcessPath != "" {
 				if processInfo.User != "" {
-					r.logger.InfoContext(ctx, "found process path: ", processInfo.ProcessPath, ", user: ", processInfo.User)
+					r.logger.InfoContext(ctx, "found process path: ", processInfo.ProcessPath, " from: ", metadata.Network, " ", metadata.Source.AddrPort(), ", user: ", processInfo.User) //karing
 				} else if processInfo.UserId != -1 {
-					r.logger.InfoContext(ctx, "found process path: ", processInfo.ProcessPath, ", user id: ", processInfo.UserId)
+					r.logger.InfoContext(ctx, "found process path: ", processInfo.ProcessPath, " from: ", metadata.Network, " ", metadata.Source.AddrPort(), ", user id: ", processInfo.UserId) //karing
 				} else {
-					r.logger.InfoContext(ctx, "found process path: ", processInfo.ProcessPath)
+					r.logger.InfoContext(ctx, "found process path: ", processInfo.ProcessPath, " from: ", metadata.Network, " ", metadata.Source.AddrPort()) //karing
 				}
 			} else if processInfo.PackageName != "" {
-				r.logger.InfoContext(ctx, "found package name: ", processInfo.PackageName)
+				r.logger.InfoContext(ctx, "found package name: ", processInfo.PackageName, " from: ", metadata.Network, " ", metadata.Source.AddrPort()) //karing
 			} else if processInfo.UserId != -1 {
 				if processInfo.User != "" {
 					r.logger.InfoContext(ctx, "found user: ", processInfo.User)
@@ -484,6 +521,24 @@ match:
 			break match
 		}
 	}
+	//karing begin
+	meta := "[" + "inbound:" + metadata.Inbound
+	if metadata.ProcessInfo != nil {
+		if len(metadata.ProcessInfo.ProcessPath) > 0 {
+			meta += ",processPath:" + metadata.ProcessInfo.ProcessPath
+		}
+		if len(metadata.ProcessInfo.PackageName) > 0 {
+			meta += ",packageName:" + metadata.ProcessInfo.PackageName
+		}
+	}
+	meta += ",destination domain:" + metadata.Domain + ",destination ip:" + metadata.Destination.String() + "] "
+	if selectedRule != nil {
+		r.logger.DebugContext(ctx, meta, "matchRule ", selectedRule, " => ", selectedRule.Action())
+	} else {
+		r.logger.DebugContext(ctx, meta, "matchRule ", "final")
+	}
+	//karing end
+
 	return
 }
 

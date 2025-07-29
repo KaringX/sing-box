@@ -20,6 +20,7 @@ type ClashServer interface {
 type URLTestHistory struct {
 	Time  time.Time `json:"time"`
 	Delay uint16    `json:"delay"`
+	Err   string    `json:"err,omitempty"`
 }
 
 type URLTestHistoryStorage interface {
@@ -28,6 +29,12 @@ type URLTestHistoryStorage interface {
 	DeleteURLTestHistory(tag string)
 	StoreURLTestHistory(tag string, history *URLTestHistory)
 	Close() error
+	GetURLTestHistory() map[string]*URLTestHistory // karing
+}
+
+type URLTestResult struct { // karing
+	Delay uint16 `json:"delay,omitempty"`
+	Err   string `json:"err,omitempty"`
 }
 
 type V2RayServer interface {
@@ -36,6 +43,7 @@ type V2RayServer interface {
 }
 
 type CacheFile interface {
+	BeforeStart() error //karing
 	LifecycleService
 
 	StoreFakeIP() bool
@@ -52,6 +60,9 @@ type CacheFile interface {
 	StoreGroupExpand(group string, expand bool) error
 	LoadRuleSet(tag string) *SavedBinary
 	SaveRuleSet(tag string, set *SavedBinary) error
+	DeleteRuleSet(tag string)           //karing
+	HasRuleSet(tag string) bool         //karing
+	GetAllRuleSetKeys() map[string]bool //karing
 }
 
 type SavedBinary struct {
@@ -113,7 +124,8 @@ type OutboundGroup interface {
 
 type URLTestGroup interface {
 	OutboundGroup
-	URLTest(ctx context.Context) (map[string]uint16, error)
+	URLTest(ctx context.Context, force bool) (map[string]URLTestResult, error) //karing
+	UpdateCheck()                                                              //karing
 }
 
 func OutboundTag(detour Outbound) string {

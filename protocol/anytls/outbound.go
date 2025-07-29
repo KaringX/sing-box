@@ -104,6 +104,9 @@ func (h *Outbound) dialOut(ctx context.Context) (net.Conn, error) {
 }
 
 func (h *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
+	if h.GetParseErr() != nil { //karing
+		return nil, h.GetParseErr()
+	}
 	ctx, metadata := adapter.ExtendContext(ctx)
 	metadata.Outbound = h.Tag()
 	metadata.Destination = destination
@@ -119,6 +122,9 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 }
 
 func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
+	if h.GetParseErr() != nil { //karing
+		return nil, h.GetParseErr()
+	}
 	ctx, metadata := adapter.ExtendContext(ctx)
 	metadata.Outbound = h.Tag()
 	metadata.Destination = destination

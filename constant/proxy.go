@@ -20,6 +20,7 @@ const (
 	TypeSSH          = "ssh"
 	TypeShadowTLS    = "shadowtls"
 	TypeAnyTLS       = "anytls"
+	TypeMieru        = "mieru" //karing https://github.com/enfein/mbox
 	TypeShadowsocksR = "shadowsocksr"
 	TypeVLESS        = "vless"
 	TypeTUIC         = "tuic"
@@ -81,6 +82,8 @@ func ProxyDisplayName(proxyType string) string {
 		return "TUIC"
 	case TypeHysteria2:
 		return "Hysteria2"
+	case TypeMieru:
+		return "Mieru" //karing https://github.com/enfein/mbox
 	case TypeAnyTLS:
 		return "AnyTLS"
 	case TypeSelector:

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
+	"runtime"
 	"runtime/debug"
 	"time"
 
@@ -15,13 +15,13 @@ import (
 	boxService "github.com/sagernet/sing-box/adapter/service"
 	"github.com/sagernet/sing-box/common/certificate"
 	"github.com/sagernet/sing-box/common/dialer"
-	"github.com/sagernet/sing-box/common/taskmonitor"
 	"github.com/sagernet/sing-box/common/tls"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/dns"
 	"github.com/sagernet/sing-box/dns/transport/local"
 	"github.com/sagernet/sing-box/experimental"
 	"github.com/sagernet/sing-box/experimental/cachefile"
+	"github.com/sagernet/sing-box/experimental/clashapi"
 	"github.com/sagernet/sing-box/experimental/libbox/platform"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
@@ -38,6 +38,7 @@ import (
 var _ adapter.SimpleLifecycle = (*Box)(nil)
 
 type Box struct {
+	ctx             context.Context //karing
 	createdAt       time.Time
 	logFactory      log.Factory
 	logger          log.ContextLogger
@@ -94,14 +95,24 @@ func Context(
 	return ctx
 }
 
-func New(options Options) (*Box, error) {
+func New(options Options) (box *Box, err error) { //karing
 	createdAt := time.Now()
 	ctx := options.Context
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	ctx = service.ContextWithDefaultRegistry(ctx)
-
+	var logFactory log.Factory //karing
+	defer func() {             //karing
+		if box != nil {
+			runtime.SetFinalizer(box, func(box *Box) {
+				if logFactory != nil {
+					logFactory.Logger().InfoContext(ctx, "box finalizered")
+				}
+				service.UnRegisterAll(options.Context)
+			})
+		}
+	}()
 	endpointRegistry := service.FromContext[adapter.EndpointRegistry](ctx)
 	inboundRegistry := service.FromContext[adapter.InboundRegistry](ctx)
 	outboundRegistry := service.FromContext[adapter.OutboundRegistry](ctx)
@@ -130,7 +141,7 @@ func New(options Options) (*Box, error) {
 	var needCacheFile bool
 	var needClashAPI bool
 	var needV2RayAPI bool
-	if experimentalOptions.CacheFile != nil && experimentalOptions.CacheFile.Enabled || options.PlatformLogWriter != nil {
+	if experimentalOptions.CacheFile != nil && experimentalOptions.CacheFile.Enabled /*|| options.PlatformLogWriter != nil*/ { //karing
 		needCacheFile = true
 	}
 	if experimentalOptions.ClashAPI != nil || options.PlatformLogWriter != nil {
@@ -144,7 +155,7 @@ func New(options Options) (*Box, error) {
 	if platformInterface != nil {
 		defaultLogWriter = io.Discard
 	}
-	logFactory, err := log.New(log.Options{
+	logFactory, err = log.New(log.Options{
 		Context:        ctx,
 		Options:        common.PtrValueOrDefault(options.Log),
 		Observable:     needClashAPI,
@@ -154,6 +165,36 @@ func New(options Options) (*Box, error) {
 	})
 	if err != nil {
 		return nil, E.Cause(err, "create log factory")
+	}
+	err = logFactory.Start() //karing
+	if err != nil {          //karing
+		return nil, E.Cause(err, "start logger")
+	}
+	logFactory.Logger().InfoContext(ctx, "box new") //karing
+
+	var internalServices []adapter.LifecycleService //karing
+	if needCacheFile {                              //karing
+		cacheFile := cachefile.New(ctx, common.PtrValueOrDefault(experimentalOptions.CacheFile))
+		service.MustRegister[adapter.CacheFile](ctx, cacheFile)
+		internalServices = append(internalServices, cacheFile)
+		err = cacheFile.BeforeStart()
+		if err != nil {
+			return nil, E.Cause(err, "cacheFile load failed")
+		}
+	}
+
+	//var internalServices []adapter.LifecycleService //karing
+	certificateOptions := common.PtrValueOrDefault(options.Certificate)
+	if C.IsAndroid || certificateOptions.Store != "" && certificateOptions.Store != C.CertificateStoreSystem ||
+		len(certificateOptions.Certificate) > 0 ||
+		len(certificateOptions.CertificatePath) > 0 ||
+		len(certificateOptions.CertificateDirectoryPath) > 0 {
+		certificateStore, err := certificate.NewStore(ctx, logFactory.NewLogger("certificate"), certificateOptions)
+		if err != nil {
+			return nil, err
+		}
+		service.MustRegister[adapter.CertificateStore](ctx, certificateStore)
+		internalServices = append(internalServices, certificateStore)
 	}
 
 	var internalServices []adapter.LifecycleService
@@ -246,9 +287,10 @@ func New(options Options) (*Box, error) {
 			tag,
 			endpointOptions.Type,
 			endpointOptions.Options,
+			endpointOptions.ParseErr, //karing
 		)
 		if err != nil {
-			return nil, E.Cause(err, "initialize endpoint[", i, "]")
+			return nil, E.Cause(err, "initialize endpoint[", i, "][", tag, "]") //karing
 		}
 	}
 	for i, inboundOptions := range options.Inbounds {
@@ -267,7 +309,7 @@ func New(options Options) (*Box, error) {
 			inboundOptions.Options,
 		)
 		if err != nil {
-			return nil, E.Cause(err, "initialize inbound[", i, "]")
+			return nil, E.Cause(err, "initialize inbound[", i, "][", tag, "]") //karing
 		}
 	}
 	for i, outboundOptions := range options.Outbounds {
@@ -291,9 +333,28 @@ func New(options Options) (*Box, error) {
 			tag,
 			outboundOptions.Type,
 			outboundOptions.Options,
+			outboundOptions.ParseErr, //karing
 		)
 		if err != nil {
-			return nil, E.Cause(err, "initialize outbound[", i, "]")
+			return nil, E.Cause(err, "initialize outbound[", i, "][", tag, "]") //karing
+		}
+	}
+	for i, serviceOptions := range options.Services {
+		var tag string
+		if serviceOptions.Tag != "" {
+			tag = serviceOptions.Tag
+		} else {
+			tag = F.ToString(i)
+		}
+		err = serviceManager.Create(
+			ctx,
+			logFactory.NewLogger(F.ToString("service/", serviceOptions.Type, "[", tag, "]")),
+			tag,
+			serviceOptions.Type,
+			serviceOptions.Options,
+		)
+		if err != nil {
+			return nil, E.Cause(err, "initialize service[", i, "]")
 		}
 	}
 	for i, serviceOptions := range options.Services {
@@ -336,11 +397,14 @@ func New(options Options) (*Box, error) {
 			return nil, E.Cause(err, "initialize platform interface")
 		}
 	}
+	/*//karing
 	if needCacheFile {
 		cacheFile := cachefile.New(ctx, common.PtrValueOrDefault(experimentalOptions.CacheFile))
 		service.MustRegister[adapter.CacheFile](ctx, cacheFile)
 		internalServices = append(internalServices, cacheFile)
 	}
+	*/
+
 	if needClashAPI {
 		clashAPIOptions := common.PtrValueOrDefault(experimentalOptions.ClashAPI)
 		clashAPIOptions.ModeList = experimental.CalculateClashModeList(options.Options)
@@ -351,6 +415,18 @@ func New(options Options) (*Box, error) {
 		router.AppendTracker(clashServer)
 		service.MustRegister[adapter.ClashServer](ctx, clashServer)
 		internalServices = append(internalServices, clashServer)
+
+		outbound.OutboundGetLatestDownloadActiveConnection = func(tag string) (bool, time.Time) { //karing
+			clashServer := service.FromContext[adapter.ClashServer](ctx)
+			if clashServer == nil {
+				return false, time.Now()
+			}
+			trafficManager := clashServer.(*clashapi.Server).TrafficManager()
+			if trafficManager == nil {
+				return false, time.Now()
+			}
+			return trafficManager.OutboundGetLatestDownloadActiveConnection(tag)
+		}
 	}
 	if needV2RayAPI {
 		v2rayServer, err := experimental.NewV2RayServer(logFactory.NewLogger("v2ray-api"), common.PtrValueOrDefault(experimentalOptions.V2RayAPI))
@@ -374,12 +450,14 @@ func New(options Options) (*Box, error) {
 			Logger:        logFactory.NewLogger("ntp"),
 			Server:        ntpOptions.ServerOptions.Build(),
 			Interval:      time.Duration(ntpOptions.Interval),
+			Timeout:       time.Duration(5 * time.Second), //karing
 			WriteToSystem: ntpOptions.WriteToSystem,
 		})
 		timeService.TimeService = ntpService
 		internalServices = append(internalServices, adapter.NewLifecycleService(ntpService, "ntp service"))
 	}
 	return &Box{
+		ctx:             ctx, //karing
 		network:         networkManager,
 		endpoint:        endpointManager,
 		inbound:         inboundManager,
@@ -412,7 +490,7 @@ func (s *Box) PreStart() error {
 		s.Close()
 		return err
 	}
-	s.logger.Info("sing-box pre-started (", F.Seconds(time.Since(s.createdAt).Seconds()), "s)")
+	s.logger.InfoContext(s.ctx, "box pre-started (", F.Seconds(time.Since(s.createdAt).Seconds()), "s)") //karing
 	return nil
 }
 
@@ -431,11 +509,12 @@ func (s *Box) Start() error {
 		s.Close()
 		return err
 	}
-	s.logger.Info("sing-box started (", F.Seconds(time.Since(s.createdAt).Seconds()), "s)")
+	s.logger.InfoContext(s.ctx, "box started (", F.Seconds(time.Since(s.createdAt).Seconds()), "s) since ", s.createdAt) //karing
 	return nil
 }
 
 func (s *Box) preStart() error {
+	/*//karing
 	monitor := taskmonitor.New(s.logger, C.StartTimeout)
 	monitor.Start("start logger")
 	err := s.logFactory.Start()
@@ -444,6 +523,8 @@ func (s *Box) preStart() error {
 		return E.Cause(err, "start logger")
 	}
 	err = adapter.StartNamed(adapter.StartStateInitialize, s.internalService) // cache-file clash-api v2ray-api
+	}*/
+	err := adapter.StartNamed(adapter.StartStateInitialize, s.internalService) //karing cache-file clash-api v2ray-api
 	if err != nil {
 		return err
 	}
@@ -467,22 +548,33 @@ func (s *Box) start() error {
 	if err != nil {
 		return err
 	}
-	err = adapter.Start(adapter.StartStateStart, s.inbound, s.endpoint, s.service)
+
+	err = adapter.Start(adapter.StartStateStart /*s.inbound,*/, s.endpoint, s.service) //karing
 	if err != nil {
 		return err
 	}
-	err = adapter.Start(adapter.StartStatePostStart, s.outbound, s.network, s.dnsTransport, s.dnsRouter, s.connection, s.router, s.inbound, s.endpoint, s.service)
+	err = adapter.Start(adapter.StartStatePostStart, s.outbound, s.network, s.dnsTransport, s.dnsRouter, s.connection, s.router /*, s.inbound*/, s.endpoint, s.service) //karing
 	if err != nil {
 		return err
 	}
-	err = adapter.StartNamed(adapter.StartStatePostStart, s.internalService)
+	err = adapter.Start(adapter.StartStateStarted, s.network, s.dnsTransport, s.dnsRouter, s.connection, s.router, s.outbound /*s.inbound,*/, s.endpoint, s.service) //karing
 	if err != nil {
 		return err
 	}
-	err = adapter.Start(adapter.StartStateStarted, s.network, s.dnsTransport, s.dnsRouter, s.connection, s.router, s.outbound, s.inbound, s.endpoint, s.service)
+	//karing begin
+	err = adapter.Start(adapter.StartStateStart, s.inbound)
 	if err != nil {
 		return err
 	}
+	err = adapter.Start(adapter.StartStatePostStart, s.inbound)
+	if err != nil {
+		return err
+	}
+	err = adapter.Start(adapter.StartStateStarted, s.inbound)
+	if err != nil {
+		return err
+	}
+	//karing end
 	err = adapter.StartNamed(adapter.StartStateStarted, s.internalService)
 	if err != nil {
 		return err
@@ -491,9 +583,10 @@ func (s *Box) start() error {
 }
 
 func (s *Box) Close() error {
+	closeDebug() //karing
 	select {
 	case <-s.done:
-		return os.ErrClosed
+		return nil //karing
 	default:
 		close(s.done)
 	}
@@ -505,9 +598,21 @@ func (s *Box) Close() error {
 			return E.Cause(err, "close ", lifecycleService.Name())
 		})
 	}
-	err = E.Append(err, s.logFactory.Close(), func(err error) error {
-		return E.Cause(err, "close logger")
-	})
+	s.logger.InfoContext(s.ctx, "box closed") //karing
+	//err = E.Append(err, s.logFactory.Close(), func(err error) error {
+	//	return E.Cause(err, "close logger")
+	//})
+	s.network = nil         //karing
+	s.endpoint = nil        //karing
+	s.inbound = nil         //karing
+	s.outbound = nil        //karing
+	s.service = nil         //karing
+	s.dnsTransport = nil    //karing
+	s.dnsRouter = nil       //karing
+	s.connection = nil      //karing
+	s.router = nil          //karing
+	s.internalService = nil //karing
+
 	return err
 }
 
@@ -525,4 +630,8 @@ func (s *Box) Inbound() adapter.InboundManager {
 
 func (s *Box) Outbound() adapter.OutboundManager {
 	return s.outbound
+}
+
+func (s *Box) Logger() log.ContextLogger { //karing
+	return s.logger
 }

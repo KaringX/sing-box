@@ -67,7 +67,8 @@ func NewDefault(ctx context.Context, options option.DialerOptions) (*DefaultDial
 	}
 	if options.BindInterface != "" {
 		if !(C.IsLinux || C.IsDarwin || C.IsWindows) {
-			return nil, E.New("`bind_interface` is only supported on Linux, macOS and Windows")
+			//return nil, E.New("`bind_interface` is only supported on Linux, macOS and Windows") //karing
+			options.BindInterface = "" //karing
 		}
 		bindFunc := control.BindToInterface(interfaceFinder, options.BindInterface, -1)
 		dialer.Control = control.Append(dialer.Control, bindFunc)
@@ -180,11 +181,33 @@ func NewDefault(ctx context.Context, options option.DialerOptions) (*DefaultDial
 		}
 		setMultiPathTCP(&dialer4)
 	}
-	tcpDialer4, err := newTCPDialer(dialer4, options.TCPFastOpen)
+
+	var tlsFragment *TLSFragment = nil                             //hiddify
+	if options.TLSFragment != nil && options.TLSFragment.Enabled { //hiddify
+		tlsFragment = &TLSFragment{}
+		if options.TCPFastOpen {
+			return nil, E.New("TLS Fragmentation is not compatible with TCP Fast Open, set `tcp_fast_open` to `false` in your outbound if you intend to enable TLS fragmentation.")
+		}
+		tlsFragment.Enabled = true
+
+		sleep, err := option.Parse2IntRange(options.TLSFragment.Sleep)
+
+		if err != nil {
+			return nil, E.Cause(err, "invalid TLS fragment sleep period supplied")
+		}
+		tlsFragment.Sleep = sleep
+
+		size, err := option.Parse2IntRange(options.TLSFragment.Size)
+		if err != nil {
+			return nil, E.Cause(err, "invalid TLS fragment size supplied")
+		}
+		tlsFragment.Size = size
+	}
+	tcpDialer4, err := newTCPDialer(dialer4, options.TCPFastOpen, tlsFragment) //hiddify
 	if err != nil {
 		return nil, err
 	}
-	tcpDialer6, err := newTCPDialer(dialer6, options.TCPFastOpen)
+	tcpDialer6, err := newTCPDialer(dialer6, options.TCPFastOpen, tlsFragment) //hiddify
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +252,7 @@ func (d *DefaultDialer) DialContext(ctx context.Context, network string, address
 		return nil, E.New("domain not resolved")
 	}
 	if d.networkStrategy == nil {
-		return trackConn(listener.ListenNetworkNamespace[net.Conn](d.netns, func() (net.Conn, error) {
+		conn, err := listener.ListenNetworkNamespace[net.Conn](d.netns, func() (net.Conn, error) { //karing
 			switch N.NetworkName(network) {
 			case N.NetworkUDP:
 				if !address.IsIPv6() {
@@ -243,7 +266,9 @@ func (d *DefaultDialer) DialContext(ctx context.Context, network string, address
 			} else {
 				return DialSlowContext(&d.dialer6, ctx, network, address)
 			}
-		}))
+		})
+		inbound := adapter.ContextFrom(ctx)           //karing
+		return trackConn(conn, err, address, inbound) //karing
 	} else {
 		return d.DialParallelInterface(ctx, network, address, d.networkStrategy, d.networkType, d.fallbackNetworkType, d.networkFallbackDelay)
 	}
@@ -294,12 +319,13 @@ func (d *DefaultDialer) DialParallelInterface(ctx context.Context, network strin
 	if !fastFallback && !isPrimary {
 		d.networkLastFallback.Store(time.Now())
 	}
-	return trackConn(conn, nil)
+	inbound := adapter.ContextFrom(ctx)           //karing
+	return trackConn(conn, nil, address, inbound) //karing
 }
 
 func (d *DefaultDialer) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
 	if d.networkStrategy == nil {
-		return trackPacketConn(listener.ListenNetworkNamespace[net.PacketConn](d.netns, func() (net.PacketConn, error) {
+		conn, err := listener.ListenNetworkNamespace[net.PacketConn](d.netns, func() (net.PacketConn, error) { //karing
 			if destination.IsIPv6() {
 				return d.udpListener.ListenPacket(ctx, N.NetworkUDP, d.udpAddr6)
 			} else if destination.IsIPv4() && !destination.Addr.IsUnspecified() {
@@ -307,7 +333,9 @@ func (d *DefaultDialer) ListenPacket(ctx context.Context, destination M.Socksadd
 			} else {
 				return d.udpListener.ListenPacket(ctx, N.NetworkUDP, d.udpAddr4)
 			}
-		}))
+		})
+		inbound := adapter.ContextFrom(ctx)                     //karing
+		return trackPacketConn(conn, err, destination, inbound) //karing
 	} else {
 		return d.ListenSerialInterfacePacket(ctx, destination, d.networkStrategy, d.networkType, d.fallbackNetworkType, d.networkFallbackDelay)
 	}
@@ -343,7 +371,8 @@ func (d *DefaultDialer) ListenSerialInterfacePacket(ctx context.Context, destina
 			return nil, err
 		}
 	}
-	return trackPacketConn(packetConn, nil)
+	inbound := adapter.ContextFrom(ctx)                           //karing
+	return trackPacketConn(packetConn, nil, destination, inbound) //karing
 }
 
 func (d *DefaultDialer) ListenPacketCompat(network, address string) (net.PacketConn, error) {
@@ -360,16 +389,16 @@ func (d *DefaultDialer) ListenPacketCompat(network, address string) (net.PacketC
 	return udpListener.ListenPacket(context.Background(), network, address)
 }
 
-func trackConn(conn net.Conn, err error) (net.Conn, error) {
+func trackConn(conn net.Conn, err error, destination M.Socksaddr, inbound *adapter.InboundContext) (net.Conn, error) { //karing
 	if !conntrack.Enabled || err != nil {
 		return conn, err
 	}
-	return conntrack.NewConn(conn)
+	return conntrack.NewConn(conn, destination, inbound) //karing
 }
 
-func trackPacketConn(conn net.PacketConn, err error) (net.PacketConn, error) {
+func trackPacketConn(conn net.PacketConn, err error, destination M.Socksaddr, inbound *adapter.InboundContext) (net.PacketConn, error) { //karing
 	if !conntrack.Enabled || err != nil {
 		return conn, err
 	}
-	return conntrack.NewPacketConn(conn)
+	return conntrack.NewPacketConn(conn, destination, inbound) //karing
 }

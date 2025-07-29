@@ -70,9 +70,15 @@ func (l *Listener) ListenTCP() (net.Listener, error) {
 		}
 	})
 	if err != nil {
+		if l.router != nil { //karing
+			info, err1 := l.router.FindProcessInfo(l.ctx, N.NetworkTCP, bindAddr.AddrPort())
+			if err1 == nil {
+				err = E.Cause(err, "port[", bindAddr.AddrPort().Port(), "] is occupied by[", info.ProcessPath, info.PackageName, "] ")
+			}
+		}
 		return nil, err
 	}
-	l.logger.Info("tcp server started at ", tcpListener.Addr())
+	l.logger.InfoContext(l.ctx, "tcp server started at ", tcpListener.Addr()) //karing
 	l.tcpListener = tcpListener
 	return tcpListener, err
 }
@@ -85,14 +91,14 @@ func (l *Listener) loopTCPIn() {
 		if err != nil {
 			//nolint:staticcheck
 			if netError, isNetError := err.(net.Error); isNetError && netError.Temporary() {
-				l.logger.Error(err)
+				l.logger.ErrorContext(l.ctx, err) //karing
 				continue
 			}
 			if l.shutdown.Load() && E.IsClosed(err) {
 				return
 			}
 			l.tcpListener.Close()
-			l.logger.Error("tcp listener closed: ", err)
+			l.logger.ErrorContext(l.ctx, "tcp listener closed: ", err) //karing
 			continue
 		}
 		//nolint:staticcheck

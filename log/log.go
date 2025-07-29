@@ -8,6 +8,7 @@ import (
 
 	"github.com/sagernet/sing-box/option"
 	E "github.com/sagernet/sing/common/exceptions"
+	"github.com/sagernet/sing/service/filemanager"
 )
 
 type Options struct {
@@ -18,6 +19,10 @@ type Options struct {
 	BaseTime       time.Time
 	PlatformWriter PlatformWriter
 }
+
+var (
+	CtxKeyLogContextIdName = "log contextId name"
+)
 
 func New(options Options) (Factory, error) {
 	logOptions := options.Options
@@ -40,7 +45,7 @@ func New(options Options) (Factory, error) {
 	case "stdout":
 		logWriter = os.Stdout
 	default:
-		logFilePath = logOptions.Output
+		logFilePath = filemanager.BasePath(options.Context, logOptions.Output) //karing
 	}
 	logFormatter := Formatter{
 		BaseTime:         options.BaseTime,

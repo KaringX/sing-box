@@ -115,6 +115,14 @@ func (r *Router) Close() error {
 		})
 		monitor.Finish()
 	}
+	if r.client != nil { //karing
+		r.client.Close()
+	}
+	r.transport = nil                    //karing
+	r.outbound = nil                     //karing
+	r.rules = make([]adapter.DNSRule, 0) //karing
+	r.dnsReverseMapping = nil            //karing
+
 	return err
 }
 
@@ -196,10 +204,17 @@ func (r *Router) matchDNS(ctx context.Context, allowFakeIP bool, ruleIndex int, 
 			}
 		}
 	}
+	if r.transport == nil { //karing
+		return nil, nil, -1
+	}
+
 	return r.transport.Default(), nil, -1
 }
 
 func (r *Router) Exchange(ctx context.Context, message *mDNS.Msg, options adapter.DNSQueryOptions) (*mDNS.Msg, error) {
+	if r.transport == nil { //karing
+		return nil, E.New("router closed")
+	}
 	if len(message.Question) != 1 {
 		r.logger.WarnContext(ctx, "bad question size: ", len(message.Question))
 		responseMessage := mDNS.Msg{
@@ -287,21 +302,25 @@ func (r *Router) Exchange(ctx context.Context, message *mDNS.Msg, options adapte
 				response, err = r.client.Exchange(dnsCtx, transport, message, dnsOptions, responseCheck)
 				var rejected bool
 				if err != nil {
+					transportTag := ""    //karing
+					if transport != nil { //karing
+						transportTag = transport.Tag()
+					} //karing
 					if errors.Is(err, ErrResponseRejectedCached) {
 						rejected = true
-						r.logger.DebugContext(ctx, E.Cause(err, "response rejected for ", FormatQuestion(message.Question[0].String())), " (cached)")
+						r.logger.DebugContext(ctx, E.Cause(err, "response rejected for ", FormatQuestion(message.Question[0].String())), " (cached)", " by ", transportTag) //karing
 					} else if errors.Is(err, ErrResponseRejected) {
 						rejected = true
-						r.logger.DebugContext(ctx, E.Cause(err, "response rejected for ", FormatQuestion(message.Question[0].String())))
+						r.logger.DebugContext(ctx, E.Cause(err, "response rejected for ", FormatQuestion(message.Question[0].String()), " by ", transportTag)) //karing
 						/*} else if responseCheck!= nil && errors.Is(err, RcodeError(mDNS.RcodeNameError)) {
 						rejected = true
 						r.logger.DebugContext(ctx, E.Cause(err, "response rejected for ", FormatQuestion(message.Question[0].String())))
 						*/
 					} else if len(message.Question) > 0 {
 						rejected = true
-						r.logger.ErrorContext(ctx, E.Cause(err, "exchange failed for ", FormatQuestion(message.Question[0].String())))
+						r.logger.ErrorContext(ctx, E.Cause(err, "exchange failed for ", FormatQuestion(message.Question[0].String()), " by ", transportTag)) //karing
 					} else {
-						r.logger.ErrorContext(ctx, E.Cause(err, "exchange failed for <empty query>"))
+						r.logger.ErrorContext(ctx, E.Cause(err, "exchange failed for <empty query>", " by ", transportTag)) //karing
 					}
 				}
 				if responseCheck != nil && rejected {
@@ -330,6 +349,9 @@ func (r *Router) Exchange(ctx context.Context, message *mDNS.Msg, options adapte
 }
 
 func (r *Router) Lookup(ctx context.Context, domain string, options adapter.DNSQueryOptions) ([]netip.Addr, error) {
+	if r.transport == nil { //karing
+		return nil, E.New("router closed")
+	}
 	var (
 		responseAddrs []netip.Addr
 		cached        bool
@@ -438,6 +460,123 @@ response:
 	return responseAddrs, err
 }
 
+func (r *Router) LookupTag(ctx context.Context, domain string, options adapter.DNSQueryOptions) ([]netip.Addr, string, error) { //karing
+	var (
+		responseAddrs []netip.Addr
+		cached        bool
+		err           error
+		transportTag  string //karing
+	)
+	printResult := func() {
+		if err == nil && len(responseAddrs) == 0 {
+			err = E.New("empty result")
+		}
+		if err != nil {
+			if errors.Is(err, ErrResponseRejectedCached) {
+				r.logger.DebugContext(ctx, "response rejected for ", domain, " (cached)")
+			} else if errors.Is(err, ErrResponseRejected) {
+				r.logger.DebugContext(ctx, "response rejected for ", domain)
+			} else {
+				r.logger.ErrorContext(ctx, E.Cause(err, "lookup failed for ", domain))
+			}
+		}
+		if err != nil {
+			err = E.Cause(err, "lookup ", domain)
+		}
+	}
+	responseAddrs, cached = r.client.LookupCache(domain, options.Strategy)
+	if cached {
+		if len(responseAddrs) == 0 {
+			return nil, "", E.New("lookup ", domain, ": empty result (cached)") //karing
+		}
+		return responseAddrs, "", nil //karing
+	}
+	r.logger.DebugContext(ctx, "lookup domain ", domain)
+	ctx, metadata := adapter.ExtendContext(ctx)
+	metadata.Destination = M.Socksaddr{}
+	metadata.Domain = FqdnToDomain(domain)
+	if options.Transport != nil {
+		transport := options.Transport
+		transportTag = transport.Tag() //karing
+		if legacyTransport, isLegacy := transport.(adapter.LegacyDNSTransport); isLegacy {
+			if options.Strategy == C.DomainStrategyAsIS {
+				options.Strategy = r.defaultDomainStrategy
+			}
+			if !options.ClientSubnet.IsValid() {
+				options.ClientSubnet = legacyTransport.LegacyClientSubnet()
+			}
+		}
+		if options.Strategy == C.DomainStrategyAsIS {
+			options.Strategy = r.defaultDomainStrategy
+		}
+		responseAddrs, err = r.client.Lookup(ctx, transport, domain, options, nil)
+	} else {
+		var (
+			transport adapter.DNSTransport
+			rule      adapter.DNSRule
+			ruleIndex int
+		)
+		ruleIndex = -1
+		for {
+			dnsCtx := adapter.OverrideContext(ctx)
+			dnsOptions := options
+			transport, rule, ruleIndex = r.matchDNS(ctx, false, ruleIndex, true, &dnsOptions)
+			if rule != nil {
+				switch action := rule.Action().(type) {
+				case *R.RuleActionReject:
+					switch action.Method {
+					case C.RuleActionRejectMethodDefault:
+						return nil, transport.Tag(), nil //karing
+					case C.RuleActionRejectMethodDrop:
+						return nil, "", tun.ErrDrop //karing
+					}
+				case *R.RuleActionPredefined:
+					if action.Rcode != mDNS.RcodeSuccess {
+						err = RcodeError(action.Rcode)
+					} else {
+						for _, answer := range action.Answer {
+							switch record := answer.(type) {
+							case *mDNS.A:
+								responseAddrs = append(responseAddrs, M.AddrFromIP(record.A))
+							case *mDNS.AAAA:
+								responseAddrs = append(responseAddrs, M.AddrFromIP(record.AAAA))
+							}
+						}
+					}
+					goto response
+				}
+			}
+			if transport != nil { //karing
+				transportTag = transport.Tag()
+			} else { //karing
+				transportTag = ""
+			}
+
+			var responseCheck func(responseAddrs []netip.Addr) bool
+			if rule != nil && rule.WithAddressLimit() {
+				responseCheck = func(responseAddrs []netip.Addr) bool {
+					metadata.DestinationAddresses = responseAddrs
+					return rule.MatchAddressLimit(metadata)
+				}
+			}
+			if dnsOptions.Strategy == C.DomainStrategyAsIS {
+				dnsOptions.Strategy = r.defaultDomainStrategy
+			}
+			responseAddrs, err = r.client.Lookup(dnsCtx, transport, domain, dnsOptions, responseCheck)
+			if responseCheck == nil || err == nil {
+				break
+			}
+			printResult()
+		}
+	}
+response:
+	printResult()
+	if len(responseAddrs) > 0 {
+		r.logger.InfoContext(ctx, "lookup succeed for ", domain, ": ", strings.Join(F.MapToString(responseAddrs), " "))
+	}
+	return responseAddrs, transportTag, err
+}
+
 func isAddressQuery(message *mDNS.Msg) bool {
 	for _, question := range message.Question {
 		if question.Qtype == mDNS.TypeA || question.Qtype == mDNS.TypeAAAA || question.Qtype == mDNS.TypeHTTPS {
@@ -464,6 +603,9 @@ func (r *Router) LookupReverseMapping(ip netip.Addr) (string, bool) {
 
 func (r *Router) ResetNetwork() {
 	r.ClearCache()
+	if r.transport == nil { //karing
+		return
+	}
 	for _, transport := range r.transport.Transports() {
 		transport.Close()
 	}

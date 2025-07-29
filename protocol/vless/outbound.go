@@ -41,9 +41,13 @@ type Outbound struct {
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.VLESSOutboundOptions) (adapter.Outbound, error) {
+	empty := &Outbound{ //karing
+		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeVLESS, tag, []string{}, options.DialerOptions),
+		logger:  logger,
+	}
 	outboundDialer, err := dialer.New(ctx, options.DialerOptions, options.ServerIsDomain())
 	if err != nil {
-		return nil, err
+		return empty, err //karing
 	}
 	outbound := &Outbound{
 		Adapter:    outbound.NewAdapterWithDialerOptions(C.TypeVLESS, tag, options.Network.Build(), options.DialerOptions),
@@ -54,13 +58,13 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 	if options.TLS != nil {
 		outbound.tlsConfig, err = tls.NewClient(ctx, options.Server, common.PtrValueOrDefault(options.TLS))
 		if err != nil {
-			return nil, err
+			return empty, err //karing
 		}
 	}
 	if options.Transport != nil {
 		outbound.transport, err = v2ray.NewClientTransport(ctx, outbound.dialer, outbound.serverAddr, common.PtrValueOrDefault(options.Transport), outbound.tlsConfig)
 		if err != nil {
-			return nil, E.Cause(err, "create client transport: ", options.Transport.Type)
+			return empty, E.Cause(err, "create client transport: ", options.Transport.Type) //karing
 		}
 	}
 	if options.PacketEncoding == nil {
@@ -73,21 +77,24 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		case "xudp":
 			outbound.xudp = true
 		default:
-			return nil, E.New("unknown packet encoding: ", options.PacketEncoding)
+			return empty, E.New("unknown packet encoding: ", *options.PacketEncoding) //karing
 		}
 	}
 	outbound.client, err = vless.NewClient(options.UUID, options.Flow, logger)
 	if err != nil {
-		return nil, err
+		return empty, err //karing
 	}
 	outbound.multiplexDialer, err = mux.NewClientWithOptions((*vlessDialer)(outbound), logger, common.PtrValueOrDefault(options.Multiplex))
 	if err != nil {
-		return nil, err
+		return empty, err //karing
 	}
 	return outbound, nil
 }
 
 func (h *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
+	if h.GetParseErr() != nil { //karing
+		return nil, h.GetParseErr()
+	}
 	if h.multiplexDialer == nil {
 		switch N.NetworkName(network) {
 		case N.NetworkTCP:
@@ -108,6 +115,9 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 }
 
 func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
+	if h.GetParseErr() != nil { //karing
+		return nil, h.GetParseErr()
+	}
 	if h.multiplexDialer == nil {
 		h.logger.InfoContext(ctx, "outbound packet connection to ", destination)
 		return (*vlessDialer)(h).ListenPacket(ctx, destination)

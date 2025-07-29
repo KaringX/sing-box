@@ -32,3 +32,7 @@ func applyDebugOptions(options option.DebugOptions) {
 		conntrack.KillerEnabled = *options.OOMKiller
 	}
 }
+
+func closeDebug() { //karing
+	closeDebugListen()
+}

@@ -58,6 +58,16 @@ func (s *HistoryStorage) StoreURLTestHistory(tag string, history *adapter.URLTes
 	s.notifyUpdated()
 }
 
+func (s *HistoryStorage) GetURLTestHistory() map[string]*adapter.URLTestHistory { // karing
+	history := make(map[string]*adapter.URLTestHistory)
+	s.access.Lock()
+	for k, v := range s.delayHistory {
+		history[k] = v
+	}
+	s.access.Unlock()
+	return history
+}
+
 func (s *HistoryStorage) notifyUpdated() {
 	updateHook := s.updateHook
 	if updateHook != nil {
@@ -70,10 +80,15 @@ func (s *HistoryStorage) notifyUpdated() {
 
 func (s *HistoryStorage) Close() error {
 	s.updateHook = nil
+	s.access.Lock()                 //kariing
+	for k := range s.delayHistory { //kariing
+		delete(s.delayHistory, k)
+	}
+	s.access.Unlock() //kariing
 	return nil
 }
 
-func URLTest(ctx context.Context, link string, detour N.Dialer) (t uint16, err error) {
+func URLTest(ctx context.Context, link string, detour N.Dialer) (t uint16, t2 uint16, err error) { //karing
 	if link == "" {
 		link = "https://www.gstatic.com/generate_204"
 	}
@@ -125,7 +140,17 @@ func URLTest(ctx context.Context, link string, detour N.Dialer) (t uint16, err e
 	if err != nil {
 		return
 	}
+	t2 = uint16(time.Since(start).Milliseconds()) //karing
 	resp.Body.Close()
-	t = uint16(time.Since(start) / time.Millisecond)
+	{ //karing
+		start2 := time.Now()
+		resp, err = client.Do(req.WithContext(ctx))
+		if err != nil {
+			t = t2
+			return t, t2, nil
+		}
+		t = uint16(time.Since(start2).Milliseconds())
+		resp.Body.Close()
+	}
 	return
 }

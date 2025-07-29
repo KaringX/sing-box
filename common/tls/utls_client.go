@@ -29,6 +29,7 @@ type UTLSClientConfig struct {
 	fragment              bool
 	fragmentFallbackDelay time.Duration
 	recordFragment        bool
+	paddingSize           option.IntRange //hiddify
 }
 
 func (c *UTLSClientConfig) ServerName() string {
@@ -57,6 +58,16 @@ func (c *UTLSClientConfig) Config() (*STDConfig, error) {
 func (c *UTLSClientConfig) Client(conn net.Conn) (Conn, error) {
 	if c.recordFragment {
 		conn = tf.NewConn(conn, c.ctx, c.fragment, c.recordFragment, c.fragmentFallbackDelay)
+	}
+	var uConn *utls.UConn
+	if e.id != utls.HelloCustom { //hiddify
+		uConn = utls.UClient(conn, e.config.Clone(), e.id)
+	} else { //hiddify
+		var err error
+		uConn, err = makeTLSHelloPacketWithPadding(conn, e, e.config.ServerName)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return &utlsALPNWrapper{utlsConnWrapper{utls.UClient(conn, c.config.Clone(), c.id)}, c.config.NextProtos}, nil
 }
@@ -142,6 +153,10 @@ func NewUTLSClient(ctx context.Context, serverAddress string, options option.Out
 		return nil, E.New("missing server_name or insecure=true")
 	}
 
+	if options.TLSTricks != nil && options.TLSTricks.MixedCaseSNI { //hiddify
+		serverName = randomizeCase(serverName)
+	}
+
 	var tlsConfig utls.Config
 	tlsConfig.Time = ntp.TimeFuncFromContext(ctx)
 	tlsConfig.RootCAs = adapter.RootPoolFromContext(ctx)
@@ -206,6 +221,22 @@ func NewUTLSClient(ctx context.Context, serverAddress string, options option.Out
 	if err != nil {
 		return nil, err
 	}
+	if options.TLSTricks != nil { //hiddify
+		switch options.TLSTricks.PaddingMode {
+		case "random":
+			paddingSize, err := option.Parse2IntRange(options.TLSTricks.PaddingSize) //hiddify
+			if err != nil {
+				return nil, E.Cause(err, "invalid Padding Size supplied")
+			}
+			return &UTLSClientConfig{config: &tlsConfig, paddingSize: paddingSize, id: id}, nil
+		case "sni":
+
+		case "hello_client":
+		// TODO
+		default:
+			// TODO
+		}
+	}
 	uConfig := &UTLSClientConfig{ctx, &tlsConfig, id, options.Fragment, time.Duration(options.FragmentFallbackDelay), options.RecordFragment}
 	if options.ECH != nil && options.ECH.Enabled {
 		if options.Reality != nil && options.Reality.Enabled {
@@ -264,6 +295,8 @@ func uTLSClientHelloID(name string) (utls.ClientHelloID, error) {
 		return randomFingerprint, nil
 	case "randomized":
 		return randomizedFingerprint, nil
+	case "custom": //hiddify
+		return utls.HelloCustom, nil
 	default:
 		return utls.ClientHelloID{}, E.New("unknown uTLS fingerprint: ", name)
 	}
