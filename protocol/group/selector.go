@@ -186,7 +186,12 @@ func (s *Selector) NewPacketConnectionEx(ctx context.Context, conn N.PacketConn,
 	}
 }
 
-func RealTag(detour adapter.Outbound) string {
+func RealTag(detour adapter.Outbound) (tag string) { //karing
+	defer func() { //karing
+		if e := recover(); e != nil {
+			tag = ""
+		}
+	}()
 	if detour == nil { //karing
 		return ""
 	}
