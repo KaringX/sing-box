@@ -16,15 +16,17 @@ import (
 )
 
 var (
-	debugEnabled bool
-	target       string
-	platform     string
+	debugEnabled  bool
+	target        string
+	platform      string
+	withTailscale bool
 )
 
 func init() {
 	flag.BoolVar(&debugEnabled, "debug", false, "enable debug")
 	flag.StringVar(&target, "target", "android", "target platform")
 	flag.StringVar(&platform, "platform", "", "specify platform")
+	flag.BoolVar(&withTailscale, "with-tailscale", false, "build tailscale for iOS and tvOS")
 }
 
 func main() {
@@ -44,8 +46,9 @@ var (
 	sharedFlags []string
 	debugFlags  []string
 	sharedTags  []string
-	iosTags     []string
+	darwinTags  []string
 	memcTags    []string
+	notMemcTags []string
 	debugTags   []string
 )
 
@@ -60,8 +63,9 @@ func init() {
 	debugFlags = append(debugFlags, "-ldflags", "-X github.com/sagernet/sing-box/constant.Version="+currentTag)
 
 	sharedTags = append(sharedTags, "with_gvisor", "with_quic", "with_wireguard", "with_utls", "with_clash_api", "with_conntrack")
-	iosTags = append(iosTags, "with_dhcp", "with_low_memory")
+	darwinTags = append(darwinTags, "with_dhcp")
 	memcTags = append(memcTags, "with_tailscale")
+	notMemcTags = append(notMemcTags, "with_low_memory")
 	debugTags = append(debugTags, "debug")
 }
 
@@ -151,7 +155,10 @@ func buildApple() {
 		"-v",
 		"-target", bindTarget,
 		"-libname=box",
-		"-tags-macos=" + strings.Join(memcTags, ","),
+		"-tags-not-macos=with_low_memory",
+	}
+	if !withTailscale {
+		args = append(args, "-tags-macos="+strings.Join(memcTags, ","))
 	}
 
 	if !debugEnabled {
@@ -160,7 +167,10 @@ func buildApple() {
 		args = append(args, debugFlags...)
 	}
 
-	tags := append(sharedTags, iosTags...)
+	tags := append(sharedTags, darwinTags...)
+	if withTailscale {
+		tags = append(tags, memcTags...)
+	}
 	if debugEnabled {
 		tags = append(tags, debugTags...)
 	}

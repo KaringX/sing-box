@@ -130,9 +130,16 @@ func NewInbound(ctx context.Context, router adapter.Router, logger log.ContextLo
 		deprecated.Report(ctx, deprecated.OptionTUNGSO)
 	}
 
+	platformInterface := service.FromContext[platform.Interface](ctx)
 	tunMTU := options.MTU
+	enableGSO := C.IsLinux && options.Stack == "gvisor" && platformInterface == nil && tunMTU > 0 && tunMTU < 49152
 	if tunMTU == 0 {
-		tunMTU = 9000
+		if platformInterface != nil && platformInterface.UnderNetworkExtension() {
+			// In Network Extension, when MTU exceeds 4064 (4096-UTUN_IF_HEADROOM_SIZE), the performance of tun will drop significantly, which may be a system bug.
+			tunMTU = 4064
+		} else {
+			tunMTU = 65535
+		}
 	}
 	var udpTimeout time.Duration
 	if options.UDPTimeout != 0 {
@@ -173,6 +180,7 @@ func NewInbound(ctx context.Context, router adapter.Router, logger log.ContextLo
 		outputMark = tun.DefaultAutoRedirectOutputMark
 	}
 	networkManager := service.FromContext[adapter.NetworkManager](ctx)
+	multiPendingPackets := C.IsDarwin && ((options.Stack == "gvisor" && tunMTU < 32768) || (options.Stack != "gvisor" && options.MTU <= 9000))
 	inbound := &Inbound{
 		tag:            tag,
 		ctx:            ctx,
@@ -183,6 +191,7 @@ func NewInbound(ctx context.Context, router adapter.Router, logger log.ContextLo
 		tunOptions: tun.Options{
 			Name:                     options.InterfaceName,
 			MTU:                      tunMTU,
+			GSO:                      enableGSO,
 			Inet4Address:             inet4Address,
 			Inet6Address:             inet6Address,
 			AutoRoute:                options.AutoRoute,
@@ -190,6 +199,8 @@ func NewInbound(ctx context.Context, router adapter.Router, logger log.ContextLo
 			IPRoute2RuleIndex:        ruleIndex,
 			AutoRedirectInputMark:    inputMark,
 			AutoRedirectOutputMark:   outputMark,
+			Inet4LoopbackAddress:     common.Filter(options.LoopbackAddress, netip.Addr.Is4),
+			Inet6LoopbackAddress:     common.Filter(options.LoopbackAddress, netip.Addr.Is6),
 			StrictRoute:              options.StrictRoute,
 			IncludeInterface:         options.IncludeInterface,
 			ExcludeInterface:         options.ExcludeInterface,
@@ -203,10 +214,11 @@ func NewInbound(ctx context.Context, router adapter.Router, logger log.ContextLo
 			IncludePackage:           options.IncludePackage,
 			ExcludePackage:           options.ExcludePackage,
 			InterfaceMonitor:         networkManager.InterfaceMonitor(),
+			EXP_MultiPendingPackets:  multiPendingPackets,
 		},
 		udpTimeout:        udpTimeout,
 		stack:             options.Stack,
-		platformInterface: service.FromContext[platform.Interface](ctx),
+		platformInterface: platformInterface,
 		platformOptions:   common.PtrValueOrDefault(options.Platform),
 	}
 	for _, routeAddressSet := range options.RouteAddressSet {

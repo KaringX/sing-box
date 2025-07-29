@@ -90,14 +90,8 @@ func (m *ConnectionManager) NewConnection(ctx context.Context, this N.Dialer, co
 		m.logger.ErrorContext(ctx, err)
 		return
 	}
-	if metadata.TLSFragment {
-		fallbackDelay := metadata.TLSFragmentFallbackDelay
-		if fallbackDelay == 0 {
-			fallbackDelay = C.TLSFragmentFallbackDelay
-		}
-		remoteConn = tf.NewConn(remoteConn, ctx, false, fallbackDelay)
-	} else if metadata.TLSRecordFragment {
-		remoteConn = tf.NewConn(remoteConn, ctx, true, 0)
+	if metadata.TLSFragment || metadata.TLSRecordFragment {
+		remoteConn = tf.NewConn(remoteConn, ctx, metadata.TLSFragment, metadata.TLSRecordFragment, metadata.TLSFragmentFallbackDelay)
 	}
 	m.access.Lock()
 	element := m.connections.PushBack(conn)
@@ -283,7 +277,7 @@ func (m *ConnectionManager) connectionCopy(ctx context.Context, source net.Conn,
 			return
 		}
 	}
-	_, err := bufio.CopyWithCounters(destinationWriter, sourceReader, source, readCounters, writeCounters)
+	_, err := bufio.CopyWithCounters(destinationWriter, sourceReader, source, readCounters, writeCounters, bufio.DefaultIncreaseBufferAfter, bufio.DefaultBatchSize)
 	if err != nil {
 		common.Close(source, destination)
 	} else if duplexDst, isDuplex := destination.(N.WriteCloser); isDuplex {

@@ -2,6 +2,65 @@
 icon: material/alert-decagram
 ---
 
+#### 1.12.0-rc.4
+
+* Fixes and improvements
+
+### 1.11.15
+
+* Fixes and improvements
+
+_We are temporarily unable to update sing-box apps on the App Store because the reviewer mistakenly found that we
+violated the rules (TestFlight users are not affected)._
+
+#### 1.12.0-beta.32
+
+* Improve tun performance on Apple platforms **1**
+* Fixes and improvements
+
+**1**:
+
+We have significantly improved the performance of tun inbound on Apple platforms, especially in the gVisor stack.
+
+### 1.11.14
+
+* Fixes and improvements
+
+_We are temporarily unable to update sing-box apps on the App Store because the reviewer mistakenly found that we
+violated the rules (TestFlight users are not affected)._
+
+#### 1.12.0-beta.24
+
+* Allow `tls_fragment` and `tls_record_fragment` to be enabled together **1**
+* Also add fragment options for TLS client configuration **2**
+* Fixes and improvements
+
+**1**:
+
+For debugging only, it is recommended to disable if record fragmentation works.
+
+See [Route Action](/configuration/route/rule_action/#tls_fragment).
+
+**2**:
+
+See [TLS](/configuration/shared/tls/).
+
+#### 1.12.0-beta.23
+
+* Add loopback address support for tun **1**
+* Add cache support for ssm-api **2**
+* Fixes and improvements
+
+**1**:
+
+TUN now implements SideStore's StosVPN.
+
+See [Tun](/configuration/inbound/tun/#loopback_address).
+
+**2**:
+
+See [SSM API Service](/configuration/service/ssm-api/#cache_path).
+
 #### 1.12.0-beta.21
 
 * Fix missing `home` option for DERP service **1**

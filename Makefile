@@ -108,6 +108,16 @@ upload_ios_app_store:
 	cd ../sing-box-for-apple && \
 	xcodebuild -exportArchive -archivePath build/SFI.xcarchive -exportOptionsPlist SFI/Upload.plist -allowProvisioningUpdates
 
+export_ios_ipa:
+	cd ../sing-box-for-apple && \
+	xcodebuild -exportArchive -archivePath build/SFI.xcarchive -exportOptionsPlist SFI/Export.plist -allowProvisioningUpdates -exportPath build/SFI && \
+	cp build/SFI/sing-box.ipa dist/SFI.ipa
+
+upload_ios_ipa:
+	cd dist && \
+	cp SFI.ipa "SFI-${VERSION}.ipa" && \
+	ghr --replace --draft --prerelease "v${VERSION}" "SFI-${VERSION}.ipa"
+
 release_ios: build_ios upload_ios_app_store
 
 build_macos:
@@ -175,6 +185,16 @@ upload_tvos_app_store:
 	cd ../sing-box-for-apple && \
 	xcodebuild -exportArchive -archivePath "build/SFT.xcarchive" -exportOptionsPlist SFI/Upload.plist -allowProvisioningUpdates
 
+export_tvos_ipa:
+	cd ../sing-box-for-apple && \
+	xcodebuild -exportArchive -archivePath "build/SFT.xcarchive" -exportOptionsPlist SFI/Export.plist -allowProvisioningUpdates -exportPath build/SFT && \
+	cp build/SFT/sing-box.ipa dist/SFT.ipa
+
+upload_tvos_ipa:
+	cd dist && \
+	cp SFT.ipa "SFT-${VERSION}.ipa" && \
+	ghr --replace --draft --prerelease "v${VERSION}" "SFT-${VERSION}.ipa"
+
 release_tvos: build_tvos upload_tvos_app_store
 
 update_apple_version:
@@ -225,8 +245,8 @@ lib:
 	go run ./cmd/internal/build_libbox -target ios
 
 lib_install:
-	go install -v github.com/sagernet/gomobile/cmd/gomobile@v0.1.6
-	go install -v github.com/sagernet/gomobile/cmd/gobind@v0.1.6
+	go install -v github.com/sagernet/gomobile/cmd/gomobile@v0.1.7
+	go install -v github.com/sagernet/gomobile/cmd/gobind@v0.1.7
 
 docs:
 	venv/bin/mkdocs serve
