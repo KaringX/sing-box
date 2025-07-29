@@ -73,7 +73,7 @@ require ( //karing
 	github.com/klauspost/compress v1.17.11
 	github.com/shirou/gopsutil/v3 v3.24.5
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
-	github.com/enfein/mieru/v3 v3.16.2
+	github.com/enfein/mieru/v3 v3.17.0
 )
 
 replace github.com/Dreamacro/clash => github.com/KaringX/clash v0.0.0-20241101044429-f71df89d4091
