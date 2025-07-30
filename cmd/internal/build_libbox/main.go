@@ -165,7 +165,7 @@ func buildApple() {
 		"-v",
 		"-target", bindTarget,
 		"-libname=box",
-		"-tags-not-macos=with_low_memory",
+		//"-tags-not-macos=with_low_memory", //karing
 	}
 	if !withTailscale {
 		args = append(args, "-tags-macos="+strings.Join(memcTags, ","))
