@@ -69,10 +69,11 @@ func NewDefault(ctx context.Context, options option.DialerOptions) (*DefaultDial
 		if !(C.IsLinux || C.IsDarwin || C.IsWindows) {
 			//return nil, E.New("`bind_interface` is only supported on Linux, macOS and Windows") //karing
 			options.BindInterface = "" //karing
+		} else { //karing
+			bindFunc := control.BindToInterface(interfaceFinder, options.BindInterface, -1)
+			dialer.Control = control.Append(dialer.Control, bindFunc)
+			listener.Control = control.Append(listener.Control, bindFunc)
 		}
-		bindFunc := control.BindToInterface(interfaceFinder, options.BindInterface, -1)
-		dialer.Control = control.Append(dialer.Control, bindFunc)
-		listener.Control = control.Append(listener.Control, bindFunc)
 	}
 	if options.RoutingMark > 0 {
 		if !C.IsLinux {
