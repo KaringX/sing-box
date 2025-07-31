@@ -172,8 +172,8 @@ func New(options Options) (box *Box, err error) { //karing
 	}
 	logFactory.Logger().InfoContext(ctx, "box new") //karing
 
-	var internalServices []adapter.LifecycleService //karing
-	if needCacheFile {                              //karing
+	var internalServices []adapter.LifecycleService
+	if needCacheFile { //karing
 		cacheFile := cachefile.New(ctx, common.PtrValueOrDefault(experimentalOptions.CacheFile))
 		service.MustRegister[adapter.CacheFile](ctx, cacheFile)
 		internalServices = append(internalServices, cacheFile)
@@ -182,8 +182,6 @@ func New(options Options) (box *Box, err error) { //karing
 			return nil, E.Cause(err, "cacheFile load failed")
 		}
 	}
-
-	//var internalServices []adapter.LifecycleService //karing
 	certificateOptions := common.PtrValueOrDefault(options.Certificate)
 	if C.IsAndroid || certificateOptions.Store != "" && certificateOptions.Store != C.CertificateStoreSystem ||
 		len(certificateOptions.Certificate) > 0 ||
@@ -365,11 +363,13 @@ func New(options Options) (box *Box, err error) { //karing
 			return nil, E.Cause(err, "initialize platform interface")
 		}
 	}
-	/*if needCacheFile {//karing
+	/*//karing
+	if needCacheFile {
 		cacheFile := cachefile.New(ctx, common.PtrValueOrDefault(experimentalOptions.CacheFile))
 		service.MustRegister[adapter.CacheFile](ctx, cacheFile)
 		internalServices = append(internalServices, cacheFile)
-	}*/
+	}
+	*/
 
 	if needClashAPI {
 		clashAPIOptions := common.PtrValueOrDefault(experimentalOptions.ClashAPI)
@@ -555,7 +555,7 @@ func (s *Box) Close() error {
 		close(s.done)
 	}
 	err := common.Close(
-		s.inbound, s.outbound, s.endpoint, s.router, s.connection, s.dnsRouter, s.dnsTransport, s.network,
+		s.service, s.endpoint, s.inbound, s.outbound, s.router, s.connection, s.dnsRouter, s.dnsTransport, s.network,
 	)
 	for _, lifecycleService := range s.internalService {
 		err = E.Append(err, lifecycleService.Close(), func(err error) error {

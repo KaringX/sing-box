@@ -11,7 +11,6 @@ import (
 	"github.com/sagernet/sing-box/experimental/libbox/platform"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
-
 	"github.com/sagernet/sing/service"
 
 	mDNS "github.com/miekg/dns"

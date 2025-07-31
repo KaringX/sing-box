@@ -48,7 +48,6 @@ type BoxService struct {
 }
 
 var contextId int //karing
-
 func NewService(configContent string, platformInterface PlatformInterface) (boxService *BoxService, err error) { //karing
 	defer func() { //karing
 		if e := recover(); e != nil {

@@ -205,7 +205,6 @@ func NewDefault(ctx context.Context, options option.DialerOptions) (*DefaultDial
 		tlsFragment.Size = size
 	}
 	tcpDialer4, err := newTCPDialer(dialer4, options.TCPFastOpen, tlsFragment) //hiddify
-
 	if err != nil {
 		return nil, err
 	}

@@ -21,7 +21,7 @@ type Formatter struct {
 	DisableLineBreak bool
 }
 
-func (f Formatter) Format(ctx context.Context, contextId string, level Level, tag string, message string, timestamp time.Time) string {
+func (f Formatter) Format(ctx context.Context, contextId string, level Level, tag string, message string, timestamp time.Time) string { // karing
 	levelString := strings.ToUpper(FormatLevel(level))
 	if !f.DisableColors {
 		switch level {

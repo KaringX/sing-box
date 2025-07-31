@@ -3,6 +3,7 @@ package route
 import (
 	"context"
 	"net/netip"
+
 	"os"
 	"runtime"
 
@@ -45,7 +46,7 @@ type Router struct {
 	started                 bool
 }
 
-func NewRouter(ctx context.Context, logFactory log.Factory, options option.RouteOptions, dnsOptions option.DNSOptions) *Router { //karing
+func NewRouter(ctx context.Context, logFactory log.Factory, options option.RouteOptions, dnsOptions option.DNSOptions) *Router {
 	return &Router{
 		ctx:               ctx,
 		logger:            logFactory.NewLogger("router"),

@@ -20,7 +20,7 @@ type Options struct {
 	PlatformWriter PlatformWriter
 }
 
-var (
+var ( // karing
 	CtxKeyLogContextIdName = "log contextId name"
 )
 
