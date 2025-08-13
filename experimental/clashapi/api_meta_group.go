@@ -29,7 +29,7 @@ func groupRouter(server *Server) http.Handler {
 		r.Get("/delay", getGroupDelay(server))
 		r.Get("/delayUpdateCheck", updateGroupDelayCheck(server)) //karing
 	})
-	r.Get("/delayhistory", getProxyDelayHistory(server)) //karing
+	r.Get("/delayhistory", getGroupDelayHistory(server)) //karing
 	return r
 }
 
@@ -170,7 +170,7 @@ func updateGroupDelayCheck(server *Server) func(w http.ResponseWriter, r *http.R
 	}
 }
 
-func getProxyDelayHistory(server *Server) func(w http.ResponseWriter, r *http.Request) { //karing
+func getGroupDelayHistory(server *Server) func(w http.ResponseWriter, r *http.Request) { //karing
 	return func(w http.ResponseWriter, r *http.Request) {
 		delayHistory := server.urlTestHistory.GetURLTestHistory()
 		render.JSON(w, r, render.M{

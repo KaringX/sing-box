@@ -35,6 +35,7 @@ func proxyRouter(server *Server, router adapter.Router) http.Handler {
 		r.Get("/delay", getProxyDelay(server))
 		r.Get("/httprequest", httpRequestByProxy(server)) //karing
 		r.Put("/", updateProxy)
+		r.Get("/delayhistory", getProxyDelayHistory(server)) //karing
 	})
 	return r
 }
@@ -313,6 +314,17 @@ func httpRequestByProxy(server *Server) func(w http.ResponseWriter, r *http.Requ
 		})
 	}
 }
+
+func getProxyDelayHistory(server *Server) func(w http.ResponseWriter, r *http.Request) { //karing
+	return func(w http.ResponseWriter, r *http.Request) {
+		name := r.Context().Value(CtxKeyProxyName).(string)
+		delayHistory := server.urlTestHistory.LoadURLTestHistory(name)
+		render.JSON(w, r, render.M{
+			"history": delayHistory,
+		})
+	}
+}
+
 func URLRequest(ctx context.Context, link string, detour N.Dialer) (statusCode int, header map[string][]string, content []byte, err error) { //karing
 	if link == "" {
 		return 0, nil, nil, E.New("request url is empty")
