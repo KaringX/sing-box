@@ -23,7 +23,7 @@ import (
 
 type UTLSClientConfig struct {
 	config      *utls.Config
-	paddingSize option.IntRange //hiddify 
+	paddingSize option.IntRange //hiddify
 	id          utls.ClientHelloID
 }
 
@@ -55,8 +55,9 @@ func (e *UTLSClientConfig) Client(conn net.Conn) (Conn, error) {
 	if e.id != utls.HelloCustom { //hiddify
 		uConn = utls.UClient(conn, e.config.Clone(), e.id)
 	} else { //hiddify
+		uConn = utls.UClient(conn, e.config.Clone(), randomFingerprint)
 		var err error
-		uConn, err = makeTLSHelloPacketWithPadding(conn, e, e.config.ServerName)
+		uConn, err = makeTLSHelloPacketWithPadding(uConn, e.paddingSize, e.config.ServerName)
 		if err != nil {
 			return nil, err
 		}
@@ -71,7 +72,7 @@ func (e *UTLSClientConfig) SetSessionIDGenerator(generator func(clientHello []by
 func (e *UTLSClientConfig) Clone() Config {
 	return &UTLSClientConfig{
 		config:      e.config.Clone(),
-		paddingSize: e.paddingSize, //hiddify 
+		paddingSize: e.paddingSize, //hiddify
 		id:          e.id,
 	}
 }
@@ -211,7 +212,7 @@ func NewUTLSClient(ctx context.Context, serverAddress string, options option.Out
 	if options.TLSTricks != nil { //hiddify
 		switch options.TLSTricks.PaddingMode {
 		case "random":
-			paddingSize, err := option.Parse2IntRange(options.TLSTricks.PaddingSize) //hiddify 
+			paddingSize, err := option.Parse2IntRange(options.TLSTricks.PaddingSize) //hiddify
 			if err != nil {
 				return nil, E.Cause(err, "invalid Padding Size supplied")
 			}
