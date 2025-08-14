@@ -119,10 +119,10 @@ func (s *URLTest) Close() error {
 }
 
 func (s *URLTest) Now() string {
-	if outbound := s.group.selectedOutboundTCP; outbound != nil { //karing
-		return outbound.Tag() //karing
-	} else if outbound := s.group.selectedOutboundUDP; outbound != nil { //karing
-		return outbound.Tag() //karing
+	if selectedOutbound := s.group.selectedOutboundTCP; selectedOutbound != nil { //karing
+		return selectedOutbound.Tag() //karing
+	} else if selectedOutbound := s.group.selectedOutboundUDP; selectedOutbound != nil { //karing
+		return selectedOutbound.Tag() //karing
 	}
 	return ""
 }
@@ -144,37 +144,37 @@ func (s *URLTest) DialContext(ctx context.Context, network string, destination M
 		return nil, s.GetParseErr()
 	}
 	s.group.Touch()
-	var outbound adapter.Outbound
+	var selectedOutbound adapter.Outbound //karing
 	switch N.NetworkName(network) {
 	case N.NetworkTCP:
-		outbound = s.group.selectedOutboundTCP
+		selectedOutbound = s.group.selectedOutboundTCP //karing
 	case N.NetworkUDP:
-		outbound = s.group.selectedOutboundUDP
+		selectedOutbound = s.group.selectedOutboundUDP //karing
 	default:
 		return nil, E.Extend(N.ErrUnknownNetwork, network)
 	}
-	if outbound == nil {
-		outbound, _ = s.group.Select(network)
+	if selectedOutbound == nil { //karing
+		selectedOutbound, _ = s.group.Select(network) //karing
 	}
-	if outbound == nil {
+	if selectedOutbound == nil { //karing
 		return nil, E.New("missing supported outbound")
 	}
-	conn, err := outbound.DialContext(ctx, network, destination)
-	realTag := RealTag(outbound) //karing
+	conn, err := selectedOutbound.DialContext(ctx, network, destination) //karing
+	realTag := RealTag(selectedOutbound)                                 //karing
 	if err == nil {
-		s.updateHistory(outbound.Type(), realTag) //karing
+		s.updateHistory(selectedOutbound.Type(), realTag) //karing
 		return s.group.interruptGroup.NewConn(conn, interrupt.IsExternalConnectionFromContext(ctx)), nil
 	}
 
-	s.logger.ErrorContext(ctx, "DialContext ["+outbound.Tag()+"] :", err) //karing
-	//s.group.history.DeleteURLTestHistory(outbound.Tag()) //karing
+	s.logger.ErrorContext(ctx, "DialContext ["+selectedOutbound.Tag()+"] :", err) //karing
+	//s.group.history.DeleteURLTestHistory(selectedOutbound.Tag()) //karing
 	s.group.history.StoreURLTestHistory(realTag, &adapter.URLTestHistory{ //karing
 		Time:  time.Now(),
 		Delay: 0,
 		Err:   err.Error(),
 	})
-	s.recheckSelectedOutboundUDP(outbound, "DialContext") //karing
-	s.recheckSelectedOutboundTCP(outbound)                //karing
+	s.recheckSelectedOutboundUDP(selectedOutbound, "DialContext") //karing
+	s.recheckSelectedOutboundTCP(selectedOutbound)                //karing
 
 	return nil, err
 }
@@ -184,28 +184,28 @@ func (s *URLTest) ListenPacket(ctx context.Context, destination M.Socksaddr) (ne
 		return nil, s.GetParseErr()
 	}
 	s.group.Touch()
-	outbound := s.group.selectedOutboundUDP
-	if outbound == nil {
-		outbound, _ = s.group.Select(N.NetworkUDP)
+	selectedOutbound := s.group.selectedOutboundUDP //karing
+	if selectedOutbound == nil {                    //karing
+		selectedOutbound, _ = s.group.Select(N.NetworkUDP) //karing
 	}
-	if outbound == nil {
+	if selectedOutbound == nil { //karing
 		return nil, E.New("missing supported outbound")
 	}
-	conn, err := outbound.ListenPacket(ctx, destination)
-	realTag := RealTag(outbound) //karing
+	conn, err := selectedOutbound.ListenPacket(ctx, destination) //karing
+	realTag := RealTag(selectedOutbound)                         //karing
 	if err == nil {
-		s.updateHistory(outbound.Type(), realTag) //karing
+		s.updateHistory(selectedOutbound.Type(), realTag) //karing
 		return s.group.interruptGroup.NewPacketConn(conn, interrupt.IsExternalConnectionFromContext(ctx)), nil
 	}
 
-	s.logger.ErrorContext(ctx, "ListenPacket ["+outbound.Tag()+"] :", err) //karing
-	//s.group.history.DeleteURLTestHistory(outbound.Tag()) //karing
+	s.logger.ErrorContext(ctx, "ListenPacket ["+selectedOutbound.Tag()+"] :", err) //karing
+	//s.group.history.DeleteURLTestHistory(selectedOutbound.Tag()) //karing
 	s.group.history.StoreURLTestHistory(realTag, &adapter.URLTestHistory{ //karing
 		Time:  time.Now(),
 		Delay: 0,
 		Err:   err.Error(),
 	})
-	s.recheckSelectedOutboundUDP(outbound, "ListenPacket") //karing
+	s.recheckSelectedOutboundUDP(selectedOutbound, "ListenPacket") //karing
 
 	return nil, err
 }
@@ -234,16 +234,16 @@ func (s *URLTest) Checking() bool { //karing
 	return s.group.Checking()
 }
 
-func (s *URLTest) recheckSelectedOutboundTCP(outbound adapter.Outbound) { //karing
-	if outbound == s.group.selectedOutboundTCP {
-		s.logger.Warn("URLTest TCP failed: ", s.Tag(), " (", s.outboundToString(outbound), "), will performUpdateCheck")
+func (s *URLTest) recheckSelectedOutboundTCP(selectedOutbound adapter.Outbound) { //karing
+	if selectedOutbound == s.group.selectedOutboundTCP {
+		s.logger.Warn("URLTest TCP failed: ", s.Tag(), " (", s.outboundToString(selectedOutbound), "), will performUpdateCheck")
 		s.group.selectedOutboundTCP = nil
 		s.group.performUpdateCheck(!s.Checking())
 	}
 }
-func (s *URLTest) recheckSelectedOutboundUDP(outbound adapter.Outbound, from string) { //karing
-	if outbound == s.group.selectedOutboundUDP {
-		s.logger.Warn("URLTest UDP ", from, " failed: ", s.Tag(), " (", s.outboundToString(outbound), "), will performUpdateCheck")
+func (s *URLTest) recheckSelectedOutboundUDP(selectedOutbound adapter.Outbound, from string) { //karing
+	if selectedOutbound == s.group.selectedOutboundUDP {
+		s.logger.Warn("URLTest UDP ", from, " failed: ", s.Tag(), " (", s.outboundToString(selectedOutbound), "), will performUpdateCheck")
 		s.group.selectedOutboundUDP = nil
 		s.group.performUpdateCheck(!s.Checking())
 	}
@@ -280,11 +280,11 @@ func (s *URLTest) InterfaceUpdated() { //karing
 	go s.group.CheckOutbounds(true)
 }
 
-func (s *URLTest) outboundToString(outbound adapter.Outbound) string { //karing
-	if outbound == nil {
+func (s *URLTest) outboundToString(selectedOutbound adapter.Outbound) string { //karing
+	if selectedOutbound == nil {
 		return "<nil>"
 	}
-	return outbound.Tag()
+	return selectedOutbound.Tag()
 }
 
 type URLTestGroup struct {
