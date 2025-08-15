@@ -80,7 +80,7 @@ replace github.com/Dreamacro/clash => github.com/KaringX/clash v0.0.0-2024110104
 //go get github.com/KaringX/sing@50a9c2efd67210376bb718ef766d53710768d5ae
 //replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20250730035119-ed406dacde18 //karing_v0.7.0-beta.1 //0.7.0
 //bug: sing 0.7 causes some video websites to directly connect to js resources that cannot load normally, such as https://www.mgtv.com/b/760878/23242053.html
-replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20250530123122-a32538bd4bd9 //karing_v0.6.11
+replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20250815030042-db86792a0742 //karing_v0.7.5
 
 //replace github.com/sagernet/sing => ../../KaringX/sing
 
@@ -96,7 +96,7 @@ replace github.com/sagernet/quic-go => github.com/KaringX/quic-go v0.49.0-beta.1
 
 //replace github.com/sagernet/quic-go => ../../KaringX/quic-go
 
-replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.20250730040231-c587669fec85 //karing_v0.6.10-beta(dev)
+replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.20250815030528-995802198caa //karing_v0.7.0-beta1
 
 //replace github.com/sagernet/sing-tun => ../../KaringX/sing-tun
 
