@@ -107,8 +107,10 @@ func buildAndroid() {
 	}
 
 	if !debugEnabled {
+		sharedFlags[3] = sharedFlags[3] + " -checklinkname=0"
 		args = append(args, sharedFlags...)
 	} else {
+		debugFlags[1] = debugFlags[1] + " -checklinkname=0"
 		args = append(args, debugFlags...)
 	}
 
