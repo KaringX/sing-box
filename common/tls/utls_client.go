@@ -64,8 +64,9 @@ func (c *UTLSClientConfig) Client(conn net.Conn) (Conn, error) {
 	if c.id != utls.HelloCustom { //hiddify
 		uConn = utls.UClient(conn, c.config.Clone(), c.id)
 	} else { //hiddify
+		uConn = utls.UClient(conn, c.config.Clone(), randomFingerprint)
 		var err error
-		uConn, err = makeTLSHelloPacketWithPadding(conn, c, c.config.ServerName)
+		uConn, err = makeTLSHelloPacketWithPadding(uConn, c.paddingSize, c.config.ServerName)
 		if err != nil {
 			return nil, err
 		}

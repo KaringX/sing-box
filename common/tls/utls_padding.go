@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	utls "github.com/metacubex/utls"
+	"github.com/sagernet/sing-box/option"
 )
 
 const (
@@ -114,12 +115,11 @@ func (e *FakePaddingExtension) Read(b []byte) (n int, err error) {
 }
 
 // makeTLSHelloPacketWithPadding creates a TLS hello packet with padding.
-func makeTLSHelloPacketWithPadding(conn net.Conn, e *UTLSClientConfig, sni string) (*utls.UConn, error) {
-	paddingSize := int(e.paddingSize.UniformRand())
+func makeTLSHelloPacketWithPadding(uConn *utls.UConn, configPaddingSize option.IntRange, sni string) (*utls.UConn, error) {
+	paddingSize := int(configPaddingSize.UniformRand())
 	if paddingSize <= 0 {
 		paddingSize = 1
 	}
-	uConn := utls.UClient(conn, e.config.Clone(), e.id)
 	spec := utls.ClientHelloSpec{
 		TLSVersMax: utls.VersionTLS13,
 		TLSVersMin: utls.VersionTLS12,
