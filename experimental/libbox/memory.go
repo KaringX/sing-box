@@ -2,6 +2,7 @@ package libbox
 
 import (
 	"math"
+	"runtime"
 	runtimeDebug "runtime/debug"
 
 	"github.com/sagernet/sing-box/common/conntrack"
@@ -20,4 +21,9 @@ func SetMemoryLimit(enabled bool) {
 		runtimeDebug.SetMemoryLimit(math.MaxInt64)
 		conntrack.KillerEnabled = false
 	}
+}
+
+func Gc() { //karing
+	runtime.GC()
+	runtimeDebug.FreeOSMemory()
 }
