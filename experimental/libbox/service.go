@@ -32,7 +32,6 @@ import (
 	"github.com/sagernet/sing/common/logger"
 	N "github.com/sagernet/sing/common/network"
 	"github.com/sagernet/sing/service"
-	"github.com/sagernet/sing/service/filemanager"
 	"github.com/sagernet/sing/service/pause"
 )
 
@@ -58,7 +57,6 @@ func NewService(configContent string, platformInterface PlatformInterface) (boxS
 	D.MainGoroutineId = D.GetCurrentGoroutineId()                                                                 //karing
 	ctx := context.WithValue(BaseContext(platformInterface), log.CtxKeyLogContextIdName, strconv.Itoa(contextId)) //karing
 	contextId++                                                                                                   //karing
-	ctx = filemanager.WithDefault(ctx, sWorkingPath, sBasePath, sTempPath, sUserID, sGroupID)                     //karing
 	service.MustRegister[deprecated.Manager](ctx, new(deprecatedManager))
 	var options option.Options                     //karing
 	options, err = parseConfig(ctx, configContent) //karing

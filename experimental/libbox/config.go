@@ -35,14 +35,14 @@ func BaseContext(platformInterface PlatformInterface) context.Context {
 		}
 	}
 	ctx := context.Background()
-	ctx = filemanager.WithDefault(ctx, sWorkingPath, sTempPath, sUserID, sGroupID)
+	ctx = filemanager.WithDefault(ctx, sWorkingPath, sBasePath, sTempPath, sUserID, sGroupID) //karing
 	return box.Context(ctx, include.InboundRegistry(), include.OutboundRegistry(), include.EndpointRegistry(), dnsRegistry, include.ServiceRegistry())
 }
 
 func parseConfig(ctx context.Context, configContent string) (option.Options, error) {
 	options, err := json.UnmarshalExtendedContext[option.Options](ctx, []byte(configContent))
 	if err != nil {
-		return option.Options{}, E.Cause(err, "decode config: config length: ", len(configContent))  //karing
+		return option.Options{}, E.Cause(err, "decode config: config length: ", len(configContent)) //karing
 	}
 	return options, nil
 }
