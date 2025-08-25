@@ -121,11 +121,16 @@ func NewDefault(ctx context.Context, options option.DialerOptions) (*DefaultDial
 					listener.Control = control.Append(listener.Control, bindFunc)
 				}
 			}
+			if options.RoutingMark == 0 && defaultOptions.RoutingMark != 0 {
+				dialer.Control = control.Append(dialer.Control, setMarkWrapper(networkManager, defaultOptions.RoutingMark, true))
+				listener.Control = control.Append(listener.Control, setMarkWrapper(networkManager, defaultOptions.RoutingMark, true))
+			}
 		}
-		if options.RoutingMark == 0 && defaultOptions.RoutingMark != 0 {
-			dialer.Control = control.Append(dialer.Control, setMarkWrapper(networkManager, defaultOptions.RoutingMark, true))
-			listener.Control = control.Append(listener.Control, setMarkWrapper(networkManager, defaultOptions.RoutingMark, true))
-		}
+	}
+	if networkManager != nil {
+		markFunc := networkManager.AutoRedirectOutputMarkFunc()
+		dialer.Control = control.Append(dialer.Control, markFunc)
+		listener.Control = control.Append(listener.Control, markFunc)
 	}
 	if options.ReuseAddr {
 		listener.Control = control.Append(listener.Control, control.ReuseAddr())
@@ -310,6 +315,14 @@ func (d *DefaultDialer) ListenPacket(ctx context.Context, destination M.Socksadd
 		}))
 	} else {
 		return d.ListenSerialInterfacePacket(ctx, destination, d.networkStrategy, d.networkType, d.fallbackNetworkType, d.networkFallbackDelay)
+	}
+}
+
+func (d *DefaultDialer) DialerForICMPNetwork(network string) net.Dialer {
+	if network == N.NetworkICMPv6 {
+		return dialerFromTCPDialer(d.dialer6)
+	} else {
+		return dialerFromTCPDialer(d.dialer4)
 	}
 }
 

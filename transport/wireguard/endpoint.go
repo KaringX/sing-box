@@ -8,8 +8,12 @@ import (
 	"net"
 	"net/netip"
 	"os"
+	"reflect"
 	"strings"
+	"unsafe"
 
+	"github.com/sagernet/sing-box/adapter"
+	"github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common"
 	E "github.com/sagernet/sing/common/exceptions"
 	F "github.com/sagernet/sing/common/format"
@@ -29,7 +33,9 @@ type Endpoint struct {
 	ipcConf        string
 	allowedAddress []netip.Prefix
 	tunDevice      Device
+	natDevice      NatDevice
 	device         *device.Device
+	allowedIPs     *device.AllowedIPs
 	pause          pause.Manager
 	pauseCallback  *list.Element[pause.Callback]
 }
@@ -111,12 +117,17 @@ func NewEndpoint(options EndpointOptions) (*Endpoint, error) {
 	if err != nil {
 		return nil, E.Cause(err, "create WireGuard device")
 	}
+	natDevice, isNatDevice := tunDevice.(NatDevice)
+	if !isNatDevice {
+		natDevice = NewNATDevice(tunDevice)
+	}
 	return &Endpoint{
 		options:        options,
 		peers:          peers,
 		ipcConf:        ipcConf,
 		allowedAddress: allowedAddresses,
 		tunDevice:      tunDevice,
+		natDevice:      natDevice,
 	}, nil
 }
 
@@ -176,7 +187,13 @@ func (e *Endpoint) Start(resolve bool) error {
 			e.options.Logger.Error(fmt.Sprintf(strings.ToLower(format), args...))
 		},
 	}
-	wgDevice := device.NewDevice(e.options.Context, e.tunDevice, bind, logger, e.options.Workers)
+	var deviceInput Device
+	if e.natDevice != nil {
+		deviceInput = e.natDevice
+	} else {
+		deviceInput = e.tunDevice
+	}
+	wgDevice := device.NewDevice(e.options.Context, deviceInput, bind, logger, e.options.Workers)
 	e.tunDevice.SetDevice(wgDevice)
 	ipcConf := e.ipcConf
 	for _, peer := range e.peers {
@@ -191,6 +208,7 @@ func (e *Endpoint) Start(resolve bool) error {
 	if e.pause != nil {
 		e.pauseCallback = e.pause.RegisterCallback(e.onPauseUpdated)
 	}
+	e.allowedIPs = (*device.AllowedIPs)(unsafe.Pointer(reflect.Indirect(reflect.ValueOf(wgDevice)).FieldByName("allowedips").UnsafeAddr()))
 	return nil
 }
 
@@ -216,6 +234,20 @@ func (e *Endpoint) Close() error {
 		e.pause.UnregisterCallback(e.pauseCallback)
 	}
 	return nil
+}
+
+func (e *Endpoint) Lookup(address netip.Addr) *device.Peer {
+	if e.allowedIPs == nil {
+		return nil
+	}
+	return e.allowedIPs.Lookup(address.AsSlice())
+}
+
+func (e *Endpoint) NewDirectRouteConnection(metadata adapter.InboundContext, routeContext tun.DirectRouteContext) (tun.DirectRouteDestination, error) {
+	if e.natDevice == nil {
+		return nil, os.ErrInvalid
+	}
+	return e.natDevice.CreateDestination(metadata, routeContext)
 }
 
 func (e *Endpoint) onPauseUpdated(event int) {
