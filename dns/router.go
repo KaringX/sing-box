@@ -305,19 +305,14 @@ func (r *Router) Exchange(ctx context.Context, message *mDNS.Msg, options adapte
 					transportTag := ""    //karing
 					if transport != nil { //karing
 						transportTag = transport.Tag()
-					} //karing
+					}
 					if errors.Is(err, ErrResponseRejectedCached) {
 						rejected = true
 						r.logger.DebugContext(ctx, E.Cause(err, "response rejected for ", FormatQuestion(message.Question[0].String())), " (cached)", " by ", transportTag) //karing
 					} else if errors.Is(err, ErrResponseRejected) {
 						rejected = true
 						r.logger.DebugContext(ctx, E.Cause(err, "response rejected for ", FormatQuestion(message.Question[0].String()), " by ", transportTag)) //karing
-						/*} else if responseCheck!= nil && errors.Is(err, RcodeError(mDNS.RcodeNameError)) {
-						rejected = true
-						r.logger.DebugContext(ctx, E.Cause(err, "response rejected for ", FormatQuestion(message.Question[0].String())))
-						*/
 					} else if len(message.Question) > 0 {
-						rejected = true
 						r.logger.ErrorContext(ctx, E.Cause(err, "exchange failed for ", FormatQuestion(message.Question[0].String()), " by ", transportTag)) //karing
 					} else {
 						r.logger.ErrorContext(ctx, E.Cause(err, "exchange failed for <empty query>", " by ", transportTag)) //karing
@@ -461,6 +456,9 @@ response:
 }
 
 func (r *Router) LookupTag(ctx context.Context, domain string, options adapter.DNSQueryOptions) ([]netip.Addr, string, error) { //karing
+	if r.transport == nil { //karing
+		return nil, E.New("router closed")
+	}
 	var (
 		responseAddrs []netip.Addr
 		cached        bool
@@ -551,7 +549,6 @@ func (r *Router) LookupTag(ctx context.Context, domain string, options adapter.D
 			} else { //karing
 				transportTag = ""
 			}
-
 			var responseCheck func(responseAddrs []netip.Addr) bool
 			if rule != nil && rule.WithAddressLimit() {
 				responseCheck = func(responseAddrs []netip.Addr) bool {
@@ -574,7 +571,7 @@ response:
 	if len(responseAddrs) > 0 {
 		r.logger.InfoContext(ctx, "lookup succeed for ", domain, ": ", strings.Join(F.MapToString(responseAddrs), " "))
 	}
-	return responseAddrs, transportTag, err
+	return responseAddrs, transportTag, err //karing
 }
 
 func isAddressQuery(message *mDNS.Msg) bool {

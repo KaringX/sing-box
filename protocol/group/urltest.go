@@ -466,7 +466,7 @@ func (g *URLTestGroup) Select(network string) (adapter.Outbound, bool) {
 }
 
 func (g *URLTestGroup) loopCheck() {
-	if time.Now().Sub(g.lastActive.Load()) > g.interval {
+	if time.Since(g.lastActive.Load()) > g.interval {
 		g.lastActive.Store(time.Now())
 		g.CheckOutbounds(false)
 	}
@@ -476,7 +476,7 @@ func (g *URLTestGroup) loopCheck() {
 			return
 		case <-g.ticker.C:
 		}
-		if time.Now().Sub(g.lastActive.Load()) > g.idleTimeout {
+		if time.Since(g.lastActive.Load()) > g.idleTimeout {
 			g.access.Lock()
 			g.ticker.Stop()
 			g.ticker = nil
@@ -659,7 +659,7 @@ func (g *URLTestGroup) urlTest(ctx context.Context, force bool) (map[string]adap
 			continue
 		}
 		history := g.history.LoadURLTestHistory(realTag)
-		if !force && history != nil && time.Now().Sub(history.Time) < g.interval {
+		if !force && history != nil && time.Since(history.Time) < g.interval {
 			continue
 		}
 		checked[realTag] = true
