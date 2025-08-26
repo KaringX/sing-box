@@ -457,7 +457,7 @@ response:
 
 func (r *Router) LookupTag(ctx context.Context, domain string, options adapter.DNSQueryOptions) ([]netip.Addr, string, error) { //karing
 	if r.transport == nil { //karing
-		return nil, E.New("router closed")
+		return nil, "", E.New("router closed")
 	}
 	var (
 		responseAddrs []netip.Addr
