@@ -37,6 +37,7 @@ type Router interface {
 	Rules() []Rule
 	AppendTracker(tracker ConnectionTracker)
 	ResetNetwork()
+	ResetOutboundNetwork(tags []string) //karing
 }
 
 type ConnectionTracker interface {

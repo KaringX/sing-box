@@ -6,6 +6,8 @@ import (
 	"io"
 	"net/http"
 	"net/netip"
+	"runtime"
+	runtimeDebug "runtime/debug"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -236,12 +238,18 @@ func remoteRuleSetRulesCount(router adapter.Router) func(w http.ResponseWriter, 
 		})
 	}
 }
+
 func resetOutboundConnections() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		conntrack.Close()
+		go func() {
+			runtime.GC()
+			runtimeDebug.FreeOSMemory()
+		}()
 		render.JSON(w, r, render.M{})
 	}
 }
+
 func mainStack() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		stack := D.GetGoroutineStack(D.MainGoroutineId)

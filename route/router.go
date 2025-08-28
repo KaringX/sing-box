@@ -277,6 +277,12 @@ func (r *Router) ResetNetwork() {
 	}
 }
 
+func (r *Router) ResetOutboundNetwork(tags []string) { //karing
+	if r.network != nil {
+		r.network.ResetOutboundNetwork(tags)
+	}
+}
+
 func (r *Router) GetRemoteRuleSetRulesCount() map[string]int { //karing
 	counts := make(map[string]int)
 	for _, ruleSet := range r.ruleSets {

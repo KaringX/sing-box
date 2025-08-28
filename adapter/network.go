@@ -26,6 +26,7 @@ type NetworkManager interface {
 	PackageManager() tun.PackageManager
 	WIFIState() WIFIState
 	ResetNetwork()
+	ResetOutboundNetwork(tags []string) //karing
 	UpdateWIFIState()
 }
 
