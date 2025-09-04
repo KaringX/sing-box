@@ -29,7 +29,7 @@ require (
 	github.com/sagernet/gomobile v0.1.8
 	github.com/sagernet/gvisor v0.0.0-20250325023245-7a9c0f5725fb
 	github.com/sagernet/quic-go v0.52.0-beta.1
-	github.com/sagernet/sing v0.7.6-0.20250815070458-d33ece7a184f
+	github.com/sagernet/sing v0.7.6
 	github.com/sagernet/sing-mux v0.3.3
 	github.com/sagernet/sing-quic v0.5.0
 	github.com/sagernet/sing-shadowsocks v0.2.8
@@ -38,7 +38,7 @@ require (
 	github.com/sagernet/sing-tun v0.7.0-beta.1
 	github.com/sagernet/sing-vmess v0.2.7
 	github.com/sagernet/smux v1.5.34-mod.2
-	github.com/sagernet/tailscale v1.80.3-mod.5
+	github.com/sagernet/tailscale v1.80.3-sing-box-1.12-mod.1
 	github.com/sagernet/wireguard-go v0.0.1-beta.7
 	github.com/sagernet/ws v0.0.0-20231204124109-acfe8907c854
 	github.com/spf13/cobra v1.9.1
@@ -78,9 +78,9 @@ require ( //karing
 replace github.com/Dreamacro/clash => github.com/KaringX/clash v0.0.0-20241101044429-f71df89d4091
 
 //go get github.com/KaringX/sing@50a9c2efd67210376bb718ef766d53710768d5ae
-replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20250826053701-45613f93240b //karing_v0.7.6
+//replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20250826053701-45613f93240b //karing_v0.7.6
 
-//replace github.com/sagernet/sing => ../../KaringX/sing
+replace github.com/sagernet/sing => ../../KaringX/sing
 
 replace github.com/sagernet/sing-dns => github.com/KaringX/sing-dns v0.3.0-beta.14.0.20250530212309-a733af0f5878 //karing_v0.4.5
 
@@ -94,9 +94,9 @@ replace github.com/sagernet/quic-go => github.com/KaringX/quic-go v0.49.0-beta.1
 
 //replace github.com/sagernet/quic-go => ../../KaringX/quic-go
 
-replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.20250815030528-995802198caa //karing_v0.7.0-beta1
+//replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.20250815030528-995802198caa //karing_v0.7.0-beta1
 
-//replace github.com/sagernet/sing-tun => ../../KaringX/sing-tun
+replace github.com/sagernet/sing-tun => ../../KaringX/sing-tun
 
 replace github.com/sagernet/ws => github.com/KaringX/ws v0.0.0-20250301004503-082f57b5c845 //karing_fork
 
