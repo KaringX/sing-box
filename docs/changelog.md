@@ -2,9 +2,37 @@
 icon: material/alert-decagram
 ---
 
-#### 1.13.0-alpha.5
+#### 1.13.0-alpha.8
 
 * Fixes and improvements
+
+#### 1.12.4
+
+* Fixes and improvements
+
+#### 1.13.0-alpha.7
+
+* Add reject support for ICMP echo supports **1**
+* Fixes and improvements
+
+**1**:
+
+You can now reject, drop, or directly reply to ICMP echo (ping) requests using `reject` Route Action.
+
+See [Route Action](/configuration/route/rule_action/#reject).
+
+#### 1.13.0-alpha.6
+
+* Add proxy support for ICMP echo requests **1**
+* Fixes and improvements
+
+**1**:
+
+You can now match ICMP echo (ping) requests using the new `icmp` network in routing rules.
+
+Such traffic originates from `TUN`, `WireGuard`, and `Tailscale` inbounds and can be routed to `Direct`, `WireGuard`, and `Tailscale` outbounds.
+
+See [Route Rule](/configuration/route/rule/#network).
 
 #### 1.12.3
 

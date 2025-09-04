@@ -113,6 +113,9 @@ func (r *Router) routeConnection(ctx context.Context, conn net.Conn, metadata ad
 			}
 		case *R.RuleActionReject:
 			buf.ReleaseMulti(buffers)
+			if action.Method == C.RuleActionRejectMethodReply {
+				return E.New("reject method `reply` is not supported for TCP connections")
+			}
 			return action.Error(ctx)
 		case *R.RuleActionHijackDNS:
 			for _, buffer := range buffers {
@@ -228,6 +231,9 @@ func (r *Router) routePacketConnection(ctx context.Context, conn N.PacketConn, m
 			}
 		case *R.RuleActionReject:
 			N.ReleaseMultiPacketBuffer(packetBuffers)
+			if action.Method == C.RuleActionRejectMethodReply {
+				return E.New("reject method `reply` is not supported for UDP connections")
+			}
 			return action.Error(ctx)
 		case *R.RuleActionHijackDNS:
 			return r.hijackDNSPacket(ctx, conn, packetBuffers, metadata, onClose)
@@ -259,7 +265,7 @@ func (r *Router) routePacketConnection(ctx context.Context, conn N.PacketConn, m
 	return nil
 }
 
-func (r *Router) PreMatch(metadata adapter.InboundContext, routeContext tun.DirectRouteContext) (tun.DirectRouteDestination, error) {
+func (r *Router) PreMatch(metadata adapter.InboundContext, routeContext tun.DirectRouteContext, timeout time.Duration) (tun.DirectRouteDestination, error) {
 	selectedRule, _, _, _, err := r.matchRule(r.ctx, &metadata, true, nil, nil)
 	if err != nil {
 		return nil, err
@@ -267,6 +273,16 @@ func (r *Router) PreMatch(metadata adapter.InboundContext, routeContext tun.Dire
 	if selectedRule != nil {
 		switch action := selectedRule.Action().(type) {
 		case *R.RuleActionReject:
+			switch metadata.Network {
+			case N.NetworkTCP:
+				if action.Method == C.RuleActionRejectMethodReply {
+					return nil, E.New("reject method `reply` is not supported for TCP connections")
+				}
+			case N.NetworkUDP:
+				if action.Method == C.RuleActionRejectMethodReply {
+					return nil, E.New("reject method `reply` is not supported for UDP connections")
+				}
+			}
 			return nil, action.Error(context.Background())
 		case *R.RuleActionRoute:
 			if routeContext == nil {
@@ -279,17 +295,17 @@ func (r *Router) PreMatch(metadata adapter.InboundContext, routeContext tun.Dire
 			if !common.Contains(outbound.Network(), metadata.Network) {
 				return nil, E.New(metadata.Network, " is not supported by outbound: ", action.Outbound)
 			}
-			return outbound.(adapter.DirectRouteOutbound).NewDirectRouteConnection(metadata, routeContext)
+			return outbound.(adapter.DirectRouteOutbound).NewDirectRouteConnection(metadata, routeContext, timeout)
 		}
 	}
-	if metadata.Network != N.NetworkICMPv4 && metadata.Network != N.NetworkICMPv6 {
+	if selectedRule != nil || metadata.Network != N.NetworkICMP {
 		return nil, nil
 	}
 	defaultOutbound := r.outbound.Default()
 	if !common.Contains(defaultOutbound.Network(), metadata.Network) {
 		return nil, E.New(metadata.Network, " is not supported by default outbound: ", defaultOutbound.Tag())
 	}
-	return defaultOutbound.(adapter.DirectRouteOutbound).NewDirectRouteConnection(metadata, routeContext)
+	return defaultOutbound.(adapter.DirectRouteOutbound).NewDirectRouteConnection(metadata, routeContext, timeout)
 }
 
 func (r *Router) matchRule(
@@ -482,7 +498,7 @@ match:
 				} else if len(newPacketBuffers) > 0 {
 					packetBuffers = append(packetBuffers, newPacketBuffers...)
 				}
-			} else {
+			} else if metadata.Network != N.NetworkICMP {
 				selectedRule = currentRule
 				selectedRuleIndex = currentRuleIndex
 				break match
@@ -496,8 +512,7 @@ match:
 		actionType := currentRule.Action().Type()
 		if actionType == C.RuleActionTypeRoute ||
 			actionType == C.RuleActionTypeReject ||
-			actionType == C.RuleActionTypeHijackDNS ||
-			(actionType == C.RuleActionTypeSniff && preMatch) {
+			actionType == C.RuleActionTypeHijackDNS {
 			selectedRule = currentRule
 			selectedRuleIndex = currentRuleIndex
 			break match

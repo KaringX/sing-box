@@ -5,12 +5,13 @@ import (
 	"errors"
 	"os"
 	"sync"
+	"sync/atomic"
 
 	"github.com/sagernet/sing-box/adapter"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/service/resolved"
 	"github.com/sagernet/sing-tun"
-	"github.com/sagernet/sing/common/atomic"
+	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/control"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/logger"
@@ -82,7 +83,7 @@ func (t *DBusResolvedResolver) Close() error {
 }
 
 func (t *DBusResolvedResolver) Object() any {
-	return t.resoledObject.Load()
+	return common.PtrOrNil(t.resoledObject.Load())
 }
 
 func (t *DBusResolvedResolver) Exchange(object any, ctx context.Context, message *mDNS.Msg) (*mDNS.Msg, error) {

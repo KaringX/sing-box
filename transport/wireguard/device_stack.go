@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/netip"
 	"os"
+	"time"
 
 	"github.com/sagernet/gvisor/pkg/buffer"
 	"github.com/sagernet/gvisor/pkg/tcpip"
@@ -109,11 +110,17 @@ func (w *stackDevice) DialContext(ctx context.Context, network string, destinati
 	}
 	var networkProtocol tcpip.NetworkProtocolNumber
 	if destination.IsIPv4() {
+		if !w.inet4Address.IsValid() {
+			return nil, E.New("missing IPv4 local address")
+		}
 		networkProtocol = header.IPv4ProtocolNumber
 		bind.Addr = tun.AddressFromAddr(w.inet4Address)
 	} else {
+		if !w.inet6Address.IsValid() {
+			return nil, E.New("missing IPv6 local address")
+		}
 		networkProtocol = header.IPv6ProtocolNumber
-		bind.Addr = tun.AddressFromAddr(w.inet4Address)
+		bind.Addr = tun.AddressFromAddr(w.inet6Address)
 	}
 	switch N.NetworkName(network) {
 	case N.NetworkTCP:
@@ -251,7 +258,7 @@ func (w *stackDevice) BatchSize() int {
 	return 1
 }
 
-func (w *stackDevice) CreateDestination(metadata adapter.InboundContext, routeContext tun.DirectRouteContext) (tun.DirectRouteDestination, error) {
+func (w *stackDevice) CreateDestination(metadata adapter.InboundContext, routeContext tun.DirectRouteContext, timeout time.Duration) (tun.DirectRouteDestination, error) {
 	ctx := log.ContextWithNewID(w.ctx)
 	destination, err := ping.ConnectGVisor(
 		ctx, w.logger,
@@ -259,6 +266,7 @@ func (w *stackDevice) CreateDestination(metadata adapter.InboundContext, routeCo
 		routeContext,
 		w.stack,
 		w.inet4Address, w.inet6Address,
+		timeout,
 	)
 	if err != nil {
 		return nil, err

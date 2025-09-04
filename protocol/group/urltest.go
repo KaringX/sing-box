@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/sagernet/sing-box/adapter"
@@ -13,8 +14,8 @@ import (
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
+	tun "github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common"
-	"github.com/sagernet/sing/common/atomic"
 	"github.com/sagernet/sing/common/batch"
 	E "github.com/sagernet/sing/common/exceptions"
 	M "github.com/sagernet/sing/common/metadata"
@@ -170,6 +171,21 @@ func (s *URLTest) NewPacketConnectionEx(ctx context.Context, conn N.PacketConn, 
 	s.connection.NewPacketConnection(ctx, s, conn, metadata, onClose)
 }
 
+func (s *URLTest) NewDirectRouteConnection(metadata adapter.InboundContext, routeContext tun.DirectRouteContext, timeout time.Duration) (tun.DirectRouteDestination, error) {
+	s.group.Touch()
+	selected := s.group.selectedOutboundTCP
+	if selected == nil {
+		selected, _ = s.group.Select(N.NetworkTCP)
+	}
+	if selected == nil {
+		return nil, E.New("missing supported outbound")
+	}
+	if !common.Contains(selected.Network(), metadata.Network) {
+		return nil, E.New(metadata.Network, " is not supported by outbound: ", selected.Tag())
+	}
+	return selected.(adapter.DirectRouteOutbound).NewDirectRouteConnection(metadata, routeContext, timeout)
+}
+
 type URLTestGroup struct {
 	ctx                          context.Context
 	router                       adapter.Router
@@ -192,7 +208,7 @@ type URLTestGroup struct {
 	ticker                       *time.Ticker
 	close                        chan struct{}
 	started                      bool
-	lastActive                   atomic.TypedValue[time.Time]
+	lastActive                   common.TypedValue[time.Time]
 }
 
 func NewURLTestGroup(ctx context.Context, outboundManager adapter.OutboundManager, logger log.Logger, outbounds []adapter.Outbound, link string, interval time.Duration, tolerance uint16, idleTimeout time.Duration, interruptExternalConnections bool) (*URLTestGroup, error) {
