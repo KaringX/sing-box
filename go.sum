@@ -6,8 +6,12 @@ github.com/KaringX/clash v0.0.0-20241101044429-f71df89d4091 h1:525dFF+PjztEPQqel
 github.com/KaringX/clash v0.0.0-20241101044429-f71df89d4091/go.mod h1:r//xe/2pA3Zl+3fjIiI/o6RjIVd+z87drCD58dpRnFg=
 github.com/KaringX/quic-go v0.49.0-beta.1.0.20250528041323-b571ce42d479 h1:7ap2O+eMdFl5oPjd4I7KcKmo58WUrsGrped+DWeHL7c=
 github.com/KaringX/quic-go v0.49.0-beta.1.0.20250528041323-b571ce42d479/go.mod h1:OV+V5kEBb8kJS7k29MzDu6oj9GyMc7HA07sE1tedxz4=
+github.com/KaringX/sing v0.5.0-alpha.11.0.20250904033655-da7ae65a160b h1:G+OMT6oaDi58PtuGVJwrGwfL8VmskaR7WCeJtjauQt0=
+github.com/KaringX/sing v0.5.0-alpha.11.0.20250904033655-da7ae65a160b/go.mod h1:ARkL0gM13/Iv5VCZmci/NuoOlePoIsW0m7BWfln/Hak=
 github.com/KaringX/sing-quic v0.2.0-beta.12.0.20250826053421-b88d178eb45c h1:xfsnXBtf9H8UUBzG6PeY/Gs2GwFkTctEJPj2LOmWIJs=
 github.com/KaringX/sing-quic v0.2.0-beta.12.0.20250826053421-b88d178eb45c/go.mod h1:SAv/qdeDN+75msGG5U5ZIwG+3Ua50jVIKNrRSY8pkx0=
+github.com/KaringX/sing-tun v0.6.2-0.20250904033100-bd6aec0397b1 h1:wO5b5xYBi/niS+lmsq+RgwfTcRiHxWOlCVe4CmDsObM=
+github.com/KaringX/sing-tun v0.6.2-0.20250904033100-bd6aec0397b1/go.mod h1:pUEjh9YHQ2gJT6Lk0TYDklh3WJy7lz+848vleGM3JPM=
 github.com/KaringX/tailscale v1.80.3-mod.5.0.20250531025012-b525f2db9b5f h1:Mt7hFngHk7x4ta+WvOLi5DbhqA3iSv29AaWEIuch+nI=
 github.com/KaringX/tailscale v1.80.3-mod.5.0.20250531025012-b525f2db9b5f/go.mod h1:EBxXsWu4OH2ELbQLq32WoBeIubG8KgDrg4/Oaxjs6lI=
 github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20250531024932-ebfb2f0492e2 h1:2mHFfrNKRVE0ihBELtNU7BONQoEHDwtc/S5tvf9SEIM=

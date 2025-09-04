@@ -78,9 +78,9 @@ require ( //karing
 replace github.com/Dreamacro/clash => github.com/KaringX/clash v0.0.0-20241101044429-f71df89d4091
 
 //go get github.com/KaringX/sing@50a9c2efd67210376bb718ef766d53710768d5ae
-//replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20250826053701-45613f93240b //karing_v0.7.6
+replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20250904033655-da7ae65a160b //karing_v0.7.6
 
-replace github.com/sagernet/sing => ../../KaringX/sing
+//replace github.com/sagernet/sing => ../../KaringX/sing
 
 replace github.com/sagernet/sing-dns => github.com/KaringX/sing-dns v0.3.0-beta.14.0.20250530212309-a733af0f5878 //karing_v0.4.5
 
@@ -94,9 +94,9 @@ replace github.com/sagernet/quic-go => github.com/KaringX/quic-go v0.49.0-beta.1
 
 //replace github.com/sagernet/quic-go => ../../KaringX/quic-go
 
-//replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.20250815030528-995802198caa //karing_v0.7.0-beta1
+replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.20250904033100-bd6aec0397b1 //karing_v0.7.0
 
-replace github.com/sagernet/sing-tun => ../../KaringX/sing-tun
+//replace github.com/sagernet/sing-tun => ../../KaringX/sing-tun
 
 replace github.com/sagernet/ws => github.com/KaringX/ws v0.0.0-20250301004503-082f57b5c845 //karing_fork
 
