@@ -68,7 +68,7 @@ require ( //hiddify
 require ( //karing
 	github.com/Dreamacro/clash v1.18.0
 	github.com/alitto/pond v1.9.2
-	github.com/enfein/mieru/v3 v3.17.0
+	github.com/enfein/mieru/v3 v3.19.1
 	github.com/getsentry/sentry-go v0.33.0
 	github.com/klauspost/compress v1.17.11
 	github.com/shirou/gopsutil/v3 v3.24.5
