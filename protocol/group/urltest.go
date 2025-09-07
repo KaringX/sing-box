@@ -173,6 +173,7 @@ func (s *URLTest) DialContext(ctx context.Context, network string, destination M
 		Delay: 0,
 		Err:   err.Error(),
 	})
+	s.group.outboundInterfaceUpdated(selectedOutbound)            //karing
 	s.recheckSelectedOutboundUDP(selectedOutbound, "DialContext") //karing
 	s.recheckSelectedOutboundTCP(selectedOutbound)                //karing
 
@@ -205,6 +206,7 @@ func (s *URLTest) ListenPacket(ctx context.Context, destination M.Socksaddr) (ne
 		Delay: 0,
 		Err:   err.Error(),
 	})
+	s.group.outboundInterfaceUpdated(selectedOutbound)             //karing
 	s.recheckSelectedOutboundUDP(selectedOutbound, "ListenPacket") //karing
 
 	return nil, err
@@ -253,13 +255,11 @@ func (s *URLTest) updateHistory(outboundType string, realTag string) { //karing
 	if !s.group.isProxyOutbound(outboundType) {
 		return
 	}
-	if s.group.IsHealthChecking(realTag) {
-		return
-	}
+
 	history := s.group.history.LoadURLTestHistory(realTag)
 	if (history == nil) || len(history.Err) != 0 {
 		s.group.history.DeleteURLTestHistory(realTag)
-		s.group.HealthCheck(realTag)
+		s.group.HealthCheck(realTag, true)
 	}
 }
 
@@ -512,8 +512,11 @@ func (g *URLTestGroup) IsHealthChecking(realTag string) bool { //karing
 	return ok
 }
 
-func (g *URLTestGroup) HealthCheck(realTag string) { //karing
+func (g *URLTestGroup) HealthCheck(realTag string, skipActiveConnectionCheck bool) { //karing
 	if g.Checking() {
+		return
+	}
+	if g.IsHealthChecking(realTag) {
 		return
 	}
 	pauseManager := service.FromContext[pause.Manager](g.ctx)
@@ -523,7 +526,7 @@ func (g *URLTestGroup) HealthCheck(realTag string) { //karing
 	if pauseManager.IsNetworkPaused() || pauseManager.IsDevicePaused() {
 		return
 	}
-	if outbound.OutboundGetLatestDownloadActiveConnection != nil {
+	if outbound.OutboundGetLatestDownloadActiveConnection != nil && !skipActiveConnectionCheck {
 		has, downloadLatest := outbound.OutboundGetLatestDownloadActiveConnection(realTag)
 		if !has {
 			return
@@ -549,6 +552,10 @@ func (g *URLTestGroup) HealthCheck(realTag string) { //karing
 				return
 			}
 			t, _, err := urltest.URLTest(ctx, g.link, p)
+			if err != nil {
+				g.outboundInterfaceUpdated(p)
+				t, _, err = urltest.URLTest(ctx, g.link, p)
+			}
 			if err == nil {
 				history := g.history.LoadURLTestHistory(realTag)
 				if (history == nil) || len(history.Err) != 0 {
@@ -585,7 +592,7 @@ func (g *URLTestGroup) HealthCheckSelected() { //karing
 		tags[RealTag(selectedOutboundUDP)] = true
 	}
 	for tag := range tags {
-		g.HealthCheck(tag)
+		g.HealthCheck(tag, false)
 	}
 }
 
@@ -612,6 +619,8 @@ func (g *URLTestGroup) isProxyOutbound(outboundType string) bool { //karing
 	case C.TypeShadowTLS:
 		return true
 	case C.TypeAnyTLS:
+		return true
+	case C.TypeMieru:
 		return true
 	case C.TypeShadowsocksR:
 		return true
@@ -698,7 +707,7 @@ func (g *URLTestGroup) urlTest(ctx context.Context, force bool) (map[string]adap
 					Delay: t,
 					Err:   "",
 				})
-				g.tryInterfaceUpdated(detour, realTag)
+				g.quicOutboundInterfaceUpdated(detour, realTag)
 			}
 			resultAccess.Lock()
 			if err == nil { //karing
@@ -762,7 +771,7 @@ func (g *URLTestGroup) performUpdateCheck(retestGroupIfAllFailed bool) {
 	}
 }
 
-func (g *URLTestGroup) tryInterfaceUpdated(detour adapter.Outbound, realTag string) { //karing
+func (g *URLTestGroup) quicOutboundInterfaceUpdated(detour adapter.Outbound, realTag string) { //karing
 	listener, isListener := detour.(adapter.InterfaceUpdateListener)
 	needUpdate := detour.Type() == C.TypeHysteria || detour.Type() == C.TypeHysteria2 || detour.Type() == C.TypeTUIC
 	if isListener && needUpdate {
@@ -772,5 +781,12 @@ func (g *URLTestGroup) tryInterfaceUpdated(detour adapter.Outbound, realTag stri
 				listener.InterfaceUpdated()
 			}
 		}
+	}
+}
+
+func (g *URLTestGroup) outboundInterfaceUpdated(detour adapter.Outbound) { //karing
+	listener, isListener := detour.(adapter.InterfaceUpdateListener)
+	if isListener {
+		listener.InterfaceUpdated()
 	}
 }
