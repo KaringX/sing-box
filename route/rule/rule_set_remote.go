@@ -121,8 +121,8 @@ func (s *RemoteRuleSet) StartContext(ctx context.Context, startContext *adapter.
 		if err != nil {
 			return E.Cause(err, "initial rule-set: ", s.options.Tag)
 		}
-	}
-	s.updateTicker = time.NewTicker(s.updateInterval)*/
+	}*/
+	s.updateTicker = time.NewTicker(s.updateInterval)
 	return nil
 }
 
@@ -212,19 +212,12 @@ func (s *RemoteRuleSet) loadBytes(content []byte) error {
 
 func (s *RemoteRuleSet) loopUpdate() {
 	if s.lastUpdated.IsZero() || time.Since(s.lastUpdated) > s.updateInterval { //karing
-		s.updateTicker = time.NewTicker(s.updateInterval) //karing
 		err := s.fetch(s.ctx, nil)
 		if err != nil {
-			s.updateTicker = time.NewTicker(5 * time.Second)                          //karing
 			s.logger.ErrorContext(s.ctx, "fetch rule-set ", s.options.Tag, ": ", err) //karing
 		} else if s.refs.Load() == 0 {
 			s.rules = nil
-			s.updateTicker = time.NewTicker(s.updateInterval) //karing
-		} else { //karing
-			s.updateTicker = time.NewTicker(s.updateInterval)
 		}
-	} else {
-		s.updateTicker = time.NewTicker(time.Since(s.lastUpdated)) //karing
 	}
 	for {
 		runtime.GC()
@@ -244,9 +237,6 @@ func (s *RemoteRuleSet) updateOnce() {
 		s.logger.ErrorContext(s.ctx, "fetch rule-set ", s.options.Tag, ": ", err) //karing
 	} else if s.refs.Load() == 0 {
 		s.rules = nil
-		s.updateTicker = time.NewTicker(s.updateInterval) //karing
-	} else { //karing
-		s.updateTicker = time.NewTicker(s.updateInterval)
 	}
 }
 
