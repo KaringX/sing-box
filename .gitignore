@@ -20,3 +20,4 @@ cache.db
 /*.log
 /.vscode
 /experimental/libbox/sentry_private.go
+karingService
