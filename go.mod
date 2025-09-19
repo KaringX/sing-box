@@ -61,24 +61,23 @@ require ( //hiddify
 	github.com/pion/logging v0.2.2
 	github.com/pion/turn/v3 v3.0.3
 	github.com/pires/go-proxyproto v0.8.0
-	github.com/valyala/fastjson v1.6.4
-//github.com/sagernet/tfo-go v0.0.0-20230816093905-5a5c285d44a6
 )
 
 require ( //karing
 	github.com/Dreamacro/clash v1.18.0
 	github.com/alitto/pond v1.9.2
-	github.com/enfein/mieru/v3 v3.19.1
+	github.com/enfein/mieru/v3 v3.20.0
 	github.com/getsentry/sentry-go v0.33.0
 	github.com/klauspost/compress v1.17.11
 	github.com/shirou/gopsutil/v3 v3.24.5
+	github.com/valyala/fastjson v1.6.4
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
 
 replace github.com/Dreamacro/clash => github.com/KaringX/clash v0.0.0-20241101044429-f71df89d4091
 
 //go get github.com/KaringX/sing@50a9c2efd67210376bb718ef766d53710768d5ae
-replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20250904033655-da7ae65a160b //karing_v0.7.6
+replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20250919024444-9a247d78b044 //karing_v0.7.10
 
 //replace github.com/sagernet/sing => ../../KaringX/sing
 
@@ -86,7 +85,7 @@ replace github.com/sagernet/sing-dns => github.com/KaringX/sing-dns v0.3.0-beta.
 
 //replace github.com/sagernet/sing-dns => ../../KaringX/sing-dns
 
-replace github.com/sagernet/sing-quic => github.com/KaringX/sing-quic v0.2.0-beta.12.0.20250826053421-b88d178eb45c //karing_v0.5.0
+replace github.com/sagernet/sing-quic => github.com/KaringX/sing-quic v0.2.0-beta.12.0.20250919025209-4fc4fe8fd01e //karing_v0.5.2
 
 //replace github.com/sagernet/sing-quic => ../../KaringX/sing-quic
 
@@ -94,7 +93,7 @@ replace github.com/sagernet/quic-go => github.com/KaringX/quic-go v0.49.0-beta.1
 
 //replace github.com/sagernet/quic-go => ../../KaringX/quic-go
 
-replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.20250904033100-bd6aec0397b1 //karing_v0.7.0
+replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.20250919024753-61aded87f152 //karing_v0.7.2
 
 //replace github.com/sagernet/sing-tun => ../../KaringX/sing-tun
 

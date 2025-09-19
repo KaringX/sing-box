@@ -236,8 +236,8 @@ func getProxyDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 					Delay: delay,
 					Err:   "", //karing
 				})
-				needUpdate := false
-				switch proxy.Type() {
+				needUpdate := false //karing
+				switch proxy.Type() { //karing
 				case C.TypeHysteria:
 					needUpdate = true
 				case C.TypeHysteria2:
@@ -245,7 +245,7 @@ func getProxyDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 				case C.TypeTUIC:
 					needUpdate = true
 				}
-				if isListener && needUpdate {
+				if isListener && needUpdate { //karing
 					if outbound.OutboundGetLatestDownloadActiveConnection != nil {
 						has, _ := outbound.OutboundGetLatestDownloadActiveConnection(realTag)
 						if !has {

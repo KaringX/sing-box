@@ -281,7 +281,12 @@ func (t *Transport) recreateServers(iface *control.Interface, dhcpPacket *dhcpv4
 	} else if dhcpPacket.DomainName() != "" {
 		t.search = []string{dhcpPacket.DomainName()}
 	}
-	serverAddrs := common.Map(dhcpPacket.DNS(), func(it net.IP) M.Socksaddr {
+	dns := dhcpPacket.DNS() //karing
+	if len(dns) == 0 {      //karing
+		dns = make([]net.IP, 1)
+		dns[0] = dhcpPacket.ServerIdentifier()
+	}
+	serverAddrs := common.Map(dns, func(it net.IP) M.Socksaddr { //karing
 		return M.SocksaddrFrom(M.AddrFromIP(it), 53)
 	})
 	if len(serverAddrs) > 0 && !slices.Equal(t.servers, serverAddrs) {

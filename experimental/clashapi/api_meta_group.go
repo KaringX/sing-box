@@ -126,9 +126,9 @@ func getGroupDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 						})
 					}
 					resultAccess.Lock() //karing
-					if err == nil {
+					if err == nil { //karing
 						result[tag] = adapter.URLTestResult{Delay: t, Err: ""}
-					} else {
+					} else { //karing
 						result[tag] = adapter.URLTestResult{Delay: t, Err: err.Error()}
 					}
 					resultAccess.Unlock() //karing
