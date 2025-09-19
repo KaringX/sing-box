@@ -2,10 +2,13 @@ package local
 
 import (
 	"context"
+	"errors"
 	"math/rand"
+	"syscall"
 	"time"
 
 	"github.com/sagernet/sing-box/dns"
+	"github.com/sagernet/sing-box/dns/transport"
 	"github.com/sagernet/sing/common/buf"
 	E "github.com/sagernet/sing/common/exceptions"
 	M "github.com/sagernet/sing/common/metadata"
@@ -106,12 +109,6 @@ func (t *Transport) exchangeOne(ctx context.Context, server M.Socksaddr, questio
 	if server.Port == 0 {
 		server.Port = 53
 	}
-	var networks []string
-	if useTCP {
-		networks = []string{N.NetworkTCP}
-	} else {
-		networks = []string{N.NetworkUDP, N.NetworkTCP}
-	}
 	request := &mDNS.Msg{
 		MsgHdr: mDNS.MsgHdr{
 			Id:                uint16(rand.Uint32()),
@@ -121,41 +118,74 @@ func (t *Transport) exchangeOne(ctx context.Context, server M.Socksaddr, questio
 		Question: []mDNS.Question{question},
 		Compress: true,
 	}
-	request.SetEdns0(maxDNSPacketSize, false)
+	request.SetEdns0(buf.UDPBufferSize, false)
+	if !useTCP {
+		return t.exchangeUDP(ctx, server, request, timeout)
+	} else {
+		return t.exchangeTCP(ctx, server, request, timeout)
+	}
+}
+
+func (t *Transport) exchangeUDP(ctx context.Context, server M.Socksaddr, request *mDNS.Msg, timeout time.Duration) (*mDNS.Msg, error) {
+	conn, err := t.dialer.DialContext(ctx, N.NetworkUDP, server)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+	if deadline, loaded := ctx.Deadline(); loaded && !deadline.IsZero() {
+		newDeadline := time.Now().Add(timeout)
+		if deadline.After(newDeadline) {
+			deadline = newDeadline
+		}
+		conn.SetDeadline(deadline)
+	}
 	buffer := buf.Get(buf.UDPBufferSize)
 	defer buf.Put(buffer)
-	for _, network := range networks {
-		ctx, cancel := context.WithDeadline(ctx, time.Now().Add(timeout))
-		defer cancel()
-		conn, err := t.dialer.DialContext(ctx, network, server)
-		if err != nil {
-			return nil, err
-		}
-		defer conn.Close()
-		if deadline, loaded := ctx.Deadline(); loaded && !deadline.IsZero() {
-			conn.SetDeadline(deadline)
-		}
-		rawMessage, err := request.PackBuffer(buffer)
-		if err != nil {
-			return nil, E.Cause(err, "pack request")
-		}
-		_, err = conn.Write(rawMessage)
-		if err != nil {
-			return nil, E.Cause(err, "write request")
-		}
-		n, err := conn.Read(buffer)
-		if err != nil {
-			return nil, E.Cause(err, "read response")
-		}
-		var response mDNS.Msg
-		err = response.Unpack(buffer[:n])
-		if err != nil {
-			return nil, E.Cause(err, "unpack response")
-		}
-		if response.Truncated && network == N.NetworkUDP {
-			continue
-		}
-		return &response, nil
+	rawMessage, err := request.PackBuffer(buffer)
+	if err != nil {
+		return nil, E.Cause(err, "pack request")
 	}
-	panic("unexpected")
+	_, err = conn.Write(rawMessage)
+	if err != nil {
+		if errors.Is(err, syscall.EMSGSIZE) {
+			return t.exchangeTCP(ctx, server, request, timeout)
+		}
+		return nil, E.Cause(err, "write request")
+	}
+	n, err := conn.Read(buffer)
+	if err != nil {
+		if errors.Is(err, syscall.EMSGSIZE) {
+			return t.exchangeTCP(ctx, server, request, timeout)
+		}
+		return nil, E.Cause(err, "read response")
+	}
+	var response mDNS.Msg
+	err = response.Unpack(buffer[:n])
+	if err != nil {
+		return nil, E.Cause(err, "unpack response")
+	}
+	if response.Truncated {
+		return t.exchangeTCP(ctx, server, request, timeout)
+	}
+	return &response, nil
+}
+
+func (t *Transport) exchangeTCP(ctx context.Context, server M.Socksaddr, request *mDNS.Msg, timeout time.Duration) (*mDNS.Msg, error) {
+	conn, err := t.dialer.DialContext(ctx, N.NetworkTCP, server)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+	if deadline, loaded := ctx.Deadline(); loaded && !deadline.IsZero() {
+		newDeadline := time.Now().Add(timeout)
+		if deadline.After(newDeadline) {
+			deadline = newDeadline
+		}
+		conn.SetDeadline(deadline)
+	}
+	err = transport.WriteMessage(conn, 0, request)
+	if err != nil {
+		return nil, err
+	}
+	return transport.ReadMessage(conn)
 }

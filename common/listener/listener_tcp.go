@@ -3,6 +3,7 @@ package listener
 import (
 	"net"
 	"net/netip"
+	"strings"
 	"syscall"
 	"time"
 
@@ -16,7 +17,7 @@ import (
 	N "github.com/sagernet/sing/common/network"
 	"github.com/sagernet/sing/service"
 
-	"github.com/metacubex/tfo-go"
+	"github.com/database64128/tfo-go/v2"
 )
 
 func (l *Listener) ListenTCP() (net.Listener, error) {
@@ -45,18 +46,19 @@ func (l *Listener) ListenTCP() (net.Listener, error) {
 		if keepInterval == 0 {
 			keepInterval = C.TCPKeepAliveInterval
 		}
-		setKeepAliveConfig(&listenConfig, keepIdle, keepInterval)
+		listenConfig.KeepAliveConfig = net.KeepAliveConfig{
+			Enable:   true,
+			Idle:     keepIdle,
+			Interval: keepInterval,
+		}
 	}
 	if l.listenOptions.TCPMultiPath {
-		if !go121Available {
-			return nil, E.New("MultiPath TCP requires go1.21, please recompile your binary.")
-		}
-		setMultiPathTCP(&listenConfig)
+		listenConfig.SetMultipathTCP(true)
 	}
 	if l.tproxy {
 		listenConfig.Control = control.Append(listenConfig.Control, func(network, address string, conn syscall.RawConn) error {
 			return control.Raw(conn, func(fd uintptr) error {
-				return redir.TProxy(fd, !M.ParseSocksaddr(address).IsIPv4(), false)
+				return redir.TProxy(fd, !strings.HasSuffix(network, "4"), false)
 			})
 		})
 	}
