@@ -113,9 +113,6 @@ func (t *Transport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS.Msg,
 		return nil, err
 	}
 	if len(servers) == 0 {
-		go func() { //karing
-			t.Fetch()
-		}()
 		return nil, E.New("dhcp: empty DNS servers from response")
 	}
 	return t.Exchange0(ctx, message, servers)
@@ -281,18 +278,13 @@ func (t *Transport) recreateServers(iface *control.Interface, dhcpPacket *dhcpv4
 	} else if dhcpPacket.DomainName() != "" {
 		t.search = []string{dhcpPacket.DomainName()}
 	}
-	dns := dhcpPacket.DNS() //karing
-	if len(dns) == 0 {      //karing
-		dns = make([]net.IP, 1)
-		dns[0] = dhcpPacket.ServerIdentifier()
-	}
-	serverAddrs := common.Map(dns, func(it net.IP) M.Socksaddr { //karing
+
+	serverAddrs := common.Map(dhcpPacket.DNS(), func(it net.IP) M.Socksaddr {
 		return M.SocksaddrFrom(M.AddrFromIP(it), 53)
 	})
 	if len(serverAddrs) > 0 && !slices.Equal(t.servers, serverAddrs) {
 		t.logger.Info("dhcp: updated DNS servers from ", iface.Name, ": [", strings.Join(common.Map(serverAddrs, M.Socksaddr.String), ","), "], search: [", strings.Join(t.search, ","), "]")
 	}
 	t.servers = serverAddrs
-
 	return nil
 }
