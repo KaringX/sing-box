@@ -14,7 +14,7 @@ import (
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
 	R "github.com/sagernet/sing-box/route/rule"
-	"github.com/sagernet/sing-tun"
+	tun "github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common"
 	E "github.com/sagernet/sing/common/exceptions"
 	F "github.com/sagernet/sing/common/format"
@@ -148,9 +148,9 @@ func (r *Router) matchDNS(ctx context.Context, allowFakeIP bool, ruleIndex int, 
 			}
 			ruleDescription := currentRule.String()
 			if ruleDescription != "" {
-				r.logger.DebugContext(ctx, "match[", displayRuleIndex, "] ", currentRule, " => ", currentRule.Action())
+				r.logger.DebugContext(ctx, metadata.Domain, " ", "match[", displayRuleIndex, "] ", currentRule, " => ", currentRule.Action()) //karing
 			} else {
-				r.logger.DebugContext(ctx, "match[", displayRuleIndex, "] => ", currentRule.Action())
+				r.logger.DebugContext(ctx, metadata.Domain, " ", "match[", displayRuleIndex, "] => ", currentRule.Action())
 			}
 			switch action := currentRule.Action().(type) {
 			case *R.RuleActionDNSRoute:
@@ -493,6 +493,28 @@ func (r *Router) LookupTag(ctx context.Context, domain string, options adapter.D
 	ctx, metadata := adapter.ExtendContext(ctx)
 	metadata.Destination = M.Socksaddr{}
 	metadata.Domain = FqdnToDomain(domain)
+	if metadata.QueryType == 0 {
+		switch C.DomainStrategy(options.Strategy) {
+		case C.DomainStrategyAsIS:
+			metadata.IPVersion = 4
+			metadata.QueryType = mDNS.TypeA
+		case C.DomainStrategyPreferIPv4:
+			metadata.IPVersion = 4
+			metadata.QueryType = mDNS.TypeA
+		case C.DomainStrategyPreferIPv6:
+			metadata.IPVersion = 6
+			metadata.QueryType = mDNS.TypeAAAA
+		case C.DomainStrategyIPv4Only:
+			metadata.IPVersion = 4
+			metadata.QueryType = mDNS.TypeA
+		case C.DomainStrategyIPv6Only:
+			metadata.IPVersion = 6
+			metadata.QueryType = mDNS.TypeAAAA
+		default:
+			metadata.IPVersion = 4
+			metadata.QueryType = mDNS.TypeA
+		}
+	}
 	if options.Transport != nil {
 		transport := options.Transport
 		transportTag = transport.Tag() //karing

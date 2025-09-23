@@ -15,8 +15,8 @@ import (
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/option"
 	R "github.com/sagernet/sing-box/route/rule"
-	"github.com/sagernet/sing-mux"
-	"github.com/sagernet/sing-vmess"
+	mux "github.com/sagernet/sing-mux"
+	vmess "github.com/sagernet/sing-vmess"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/buf"
 	"github.com/sagernet/sing/common/bufio"
@@ -417,18 +417,18 @@ match:
 		if !preMatch {
 			ruleDescription := currentRule.String()
 			if ruleDescription != "" {
-				r.logger.DebugContext(ctx, "match[", currentRuleIndex, "] ", currentRule, " => ", currentRule.Action())
+				r.logger.DebugContext(ctx, metadata.Domain, " ", "match[", currentRuleIndex, "] ", currentRule, " => ", currentRule.Action()) //karing
 			} else {
-				r.logger.DebugContext(ctx, "match[", currentRuleIndex, "] => ", currentRule.Action())
+				r.logger.DebugContext(ctx, metadata.Domain, " ", "match[", currentRuleIndex, "] => ", currentRule.Action()) //karing
 			}
 		} else {
 			switch currentRule.Action().Type() {
 			case C.RuleActionTypeReject:
 				ruleDescription := currentRule.String()
 				if ruleDescription != "" {
-					r.logger.DebugContext(ctx, "pre-match[", currentRuleIndex, "] ", currentRule, " => ", currentRule.Action())
+					r.logger.DebugContext(ctx, metadata.Domain, " ", "pre-match[", currentRuleIndex, "] ", currentRule, " => ", currentRule.Action()) //karing
 				} else {
-					r.logger.DebugContext(ctx, "pre-match[", currentRuleIndex, "] => ", currentRule.Action())
+					r.logger.DebugContext(ctx, metadata.Domain, " ", "pre-match[", currentRuleIndex, "] => ", currentRule.Action()) //karing
 				}
 			}
 		}

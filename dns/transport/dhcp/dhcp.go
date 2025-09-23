@@ -38,6 +38,10 @@ func RegisterTransport(registry *dns.TransportRegistry) {
 }
 
 var _ adapter.DNSTransport = (*Transport)(nil)
+var ( //karing
+	cachedServers   []M.Socksaddr
+	cachedUpdatedAt time.Time
+)
 
 type Transport struct {
 	dns.TransportAdapter
@@ -143,6 +147,10 @@ func (t *Transport) Fetch() ([]M.Socksaddr, error) {
 	}
 	err := t.updateServers()
 	if err != nil {
+		if len(cachedServers) > 0 && !cachedUpdatedAt.IsZero() { //karing
+			t.servers = cachedServers
+			t.updatedAt = cachedUpdatedAt
+		}
 		return nil, err
 	}
 	return t.servers, nil
@@ -179,6 +187,7 @@ func (t *Transport) updateServers() error {
 		return E.New("dhcp: empty DNS servers response")
 	} else {
 		t.updatedAt = time.Now()
+		cachedUpdatedAt = t.updatedAt //karing
 		return nil
 	}
 }
@@ -286,5 +295,6 @@ func (t *Transport) recreateServers(iface *control.Interface, dhcpPacket *dhcpv4
 		t.logger.Info("dhcp: updated DNS servers from ", iface.Name, ": [", strings.Join(common.Map(serverAddrs, M.Socksaddr.String), ","), "], search: [", strings.Join(t.search, ","), "]")
 	}
 	t.servers = serverAddrs
+	cachedServers = t.servers //karing
 	return nil
 }
