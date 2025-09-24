@@ -27,6 +27,7 @@ var (
 	ErrNotCached              = E.New("not cached")
 	ErrResponseRejected       = E.New("response rejected")
 	ErrResponseRejectedCached = E.Extend(ErrResponseRejected, "cached")
+	ErrRejectedByRuleAction   = E.New("rejected by rule action") //karing
 )
 
 var _ adapter.DNSClient = (*Client)(nil)

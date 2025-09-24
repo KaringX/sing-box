@@ -410,7 +410,7 @@ func (r *Router) Lookup(ctx context.Context, domain string, options adapter.DNSQ
 				case *R.RuleActionReject:
 					switch action.Method {
 					case C.RuleActionRejectMethodDefault:
-						return nil, nil
+						return nil, ErrRejectedByRuleAction //karing
 					case C.RuleActionRejectMethodDrop:
 						return nil, tun.ErrDrop
 					}
@@ -546,7 +546,7 @@ func (r *Router) LookupTag(ctx context.Context, domain string, options adapter.D
 				case *R.RuleActionReject:
 					switch action.Method {
 					case C.RuleActionRejectMethodDefault:
-						return nil, transport.Tag(), nil //karing
+						return nil, transport.Tag(), ErrRejectedByRuleAction //karing
 					case C.RuleActionRejectMethodDrop:
 						return nil, "", tun.ErrDrop //karing
 					}
