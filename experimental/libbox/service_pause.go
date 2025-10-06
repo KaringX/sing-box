@@ -21,9 +21,7 @@ func (s *BoxService) Pause() {
 	}
 	s.pauseManager.DevicePause()
 	/*//karing
-	if !C.IsIos {
-		s.instance.Router().ResetNetwork()
-	} else {
+	if C.IsIos {
 		if s.endPauseTimer == nil {
 			s.endPauseTimer = time.AfterFunc(time.Minute, s.pauseManager.DeviceWake)
 		} else {
@@ -41,7 +39,6 @@ func (s *BoxService) Wake() {
 	/*//karing
 	if !C.IsIos {
 		s.pauseManager.DeviceWake()
-		s.instance.Router().ResetNetwork()
 	}
 	*/
 
