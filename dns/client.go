@@ -177,7 +177,7 @@ func (c *Client) Exchange(ctx context.Context, transport adapter.DNSTransport, m
 	cancel()
 	if err != nil {
 		var rcodeError RcodeError
-		if errors.As(err, &rcodeError) {
+		if errors.Is(err, rcodeError) && errors.As(err, &rcodeError) { //karing
 			response = FixedResponseStatus(message, int(rcodeError))
 		} else {
 			return nil, err
