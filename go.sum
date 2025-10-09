@@ -6,8 +6,6 @@ github.com/KaringX/clash v0.0.0-20241101044429-f71df89d4091 h1:525dFF+PjztEPQqel
 github.com/KaringX/clash v0.0.0-20241101044429-f71df89d4091/go.mod h1:r//xe/2pA3Zl+3fjIiI/o6RjIVd+z87drCD58dpRnFg=
 github.com/KaringX/quic-go v0.49.0-beta.1.0.20250528041323-b571ce42d479 h1:7ap2O+eMdFl5oPjd4I7KcKmo58WUrsGrped+DWeHL7c=
 github.com/KaringX/quic-go v0.49.0-beta.1.0.20250528041323-b571ce42d479/go.mod h1:OV+V5kEBb8kJS7k29MzDu6oj9GyMc7HA07sE1tedxz4=
-github.com/KaringX/sing v0.5.0-alpha.11.0.20250919024444-9a247d78b044 h1:y+52zpj2RRsNd7IwGmfeXIaRjFEUZsKrYyUCDuprnZU=
-github.com/KaringX/sing v0.5.0-alpha.11.0.20250919024444-9a247d78b044/go.mod h1:ARkL0gM13/Iv5VCZmci/NuoOlePoIsW0m7BWfln/Hak=
 github.com/KaringX/sing v0.5.0-alpha.11.0.20251006023650-972d15ac084d h1:fxTINzYyhJqxOMWnE8yyBOvaTxwbjpVRjHZ+yf4vBcs=
 github.com/KaringX/sing v0.5.0-alpha.11.0.20251006023650-972d15ac084d/go.mod h1:ARkL0gM13/Iv5VCZmci/NuoOlePoIsW0m7BWfln/Hak=
 github.com/KaringX/sing-quic v0.2.0-beta.12.0.20250919025209-4fc4fe8fd01e h1:xDy3j+An5TcCWpP+XWfdl40cSAWDt6GDtoRA0q82das=
@@ -158,6 +156,8 @@ github.com/mdlayher/sdnotify v1.0.0 h1:Ma9XeLVN/l0qpyx1tNeMSeTjCPH6NtuD6/N9XdTlQ
 github.com/mdlayher/sdnotify v1.0.0/go.mod h1:HQUmpM4XgYkhDLtd+Uad8ZFK1T9D5+pNxnXQjCeJlGE=
 github.com/mdlayher/socket v0.5.1 h1:VZaqt6RkGkt2OE9l3GcC6nZkqD3xKeQLyfleW/uBcos=
 github.com/mdlayher/socket v0.5.1/go.mod h1:TjPLHI1UgwEv5J1B5q0zTZq12A/6H7nKmtTanQE37IQ=
+github.com/metacubex/bbolt v0.0.0-20250725135710-010dbbbb7a5b h1:j7dadXD8I2KTmMt8jg1JcaP1ANL3JEObJPdANKcSYPY=
+github.com/metacubex/bbolt v0.0.0-20250725135710-010dbbbb7a5b/go.mod h1:+WmP0VJZDkDszvpa83HzfUp6QzARl/IKkMorH4+nODw=
 github.com/metacubex/tfo-go v0.0.0-20250516165257-e29c16ae41d4 h1:j1VRTiC9JLR4nUbSikx9OGdu/3AgFDqgcLj4GoqyQkc=
 github.com/metacubex/tfo-go v0.0.0-20250516165257-e29c16ae41d4/go.mod h1:l9oLnLoEXyGZ5RVLsh7QCC5XsouTUyKk4F2nLm2DHLw=
 github.com/metacubex/utls v1.8.0 h1:mSYi6FMnmc5riARl5UZDmWVy710z+P5b7xuGW0lV9ac=
@@ -211,8 +211,6 @@ github.com/safchain/ethtool v0.3.0 h1:gimQJpsI6sc1yIqP/y8GYgiXn/NjgvpM0RNoWLVVmP
 github.com/safchain/ethtool v0.3.0/go.mod h1:SA9BwrgyAqNo7M+uaL6IYbxpm5wk3L7Mm6ocLW+CJUs=
 github.com/sagernet/asc-go v0.0.0-20241217030726-d563060fe4e1 h1:qi+ijeREa0yfAaO+NOcZ81gv4uzOfALUIdhkiIFvmG4=
 github.com/sagernet/asc-go v0.0.0-20241217030726-d563060fe4e1/go.mod h1:JULDuzTMn2gyZFcjpTVZP4/UuwAdbHJ0bum2RdjXojU=
-github.com/sagernet/bbolt v0.0.0-20231014093535-ea5cb2fe9f0a h1:+NkI2670SQpQWvkkD2QgdTuzQG263YZ+2emfpeyGqW0=
-github.com/sagernet/bbolt v0.0.0-20231014093535-ea5cb2fe9f0a/go.mod h1:63s7jpZqcDAIpj8oI/1v4Izok+npJOHACFCU6+huCkM=
 github.com/sagernet/cors v1.2.1 h1:Cv5Z8y9YSD6Gm+qSpNrL3LO4lD3eQVvbFYJSG7JCMHQ=
 github.com/sagernet/cors v1.2.1/go.mod h1:O64VyOjjhrkLmQIjF4KGRrJO/5dVXFdpEmCW/eISRAI=
 github.com/sagernet/fswatch v0.1.1 h1:YqID+93B7VRfqIH3PArW/XpJv5H4OLEVWDfProGoRQs=

@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"time"
 
-	"github.com/sagernet/bbolt"
+	"github.com/metacubex/bbolt" //karing
 	"github.com/sagernet/sing/common/buf"
 	"github.com/sagernet/sing/common/logger"
 )

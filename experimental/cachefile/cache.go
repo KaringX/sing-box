@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sagernet/bbolt"
-	bboltErrors "github.com/sagernet/bbolt/errors"
+	"github.com/metacubex/bbolt" //karing
+
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing/common"
@@ -121,10 +121,10 @@ func (c *CacheFile) start(stage adapter.StartStage) error { //karing
 		if err == nil {
 			break
 		}
-		if errors.Is(err, bboltErrors.ErrTimeout) {
+		if errors.Is(err, bbolt.ErrTimeout) { //karing
 			continue
 		}
-		if E.IsMulti(err, bboltErrors.ErrInvalid, bboltErrors.ErrChecksum, bboltErrors.ErrVersionMismatch) {
+		if E.IsMulti(err, bbolt.ErrInvalid, bbolt.ErrChecksum, bbolt.ErrVersionMismatch) { //karing
 			rmErr := os.Remove(c.path)
 			if rmErr != nil {
 				return err
