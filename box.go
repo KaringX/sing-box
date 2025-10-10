@@ -14,6 +14,7 @@ import (
 	"github.com/sagernet/sing-box/adapter/outbound"
 	boxService "github.com/sagernet/sing-box/adapter/service"
 	"github.com/sagernet/sing-box/common/certificate"
+	"github.com/sagernet/sing-box/common/db"
 	"github.com/sagernet/sing-box/common/dialer"
 	"github.com/sagernet/sing-box/common/tls"
 	C "github.com/sagernet/sing-box/constant"
@@ -182,6 +183,16 @@ func New(options Options) (box *Box, err error) { //karing
 			return nil, E.Cause(err, "cacheFile load failed")
 		}
 	}
+
+	if experimentalOptions.DBFile != nil && experimentalOptions.DBFile.Enabled && len(experimentalOptions.DBFile.Path) > 0 { //karing
+		dbFile, err := db.New(ctx, experimentalOptions.DBFile)
+		if err != nil {
+			return nil, E.Cause(err, "dbFile load failed")
+		}
+		service.MustRegister[adapter.DBFile](ctx, dbFile)
+		internalServices = append(internalServices, dbFile)
+	}
+
 	certificateOptions := common.PtrValueOrDefault(options.Certificate)
 	if C.IsAndroid || certificateOptions.Store != "" && certificateOptions.Store != C.CertificateStoreSystem ||
 		len(certificateOptions.Certificate) > 0 ||

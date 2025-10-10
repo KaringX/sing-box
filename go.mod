@@ -65,6 +65,7 @@ require ( //hiddify
 )
 
 require ( //karing
+	github.com/mattn/go-sqlite3 v1.14.32
 	github.com/Dreamacro/clash v1.18.0
 	github.com/alitto/pond v1.9.2
 	github.com/enfein/mieru/v3 v3.20.0
