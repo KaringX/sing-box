@@ -56,13 +56,16 @@ func NewManager(ctx context.Context, logFactory log.ObservableFactory) *Manager 
 		done:      make(chan struct{}),
 		// process: &process.Process{Pid: int32(os.Getpid())},
 	}
-	dbFile := service.FromContext[adapter.DBFile](ctx)
-	if dbFile != nil {
-		err := dbFile.CreateTable(createTableSQL())
-		if err != nil { //karing
+	dbFile := service.FromContext[adapter.DBFile](ctx) //karing
+	if dbFile != nil {                                 //karing
+		err := dbFile.Exec(createTableSQL())
+		if err != nil {
 			manager.logger.WarnContext(manager.ctx, "create table connection_track: ", err)
 		} else {
-			go manager.handleDB() //karing
+			go func() {
+				dbFile.Exec(deleteOldSQL())
+			}()
+			go manager.handleDB()
 		}
 	}
 	go manager.handle() //karing
@@ -505,6 +508,11 @@ CREATE TABLE IF NOT EXISTS connections_track (
 	outbound_type TEXT 
 );`
 }
+
+func deleteOldSQL() string { //karing
+	return `DELETE FROM connections_track WHERE create_at < datetime('now', '-7 day');`
+}
+
 func prepareSQL() string { //karing
 	return `
 INSERT INTO connections_track(

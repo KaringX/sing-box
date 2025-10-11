@@ -68,9 +68,9 @@ type CacheFile interface {
 
 type DBFile interface { //karing
 	LifecycleService
-	CreateTable(sql string) error
+	Exec(sql string) error
 	Prepare(tx *sql.Tx, sql string) (*sql.Stmt, error)
-	Exec(stmt *sql.Stmt, args ...any) (sql.Result, error)
+	ExecStmt(stmt *sql.Stmt, args ...any) (sql.Result, error)
 	BeginTx() (*sql.Tx, error)
 	Commit(tx *sql.Tx) error
 }

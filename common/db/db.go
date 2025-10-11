@@ -40,7 +40,7 @@ func (d *DBFile) Close() error {
 	return d.db.Close()
 }
 
-func (d *DBFile) CreateTable(sql string) error {
+func (d *DBFile) Exec(sql string) error {
 	if d.db == nil {
 		return nil
 	}
@@ -55,7 +55,7 @@ func (d *DBFile) Prepare(tx *sql.Tx, sql string) (*sql.Stmt, error) {
 	return tx.Prepare(sql)
 }
 
-func (d *DBFile) Exec(stmt *sql.Stmt, args ...any) (sql.Result, error) {
+func (d *DBFile) ExecStmt(stmt *sql.Stmt, args ...any) (sql.Result, error) {
 	if d.db == nil || stmt == nil {
 		return nil, nil
 	}
