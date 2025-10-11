@@ -67,7 +67,7 @@ type Server struct {
 }
 
 func NewServer(ctx context.Context, logFactory log.ObservableFactory, options option.ClashAPIOptions) (adapter.ClashServer, error) {
-	trafficManager := trafficontrol.NewManager()
+	trafficManager := trafficontrol.NewManager(ctx, logFactory) //karing
 	chiRouter := chi.NewRouter()
 	s := &Server{
 		ctx:       ctx,
@@ -262,11 +262,11 @@ func (s *Server) TrafficManager() *trafficontrol.Manager {
 }
 
 func (s *Server) RoutedConnection(ctx context.Context, conn net.Conn, metadata adapter.InboundContext, matchedRule adapter.Rule, matchOutbound adapter.Outbound) net.Conn {
-	return trafficontrol.NewTCPTracker(conn, s.trafficManager, metadata, s.outbound, matchedRule, matchOutbound)
+	return trafficontrol.NewTCPTracker(ctx, conn, s.trafficManager, metadata, s.outbound, matchedRule, matchOutbound) //karing
 }
 
 func (s *Server) RoutedPacketConnection(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext, matchedRule adapter.Rule, matchOutbound adapter.Outbound) N.PacketConn {
-	return trafficontrol.NewUDPTracker(conn, s.trafficManager, metadata, s.outbound, matchedRule, matchOutbound)
+	return trafficontrol.NewUDPTracker(ctx, conn, s.trafficManager, metadata, s.outbound, matchedRule, matchOutbound) //karing
 }
 
 func (s *Server) AddTick(tick *time.Ticker, onClose func()) { //karing
@@ -357,7 +357,7 @@ func traffic(server *Server, trafficManager *trafficontrol.Manager) func(w http.
 		}
 
 		tick := time.NewTicker(time.Second)
-		closed := false //karing
+		closed := false               //karing
 		server.AddTick(tick, func() { //karing
 			closed = true
 		})

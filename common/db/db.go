@@ -18,7 +18,7 @@ type DBFile struct {
 
 func New(ctx context.Context, options *option.DBFileOptions) (*DBFile, error) {
 	dbPath := filemanager.BasePath(ctx, options.Path)
-	db, err := sql.Open("sqlite3", dbPath)
+	db, err := sql.Open("sqlite3", dbPath) //+":locked.sqlite?cache=shared"
 	if err != nil {
 		return nil, err
 	}
