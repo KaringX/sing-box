@@ -108,7 +108,7 @@ func (m *Manager) Leave(c Tracker) {
 	metadata := c.Metadata()
 	dbFile := service.FromContext[adapter.DBFile](m.ctx) //karing
 	if dbFile != nil {                                   //karing
-		m.closedConnectionsForPersist.Store(c.Metadata().ID, c)
+		m.closedConnectionsForPersist.Store(metadata.ID, c)
 	}
 	_, loaded := m.connections.LoadAndDelete(metadata.ID)
 	if loaded {
@@ -294,15 +294,15 @@ func (m *Manager) handleDB() { //karing
 			return
 		case <-m.dbTicker.C:
 			m.persistDeviceEventsToDB(&m.events)
-			m.persistConnectionsToDB(&m.closedConnectionsForPersist, "connection:disconnect")
-			m.persistConnectionsToDB(&m.connections, "")
+			m.persistConnectionsToDB(&m.closedConnectionsForPersist, nil)
+			m.persistConnectionsToDB(&m.connections, nil)
 			m.events.Clear()
 			m.closedConnectionsForPersist.Clear()
 		}
 	}
 }
 
-func (m *Manager) persistConnectionsToDB(connections *compatible.Map[uuid.UUID, Tracker], method string) { //karing
+func (m *Manager) persistConnectionsToDB(connections *compatible.Map[uuid.UUID, Tracker], closeAt *time.Time) { //karing
 	if connections.Len() == 0 {
 		return
 	}
@@ -323,7 +323,7 @@ func (m *Manager) persistConnectionsToDB(connections *compatible.Map[uuid.UUID, 
 		var memStats runtime.MemStats
 		runtime.ReadMemStats(&memStats)
 		m.memory = memStats.StackInuse + memStats.HeapInuse + memStats.HeapIdle - memStats.HeapReleased
-
+		now := time.Now()
 		connections.Range(func(_ uuid.UUID, value Tracker) bool {
 			t := value.Metadata()
 			if !t.Dirty.Load() {
@@ -384,10 +384,18 @@ func (m *Manager) persistConnectionsToDB(connections *compatible.Map[uuid.UUID, 
 			if t.Metadata.Destination.Addr.IsValid() {
 				destination_ip = t.Metadata.Destination.Addr.String()
 			}
-
+			var connectionCloseAt *time.Time
+			if closeAt != nil {
+				connectionCloseAt = closeAt
+			} else {
+				if !t.ClosedAt.IsZero() {
+					connectionCloseAt = &t.ClosedAt
+				}
+			}
 			_, err = stmt.Exec(
 				coreStartTime,
 				m.startTime,
+				now,
 				m.uploadTotal.Load(),
 				m.downloadTotal.Load(),
 				m.uploadBlip.Load(),
@@ -401,7 +409,8 @@ func (m *Manager) persistConnectionsToDB(connections *compatible.Map[uuid.UUID, 
 				m.memory,
 				t.ID.String(),
 				t.CreatedAt,
-				method,
+				connectionCloseAt,
+				"",
 				inbound,
 				t.Metadata.Network,
 				t.Protocol,
@@ -458,10 +467,12 @@ func (m *Manager) persistDeviceEventsToDB(events *compatible.Map[uuid.UUID, Devi
 		runtime.ReadMemStats(&memStats)
 		m.memory = memStats.StackInuse + memStats.HeapInuse + memStats.HeapIdle - memStats.HeapReleased
 
+		now := time.Now()
 		events.Range(func(id uuid.UUID, value DeviceEventTracker) bool {
 			_, err = stmt.Exec(
 				coreStartTime,
 				m.startTime,
+				now,
 				m.uploadTotal.Load(),
 				m.downloadTotal.Load(),
 				m.uploadBlip.Load(),
@@ -475,6 +486,7 @@ func (m *Manager) persistDeviceEventsToDB(events *compatible.Map[uuid.UUID, Devi
 				m.memory,
 				id.String(),
 				value.CreatedAt,
+				nil,
 				value.Name,
 				"",
 				"",
@@ -520,9 +532,9 @@ func (m *Manager) Close() error { //karing
 	if dbFile != nil {
 		id, _ := uuid.NewV4()
 		m.events.Store(id, DeviceEventTracker{CreatedAt: time.Now(), Name: "core:stop"})
-
-		m.persistConnectionsToDB(&m.closedConnectionsForPersist, "connection:disconnect")
-		m.persistConnectionsToDB(&m.connections, "")
+		closeAt := time.Now()
+		m.persistConnectionsToDB(&m.closedConnectionsForPersist, &closeAt)
+		m.persistConnectionsToDB(&m.connections, nil)
 		m.persistDeviceEventsToDB(&m.events)
 	}
 
@@ -590,6 +602,7 @@ func createTableSQL() string { //karing
 CREATE TABLE IF NOT EXISTS records (
     core_start DATETIME,
 	last_start DATETIME,
+	persist DATETIME,
     total_upload INTEGER,
 	total_download INTEGER,
 	total_upload_speed INTEGER,
@@ -601,8 +614,9 @@ CREATE TABLE IF NOT EXISTS records (
 	goroutines INTEGER,
 	thread INTEGER,
 	memory INTEGER,
-    connection_id TEXT,
-	connection_at DATETIME,
+    session_id TEXT,
+	begin DATETIME,
+	end DATETIME,
 	method TEXT,
     inbound TEXT,
 	network TEXT,
@@ -639,6 +653,7 @@ func prepareSQL() string { //karing
 INSERT INTO records(
     core_start ,
 	last_start ,
+	persist ,
     total_upload ,
 	total_download ,
 	total_upload_speed ,
@@ -650,8 +665,9 @@ INSERT INTO records(
 	goroutines ,
 	thread ,
 	memory ,
-    connection_id ,
-	connection_at ,
+    session_id ,
+	begin ,
+	end ,
 	method ,
     inbound ,
 	network ,
@@ -671,5 +687,5 @@ INSERT INTO records(
 	rule1 , 
 	chain0 ,
 	chain1 ,
-	outbound_type ) values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
+	outbound_type ) values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
 }
