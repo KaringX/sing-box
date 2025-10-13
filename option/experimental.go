@@ -11,8 +11,9 @@ type ExperimentalOptions struct {
 }
 
 type DBFileOptions struct { //karing
-	Enabled bool   `json:"enabled,omitempty"`
-	Path    string `json:"path,omitempty"`
+	Enabled   bool   `json:"enabled,omitempty"`
+	Path      string `json:"path,omitempty"`
+	CacheDays int    `json:"cache_days,omitempty"`
 }
 
 type CacheFileOptions struct {

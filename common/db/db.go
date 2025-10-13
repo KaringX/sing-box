@@ -12,8 +12,9 @@ import (
 )
 
 type DBFile struct {
-	ctx context.Context
-	db  *sql.DB
+	ctx       context.Context
+	db        *sql.DB
+	cacheDays int
 }
 
 func New(ctx context.Context, options *option.DBFileOptions) (*DBFile, error) {
@@ -22,7 +23,7 @@ func New(ctx context.Context, options *option.DBFileOptions) (*DBFile, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &DBFile{ctx: ctx, db: db}, nil
+	return &DBFile{ctx: ctx, db: db, cacheDays: options.CacheDays}, nil
 }
 
 func (c *DBFile) Name() string {
@@ -74,4 +75,8 @@ func (d *DBFile) Commit(tx *sql.Tx) error {
 		return nil
 	}
 	return tx.Commit()
+}
+
+func (d *DBFile) CacheDays() int {
+	return d.cacheDays
 }

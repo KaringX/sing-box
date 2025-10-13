@@ -113,6 +113,7 @@ func (tt *TCPConn) Metadata() TrackerMetadata {
 }
 
 func (tt *TCPConn) Close() error {
+	tt.metadata.Dirty.Store(true) //karing
 	tt.manager.Leave(tt)
 	return tt.ExtendedConn.Close()
 }
@@ -210,6 +211,7 @@ func (ut *UDPConn) Metadata() TrackerMetadata {
 }
 
 func (ut *UDPConn) Close() error {
+	ut.metadata.Dirty.Store(true) //karing
 	ut.manager.Leave(ut)
 	return ut.PacketConn.Close()
 }

@@ -2,6 +2,7 @@ package trafficontrol
 
 import (
 	"context"
+	"fmt"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -18,18 +19,28 @@ import (
 	"github.com/sagernet/sing/common/json"
 	"github.com/sagernet/sing/common/x/list"
 	"github.com/sagernet/sing/service"
+	"github.com/sagernet/sing/service/pause"
 )
 
-var coreStartTime = time.Now() //karing
-type Manager struct {
-	ctx           context.Context
-	logger        log.ContextLogger //karing
-	uploadTotal   atomic.Int64
-	downloadTotal atomic.Int64
+var coreStartTime *time.Time //karing
 
-	connections             compatible.Map[uuid.UUID, Tracker]
-	closedConnectionsAccess sync.Mutex
-	closedConnections       list.List[TrackerMetadata]
+type DeviceEventTracker struct { //karing
+	CreatedAt time.Time
+	Name      string
+}
+
+type Manager struct {
+	ctx                         context.Context               //karing
+	logger                      log.ContextLogger             //karing
+	pause                       pause.Manager                 //karing
+	pauseCallback               *list.Element[pause.Callback] //karing
+	uploadTotal                 atomic.Int64
+	downloadTotal               atomic.Int64
+	events                      compatible.Map[uuid.UUID, DeviceEventTracker] //karing
+	closedConnectionsForPersist compatible.Map[uuid.UUID, Tracker]            //karing
+	connections                 compatible.Map[uuid.UUID, Tracker]
+	closedConnectionsAccess     sync.Mutex
+	closedConnections           list.List[TrackerMetadata]
 	// process     *process.Process
 	memory   uint64
 	ticker   *time.Ticker  //karing
@@ -49,12 +60,17 @@ func NewManager(ctx context.Context, logFactory log.ObservableFactory) *Manager 
 	///return &Manager{}//karing
 	manager := &Manager{ //karing
 		ctx:       ctx,
-		logger:    logFactory.NewLogger("traficontrol"),
+		logger:    logFactory.NewLogger("trafficontrolmanager"),
 		startTime: time.Now(),
 		ticker:    time.NewTicker(time.Second),
 		dbTicker:  time.NewTicker(time.Second),
 		done:      make(chan struct{}),
 		// process: &process.Process{Pid: int32(os.Getpid())},
+	}
+	restart := true
+	if coreStartTime == nil {
+		restart = false
+		coreStartTime = &manager.startTime
 	}
 	dbFile := service.FromContext[adapter.DBFile](ctx) //karing
 	if dbFile != nil {                                 //karing
@@ -63,8 +79,19 @@ func NewManager(ctx context.Context, logFactory log.ObservableFactory) *Manager 
 			manager.logger.WarnContext(manager.ctx, "create table connection_track: ", err)
 		} else {
 			go func() {
-				dbFile.Exec(deleteOldSQL())
+				dbFile.Exec(deleteOldSQL(dbFile.CacheDays()))
 			}()
+			manager.pause = service.FromContext[pause.Manager](ctx)
+			if manager.pause != nil {
+				manager.pauseCallback = manager.pause.RegisterCallback(manager.onPauseUpdated)
+			}
+			id, _ := uuid.NewV4()
+			if restart {
+				manager.events.Store(id, DeviceEventTracker{CreatedAt: time.Now(), Name: "core:restart"})
+			} else {
+				manager.events.Store(id, DeviceEventTracker{CreatedAt: time.Now(), Name: "core:start"})
+			}
+
 			go manager.handleDB()
 		}
 	}
@@ -79,6 +106,10 @@ func (m *Manager) Join(c Tracker) {
 
 func (m *Manager) Leave(c Tracker) {
 	metadata := c.Metadata()
+	dbFile := service.FromContext[adapter.DBFile](m.ctx) //karing
+	if dbFile != nil {                                   //karing
+		m.closedConnectionsForPersist.Store(c.Metadata().ID, c)
+	}
 	_, loaded := m.connections.LoadAndDelete(metadata.ID)
 	if loaded {
 		metadata.ClosedAt = time.Now()
@@ -136,6 +167,20 @@ func (m *Manager) Connection(id uuid.UUID) Tracker {
 		return nil
 	}
 	return connection
+}
+
+func (m *Manager) onPauseUpdated(event int) {
+	id, _ := uuid.NewV4()
+	switch event {
+	case pause.EventDevicePaused:
+		m.events.Store(id, DeviceEventTracker{CreatedAt: time.Now(), Name: "device:pause"})
+	case pause.EventNetworkPause:
+		m.events.Store(id, DeviceEventTracker{CreatedAt: time.Now(), Name: "network:pause"})
+	case pause.EventDeviceWake:
+		m.events.Store(id, DeviceEventTracker{CreatedAt: time.Now(), Name: "device:wake"})
+	case pause.EventNetworkWake:
+		m.events.Store(id, DeviceEventTracker{CreatedAt: time.Now(), Name: "network:wake"})
+	}
 }
 
 func (m *Manager) Snapshot(includeConnections bool) *Snapshot { //karing
@@ -248,12 +293,19 @@ func (m *Manager) handleDB() { //karing
 		case <-m.done:
 			return
 		case <-m.dbTicker.C:
-			m.persistToDB()
+			m.persistDeviceEventsToDB(&m.events)
+			m.persistConnectionsToDB(&m.closedConnectionsForPersist, "connection:disconnect")
+			m.persistConnectionsToDB(&m.connections, "")
+			m.events.Clear()
+			m.closedConnectionsForPersist.Clear()
 		}
 	}
 }
 
-func (m *Manager) persistToDB() { //karing
+func (m *Manager) persistConnectionsToDB(connections *compatible.Map[uuid.UUID, Tracker], method string) { //karing
+	if connections.Len() == 0 {
+		return
+	}
 	dbFile := service.FromContext[adapter.DBFile](m.ctx)
 	if dbFile != nil {
 		tx, err := dbFile.BeginTx()
@@ -272,7 +324,7 @@ func (m *Manager) persistToDB() { //karing
 		runtime.ReadMemStats(&memStats)
 		m.memory = memStats.StackInuse + memStats.HeapInuse + memStats.HeapIdle - memStats.HeapReleased
 
-		m.connections.Range(func(_ uuid.UUID, value Tracker) bool {
+		connections.Range(func(_ uuid.UUID, value Tracker) bool {
 			t := value.Metadata()
 			if !t.Dirty.Load() {
 				return true
@@ -333,42 +385,9 @@ func (m *Manager) persistToDB() { //karing
 				destination_ip = t.Metadata.Destination.Addr.String()
 			}
 
-			/*
-					core_start ,
-				    total_upload ,
-					total_download ,
-					total_upload_speed ,
-					total_download_speed ,
-					total_upload_direct ,
-					total_download_direct ,
-					connections_in ,
-					connections_out ,
-					goroutines ,
-					thread ,
-					memory ,
-				    connection_id ,
-					create_at ,
-				    inbound ,
-					network ,
-					protocol ,
-					process ,
-					package ,
-					source_ip ,
-					source_port ,
-					host ,
-					destination_ip ,
-					destination_port ,
-					upload ,
-					download ,
-					upload_speed ,
-					download_speed ,
-					rule0 ,
-					rule1 ,
-					chain0 ,
-					chain1 ,
-					outbound_type */
 			_, err = stmt.Exec(
 				coreStartTime,
+				m.startTime,
 				m.uploadTotal.Load(),
 				m.downloadTotal.Load(),
 				m.uploadBlip.Load(),
@@ -382,6 +401,7 @@ func (m *Manager) persistToDB() { //karing
 				m.memory,
 				t.ID.String(),
 				t.CreatedAt,
+				method,
 				inbound,
 				t.Metadata.Network,
 				t.Protocol,
@@ -415,13 +435,108 @@ func (m *Manager) persistToDB() { //karing
 		}
 	}
 }
+
+func (m *Manager) persistDeviceEventsToDB(events *compatible.Map[uuid.UUID, DeviceEventTracker]) { //karing
+	if events.Len() == 0 {
+		return
+	}
+	dbFile := service.FromContext[adapter.DBFile](m.ctx)
+	if dbFile != nil {
+		tx, err := dbFile.BeginTx()
+		if err != nil {
+			m.logger.WarnContext(m.ctx, "db begin transaction: ", err)
+			return
+		}
+		stmt, err := tx.Prepare(prepareSQL())
+		if err != nil {
+			m.logger.WarnContext(m.ctx, "db transaction prepare: ", err)
+			return
+		}
+		defer stmt.Close()
+
+		var memStats runtime.MemStats
+		runtime.ReadMemStats(&memStats)
+		m.memory = memStats.StackInuse + memStats.HeapInuse + memStats.HeapIdle - memStats.HeapReleased
+
+		events.Range(func(id uuid.UUID, value DeviceEventTracker) bool {
+			_, err = stmt.Exec(
+				coreStartTime,
+				m.startTime,
+				m.uploadTotal.Load(),
+				m.downloadTotal.Load(),
+				m.uploadBlip.Load(),
+				m.downloadBlip.Load(),
+				m.uploadTotalDirect.Load(),
+				m.downloadTotalDirect.Load(),
+				int32(m.connections.Len()),
+				int32(conntrack.Count()),
+				int32(runtime.NumGoroutine()),
+				int32(gofree.ThreadNum()),
+				m.memory,
+				id.String(),
+				value.CreatedAt,
+				value.Name,
+				"",
+				"",
+				"",
+				"",
+				"",
+				"",
+				0,
+				"",
+				"",
+				0,
+				0,
+				0,
+				0,
+				0,
+				"",
+				"",
+				"",
+				"",
+				"")
+			if err != nil {
+				m.logger.WarnContext(m.ctx, "db stmt exec: ", err)
+				return false
+			}
+			return true
+		})
+
+		err = tx.Commit()
+		if err != nil {
+			m.logger.WarnContext(m.ctx, "db transaction commit: ", err)
+			return
+		}
+	}
+}
+
 func (m *Manager) Close() error { //karing
 	m.ticker.Stop()
 	m.dbTicker.Stop()
 	close(m.done)
 	m.startTime = time.Now()
-	m.ResetStatistic()
+
+	dbFile := service.FromContext[adapter.DBFile](m.ctx)
+	if dbFile != nil {
+		id, _ := uuid.NewV4()
+		m.events.Store(id, DeviceEventTracker{CreatedAt: time.Now(), Name: "core:stop"})
+
+		m.persistConnectionsToDB(&m.closedConnectionsForPersist, "connection:disconnect")
+		m.persistConnectionsToDB(&m.connections, "")
+		m.persistDeviceEventsToDB(&m.events)
+	}
+
 	m.connections.Clear()
+	m.closedConnectionsForPersist.Clear()
+	m.events.Clear()
+
+	if m.pauseCallback != nil {
+		m.pause.UnregisterCallback(m.pauseCallback)
+		m.pauseCallback = nil
+	}
+
+	m.ResetStatistic()
+
 	return nil
 }
 
@@ -472,8 +587,9 @@ func (s *Snapshot) MarshalJSON() ([]byte, error) {
 
 func createTableSQL() string { //karing
 	return `
-CREATE TABLE IF NOT EXISTS connections_track (
+CREATE TABLE IF NOT EXISTS records (
     core_start DATETIME,
+	last_start DATETIME,
     total_upload INTEGER,
 	total_download INTEGER,
 	total_upload_speed INTEGER,
@@ -486,7 +602,8 @@ CREATE TABLE IF NOT EXISTS connections_track (
 	thread INTEGER,
 	memory INTEGER,
     connection_id TEXT,
-	create_at DATETIME,
+	connection_at DATETIME,
+	method TEXT,
     inbound TEXT,
 	network TEXT,
 	protocol TEXT,
@@ -509,14 +626,19 @@ CREATE TABLE IF NOT EXISTS connections_track (
 );`
 }
 
-func deleteOldSQL() string { //karing
-	return `DELETE FROM connections_track WHERE create_at < datetime('now', '-7 day');`
+func deleteOldSQL(cacheDays int) string { //karing
+	if cacheDays <= 0 {
+		cacheDays = 7
+	}
+
+	return fmt.Sprintf(`DELETE FROM records WHERE create_at < datetime('now', '-%d day');`, cacheDays)
 }
 
 func prepareSQL() string { //karing
 	return `
-INSERT INTO connections_track(
+INSERT INTO records(
     core_start ,
+	last_start ,
     total_upload ,
 	total_download ,
 	total_upload_speed ,
@@ -529,7 +651,8 @@ INSERT INTO connections_track(
 	thread ,
 	memory ,
     connection_id ,
-	create_at ,
+	connection_at ,
+	method ,
     inbound ,
 	network ,
 	protocol ,
@@ -548,5 +671,5 @@ INSERT INTO connections_track(
 	rule1 , 
 	chain0 ,
 	chain1 ,
-	outbound_type ) values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
+	outbound_type ) values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
 }
