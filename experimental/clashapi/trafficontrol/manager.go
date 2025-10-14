@@ -185,12 +185,12 @@ func (m *Manager) ClosedConnectionsForPersist() []TrackerMetadata { //karing
 	m.persistAccess.Lock()
 	defer m.persistAccess.Unlock()
 	data := m.closedConnectionsForPersist.Array()
-	for !m.closedConnectionsForPersist.IsEmpty() {
-		m.closedConnectionsForPersist.PopFront()
-	}
 	for i := range data {
 		data[i].UploadSpeed = data[i].UploadBlip.Load()
 		data[i].DownloadSpeed = data[i].DownloadBlip.Load()
+	}
+	for !m.closedConnectionsForPersist.IsEmpty() {
+		m.closedConnectionsForPersist.PopFront()
 	}
 	return data
 }
