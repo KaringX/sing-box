@@ -272,18 +272,22 @@ func NewUDPTracker(ctx context.Context, conn N.PacketConn, manager *Manager, met
 	*/
 	upload := new(atomic.Int64)
 	download := new(atomic.Int64)
-	uploadLast := new(time.Time)   //karing
-	downloadLast := new(time.Time) //karing
-	dirty := new(atomic.Bool)      //karing
+	uploadBlip := new(atomic.Int64)   //karing
+	downloadBlip := new(atomic.Int64) //karing
+	uploadLast := new(time.Time)      //karing
+	downloadLast := new(time.Time)    //karing
+	dirty := new(atomic.Bool)         //karing
 	dirty.Store(true)
 	trackerConn := &UDPConn{
 		PacketConn: bufio.NewCounterPacketConn(conn, []N.CountFunc{func(n int64) {
 			upload.Add(n)
 			dirty.Store(true)                                     //karing
+			uploadBlip.Add(n)                                     //karing
 			*uploadLast = time.Now()                              //karing
 			manager.PushUploaded(n, outboundType == C.TypeDirect) //karing
 		}}, []N.CountFunc{func(n int64) {
 			download.Add(n)
+			downloadBlip.Add(n)                                     //karing
 			dirty.Store(true)                                       //karing
 			*downloadLast = time.Now()                              //karing
 			manager.PushDownloaded(n, outboundType == C.TypeDirect) //karing
@@ -294,6 +298,8 @@ func NewUDPTracker(ctx context.Context, conn N.PacketConn, manager *Manager, met
 			CreatedAt:    time.Now(),
 			Upload:       upload,
 			Download:     download,
+			UploadBlip:   uploadBlip,   //karing
+			DownloadBlip: downloadBlip, //karing
 			Chain:        common.Reverse(chain),
 			Rule:         matchRule,
 			Outbound:     outbound,
