@@ -22,7 +22,8 @@ import (
 	"github.com/sagernet/sing/service/pause"
 )
 
-var coreStartTime *time.Time //karing
+var coreStartTime time.Time //karing
+var coreUuid string         //karing
 
 type DeviceEventTracker struct { //karing
 	CreatedAt time.Time
@@ -36,16 +37,16 @@ type Manager struct {
 	pauseCallback               *list.Element[pause.Callback] //karing
 	uploadTotal                 atomic.Int64
 	downloadTotal               atomic.Int64
-	events                      compatible.Map[uuid.UUID, DeviceEventTracker] //karing
-	closedConnectionsForPersist compatible.Map[uuid.UUID, Tracker]            //karing
+	persistAccess               sync.Mutex                    //karing
+	eventsForPersist            list.List[DeviceEventTracker] //karing
+	closedConnectionsForPersist list.List[TrackerMetadata]    //karing
 	connections                 compatible.Map[uuid.UUID, Tracker]
 	closedConnectionsAccess     sync.Mutex
 	closedConnections           list.List[TrackerMetadata]
 	// process     *process.Process
-	memory   uint64
-	ticker   *time.Ticker  //karing
-	dbTicker *time.Ticker  //karing
-	done     chan struct{} //karing
+	memory uint64
+	ticker *time.Ticker  //karing
+	done   chan struct{} //karing
 
 	startTime           time.Time    //karing
 	uploadTemp          atomic.Int64 //karing
@@ -63,14 +64,15 @@ func NewManager(ctx context.Context, logFactory log.ObservableFactory) *Manager 
 		logger:    logFactory.NewLogger("trafficontrolmanager"),
 		startTime: time.Now(),
 		ticker:    time.NewTicker(time.Second),
-		dbTicker:  time.NewTicker(time.Second),
 		done:      make(chan struct{}),
 		// process: &process.Process{Pid: int32(os.Getpid())},
 	}
 	restart := true
-	if coreStartTime == nil {
+	if coreStartTime.IsZero() {
 		restart = false
-		coreStartTime = &manager.startTime
+		coreStartTime = manager.startTime
+		id, _ := uuid.NewV4()
+		coreUuid = id.String()
 	}
 	dbFile := service.FromContext[adapter.DBFile](ctx) //karing
 	if dbFile != nil {                                 //karing
@@ -85,19 +87,16 @@ func NewManager(ctx context.Context, logFactory log.ObservableFactory) *Manager 
 			if manager.pause != nil {
 				manager.pauseCallback = manager.pause.RegisterCallback(manager.onPauseUpdated)
 			}
-			id, _ := uuid.NewV4()
-			if restart {
-				manager.events.Store(id, DeviceEventTracker{CreatedAt: time.Now(), Name: "core:restart"})
-			} else {
-				manager.events.Store(id, DeviceEventTracker{CreatedAt: time.Now(), Name: "core:start"})
-			}
 
-			go manager.handleDB()
+			if restart {
+				manager.addNewEvent("core:restart")
+			} else {
+				manager.addNewEvent("core:start")
+			}
 		}
 	}
 	go manager.handle() //karing
-
-	return manager //karing
+	return manager      //karing
 }
 
 func (m *Manager) Join(c Tracker) {
@@ -106,10 +105,6 @@ func (m *Manager) Join(c Tracker) {
 
 func (m *Manager) Leave(c Tracker) {
 	metadata := c.Metadata()
-	dbFile := service.FromContext[adapter.DBFile](m.ctx) //karing
-	if dbFile != nil {                                   //karing
-		m.closedConnectionsForPersist.Store(metadata.ID, c)
-	}
 	_, loaded := m.connections.LoadAndDelete(metadata.ID)
 	if loaded {
 		metadata.ClosedAt = time.Now()
@@ -119,6 +114,13 @@ func (m *Manager) Leave(c Tracker) {
 			m.closedConnections.PopFront()
 		}
 		m.closedConnections.PushBack(metadata)
+
+		dbFile := service.FromContext[adapter.DBFile](m.ctx) //karing
+		if dbFile != nil {                                   //karing
+			m.persistAccess.Lock()
+			defer m.persistAccess.Unlock()
+			m.closedConnectionsForPersist.PushBack(metadata)
+		}
 	}
 }
 
@@ -161,6 +163,48 @@ func (m *Manager) ClosedConnections() []TrackerMetadata {
 	return m.closedConnections.Array()
 }
 
+func (m *Manager) ConnectionsForPersist() []TrackerMetadata { //karing
+	var connections []TrackerMetadata
+	m.connections.Range(func(_ uuid.UUID, value Tracker) bool {
+		md := value.Metadata()
+		if !md.Dirty.Load() {
+			return true
+		}
+		md.Dirty.Store(false)
+		md.UploadSpeed = md.UploadBlip.Load()
+		md.DownloadSpeed = md.DownloadBlip.Load()
+		connections = append(connections, md)
+		md.UploadBlip.Store(0)
+		md.DownloadBlip.Store(0)
+		return true
+	})
+	return connections
+}
+
+func (m *Manager) ClosedConnectionsForPersist() []TrackerMetadata { //karing
+	m.persistAccess.Lock()
+	defer m.persistAccess.Unlock()
+	data := m.closedConnectionsForPersist.Array()
+	for !m.closedConnectionsForPersist.IsEmpty() {
+		m.closedConnectionsForPersist.PopFront()
+	}
+	for i := range data {
+		data[i].UploadSpeed = data[i].UploadBlip.Load()
+		data[i].DownloadSpeed = data[i].DownloadBlip.Load()
+	}
+	return data
+}
+
+func (m *Manager) EventsForPersist() []DeviceEventTracker { //karing
+	m.persistAccess.Lock()
+	defer m.persistAccess.Unlock()
+	data := m.eventsForPersist.Array()
+	for !m.eventsForPersist.IsEmpty() {
+		m.eventsForPersist.PopFront()
+	}
+	return data
+}
+
 func (m *Manager) Connection(id uuid.UUID) Tracker {
 	connection, loaded := m.connections.Load(id)
 	if !loaded {
@@ -170,17 +214,20 @@ func (m *Manager) Connection(id uuid.UUID) Tracker {
 }
 
 func (m *Manager) onPauseUpdated(event int) {
-	id, _ := uuid.NewV4()
+	var name string
 	switch event {
 	case pause.EventDevicePaused:
-		m.events.Store(id, DeviceEventTracker{CreatedAt: time.Now(), Name: "device:pause"})
+		name = "device:pause"
 	case pause.EventNetworkPause:
-		m.events.Store(id, DeviceEventTracker{CreatedAt: time.Now(), Name: "network:pause"})
+		name = "network:pause"
 	case pause.EventDeviceWake:
-		m.events.Store(id, DeviceEventTracker{CreatedAt: time.Now(), Name: "device:wake"})
+		name = "device:wake"
 	case pause.EventNetworkWake:
-		m.events.Store(id, DeviceEventTracker{CreatedAt: time.Now(), Name: "network:wake"})
+		name = "network:wake"
+	default:
+		return
 	}
+	m.addNewEvent(name)
 }
 
 func (m *Manager) Snapshot(includeConnections bool) *Snapshot { //karing
@@ -280,30 +327,29 @@ func (m *Manager) handle() { //karing
 			return
 		case <-m.ticker.C:
 		}
+
 		uploadTemp = m.uploadTemp.Swap(0)
 		downloadTemp = m.downloadTemp.Swap(0)
 		m.uploadBlip.Store(uploadTemp)
 		m.downloadBlip.Store(downloadTemp)
-	}
-}
 
-func (m *Manager) handleDB() { //karing
-	for {
-		select {
-		case <-m.done:
-			return
-		case <-m.dbTicker.C:
-			m.persistDeviceEventsToDB(&m.events)
-			m.persistConnectionsToDB(&m.closedConnectionsForPersist, nil)
-			m.persistConnectionsToDB(&m.connections, nil)
-			m.events.Clear()
-			m.closedConnectionsForPersist.Clear()
+		dbFile := service.FromContext[adapter.DBFile](m.ctx) //karing
+		if dbFile != nil {                                   //karing
+			m.persistDeviceEventsToDB(m.EventsForPersist())
+			m.persistConnectionsToDB(m.ClosedConnectionsForPersist(), nil)
+			m.persistConnectionsToDB(m.ConnectionsForPersist(), nil)
 		}
 	}
 }
 
-func (m *Manager) persistConnectionsToDB(connections *compatible.Map[uuid.UUID, Tracker], closeAt *time.Time) { //karing
-	if connections.Len() == 0 {
+func (m *Manager) addNewEvent(name string) {
+	m.persistAccess.Lock()
+	defer m.persistAccess.Unlock()
+	m.eventsForPersist.PushBack(DeviceEventTracker{CreatedAt: time.Now(), Name: name})
+}
+
+func (m *Manager) persistConnectionsToDB(connections []TrackerMetadata, closeAt *time.Time) { //karing
+	if len(connections) == 0 {
 		return
 	}
 	dbFile := service.FromContext[adapter.DBFile](m.ctx)
@@ -324,12 +370,7 @@ func (m *Manager) persistConnectionsToDB(connections *compatible.Map[uuid.UUID, 
 		runtime.ReadMemStats(&memStats)
 		m.memory = memStats.StackInuse + memStats.HeapInuse + memStats.HeapIdle - memStats.HeapReleased
 		now := time.Now()
-		connections.Range(func(_ uuid.UUID, value Tracker) bool {
-			t := value.Metadata()
-			if !t.Dirty.Load() {
-				return true
-			}
-			t.Dirty.Store(false)
+		for _, t := range connections {
 			var inbound string
 			if t.Metadata.Inbound != "" {
 				inbound = t.Metadata.InboundType + "/" + t.Metadata.Inbound
@@ -423,8 +464,8 @@ func (m *Manager) persistConnectionsToDB(connections *compatible.Map[uuid.UUID, 
 				t.Metadata.Destination.Port,
 				t.Upload.Load(),
 				t.Download.Load(),
-				0,
-				0,
+				t.UploadSpeed,
+				t.DownloadSpeed,
 				rule0,
 				rule1,
 				chain0,
@@ -432,10 +473,9 @@ func (m *Manager) persistConnectionsToDB(connections *compatible.Map[uuid.UUID, 
 				t.OutboundType)
 			if err != nil {
 				m.logger.WarnContext(m.ctx, "db stmt exec: ", err)
-				return false
+
 			}
-			return true
-		})
+		}
 
 		err = tx.Commit()
 		if err != nil {
@@ -445,8 +485,8 @@ func (m *Manager) persistConnectionsToDB(connections *compatible.Map[uuid.UUID, 
 	}
 }
 
-func (m *Manager) persistDeviceEventsToDB(events *compatible.Map[uuid.UUID, DeviceEventTracker]) { //karing
-	if events.Len() == 0 {
+func (m *Manager) persistDeviceEventsToDB(events []DeviceEventTracker) { //karing
+	if len(events) == 0 {
 		return
 	}
 	dbFile := service.FromContext[adapter.DBFile](m.ctx)
@@ -468,7 +508,7 @@ func (m *Manager) persistDeviceEventsToDB(events *compatible.Map[uuid.UUID, Devi
 		m.memory = memStats.StackInuse + memStats.HeapInuse + memStats.HeapIdle - memStats.HeapReleased
 
 		now := time.Now()
-		events.Range(func(id uuid.UUID, value DeviceEventTracker) bool {
+		for _, t := range events {
 			_, err = stmt.Exec(
 				coreStartTime,
 				m.startTime,
@@ -484,10 +524,10 @@ func (m *Manager) persistDeviceEventsToDB(events *compatible.Map[uuid.UUID, Devi
 				int32(runtime.NumGoroutine()),
 				int32(gofree.ThreadNum()),
 				m.memory,
-				id.String(),
-				value.CreatedAt,
+				coreUuid,
+				t.CreatedAt,
 				nil,
-				value.Name,
+				t.Name,
 				"",
 				"",
 				"",
@@ -509,10 +549,8 @@ func (m *Manager) persistDeviceEventsToDB(events *compatible.Map[uuid.UUID, Devi
 				"")
 			if err != nil {
 				m.logger.WarnContext(m.ctx, "db stmt exec: ", err)
-				return false
 			}
-			return true
-		})
+		}
 
 		err = tx.Commit()
 		if err != nil {
@@ -524,29 +562,44 @@ func (m *Manager) persistDeviceEventsToDB(events *compatible.Map[uuid.UUID, Devi
 
 func (m *Manager) Close() error { //karing
 	m.ticker.Stop()
-	m.dbTicker.Stop()
 	close(m.done)
-	m.startTime = time.Now()
-
-	dbFile := service.FromContext[adapter.DBFile](m.ctx)
-	if dbFile != nil {
-		id, _ := uuid.NewV4()
-		m.events.Store(id, DeviceEventTracker{CreatedAt: time.Now(), Name: "core:stop"})
-		closeAt := time.Now()
-		m.persistConnectionsToDB(&m.closedConnectionsForPersist, &closeAt)
-		m.persistConnectionsToDB(&m.connections, nil)
-		m.persistDeviceEventsToDB(&m.events)
-	}
-
-	m.connections.Clear()
-	m.closedConnectionsForPersist.Clear()
-	m.events.Clear()
 
 	if m.pauseCallback != nil {
 		m.pause.UnregisterCallback(m.pauseCallback)
 		m.pauseCallback = nil
 	}
 
+	dbFile := service.FromContext[adapter.DBFile](m.ctx)
+	if dbFile != nil {
+		/*var uploadTemp int64
+		var downloadTemp int64
+
+		uploadTemp = m.uploadTemp.Swap(0)
+		downloadTemp = m.downloadTemp.Swap(0)
+		m.uploadBlip.Store(uploadTemp)
+		m.downloadBlip.Store(downloadTemp)
+
+		closeAt := time.Now()
+		m.persistConnectionsToDB(m.ClosedConnectionsForPersist(), &closeAt)
+		m.persistConnectionsToDB(m.ConnectionsForPersist(), nil)*/
+
+		m.addNewEvent("core:stop")
+		m.persistDeviceEventsToDB(m.EventsForPersist())
+	}
+	m.connections.Clear()
+
+	m.closedConnectionsAccess.Lock()
+	defer m.closedConnectionsAccess.Unlock()
+	for !m.closedConnectionsForPersist.IsEmpty() {
+		m.closedConnectionsForPersist.PopFront()
+	}
+
+	m.persistAccess.Lock()
+	defer m.persistAccess.Unlock()
+	for !m.eventsForPersist.IsEmpty() {
+		m.eventsForPersist.PopFront()
+	}
+	m.startTime = time.Now() //karing
 	m.ResetStatistic()
 
 	return nil

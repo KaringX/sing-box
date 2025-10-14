@@ -18,21 +18,25 @@ import (
 )
 
 type TrackerMetadata struct {
-	ID           uuid.UUID
-	Metadata     adapter.InboundContext
-	CreatedAt    time.Time
-	ClosedAt     time.Time
-	Upload       *atomic.Int64
-	Download     *atomic.Int64
-	Chain        []string
-	Rule         adapter.Rule
-	Outbound     string
-	OutboundType string
-	User         string       //karing
-	Protocol     string       //karing
-	UploadLast   *time.Time   //karing
-	DownloadLast *time.Time   //karing
-	Dirty        *atomic.Bool //karing
+	ID            uuid.UUID
+	Metadata      adapter.InboundContext
+	CreatedAt     time.Time
+	ClosedAt      time.Time
+	Upload        *atomic.Int64
+	Download      *atomic.Int64
+	UploadBlip    *atomic.Int64 //karing
+	DownloadBlip  *atomic.Int64 //karing
+	UploadSpeed   int64         //karing
+	DownloadSpeed int64         //karing
+	Chain         []string
+	Rule          adapter.Rule
+	Outbound      string
+	OutboundType  string
+	User          string       //karing
+	Protocol      string       //karing
+	UploadLast    *time.Time   //karing
+	DownloadLast  *time.Time   //karing
+	Dirty         *atomic.Bool //karing
 }
 
 func (t TrackerMetadata) MarshalJSON() ([]byte, error) {
@@ -163,37 +167,45 @@ func NewTCPTracker(ctx context.Context, conn net.Conn, manager *Manager, metadat
 	*/
 	upload := new(atomic.Int64)
 	download := new(atomic.Int64)
-	uploadLast := new(time.Time)   //karing
-	downloadLast := new(time.Time) //karing
-	dirty := new(atomic.Bool)      //karing
+	uploadBlip := new(atomic.Int64)   //karing
+	downloadBlip := new(atomic.Int64) //karing
+	uploadLast := new(time.Time)      //karing
+	downloadLast := new(time.Time)    //karing
+	dirty := new(atomic.Bool)         //karing
 	dirty.Store(true)
 	tracker := &TCPConn{
 		ExtendedConn: bufio.NewCounterConn(conn, []N.CountFunc{func(n int64) {
 			upload.Add(n)
+			uploadBlip.Add(n)                                     //karing
 			dirty.Store(true)                                     //karing
 			*uploadLast = time.Now()                              //karing
 			manager.PushUploaded(n, outboundType == C.TypeDirect) //karing
 		}}, []N.CountFunc{func(n int64) {
 			download.Add(n)
+			downloadBlip.Add(n)                                     //karing
 			dirty.Store(true)                                       //karing
 			*downloadLast = time.Now()                              //karing
 			manager.PushDownloaded(n, outboundType == C.TypeDirect) //karing
 		}}),
 		metadata: TrackerMetadata{
-			ID:           id,
-			Metadata:     metadata,
-			CreatedAt:    time.Now(),
-			Upload:       upload,
-			Download:     download,
-			Chain:        common.Reverse(chain),
-			Rule:         matchRule,
-			Outbound:     outbound,
-			OutboundType: outboundType,
-			User:         metadata.User,     //karing
-			Protocol:     metadata.Protocol, //karing
-			UploadLast:   uploadLast,        //karing
-			DownloadLast: downloadLast,      //karing
-			Dirty:        dirty,             //karing
+			ID:            id,
+			Metadata:      metadata,
+			CreatedAt:     time.Now(),
+			Upload:        upload,
+			Download:      download,
+			UploadBlip:    uploadBlip,   //karing
+			DownloadBlip:  downloadBlip, //karing
+			UploadSpeed:   0,            //karing
+			DownloadSpeed: 0,            //karing
+			Chain:         common.Reverse(chain),
+			Rule:          matchRule,
+			Outbound:      outbound,
+			OutboundType:  outboundType,
+			User:          metadata.User,     //karing
+			Protocol:      metadata.Protocol, //karing
+			UploadLast:    uploadLast,        //karing
+			DownloadLast:  downloadLast,      //karing
+			Dirty:         dirty,             //karing
 		},
 		manager: manager,
 	}
@@ -212,8 +224,6 @@ func (ut *UDPConn) Metadata() TrackerMetadata {
 }
 
 func (ut *UDPConn) Close() error {
-	ut.metadata.ClosedAt = time.Now() //karing
-	ut.metadata.Dirty.Store(true)     //karing
 	ut.manager.Leave(ut)
 	return ut.PacketConn.Close()
 }
