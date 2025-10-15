@@ -653,10 +653,10 @@ func (s *Snapshot) MarshalJSON() ([]byte, error) {
 func createTableSQL() string { //karing
 	return `
 CREATE TABLE IF NOT EXISTS records (
-    core_start DATETIME,
+	core_start DATETIME,
 	last_start DATETIME,
 	persist DATETIME,
-    total_upload INTEGER,
+	total_upload INTEGER,
 	total_download INTEGER,
 	total_upload_speed INTEGER,
 	total_download_speed INTEGER,
@@ -667,11 +667,11 @@ CREATE TABLE IF NOT EXISTS records (
 	goroutines INTEGER,
 	thread INTEGER,
 	memory INTEGER,
-    session_id TEXT,
+	session_id TEXT,
 	begin DATETIME,
 	end DATETIME,
 	method TEXT,
-    inbound TEXT,
+	inbound TEXT,
 	network TEXT,
 	protocol TEXT,
 	process TEXT,
@@ -698,16 +698,16 @@ func deleteOldSQL(cacheDays int) string { //karing
 		cacheDays = 7
 	}
 
-	return fmt.Sprintf(`DELETE FROM records WHERE create_at < datetime('now', '-%d day');`, cacheDays)
+	return fmt.Sprintf(`DELETE FROM records WHERE core_start < datetime('now', '-%d day');`, cacheDays)
 }
 
 func prepareSQL() string { //karing
 	return `
 INSERT INTO records(
-    core_start ,
+	core_start ,
 	last_start ,
 	persist ,
-    total_upload ,
+	total_upload ,
 	total_download ,
 	total_upload_speed ,
 	total_download_speed ,
@@ -718,11 +718,11 @@ INSERT INTO records(
 	goroutines ,
 	thread ,
 	memory ,
-    session_id ,
+	session_id ,
 	begin ,
 	end ,
 	method ,
-    inbound ,
+	inbound ,
 	network ,
 	protocol ,
 	process ,
