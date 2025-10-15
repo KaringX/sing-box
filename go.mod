@@ -19,7 +19,7 @@ require (
 	github.com/logrusorgru/aurora v2.0.3+incompatible
 	github.com/metacubex/bbolt v0.0.0-20250725135710-010dbbbb7a5b //karing
 	github.com/metacubex/tfo-go v0.0.0-20250516165257-e29c16ae41d4
-	github.com/metacubex/utls v1.8.0
+	github.com/metacubex/utls v1.8.2
 	github.com/mholt/acmez/v3 v3.1.2
 	github.com/miekg/dns v1.1.67
 	github.com/oschwald/maxminddb-golang v1.13.1

@@ -412,12 +412,7 @@ func (r *Router) Lookup(ctx context.Context, domain string, options adapter.DNSQ
 			if rule != nil {
 				switch action := rule.Action().(type) {
 				case *R.RuleActionReject:
-					switch action.Method {
-					case C.RuleActionRejectMethodDefault:
-						return nil, ErrRejectedByRuleAction //karing
-					case C.RuleActionRejectMethodDrop:
-						return nil, tun.ErrDrop
-					}
+					return nil, &R.RejectedError{Cause: action.Error(ctx)}
 				case *R.RuleActionPredefined:
 					if action.Rcode != mDNS.RcodeSuccess {
 						err = RcodeError(action.Rcode)
@@ -552,12 +547,7 @@ func (r *Router) LookupTag(ctx context.Context, domain string, options adapter.D
 			if rule != nil {
 				switch action := rule.Action().(type) {
 				case *R.RuleActionReject:
-					switch action.Method {
-					case C.RuleActionRejectMethodDefault:
-						return nil, transport.Tag(), ErrRejectedByRuleAction //karing
-					case C.RuleActionRejectMethodDrop:
-						return nil, "", tun.ErrDrop //karing
-					}
+					return nil, "", &R.RejectedError{Cause: action.Error(ctx)}
 				case *R.RuleActionPredefined:
 					if action.Rcode != mDNS.RcodeSuccess {
 						err = RcodeError(action.Rcode)
