@@ -190,7 +190,7 @@ func (c *Client) Exchange(ctx context.Context, transport adapter.DNSTransport, m
 	cancel()
 	if err != nil {
 		var rcodeError RcodeError
-		if errors.Is(err, rcodeError) && errors.As(err, &rcodeError) { //karing
+		if (response == nil || response.MsgHdr.Rcode == 0) && errors.As(err, &rcodeError) { //karing
 			response = FixedResponseStatus(message, int(rcodeError))
 		} else {
 			return nil, err
