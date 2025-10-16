@@ -109,7 +109,7 @@ func NewRealityServer(ctx context.Context, logger log.Logger, options option.Inb
 			if decodedLen > 8 {
 				return nil, E.New("invalid short_id[", i, "]: ", shortIDString)
 			}
-			copy(shortID[:], maxShortID) //karing
+			copy(shortID[:], maxShortID[:decodedLen]) //karing
 			tlsConfig.ShortIds[shortID] = true
 		}
 	}
