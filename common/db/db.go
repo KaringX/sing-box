@@ -41,12 +41,19 @@ func (d *DBFile) Close() error {
 	return d.db.Close()
 }
 
-func (d *DBFile) Exec(sql string) error {
+func (d *DBFile) Exec(sql string) (sql.Result, error) {
 	if d.db == nil {
-		return nil
+		return nil, nil
 	}
-	_, err := d.db.Exec(sql)
-	return err
+	result, err := d.db.Exec(sql)
+	return result, err
+}
+
+func (d *DBFile) Query(query string, args ...any) (*sql.Rows, error) {
+	if d.db == nil {
+		return nil, nil
+	}
+	return d.db.Query(query, args)
 }
 
 func (d *DBFile) Prepare(tx *sql.Tx, sql string) (*sql.Stmt, error) {

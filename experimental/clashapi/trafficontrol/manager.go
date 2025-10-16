@@ -76,7 +76,7 @@ func NewManager(ctx context.Context, logFactory log.ObservableFactory) *Manager 
 	}
 	dbFile := service.FromContext[adapter.DBFile](ctx) //karing
 	if dbFile != nil {                                 //karing
-		err := dbFile.Exec(createTableSQL())
+		_, err := dbFile.Exec(createTableSQL())
 		if err != nil {
 			manager.logger.WarnContext(manager.ctx, "create table connection_track: ", err)
 		} else {
