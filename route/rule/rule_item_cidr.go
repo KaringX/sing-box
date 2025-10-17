@@ -81,6 +81,9 @@ func (r *IPCIDRItem) Match(metadata *adapter.InboundContext) bool {
 	}
 	if len(metadata.DestinationAddresses) > 0 {
 		for _, address := range metadata.DestinationAddresses {
+			if !address.IsValid() { //karing
+				continue
+			}
 			if r.ipSet.Contains(address) {
 				return true
 			}
