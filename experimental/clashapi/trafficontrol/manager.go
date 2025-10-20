@@ -23,12 +23,12 @@ import (
 )
 
 var coreStartTime time.Time //karing
-var coreUuid string         //karing
 var coreRestart = false     //karing
 
 type DeviceEventTracker struct { //karing
 	CreatedAt time.Time
 	Name      string
+	ID        string
 }
 
 type Manager struct {
@@ -74,8 +74,6 @@ func NewManager(ctx context.Context, logFactory log.ObservableFactory) *Manager 
 
 	if coreStartTime.IsZero() {
 		coreStartTime = manager.startTime
-		id, _ := uuid.NewV4()
-		coreUuid = id.String()
 	} else {
 		coreRestart = true
 	}
@@ -348,9 +346,10 @@ func (m *Manager) handle() { //karing
 }
 
 func (m *Manager) addNewEvent(name string) {
+	id, _ := uuid.NewV4()
 	m.persistAccess.Lock()
 	defer m.persistAccess.Unlock()
-	m.eventsForPersist.PushBack(DeviceEventTracker{CreatedAt: time.Now(), Name: name})
+	m.eventsForPersist.PushBack(DeviceEventTracker{CreatedAt: time.Now(), Name: name, ID: id.String()})
 }
 
 func (m *Manager) persistConnectionsToDB(connections []TrackerMetadata, closeAt *time.Time) { //karing
@@ -529,7 +528,7 @@ func (m *Manager) persistDeviceEventsToDB(events []DeviceEventTracker) { //karin
 				int32(runtime.NumGoroutine()),
 				int32(gofree.ThreadNum()),
 				m.memory,
-				coreUuid,
+				t.ID,
 				t.CreatedAt,
 				nil,
 				t.Name,
