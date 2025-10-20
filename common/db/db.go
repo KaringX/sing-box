@@ -17,6 +17,7 @@ type DBFile struct {
 	cacheDays int
 }
 
+// dbbackup go-sqlite3\_example\hook\hook.go
 func New(ctx context.Context, options *option.DBFileOptions) (*DBFile, error) {
 	dbPath := filemanager.BasePath(ctx, options.Path)
 	db, err := sql.Open("sqlite3", dbPath) //+":locked.sqlite?cache=shared"

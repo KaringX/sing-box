@@ -81,9 +81,9 @@ func (r *IPCIDRItem) Match(metadata *adapter.InboundContext) bool {
 	}
 	if len(metadata.DestinationAddresses) > 0 {
 		for _, address := range metadata.DestinationAddresses {
-			//if !address.IsValid() { //karing
-			//	continue
-			//}
+			if !address.Is4() && !address.Is6() { //karing avoid r.ipSet.Contains->ip.Zone()->ip.z.Value() bad z ptr panic
+				continue
+			}
 			if r.ipSet.Contains(address) {
 				return true
 			}
