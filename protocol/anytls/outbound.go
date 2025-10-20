@@ -36,25 +36,30 @@ type Outbound struct {
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.AnyTLSOutboundOptions) (adapter.Outbound, error) {
+	empty := &Outbound{ //karing
+		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeAnyTLS, tag, []string{N.NetworkTCP, N.NetworkUDP}, options.DialerOptions), //karing
+		server:  options.ServerOptions.Build(),
+		logger:  logger,
+	}
 	outbound := &Outbound{
 		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeAnyTLS, tag, []string{N.NetworkTCP, N.NetworkUDP}, options.DialerOptions),
 		server:  options.ServerOptions.Build(),
 		logger:  logger,
 	}
 	if options.TLS == nil || !options.TLS.Enabled {
-		return nil, C.ErrTLSRequired
+		return empty, C.ErrTLSRequired //karing
 	}
 	// TCP Fast Open is incompatible with anytls because TFO creates a lazy connection
 	// that only establishes on first write. The lazy connection returns an empty address
 	// before establishment, but anytls SOCKS wrapper tries to access the remote address
 	// during handshake, causing a null pointer dereference crash.
 	if options.DialerOptions.TCPFastOpen {
-		return nil, E.New("tcp_fast_open is not supported with anytls outbound")
+		return empty, E.New("tcp_fast_open is not supported with anytls outbound") //karing
 	}
 
 	tlsConfig, err := tls.NewClient(ctx, options.Server, common.PtrValueOrDefault(options.TLS))
 	if err != nil {
-		return nil, err
+		return empty, err //karing
 	}
 	outbound.tlsConfig = tlsConfig
 
@@ -64,7 +69,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		RemoteIsDomain: options.ServerIsDomain(),
 	})
 	if err != nil {
-		return nil, err
+		return empty, err //karing
 	}
 	outbound.dialer = outboundDialer
 
@@ -77,7 +82,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		Logger:                   logger,
 	})
 	if err != nil {
-		return nil, err
+		return empty, err //karing
 	}
 	outbound.client = client
 
