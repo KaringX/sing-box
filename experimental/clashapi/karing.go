@@ -121,16 +121,17 @@ func Lookup(ctx context.Context, router adapter.Router, logFactory log.Factory, 
 
 func karingRouter(ctx context.Context, router adapter.Router, logFactory log.Factory) http.Handler {
 	r := chi.NewRouter()
-	r.Get("/dnsQueryWithDefaultRouter", dnsQueryWithDefaultRouter(ctx, router, logFactory))
+	r.Get("/dnsQueryWithDefaultRouter", dnsQueryWithDefaultRouter(ctx, logFactory))
 	r.Post("/dnsQuery", dnsQuery(ctx, router, logFactory))
 	r.Get("/outboundQuery", outboundQuery(ctx, router))
 	r.Get("/remoteRuleSetRulesCount", remoteRuleSetRulesCount(router))
+	r.Get("/remoteRuleSetLastUpdated", remoteRuleSetRulesLastUpdated(ctx))
 	r.Get("/resetOutboundConnections", resetOutboundConnections())
 	r.Get("/mainStack", mainStack())
 	return r
 }
 
-func dnsQueryWithDefaultRouter(ctx context.Context, router adapter.Router, logFactory log.Factory) func(w http.ResponseWriter, r *http.Request) {
+func dnsQueryWithDefaultRouter(ctx context.Context, logFactory log.Factory) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		domain := r.URL.Query().Get("domain")
 		strategy := r.URL.Query().Get("strategy")
@@ -235,6 +236,19 @@ func remoteRuleSetRulesCount(router adapter.Router) func(w http.ResponseWriter, 
 	return func(w http.ResponseWriter, r *http.Request) {
 		render.JSON(w, r, render.M{
 			"result": router.GetRemoteRuleSetRulesCount(),
+		})
+	}
+}
+
+func remoteRuleSetRulesLastUpdated(ctx context.Context) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var result map[string]time.Time
+		cacheFile := service.FromContext[adapter.CacheFile](ctx)
+		if cacheFile != nil {
+			result = cacheFile.GetAllRuleSetLastUpdated()
+		}
+		render.JSON(w, r, render.M{
+			"result": result,
 		})
 	}
 }

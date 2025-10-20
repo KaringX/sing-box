@@ -380,8 +380,8 @@ func (c *CacheFile) HasRuleSet(tag string) bool { //karing
 	return err == nil
 }
 
-func (c *CacheFile) GetAllRuleSetKeys() map[string]bool { //karing
-	keys := make(map[string]bool)
+func (c *CacheFile) GetAllRuleSetLastUpdated() map[string]time.Time { //karing
+	keys := make(map[string]time.Time)
 	if c.DB == nil {
 		return keys
 	}
@@ -392,7 +392,9 @@ func (c *CacheFile) GetAllRuleSetKeys() map[string]bool { //karing
 		}
 		bucket.ForEach(func(name []byte, setBinary []byte) error {
 			if len(name) != 0 {
-				keys[string(name)] = len(setBinary) != 0
+				var savedSet adapter.SavedBinary
+				savedSet.UnmarshalBinary(setBinary)
+				keys[string(name)] = savedSet.LastUpdated
 			}
 			return nil
 		})

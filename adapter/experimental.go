@@ -61,9 +61,9 @@ type CacheFile interface {
 	StoreGroupExpand(group string, expand bool) error
 	LoadRuleSet(tag string) *SavedBinary
 	SaveRuleSet(tag string, set *SavedBinary) error
-	DeleteRuleSet(tag string)           //karing
-	HasRuleSet(tag string) bool         //karing
-	GetAllRuleSetKeys() map[string]bool //karing
+	DeleteRuleSet(tag string)                       //karing
+	HasRuleSet(tag string) bool                     //karing
+	GetAllRuleSetLastUpdated() map[string]time.Time //karing
 }
 
 type DBFile interface { //karing
