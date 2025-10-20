@@ -292,10 +292,6 @@ func (r *Router) Exchange(ctx context.Context, message *mDNS.Msg, options adapte
 				var responseCheck func(responseAddrs []netip.Addr) bool
 				if rule != nil && rule.WithAddressLimit() {
 					responseCheck = func(responseAddrs []netip.Addr) bool {
-						if responseAddrs == nil { //karing
-							r.logger.InfoContext(ctx, "lookup result is nil for ", metadata.Domain)
-							return true
-						}
 						metadata.DestinationAddresses = responseAddrs
 						return rule.MatchAddressLimit(metadata)
 					}
@@ -432,10 +428,6 @@ func (r *Router) Lookup(ctx context.Context, domain string, options adapter.DNSQ
 			var responseCheck func(responseAddrs []netip.Addr) bool
 			if rule != nil && rule.WithAddressLimit() {
 				responseCheck = func(responseAddrs []netip.Addr) bool {
-					if responseAddrs == nil { //karing
-						r.logger.InfoContext(ctx, "lookup result is nil for ", domain)
-						return true
-					}
 					metadata.DestinationAddresses = responseAddrs
 					return rule.MatchAddressLimit(metadata)
 				}
@@ -572,10 +564,6 @@ func (r *Router) LookupTag(ctx context.Context, domain string, options adapter.D
 			var responseCheck func(responseAddrs []netip.Addr) bool
 			if rule != nil && rule.WithAddressLimit() {
 				responseCheck = func(responseAddrs []netip.Addr) bool {
-					if responseAddrs == nil { //karing
-						r.logger.InfoContext(ctx, "lookup result is nil for ", domain)
-						return true
-					}
 					metadata.DestinationAddresses = responseAddrs
 					return rule.MatchAddressLimit(metadata)
 				}
