@@ -28,7 +28,8 @@ func dnsReadConfig(ctx context.Context, _ string) *dnsConfig {
 	}()
 	addresses, err := adapterAddresses()
 	if err != nil {
-		return nil
+		conf.err = err //karing
+		return conf    //karing
 	}
 	var dnsAddresses []struct {
 		ifName string
