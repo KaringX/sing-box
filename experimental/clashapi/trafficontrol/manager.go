@@ -24,6 +24,7 @@ import (
 
 var coreStartTime time.Time //karing
 var coreUuid string         //karing
+var coreRestart = false     //karing
 
 type DeviceEventTracker struct { //karing
 	CreatedAt time.Time
@@ -57,6 +58,9 @@ type Manager struct {
 	downloadTotalDirect atomic.Int64 //karing
 }
 
+func IsCoreRestart() bool {
+	return coreRestart
+}
 func NewManager(ctx context.Context, logFactory log.ObservableFactory) *Manager { //karing
 	///return &Manager{}//karing
 	manager := &Manager{ //karing
@@ -67,12 +71,13 @@ func NewManager(ctx context.Context, logFactory log.ObservableFactory) *Manager 
 		done:      make(chan struct{}),
 		// process: &process.Process{Pid: int32(os.Getpid())},
 	}
-	restart := true
+
 	if coreStartTime.IsZero() {
-		restart = false
 		coreStartTime = manager.startTime
 		id, _ := uuid.NewV4()
 		coreUuid = id.String()
+	} else {
+		coreRestart = true
 	}
 	dbFile := service.FromContext[adapter.DBFile](ctx) //karing
 	if dbFile != nil {                                 //karing
@@ -88,7 +93,7 @@ func NewManager(ctx context.Context, logFactory log.ObservableFactory) *Manager 
 				manager.pauseCallback = manager.pause.RegisterCallback(manager.onPauseUpdated)
 			}
 
-			if restart {
+			if coreRestart {
 				manager.addNewEvent("core:restart")
 			} else {
 				manager.addNewEvent("core:start")
