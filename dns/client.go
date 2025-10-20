@@ -613,28 +613,13 @@ func MessageToAddresses(response *dns.Msg) []netip.Addr {
 	for _, rawAnswer := range response.Answer {
 		switch answer := rawAnswer.(type) {
 		case *dns.A:
-			addr := M.AddrFromIP(answer.A) //karing
-			if addr.IsValid() {            //karing
-				addresses = append(addresses, addr)
-			}
-			//addresses = append(addresses, addr)
+			addresses = append(addresses, M.AddrFromIP(answer.A))
 		case *dns.AAAA:
-			addr := M.AddrFromIP(answer.AAAA) //karing
-			if addr.IsValid() {               //karing
-				addresses = append(addresses, addr)
-			}
-			//addresses = append(addresses, addr)
+			addresses = append(addresses, M.AddrFromIP(answer.AAAA))
 		case *dns.HTTPS:
 			for _, value := range answer.SVCB.Value {
 				if value.Key() == dns.SVCB_IPV4HINT || value.Key() == dns.SVCB_IPV6HINT {
-					addrValues := strings.Split(value.String(), ",") //karing
-					for _, addrValue := range addrValues {           //karing
-						addr := M.ParseAddr(addrValue)
-						if addr.IsValid() {
-							addresses = append(addresses, addr)
-						}
-					}
-					//addresses = append(addresses, common.Map(strings.Split(value.String(), ","), M.ParseAddr)...)
+					addresses = append(addresses, common.Map(strings.Split(value.String(), ","), M.ParseAddr)...)
 				}
 			}
 		}
