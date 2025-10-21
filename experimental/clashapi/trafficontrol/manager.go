@@ -338,9 +338,9 @@ func (m *Manager) handle() { //karing
 
 		dbFile := service.FromContext[adapter.DBFile](m.ctx) //karing
 		if dbFile != nil {                                   //karing
-			m.persistDeviceEventsToDB(m.EventsForPersist())
-			m.persistConnectionsToDB(m.ClosedConnectionsForPersist(), nil)
-			m.persistConnectionsToDB(m.ConnectionsForPersist(), nil)
+			m.persistDeviceEventsToDB(m.EventsForPersist(), nil)
+			m.persistConnectionsToDB(m.ClosedConnectionsForPersist(), nil, false)
+			m.persistConnectionsToDB(m.ConnectionsForPersist(), nil, false)
 		}
 	}
 }
@@ -352,7 +352,7 @@ func (m *Manager) addNewEvent(name string) {
 	m.eventsForPersist.PushBack(DeviceEventTracker{CreatedAt: time.Now(), Name: name, ID: id.String()})
 }
 
-func (m *Manager) persistConnectionsToDB(connections []TrackerMetadata, closeAt *time.Time) { //karing
+func (m *Manager) persistConnectionsToDB(connections []TrackerMetadata, closeAt *time.Time, persistUseCloseAtTime bool) { //karing
 	if len(connections) == 0 {
 		return
 	}
@@ -373,7 +373,12 @@ func (m *Manager) persistConnectionsToDB(connections []TrackerMetadata, closeAt 
 		var memStats runtime.MemStats
 		runtime.ReadMemStats(&memStats)
 		m.memory = memStats.StackInuse + memStats.HeapInuse + memStats.HeapIdle - memStats.HeapReleased
-		now := time.Now()
+		var persist time.Time
+		if persistUseCloseAtTime && closeAt != nil {
+			persist = *closeAt
+		} else {
+			persist = time.Now()
+		}
 		for _, t := range connections {
 			var inbound string
 			if t.Metadata.Inbound != "" {
@@ -440,7 +445,7 @@ func (m *Manager) persistConnectionsToDB(connections []TrackerMetadata, closeAt 
 			_, err = stmt.Exec(
 				coreStartTime,
 				m.startTime,
-				now,
+				persist,
 				m.uploadTotal.Load(),
 				m.downloadTotal.Load(),
 				m.uploadBlip.Load(),
@@ -489,7 +494,7 @@ func (m *Manager) persistConnectionsToDB(connections []TrackerMetadata, closeAt 
 	}
 }
 
-func (m *Manager) persistDeviceEventsToDB(events []DeviceEventTracker) { //karing
+func (m *Manager) persistDeviceEventsToDB(events []DeviceEventTracker, persistTime *time.Time) { //karing
 	if len(events) == 0 {
 		return
 	}
@@ -511,12 +516,17 @@ func (m *Manager) persistDeviceEventsToDB(events []DeviceEventTracker) { //karin
 		runtime.ReadMemStats(&memStats)
 		m.memory = memStats.StackInuse + memStats.HeapInuse + memStats.HeapIdle - memStats.HeapReleased
 
-		now := time.Now()
+		var persist time.Time
+		if persistTime != nil {
+			persist = *persistTime
+		} else {
+			persist = time.Now()
+		}
 		for _, t := range events {
 			_, err = stmt.Exec(
 				coreStartTime,
 				m.startTime,
-				now,
+				persist,
 				m.uploadTotal.Load(),
 				m.downloadTotal.Load(),
 				m.uploadBlip.Load(),
@@ -575,7 +585,7 @@ func (m *Manager) Close() error { //karing
 
 	dbFile := service.FromContext[adapter.DBFile](m.ctx)
 	if dbFile != nil {
-		/*var uploadTemp int64
+		var uploadTemp int64
 		var downloadTemp int64
 
 		uploadTemp = m.uploadTemp.Swap(0)
@@ -584,11 +594,11 @@ func (m *Manager) Close() error { //karing
 		m.downloadBlip.Store(downloadTemp)
 
 		closeAt := time.Now()
-		m.persistConnectionsToDB(m.ClosedConnectionsForPersist(), &closeAt)
-		m.persistConnectionsToDB(m.ConnectionsForPersist(), nil)*/
+		m.persistConnectionsToDB(m.ClosedConnectionsForPersist(), &closeAt, true)
+		m.persistConnectionsToDB(m.ConnectionsForPersist(), &closeAt, true)
 
 		m.addNewEvent("core:stop")
-		m.persistDeviceEventsToDB(m.EventsForPersist())
+		m.persistDeviceEventsToDB(m.EventsForPersist(), &closeAt)
 	}
 	m.connections.Clear()
 
