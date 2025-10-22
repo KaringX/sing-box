@@ -34,6 +34,7 @@ func init() {
 
 func main() {
 	flag.Parse()
+	initFlags() //karing
 
 	build_shared.FindMobile()
 
@@ -55,14 +56,16 @@ var (
 	debugTags   []string
 )
 
-func init() {
+func initFlags() { //karing
 	sharedFlags = append(sharedFlags, "-trimpath")
 	sharedFlags = append(sharedFlags, "-buildvcs=false")
+	/* //karing
 	currentTag, err := build_shared.ReadTag()
 	if err != nil {
 		currentTag = "unknown"
 	}
-	currentTag = version                                                                                                                                  //karing
+	*/
+	currentTag := version                                                                                                                                 //karing
 	sharedFlags = append(sharedFlags, "-ldflags", "-X github.com/sagernet/sing-box/constant.Version="+currentTag+" -checklinkname=0 "+" -s -w -buildid=") //karing
 	debugFlags = append(debugFlags, "-ldflags", "-X github.com/sagernet/sing-box/constant.Version="+currentTag+" -checklinkname=0 ")                      //karing
 
