@@ -171,7 +171,7 @@ func (l *observableLogger) log(ctx context.Context, level Level, deep int, args 
 			log.Fatal(message)
 		}
 	}
-	if C.Build != "release" { //karing
+	if len(C.Version) == 0 { //karing
 		if l.platformWriter != nil {
 			l.platformWriter.WriteMessage(level, l.platformFormatter.Format(ctx, contextId, level, l.tag, F.ToString(args...), nowTime)) //karing
 		}

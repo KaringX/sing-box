@@ -1,10 +1,6 @@
 package deprecated
 
 import (
-	"os"
-	"strconv"
-
-	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing/common/logger"
 )
 
@@ -21,9 +17,7 @@ func NewStderrManager(logger logger.Logger) Manager {
 }
 
 func (f *stderrManager) ReportDeprecated(feature Note) {
-	if C.Build == "release" { //karing
-		return
-	}
+	/*karing
 	if f.reported[feature.Name] {
 		return
 	}
@@ -43,4 +37,5 @@ func (f *stderrManager) ReportDeprecated(feature Note) {
 	} else {
 		f.logger.Error(feature.MessageWithLink())
 	}
+	*/
 }

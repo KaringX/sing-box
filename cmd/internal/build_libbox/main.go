@@ -21,7 +21,7 @@ var (
 	target        string
 	platform      string
 	withTailscale bool
-	ldflags       string //karing
+	version       string //karing
 )
 
 func init() {
@@ -29,7 +29,7 @@ func init() {
 	flag.StringVar(&target, "target", "android", "target platform")
 	flag.StringVar(&platform, "platform", "", "specify platform")
 	flag.BoolVar(&withTailscale, "with-tailscale", false, "build tailscale for iOS and tvOS")
-	flag.StringVar(&ldflags, "ldflags", "", "additional ldflags") //karing
+	flag.StringVar(&version, "version", "", "additional version") //karing
 }
 
 func main() {
@@ -62,8 +62,9 @@ func init() {
 	if err != nil {
 		currentTag = "unknown"
 	}
-	sharedFlags = append(sharedFlags, "-ldflags", "-X github.com/sagernet/sing-box/constant.Version="+currentTag+" "+ldflags+" -checklinkname=0 "+" -s -w -buildid=") //karing
-	debugFlags = append(debugFlags, "-ldflags", "-X github.com/sagernet/sing-box/constant.Version="+currentTag+" "+ldflags+" -checklinkname=0 ")                      //karing
+	currentTag = version                                                                                                                                      //karing
+	sharedFlags = append(sharedFlags, "-ldflags", "-X github.com/sagernet/sing-box/constant.Version="+currentTag+" "+" -checklinkname=0 "+" -s -w -buildid=") //karing
+	debugFlags = append(debugFlags, "-ldflags", "-X github.com/sagernet/sing-box/constant.Version="+currentTag+" "+" -checklinkname=0 ")                      //karing
 
 	sharedTags = append(sharedTags, "with_gvisor", "with_quic", "with_wireguard", "with_utls", "with_clash_api", "with_conntrack")
 	sharedTags = append(sharedTags, "with_low_memory", "with_tailscale", "with_acme", "with_shadowsocksr", "with_grpc", "with_karing") //karing
