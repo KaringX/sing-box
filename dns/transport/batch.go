@@ -72,9 +72,11 @@ func (t *BatchTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS
 	}
 	var count atomic.Int64
 	var result *mDNS.Msg
+	var resultEmpty *mDNS.Msg
 	var errResult error
 	var once sync.Once
 	var errOnce sync.Once
+	var emptyOnce sync.Once
 	done := make(chan struct{})
 	ctx, cancel := context.WithCancel(ctx)
 	for _, transport := range transports {
@@ -85,11 +87,22 @@ func (t *BatchTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS
 			ret, err := transport.Exchange(ctx, copydMessage)
 			count.Add(-1)
 			if err == nil {
-				once.Do(func() {
-					result = ret
-					done <- struct{}{}
-					t.logger.InfoContext(ctx, "exchanged ["+domain+"] by: ", transport.Tag())
-				})
+				if len(ret.Answer) == 0 {
+					emptyOnce.Do(func() {
+						resultEmpty = ret
+					})
+					if count.Load() == 0 {
+						once.Do(func() {
+							done <- struct{}{}
+						})
+					}
+				} else {
+					once.Do(func() {
+						result = ret
+						done <- struct{}{}
+						t.logger.InfoContext(ctx, "exchanged ["+domain+"] by: ", transport.Tag())
+					})
+				}
 			} else {
 				errOnce.Do(func() {
 					errResult = err
@@ -105,10 +118,15 @@ func (t *BatchTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS
 	<-done
 	cancel()
 	close(done)
-	if result == nil && errResult == nil {
-		errResult = E.New("exchange: all failed")
-	} else if result != nil {
-		errResult = nil
+	if result != nil {
+		return result, nil
 	}
-	return result, errResult
+	if resultEmpty != nil {
+		return resultEmpty, nil
+	}
+	if errResult != nil {
+		return nil, errResult
+	}
+
+	return nil, E.New("batch exchange: unknown error")
 }
