@@ -432,23 +432,6 @@ func (r *NetworkManager) ResetNetwork() {
 	}()
 }
 
-func (r *NetworkManager) ResetOutboundNetwork(tags []string) { //karing
-	if r.outbound != nil {
-		for _, outbound := range r.outbound.Outbounds() {
-			listener, isListener := outbound.(adapter.InterfaceUpdateListener)
-			if isListener {
-				if strings.Contains(outbound.Tag(), outbound.Tag()) {
-					listener.InterfaceUpdated()
-				}
-			}
-		}
-	}
-	go func() {
-		runtime.GC()
-		runtimeDebug.FreeOSMemory()
-	}()
-}
-
 func (r *NetworkManager) notifyInterfaceUpdate(defaultInterface *control.Interface, flags int) {
 	if r.pauseManager == nil { //karing
 		return

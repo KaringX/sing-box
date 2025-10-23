@@ -269,24 +269,6 @@ func (s *Server) RoutedPacketConnection(ctx context.Context, conn N.PacketConn, 
 	return trafficontrol.NewUDPTracker(ctx, conn, s.trafficManager, metadata, s.outbound, matchedRule, matchOutbound) //karing
 }
 
-func (s *Server) AddTick(tick *time.Ticker, onClose func()) { //karing
-	s.access.RLock()
-	defer s.access.RUnlock()
-	s.ticks.Store(tick, onClose)
-}
-
-func (s *Server) RemoveTick(tick *time.Ticker) { //karing
-	s.access.RLock()
-	defer s.access.RUnlock()
-	s.ticks.Delete(tick)
-}
-
-func (s *Server) RemoveTicks() { //karing
-	s.access.RLock()
-	defer s.access.RUnlock()
-	s.ticks.Clear()
-}
-
 func authentication(serverSecret string) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {

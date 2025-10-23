@@ -58,16 +58,6 @@ func (s *HistoryStorage) StoreURLTestHistory(tag string, history *adapter.URLTes
 	s.access.Unlock()
 }
 
-func (s *HistoryStorage) GetURLTestHistory() map[string]*adapter.URLTestHistory { // karing
-	history := make(map[string]*adapter.URLTestHistory)
-	s.access.Lock()
-	for k, v := range s.delayHistory {
-		history[k] = v
-	}
-	s.access.Unlock()
-	return history
-}
-
 func (s *HistoryStorage) notifyUpdated() {
 	updateHook := s.updateHook
 	if updateHook != nil {

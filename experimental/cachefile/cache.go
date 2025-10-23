@@ -100,9 +100,7 @@ func (c *CacheFile) Name() string {
 func (c *CacheFile) Dependencies() []string {
 	return nil
 }
-func (c *CacheFile) BeforeStart() error { //karing
-	return c.start(adapter.StartStateInitialize)
-}
+
 func (c *CacheFile) Start(stage adapter.StartStage) error { //karing
 	return nil
 }
@@ -346,59 +344,4 @@ func (c *CacheFile) SaveRuleSet(tag string, set *adapter.SavedBinary) error {
 		}
 		return bucket.Put([]byte(tag), setBinary)
 	})
-}
-
-func (c *CacheFile) DeleteRuleSet(tag string) { //karing
-	if c.DB == nil { //karing
-		return
-	}
-	c.DB.View(func(t *bbolt.Tx) error {
-		bucket := c.bucket(t, bucketRuleSet)
-		if bucket == nil {
-			return os.ErrNotExist
-		}
-		bucket.Delete([]byte(tag))
-		return nil
-	})
-}
-
-func (c *CacheFile) HasRuleSet(tag string) bool { //karing
-	if c.DB == nil { //karing
-		return false
-	}
-	err := c.DB.View(func(t *bbolt.Tx) error {
-		bucket := c.bucket(t, bucketRuleSet)
-		if bucket == nil {
-			return os.ErrNotExist
-		}
-		setBinary := bucket.Get([]byte(tag))
-		if len(setBinary) == 0 {
-			return os.ErrInvalid
-		}
-		return nil
-	})
-	return err == nil
-}
-
-func (c *CacheFile) GetAllRuleSetLastUpdated() map[string]time.Time { //karing
-	keys := make(map[string]time.Time)
-	if c.DB == nil {
-		return keys
-	}
-	c.DB.View(func(t *bbolt.Tx) error {
-		bucket := c.bucket(t, bucketRuleSet)
-		if bucket == nil {
-			return os.ErrNotExist
-		}
-		bucket.ForEach(func(name []byte, setBinary []byte) error {
-			if len(name) != 0 {
-				var savedSet adapter.SavedBinary
-				savedSet.UnmarshalBinary(setBinary)
-				keys[string(name)] = savedSet.LastUpdated
-			}
-			return nil
-		})
-		return nil
-	})
-	return keys
 }

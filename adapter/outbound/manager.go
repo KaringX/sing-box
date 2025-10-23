@@ -6,7 +6,6 @@ import (
 	"os"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/common/taskmonitor"
@@ -15,11 +14,6 @@ import (
 	"github.com/sagernet/sing/common"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/logger"
-)
-
-type OutboundGetLatestDownloadActiveConnectionFunc func(tag string) (bool, time.Time) //karing
-var (
-	OutboundGetLatestDownloadActiveConnection OutboundGetLatestDownloadActiveConnectionFunc //karing
 )
 
 var _ adapter.OutboundManager = (*Manager)(nil)

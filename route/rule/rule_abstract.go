@@ -28,10 +28,6 @@ func (r *abstractDefaultRule) Type() string {
 	return C.RuleTypeDefault
 }
 
-func (r *abstractDefaultRule) Name() string { //karing
-	return r.name
-}
-
 func (r *abstractDefaultRule) Start() error {
 	for _, item := range r.allItems {
 		if starter, isStarter := item.(interface {
@@ -168,10 +164,6 @@ type abstractLogicalRule struct {
 
 func (r *abstractLogicalRule) Type() string {
 	return C.RuleTypeLogical
-}
-
-func (r *abstractLogicalRule) Name() string { //karing
-	return r.name
 }
 
 func (r *abstractLogicalRule) Start() error {

@@ -3,22 +3,10 @@ package conntrack
 import (
 	"io"
 	"sync"
-	"time"
 
 	"github.com/sagernet/sing/common"
-	M "github.com/sagernet/sing/common/metadata"
 	"github.com/sagernet/sing/common/x/list"
 )
-
-type OutboundConn struct { //karing
-	Closer      io.Closer
-	CreatedAt   time.Time
-	Network     string
-	Source      M.Socksaddr
-	Destination M.Socksaddr
-	Fqdn        string
-	Outbound    string
-}
 
 var (
 	connAccess     sync.RWMutex
@@ -45,19 +33,6 @@ func List() []io.Closer {
 	return connList
 }
 
-func Connections() []OutboundConn { //karing
-	if !Enabled {
-		return nil
-	}
-	connAccess.RLock()
-	defer connAccess.RUnlock()
-	connList := make([]OutboundConn, 0, openConnection.Len())
-	for element := openConnection.Front(); element != nil; element = element.Next() {
-		connList = append(connList, element.Value)
-	}
-	return connList
-}
-
 func Close() {
 	if !Enabled {
 		return
@@ -66,8 +41,8 @@ func Close() {
 	defer connAccess.Unlock()
 	for element := openConnection.Front(); element != nil; element = element.Next() {
 		common.Close(element.Value.Closer) //karing
-		element.Value.Closer = nil //karing
-		element.Value.Outbound = "" //karing
+		element.Value.Closer = nil         //karing
+		element.Value.Outbound = ""        //karing
 	}
 	openConnection.Init()
 }

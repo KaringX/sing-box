@@ -49,10 +49,10 @@ type RemoteRuleSet struct {
 	lastEtag       string
 	updateTicker   *time.Ticker
 	//cacheFile      adapter.CacheFile //karing
-	pauseManager   pause.Manager
-	callbacks      list.List[adapter.RuleSetUpdateCallback]
-	refs           atomic.Int32
-	downloadTimes  int //karing
+	pauseManager  pause.Manager
+	callbacks     list.List[adapter.RuleSetUpdateCallback]
+	refs          atomic.Int32
+	downloadTimes int //karing
 }
 
 func NewRemoteRuleSet(ctx context.Context, logger logger.ContextLogger, options option.RuleSet) *RemoteRuleSet {
@@ -80,14 +80,6 @@ func (s *RemoteRuleSet) Name() string {
 
 func (s *RemoteRuleSet) String() string {
 	return strings.Join(F.MapToString(s.rules), " ")
-}
-
-func (s *RemoteRuleSet) Url() string { //karing
-	return s.options.RemoteOptions.URL
-}
-
-func (s *RemoteRuleSet) RulesCount() int { //karing
-	return len(s.rules)
 }
 
 func (s *RemoteRuleSet) StartContext(ctx context.Context, startContext *adapter.HTTPStartContext) error {

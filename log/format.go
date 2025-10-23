@@ -140,6 +140,7 @@ func (f Formatter) FormatWithSimple(ctx context.Context, contextId string, level
 			message = F.ToString("[", id.ID, " ", activeDuration, "] ", message)
 		}
 		messageSimple = F.ToString("[", id.ID, " ", activeDuration, "] ", messageSimple)
+
 	}
 	switch {
 	case f.DisableTimestamp:

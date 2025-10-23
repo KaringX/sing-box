@@ -38,10 +38,6 @@ func RegisterTransport(registry *dns.TransportRegistry) {
 }
 
 var _ adapter.DNSTransport = (*Transport)(nil)
-var ( //karing
-	cachedServers   []M.Socksaddr
-	cachedUpdatedAt time.Time
-)
 
 type Transport struct {
 	dns.TransportAdapter
@@ -287,7 +283,6 @@ func (t *Transport) recreateServers(iface *control.Interface, dhcpPacket *dhcpv4
 	} else if dhcpPacket.DomainName() != "" {
 		t.search = []string{dhcpPacket.DomainName()}
 	}
-
 	serverAddrs := common.Map(dhcpPacket.DNS(), func(it net.IP) M.Socksaddr {
 		return M.SocksaddrFrom(M.AddrFromIP(it), 53)
 	})

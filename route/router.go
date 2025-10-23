@@ -2,7 +2,6 @@ package route
 
 import (
 	"context"
-	"net/netip"
 
 	"os"
 	"runtime"
@@ -11,7 +10,6 @@ import (
 	"github.com/sagernet/sing-box/common/process"
 	"github.com/sagernet/sing-box/common/taskmonitor"
 	C "github.com/sagernet/sing-box/constant"
-	"github.com/sagernet/sing-box/experimental/clashapi/trafficontrol"
 	"github.com/sagernet/sing-box/experimental/libbox/platform"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
@@ -275,48 +273,4 @@ func (r *Router) ResetNetwork() {
 	if r.dns != nil { //karing
 		r.dns.ResetNetwork()
 	}
-}
-
-func (r *Router) ResetOutboundNetwork(tags []string) { //karing
-	if r.network != nil {
-		r.network.ResetOutboundNetwork(tags)
-	}
-}
-
-func (r *Router) GetRemoteRuleSetRulesCount() map[string]int { //karing
-	counts := make(map[string]int)
-	for _, ruleSet := range r.ruleSets {
-		if ruleset, isRemote := ruleSet.(*R.RemoteRuleSet); isRemote {
-			counts[ruleset.Url()] = ruleset.RulesCount()
-		}
-	}
-	return counts
-}
-
-func (r *Router) FindProcessInfo(ctx context.Context, network string, source netip.AddrPort) (*process.Info, error) { //karing
-	if r.processSearcher != nil {
-		var originDestination netip.AddrPort
-		return process.FindProcessInfo(r.processSearcher, ctx, network, source, originDestination)
-	}
-	return nil, E.New("processSearcher not impl")
-}
-
-func (r *Router) GetMatchRuleChain(outboundManager adapter.OutboundManager, matchOutboundTag string) ([]string, string, string) { //karing
-	return trafficontrol.GetMatchRuleChain(outboundManager, matchOutboundTag)
-}
-
-func (r *Router) GetMatchRule(ctx context.Context, metadata *adapter.InboundContext) (adapter.Rule, error) { //karing
-	rule, _, _, _, err := r.matchRule(ctx, metadata, false, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return rule, err
-}
-
-func (r *Router) GetAssetContent(path string) ([]byte, error) { //karing
-	if r.platformInterface == nil {
-		return nil, E.New("platform interface not set")
-	}
-	return r.platformInterface.GetAssetContent(path)
 }

@@ -608,7 +608,3 @@ func (s *Box) Inbound() adapter.InboundManager {
 func (s *Box) Outbound() adapter.OutboundManager {
 	return s.outbound
 }
-
-func (s *Box) Logger() log.ContextLogger { //karing
-	return s.logger
-}

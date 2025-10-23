@@ -126,7 +126,7 @@ func getGroupDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 						})
 					}
 					resultAccess.Lock() //karing
-					if err == nil { //karing
+					if err == nil {     //karing
 						result[tag] = adapter.URLTestResult{Delay: t, Err: ""}
 					} else { //karing
 						result[tag] = adapter.URLTestResult{Delay: t, Err: err.Error()}
@@ -149,32 +149,5 @@ func getGroupDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 			testResult[key] = value.Delay
 		}
 		render.JSON(w, r, testResult)
-	}
-}
-
-func updateGroupDelayCheck(server *Server) func(w http.ResponseWriter, r *http.Request) { //karing
-	return func(w http.ResponseWriter, r *http.Request) {
-		proxy := r.Context().Value(CtxKeyProxy).(adapter.Outbound)
-		group, ok := proxy.(adapter.OutboundGroup)
-		if !ok {
-			render.Status(r, http.StatusNotFound)
-			render.JSON(w, r, ErrNotFound)
-			return
-		}
-
-		if urlTestGroup, isURLTestGroup := group.(adapter.URLTestGroup); isURLTestGroup {
-			urlTestGroup.UpdateCheck()
-		}
-
-		render.JSON(w, r, "")
-	}
-}
-
-func getGroupDelayHistory(server *Server) func(w http.ResponseWriter, r *http.Request) { //karing
-	return func(w http.ResponseWriter, r *http.Request) {
-		delayHistory := server.urlTestHistory.GetURLTestHistory()
-		render.JSON(w, r, render.M{
-			"history": delayHistory,
-		})
 	}
 }

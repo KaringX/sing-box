@@ -109,8 +109,8 @@ type RawDefaultDNSRule struct {
 	Invert                   bool                              `json:"invert,omitempty"`
 
 	// Deprecated: renamed to rule_set_ip_cidr_match_source
-	Deprecated_RulesetIPCIDRMatchSource bool `json:"rule_set_ipcidr_match_source,omitempty"`
-	Name                     string		     `json:"name,omitempty"` //karing
+	Deprecated_RulesetIPCIDRMatchSource bool   `json:"rule_set_ipcidr_match_source,omitempty"`
+	Name                                string `json:"name,omitempty"` //karing
 }
 
 type DefaultDNSRule struct {
