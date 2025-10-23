@@ -338,9 +338,15 @@ func (m *Manager) handle() { //karing
 
 		dbFile := service.FromContext[adapter.DBFile](m.ctx) //karing
 		if dbFile != nil {                                   //karing
-			m.persistDeviceEventsToDB(m.EventsForPersist(), nil)
-			m.persistConnectionsToDB(m.ClosedConnectionsForPersist(), nil, false)
-			m.persistConnectionsToDB(m.ConnectionsForPersist(), nil, false)
+			persistTime := time.Now()
+			writeCount := 0
+			writeCount += m.persistDeviceEventsToDB(m.EventsForPersist(), persistTime)
+			writeCount += m.persistConnectionsToDB(m.ClosedConnectionsForPersist(), persistTime, nil)
+			writeCount += m.persistConnectionsToDB(m.ConnectionsForPersist(), persistTime, nil)
+			if writeCount == 0 {
+				m.addNewEvent("track:idle")
+				m.persistDeviceEventsToDB(m.EventsForPersist(), persistTime)
+			}
 		}
 	}
 }
@@ -352,33 +358,28 @@ func (m *Manager) addNewEvent(name string) {
 	m.eventsForPersist.PushBack(DeviceEventTracker{CreatedAt: time.Now(), Name: name, ID: id.String()})
 }
 
-func (m *Manager) persistConnectionsToDB(connections []TrackerMetadata, closeAt *time.Time, persistUseCloseAtTime bool) { //karing
+func (m *Manager) persistConnectionsToDB(connections []TrackerMetadata, persistTime time.Time, closeAt *time.Time) int { //karing
 	if len(connections) == 0 {
-		return
+		return 0
 	}
 	dbFile := service.FromContext[adapter.DBFile](m.ctx)
 	if dbFile != nil {
 		tx, err := dbFile.BeginTx()
 		if err != nil {
 			m.logger.WarnContext(m.ctx, "db begin transaction: ", err)
-			return
+			return 0
 		}
 		stmt, err := tx.Prepare(prepareSQL())
 		if err != nil {
 			m.logger.WarnContext(m.ctx, "db transaction prepare: ", err)
-			return
+			return 0
 		}
 		defer stmt.Close()
 
 		var memStats runtime.MemStats
 		runtime.ReadMemStats(&memStats)
 		m.memory = memStats.StackInuse + memStats.HeapInuse + memStats.HeapIdle - memStats.HeapReleased
-		var persist time.Time
-		if persistUseCloseAtTime && closeAt != nil {
-			persist = *closeAt
-		} else {
-			persist = time.Now()
-		}
+
 		for _, t := range connections {
 			var inbound string
 			if t.Metadata.Inbound != "" {
@@ -445,7 +446,7 @@ func (m *Manager) persistConnectionsToDB(connections []TrackerMetadata, closeAt 
 			_, err = stmt.Exec(
 				coreStartTime,
 				m.startTime,
-				persist,
+				persistTime,
 				m.uploadTotal.Load(),
 				m.downloadTotal.Load(),
 				m.uploadBlip.Load(),
@@ -489,26 +490,27 @@ func (m *Manager) persistConnectionsToDB(connections []TrackerMetadata, closeAt 
 		err = tx.Commit()
 		if err != nil {
 			m.logger.WarnContext(m.ctx, "db transaction commit: ", err)
-			return
+			return 0
 		}
 	}
+	return len(connections)
 }
 
-func (m *Manager) persistDeviceEventsToDB(events []DeviceEventTracker, persistTime *time.Time) { //karing
+func (m *Manager) persistDeviceEventsToDB(events []DeviceEventTracker, persistTime time.Time) int { //karing
 	if len(events) == 0 {
-		return
+		return 0
 	}
 	dbFile := service.FromContext[adapter.DBFile](m.ctx)
 	if dbFile != nil {
 		tx, err := dbFile.BeginTx()
 		if err != nil {
 			m.logger.WarnContext(m.ctx, "db begin transaction: ", err)
-			return
+			return 0
 		}
 		stmt, err := tx.Prepare(prepareSQL())
 		if err != nil {
 			m.logger.WarnContext(m.ctx, "db transaction prepare: ", err)
-			return
+			return 0
 		}
 		defer stmt.Close()
 
@@ -516,17 +518,11 @@ func (m *Manager) persistDeviceEventsToDB(events []DeviceEventTracker, persistTi
 		runtime.ReadMemStats(&memStats)
 		m.memory = memStats.StackInuse + memStats.HeapInuse + memStats.HeapIdle - memStats.HeapReleased
 
-		var persist time.Time
-		if persistTime != nil {
-			persist = *persistTime
-		} else {
-			persist = time.Now()
-		}
 		for _, t := range events {
 			_, err = stmt.Exec(
 				coreStartTime,
 				m.startTime,
-				persist,
+				persistTime,
 				m.uploadTotal.Load(),
 				m.downloadTotal.Load(),
 				m.uploadBlip.Load(),
@@ -569,9 +565,10 @@ func (m *Manager) persistDeviceEventsToDB(events []DeviceEventTracker, persistTi
 		err = tx.Commit()
 		if err != nil {
 			m.logger.WarnContext(m.ctx, "db transaction commit: ", err)
-			return
+			return 0
 		}
 	}
+	return len(events)
 }
 
 func (m *Manager) Close() error { //karing
@@ -593,12 +590,12 @@ func (m *Manager) Close() error { //karing
 		m.uploadBlip.Store(uploadTemp)
 		m.downloadBlip.Store(downloadTemp)
 
-		closeAt := time.Now()
-		m.persistConnectionsToDB(m.ClosedConnectionsForPersist(), &closeAt, true)
-		m.persistConnectionsToDB(m.ConnectionsForPersist(), &closeAt, true)
+		persistTime := time.Now()
+		m.persistConnectionsToDB(m.ClosedConnectionsForPersist(), persistTime, &persistTime)
+		m.persistConnectionsToDB(m.ConnectionsForPersist(), persistTime, &persistTime)
 
 		m.addNewEvent("core:stop")
-		m.persistDeviceEventsToDB(m.EventsForPersist(), &closeAt)
+		m.persistDeviceEventsToDB(m.EventsForPersist(), persistTime)
 	}
 	m.connections.Clear()
 
