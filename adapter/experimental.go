@@ -66,7 +66,7 @@ type CacheFile interface {
 	GetAllRuleSetLastUpdated() map[string]time.Time //karing
 }
 
-type DBFile interface { //karing
+type Statistics interface { //karing
 	LifecycleService
 	Exec(sql string) (sql.Result, error)
 	Query(query string, args ...any) (*sql.Rows, error)
@@ -74,6 +74,7 @@ type DBFile interface { //karing
 	ExecStmt(stmt *sql.Stmt, args ...any) (sql.Result, error)
 	BeginTx() (*sql.Tx, error)
 	Commit(tx *sql.Tx) error
+	PrivacyDesensitize() bool
 	CacheDays() int
 }
 

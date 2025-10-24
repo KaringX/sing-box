@@ -14,8 +14,8 @@ import (
 	"github.com/sagernet/sing-box/adapter/outbound"
 	boxService "github.com/sagernet/sing-box/adapter/service"
 	"github.com/sagernet/sing-box/common/certificate"
-	"github.com/sagernet/sing-box/common/db"
 	"github.com/sagernet/sing-box/common/dialer"
+	statistics "github.com/sagernet/sing-box/common/statistics"
 	"github.com/sagernet/sing-box/common/tls"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/dns"
@@ -184,13 +184,13 @@ func New(options Options) (box *Box, err error) { //karing
 		}
 	}
 
-	if experimentalOptions.DBFile != nil && experimentalOptions.DBFile.Enabled && len(experimentalOptions.DBFile.Path) > 0 { //karing
-		dbFile, err := db.New(ctx, experimentalOptions.DBFile)
+	if experimentalOptions.Statistics != nil && experimentalOptions.Statistics.Enabled && len(experimentalOptions.Statistics.Path) > 0 { //karing
+		statistics, err := statistics.New(ctx, experimentalOptions.Statistics)
 		if err != nil {
-			return nil, E.Cause(err, "dbFile load failed")
+			return nil, E.Cause(err, "statistics load failed")
 		}
-		service.MustRegister[adapter.DBFile](ctx, dbFile)
-		internalServices = append(internalServices, dbFile)
+		service.MustRegister[adapter.Statistics](ctx, statistics)
+		internalServices = append(internalServices, statistics)
 	}
 
 	certificateOptions := common.PtrValueOrDefault(options.Certificate)

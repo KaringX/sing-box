@@ -90,14 +90,14 @@ func newManagerWithExtension(ctx context.Context, logFactory log.ObservableFacto
 	} else {
 		coreRestart = true
 	}
-	dbFile := service.FromContext[adapter.DBFile](ctx)
-	if dbFile != nil {
-		_, err := dbFile.Exec(createTableSQL())
+	statistics := service.FromContext[adapter.Statistics](ctx)
+	if statistics != nil {
+		_, err := statistics.Exec(createTableSQL())
 		if err != nil {
 			manager.logger.WarnContext(manager.ctx, "create table connection_track: ", err)
 		} else {
 			go func() {
-				dbFile.Exec(deleteOldSQL(dbFile.CacheDays()))
+				statistics.Exec(deleteOldSQL(statistics.CacheDays()))
 			}()
 			manager.pause = service.FromContext[pause.Manager](ctx)
 			if manager.pause != nil {
@@ -221,8 +221,8 @@ func (m *Manager) handle() {
 		m.uploadBlip.Store(uploadTemp)
 		m.downloadBlip.Store(downloadTemp)
 
-		dbFile := service.FromContext[adapter.DBFile](m.ctx)
-		if dbFile != nil {
+		statistics := service.FromContext[adapter.Statistics](m.ctx)
+		if statistics != nil {
 			persistTime := time.Now()
 			writeCount := 0
 			writeCount += m.persistDeviceEventsToDB(m.getEventsForPersist(), persistTime)
@@ -254,8 +254,8 @@ func (m *Manager) Close() error {
 		m.pauseCallback = nil
 	}
 
-	dbFile := service.FromContext[adapter.DBFile](m.ctx)
-	if dbFile != nil {
+	statistics := service.FromContext[adapter.Statistics](m.ctx)
+	if statistics != nil {
 		var uploadTemp int64
 		var downloadTemp int64
 
@@ -301,16 +301,16 @@ func (m *Manager) persistConnectionsToDB(connections []TrackerMetadata, persistT
 	if len(connections) == 0 {
 		return 0
 	}
-	dbFile := service.FromContext[adapter.DBFile](m.ctx)
-	if dbFile != nil {
-		tx, err := dbFile.BeginTx()
+	statistics := service.FromContext[adapter.Statistics](m.ctx)
+	if statistics != nil {
+		tx, err := statistics.BeginTx()
 		if err != nil {
-			m.logger.WarnContext(m.ctx, "db begin transaction: ", err)
+			m.logger.WarnContext(m.ctx, "statistics begin transaction: ", err)
 			return 0
 		}
 		stmt, err := tx.Prepare(prepareSQL())
 		if err != nil {
-			m.logger.WarnContext(m.ctx, "db transaction prepare: ", err)
+			m.logger.WarnContext(m.ctx, "statistics transaction prepare: ", err)
 			return 0
 		}
 		defer stmt.Close()
@@ -327,52 +327,75 @@ func (m *Manager) persistConnectionsToDB(connections []TrackerMetadata, persistT
 				inbound = t.Metadata.InboundType
 			}
 			var domain string
-			if t.Metadata.Domain != "" {
-				domain = t.Metadata.Domain
-			} else {
-				domain = t.Metadata.Destination.Fqdn
-			}
 			var processPath string
 			var packageName string
-			if t.Metadata.ProcessInfo != nil {
-				if t.Metadata.ProcessInfo.ProcessPath != "" {
-					processPath = t.Metadata.ProcessInfo.ProcessPath
-				} else if t.Metadata.ProcessInfo.PackageName != "" {
-					packageName = t.Metadata.ProcessInfo.PackageName
+
+			if !statistics.PrivacyDesensitize() {
+				if t.Metadata.Domain != "" {
+					domain = t.Metadata.Domain
+				} else {
+					domain = t.Metadata.Destination.Fqdn
 				}
-				if processPath == "" {
-					if t.Metadata.ProcessInfo.UserId != -1 {
-						processPath = F.ToString(t.Metadata.ProcessInfo.UserId)
+				if t.Metadata.ProcessInfo != nil {
+					if t.Metadata.ProcessInfo.ProcessPath != "" {
+						processPath = t.Metadata.ProcessInfo.ProcessPath
+					} else if t.Metadata.ProcessInfo.PackageName != "" {
+						packageName = t.Metadata.ProcessInfo.PackageName
 					}
-				} else if t.Metadata.ProcessInfo.User != "" {
-					processPath = F.ToString(processPath, " (", t.Metadata.ProcessInfo.User, ")")
-				} else if t.Metadata.ProcessInfo.UserId != -1 {
-					processPath = F.ToString(processPath, " (", t.Metadata.ProcessInfo.UserId, ")")
+					if processPath == "" {
+						if t.Metadata.ProcessInfo.UserId != -1 {
+							processPath = F.ToString(t.Metadata.ProcessInfo.UserId)
+						}
+					} else if t.Metadata.ProcessInfo.User != "" {
+						processPath = F.ToString(processPath, " (", t.Metadata.ProcessInfo.User, ")")
+					} else if t.Metadata.ProcessInfo.UserId != -1 {
+						processPath = F.ToString(processPath, " (", t.Metadata.ProcessInfo.UserId, ")")
+					}
 				}
+			} else {
+				domain = "*"
+				processPath = "*"
+				packageName = "*"
 			}
+
 			var rule0 string
 			var rule1 string
-			if t.Rule != nil {
-				rule0 = t.Rule.Name()
-				rule1 = t.Rule.Action().Target()
-			} else {
-				rule0 = "final"
-			}
 			var chain0 string
 			var chain1 string
-			if len(t.Chain) == 1 {
-				chain0 = t.Chain[0]
-			} else if len(t.Chain) >= 2 {
-				chain1 = t.Chain[0]
-				chain0 = t.Chain[len(t.Chain)-1]
+			var outboundType string
+			if !statistics.PrivacyDesensitize() {
+				if t.Rule != nil {
+					rule0 = t.Rule.Name()
+					rule1 = t.Rule.Action().Target()
+				} else {
+					rule0 = "final"
+				}
+
+				if len(t.Chain) == 1 {
+					chain0 = t.Chain[0]
+				} else if len(t.Chain) >= 2 {
+					chain1 = t.Chain[0]
+					chain0 = t.Chain[len(t.Chain)-1]
+				}
+				outboundType = t.OutboundType
+			} else {
+				rule0 = "*"
+				rule1 = "*"
+				chain1 = "*"
+				chain0 = "*"
+				outboundType = "*"
 			}
 			var source_ip string
 			var destination_ip string
 			if t.Metadata.Source.Addr.IsValid() {
 				source_ip = t.Metadata.Source.Addr.String()
 			}
-			if t.Metadata.Destination.Addr.IsValid() {
-				destination_ip = t.Metadata.Destination.Addr.String()
+			if !statistics.PrivacyDesensitize() {
+				if t.Metadata.Destination.Addr.IsValid() {
+					destination_ip = t.Metadata.Destination.Addr.String()
+				}
+			} else {
+				destination_ip = "*"
 			}
 			var connectionCloseAt *time.Time
 			if closeAt != nil {
@@ -419,10 +442,9 @@ func (m *Manager) persistConnectionsToDB(connections []TrackerMetadata, persistT
 				rule1,
 				chain0,
 				chain1,
-				t.OutboundType)
+				outboundType)
 			if err != nil {
 				m.logger.WarnContext(m.ctx, "db stmt exec: ", err)
-
 			}
 		}
 
@@ -439,16 +461,16 @@ func (m *Manager) persistDeviceEventsToDB(events []DeviceEventTracker, persistTi
 	if len(events) == 0 {
 		return 0
 	}
-	dbFile := service.FromContext[adapter.DBFile](m.ctx)
-	if dbFile != nil {
-		tx, err := dbFile.BeginTx()
+	statistics := service.FromContext[adapter.Statistics](m.ctx)
+	if statistics != nil {
+		tx, err := statistics.BeginTx()
 		if err != nil {
-			m.logger.WarnContext(m.ctx, "db begin transaction: ", err)
+			m.logger.WarnContext(m.ctx, "statistics begin transaction: ", err)
 			return 0
 		}
 		stmt, err := tx.Prepare(prepareSQL())
 		if err != nil {
-			m.logger.WarnContext(m.ctx, "db transaction prepare: ", err)
+			m.logger.WarnContext(m.ctx, "statistics transaction prepare: ", err)
 			return 0
 		}
 		defer stmt.Close()

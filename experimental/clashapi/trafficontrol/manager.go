@@ -53,8 +53,8 @@ func (m *Manager) Leave(c Tracker) {
 		}
 		m.closedConnections.PushBack(metadata)
 
-		dbFile := service.FromContext[adapter.DBFile](m.ctx) //karing
-		if dbFile != nil {                                   //karing
+		statistics := service.FromContext[adapter.Statistics](m.ctx) //karing
+		if statistics != nil {                                       //karing
 			m.persistAccess.Lock()
 			defer m.persistAccess.Unlock()
 			m.closedConnectionsForPersist.PushBack(metadata)
