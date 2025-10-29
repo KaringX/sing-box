@@ -2,6 +2,47 @@
 icon: material/alert-decagram
 ---
 
+#### 1.13.0-alpha.27
+
+* Fixes and improvements
+
+#### 1.12.12
+
+* Fixes and improvements
+
+#### 1.13.0-alpha.26
+
+* Update quic-go to v0.55.0
+* Fix memory leak in hysteria2
+* Fixes and improvements
+
+#### 1.12.11
+
+* Fixes and improvements
+
+#### 1.13.0-alpha.24
+
+* Add Claude Code Multiplexer service **1**
+* Fixes and improvements
+
+**1**:
+
+CCM (Claude Code Multiplexer) service allows you to access your local Claude Code subscription remotely through custom tokens, eliminating the need for OAuth authentication on remote clients.
+
+See [CCM](/configuration/service/ccm).
+
+#### 1.13.0-alpha.23
+
+* Fix compatibility with MPTCP **1**
+* Fixes and improvements
+
+**1**:
+
+`auto_redirect` now rejects MPTCP connections by default to fix compatibility issues,
+but you can change it to bypass the sing-box via the new `exclude_mptcp` option.
+
+See [TUN](/configuration/inbound/tun/#exclude_mptcp).
+
 #### 1.13.0-alpha.22
 
 * Update uTLS to v1.8.1 **1**
