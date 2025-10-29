@@ -48,6 +48,7 @@ type BoxService struct {
 
 var contextId int //karing
 func NewService(configContent string, platformInterface PlatformInterface) (boxService *BoxService, err error) { //karing
+	SentryBoxServiceLaunch()
 	defer func() { //karing
 		if e := recover(); e != nil {
 			recoverMessage := fmt.Sprintf("%v", e)
