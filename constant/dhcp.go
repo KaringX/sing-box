@@ -4,5 +4,5 @@ import "time"
 
 const (
 	DHCPTTL     = time.Hour
-	DHCPTimeout = time.Minute
+	DHCPTimeout = 20 * time.Second // time.Minute
 )

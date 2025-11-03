@@ -146,6 +146,7 @@ func (t *Transport) Fetch() ([]M.Socksaddr, error) {
 		if len(cachedServers) > 0 && !cachedUpdatedAt.IsZero() { //karing
 			t.servers = cachedServers
 			t.updatedAt = cachedUpdatedAt
+			return t.servers, nil
 		}
 		return nil, err
 	}
@@ -183,12 +184,14 @@ func (t *Transport) updateServers() error {
 		return E.New("dhcp: empty DNS servers response")
 	} else {
 		t.updatedAt = time.Now()
-		cachedUpdatedAt = t.updatedAt //karing
 		return nil
 	}
 }
 
 func (t *Transport) interfaceUpdated(defaultInterface *control.Interface, flags int) {
+	var zeroTime time.Time     //karing
+	cachedServers = nil        //karing
+	cachedUpdatedAt = zeroTime //karing
 	err := t.updateServers()
 	if err != nil {
 		t.logger.ErrorContext(t.ctx, "update servers: ", err) //karing
@@ -235,7 +238,7 @@ func (t *Transport) fetchServers0(ctx context.Context, iface *control.Interface)
 
 	var group task.Group
 	group.Append0(func(ctx context.Context) error {
-		return t.fetchServersResponse(iface, packetConn, discovery.TransactionID)
+		return t.fetchServersResponse(ctx, iface, packetConn, discovery.TransactionID) //karing
 	})
 	group.Cleanup(func() {
 		packetConn.Close()
@@ -243,14 +246,22 @@ func (t *Transport) fetchServers0(ctx context.Context, iface *control.Interface)
 	return group.Run(ctx)
 }
 
-func (t *Transport) fetchServersResponse(iface *control.Interface, packetConn net.PacketConn, transactionID dhcpv4.TransactionID) error {
+func (t *Transport) fetchServersResponse(ctx context.Context, iface *control.Interface, packetConn net.PacketConn, transactionID dhcpv4.TransactionID) error { //karing
 	buffer := buf.NewSize(dhcpv4.MaxMessageSize)
 	defer buffer.Release()
 
 	for {
+		deadline, ok := ctx.Deadline() //karing
+		if ok {                        //karing
+			if time.Now().After(deadline) {
+				return E.New("dhcp: fetchServersResponse timeout")
+			}
+		}
 		_, _, err := buffer.ReadPacketFrom(packetConn)
 		if err != nil {
+			t.logger.TraceContext(t.ctx, "dhcp: readPacketFrom: ", err) //karing
 			if errors.Is(err, io.ErrShortBuffer) {
+				buffer.Reset() //karing
 				continue
 			}
 			return err
@@ -290,6 +301,7 @@ func (t *Transport) recreateServers(iface *control.Interface, dhcpPacket *dhcpv4
 		t.logger.Info("dhcp: updated DNS servers from ", iface.Name, ": [", strings.Join(common.Map(serverAddrs, M.Socksaddr.String), ","), "], search: [", strings.Join(t.search, ","), "]")
 	}
 	t.servers = serverAddrs
-	cachedServers = t.servers //karing
+	cachedServers = t.servers    //karing
+	cachedUpdatedAt = time.Now() //karing
 	return nil
 }
