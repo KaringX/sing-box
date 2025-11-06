@@ -52,6 +52,7 @@ type CacheFile struct {
 	saveAddress6      map[string]netip.Addr
 	saveRDRCAccess    sync.RWMutex
 	saveRDRC          map[saveRDRCCacheKey]bool
+	fetchError        map[string]string //karing
 }
 
 type saveRDRCCacheKey struct {
@@ -90,6 +91,7 @@ func New(ctx context.Context, options option.CacheFileOptions) *CacheFile {
 		saveAddress4: make(map[string]netip.Addr),
 		saveAddress6: make(map[string]netip.Addr),
 		saveRDRC:     make(map[saveRDRCCacheKey]bool),
+		fetchError:   make(map[string]string), //karing
 	}
 }
 
@@ -168,6 +170,9 @@ func (c *CacheFile) start(stage adapter.StartStage) error { //karing
 func (c *CacheFile) Close() error {
 	if c.DB == nil {
 		return nil
+	}
+	for k := range c.fetchError { //karing
+		delete(c.fetchError, k)
 	}
 	err := c.DB.Close() //karing
 	c.DB = nil          //karing

@@ -65,5 +65,18 @@ func (c *CacheFile) GetAllRuleSetLastUpdated() map[string]time.Time {
 		})
 		return nil
 	})
+
 	return keys
+}
+
+func (c *CacheFile) GetAllRuleSetFetchError() map[string]string {
+	return c.fetchError
+}
+
+func (c *CacheFile) SetRulesetFetchError(tag string, err string) {
+	if len(err) == 0 {
+		delete(c.fetchError, tag)
+	} else {
+		c.fetchError[tag] = err
+	}
 }

@@ -125,7 +125,7 @@ func karingRouter(ctx context.Context, router adapter.Router, logFactory log.Fac
 	r.Post("/dnsQuery", dnsQuery(ctx, router, logFactory))
 	r.Get("/outboundQuery", outboundQuery(ctx, router))
 	r.Get("/remoteRuleSetRulesCount", remoteRuleSetRulesCount(router))
-	r.Get("/remoteRuleSetLastUpdated", remoteRuleSetRulesLastUpdated(ctx))
+	r.Get("/remoteRuleSetStates", remoteRuleSetRulesStates(ctx))
 	r.Get("/resetOutboundConnections", resetOutboundConnections())
 	r.Get("/mainStack", mainStack())
 	return r
@@ -240,15 +240,18 @@ func remoteRuleSetRulesCount(router adapter.Router) func(w http.ResponseWriter, 
 	}
 }
 
-func remoteRuleSetRulesLastUpdated(ctx context.Context) func(w http.ResponseWriter, r *http.Request) {
+func remoteRuleSetRulesStates(ctx context.Context) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var result map[string]time.Time
+		var exist map[string]time.Time
+		var fetchErr map[string]string
 		cacheFile := service.FromContext[adapter.CacheFile](ctx)
 		if cacheFile != nil {
-			result = cacheFile.GetAllRuleSetLastUpdated()
+			exist = cacheFile.GetAllRuleSetLastUpdated()
+			fetchErr = cacheFile.GetAllRuleSetFetchError()
 		}
 		render.JSON(w, r, render.M{
-			"result": result,
+			"exist":    exist,
+			"fetchErr": fetchErr,
 		})
 	}
 }

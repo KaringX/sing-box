@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -237,8 +238,12 @@ func (s *RemoteRuleSet) updateOnce() {
 }
 
 func (s *RemoteRuleSet) fetch(ctx context.Context, startContext *adapter.HTTPStartContext) error {
-	if s.downloadTimes >= 5 { //karing
+	cacheFile := service.FromContext[adapter.CacheFile](s.ctx) //karing
+	if s.downloadTimes >= 5 {                                  //karing
 		s.Close()
+		if cacheFile != nil {
+			cacheFile.SetRulesetFetchError(s.options.Tag, "failed to download rule-set after multiple attempts")
+		}
 		return E.New("cancel updating rule-set ", s.options.Tag, " download_detour ", s.options.RemoteOptions.DownloadDetour, " from URL:", s.options.RemoteOptions.URL, " after ", s.downloadTimes, " times")
 	}
 	s.downloadTimes++                                                                                                                                                                                              //karing
@@ -264,6 +269,9 @@ func (s *RemoteRuleSet) fetch(ctx context.Context, startContext *adapter.HTTPSta
 	}
 	request, err := http.NewRequest("GET", s.options.RemoteOptions.URL, nil)
 	if err != nil {
+		if cacheFile != nil { //karing
+			cacheFile.SetRulesetFetchError(s.options.Tag, err.Error())
+		}
 		return err
 	}
 	if s.lastEtag != "" {
@@ -271,6 +279,9 @@ func (s *RemoteRuleSet) fetch(ctx context.Context, startContext *adapter.HTTPSta
 	}
 	response, err := httpClient.Do(request.WithContext(ctx))
 	if err != nil {
+		if cacheFile != nil { //karing
+			cacheFile.SetRulesetFetchError(s.options.Tag, err.Error())
+		}
 		return err
 	}
 	switch response.StatusCode {
@@ -284,24 +295,36 @@ func (s *RemoteRuleSet) fetch(ctx context.Context, startContext *adapter.HTTPSta
 				savedRuleSet.LastUpdated = s.lastUpdated
 				err = cacheFile.SaveRuleSet(s.options.RemoteOptions.URL, savedRuleSet) //karing
 				if err != nil {
+					cacheFile.SetRulesetFetchError(s.options.Tag, err.Error())        //karing
 					s.logger.ErrorContext(s.ctx, "save rule-set updated time: ", err) //karing
 					return nil
 				}
 			}
+			cacheFile.SetRulesetFetchError(s.options.Tag, "") //karing
 		}
+
 		s.logger.InfoContext(s.ctx, "update rule-set ", s.options.Tag, ": not modified") //karing
 		return nil
 	default:
+		if cacheFile != nil { //karing
+			cacheFile.SetRulesetFetchError(s.options.Tag, fmt.Sprintf("unexpected status: %s", response.Status))
+		}
 		return E.New("unexpected status: ", response.Status)
 	}
 	content, err := io.ReadAll(response.Body)
 	if err != nil {
 		response.Body.Close()
+		if cacheFile != nil { //karing
+			cacheFile.SetRulesetFetchError(s.options.Tag, err.Error())
+		}
 		return err
 	}
 	err = s.loadBytes(content)
 	if err != nil {
 		response.Body.Close()
+		if cacheFile != nil { //karing
+			cacheFile.SetRulesetFetchError(s.options.Tag, err.Error())
+		}
 		return err
 	}
 	response.Body.Close()
@@ -310,17 +333,21 @@ func (s *RemoteRuleSet) fetch(ctx context.Context, startContext *adapter.HTTPSta
 		s.lastEtag = eTagHeader
 	}
 	s.lastUpdated = time.Now()
-	cacheFile := service.FromContext[adapter.CacheFile](s.ctx) //karing
-	if cacheFile != nil {                                      //karing
+
+	if cacheFile != nil { //karing
 		err = cacheFile.SaveRuleSet(s.options.RemoteOptions.URL, &adapter.SavedBinary{ //karing
 			LastUpdated: s.lastUpdated,
 			Content:     content,
 			LastEtag:    s.lastEtag,
 		})
 		if err != nil {
+			cacheFile.SetRulesetFetchError(s.options.Tag, err.Error()) //karing
 			s.logger.ErrorContext(s.ctx, "save rule-set cache: ", err) //karing
+		} else {
+			cacheFile.SetRulesetFetchError(s.options.Tag, "") //karing
 		}
 	}
+
 	s.downloadTimes = 0                                             //karing
 	s.logger.InfoContext(s.ctx, "updated rule-set ", s.options.Tag) //karing
 	return nil
