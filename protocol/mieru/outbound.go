@@ -67,7 +67,12 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 	}, nil
 }
 
-func (o *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
+func (o *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (conn net.Conn, err error) { //karing
+	defer func() { //karing
+		if err == nil {
+			conn = o.OnNewConnection(conn)
+		}
+	}()
 	if o.GetParseErr() != nil { //karing
 		return nil, o.GetParseErr()
 	}
@@ -101,7 +106,12 @@ func (o *Outbound) DialContext(ctx context.Context, network string, destination 
 	}
 }
 
-func (o *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
+func (o *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (conn net.PacketConn, err error) { //karing
+	defer func() { //karing
+		if err == nil {
+			conn = o.OnNewPacketConnection(conn)
+		}
+	}()
 	if o.GetParseErr() != nil { //karing
 		return nil, o.GetParseErr()
 	}
@@ -120,7 +130,17 @@ func (o *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
 	return mierucommon.NewUDPAssociateWrapper(mierucommon.NewPacketOverStreamTunnel(streamConn)), nil
 }
 
-func (o *Outbound) Close() error {
+func (o *Outbound) InterfaceUpdated() { //karing
+	defer func() { //karing
+		o.Adapter.ConnectionsIn.Store(0)
+	}()
+	common.Close(o.client)
+}
+
+func (o *Outbound) Close() error { //karing
+	defer func() { //karing
+		o.Adapter.ConnectionsIn.Store(0)
+	}()
 	return common.Close(o.client)
 }
 

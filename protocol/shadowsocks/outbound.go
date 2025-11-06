@@ -81,7 +81,12 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 	return outbound, nil
 }
 
-func (h *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
+func (h *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (conn net.Conn, err error) { //karing
+	defer func() { //karing
+		if err == nil {
+			conn = h.OnNewConnection(conn)
+		}
+	}()
 	if h.GetParseErr() != nil { //karing
 		return nil, h.GetParseErr()
 	}
@@ -112,7 +117,12 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 	}
 }
 
-func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
+func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (conn net.PacketConn, err error) { //karing
+	defer func() { //karing
+		if err == nil {
+			conn = h.OnNewPacketConnection(conn)
+		}
+	}()
 	if h.GetParseErr() != nil { //karing
 		return nil, h.GetParseErr()
 	}
@@ -138,9 +148,15 @@ func (h *Outbound) InterfaceUpdated() {
 	if h.multiplexDialer != nil {
 		h.multiplexDialer.Reset()
 	}
+	defer func() { //karing
+		h.Adapter.ConnectionsIn.Store(0)
+	}()
 }
 
 func (h *Outbound) Close() error {
+	defer func() { //karing
+		h.Adapter.ConnectionsIn.Store(0)
+	}()
 	return common.Close(common.PtrOrNil(h.multiplexDialer))
 }
 

@@ -151,6 +151,9 @@ func (o *Outbound) Close() error {
 	if o.endpoint == nil { //karing
 		return nil
 	}
+	defer func() { //karing
+		o.Adapter.ConnectionsIn.Store(0)
+	}()
 	return o.endpoint.Close()
 }
 
@@ -158,11 +161,18 @@ func (o *Outbound) InterfaceUpdated() {
 	if o.endpoint == nil { //karing
 		return
 	}
+	defer func() { //karing
+		o.Adapter.ConnectionsIn.Store(0)
+	}()
 	o.endpoint.BindUpdate()
-	return
 }
 
-func (o *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
+func (o *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (conn net.Conn, err error) { //karing
+	defer func() { //karing
+		if err == nil {
+			conn = o.OnNewConnection(conn)
+		}
+	}()
 	if o.GetParseErr() != nil { //karing
 		return nil, o.GetParseErr()
 	}
@@ -184,7 +194,12 @@ func (o *Outbound) DialContext(ctx context.Context, network string, destination 
 	return o.endpoint.DialContext(ctx, network, destination)
 }
 
-func (o *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
+func (o *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (conn net.PacketConn, err error) { //karing
+	defer func() { //karing
+		if err == nil {
+			conn = o.OnNewPacketConnection(conn)
+		}
+	}()
 	if o.GetParseErr() != nil { //karing
 		return nil, o.GetParseErr()
 	}

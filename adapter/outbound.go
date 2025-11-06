@@ -17,6 +17,7 @@ type Outbound interface {
 	Dependencies() []string
 	N.Dialer
 	SetParseErr(err error) //karing
+	Connections() int      //karing
 }
 
 type OutboundRegistry interface {
