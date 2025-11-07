@@ -242,16 +242,16 @@ func remoteRuleSetRulesCount(router adapter.Router) func(w http.ResponseWriter, 
 
 func remoteRuleSetRulesStates(ctx context.Context) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var exist map[string]time.Time
-		var fetchErr map[string]string
+		var cached map[string]time.Time
+		var failed map[string]string
 		cacheFile := service.FromContext[adapter.CacheFile](ctx)
 		if cacheFile != nil {
-			exist = cacheFile.GetAllRuleSetLastUpdated()
-			fetchErr = cacheFile.GetAllRuleSetFetchError()
+			cached = cacheFile.GetAllRuleSetCachedLastUpdated()
+			failed = cacheFile.GetAllRuleSetFailed()
 		}
 		render.JSON(w, r, render.M{
-			"exist":    exist,
-			"fetchErr": fetchErr,
+			"cached": cached,
+			"failed": failed,
 		})
 	}
 }

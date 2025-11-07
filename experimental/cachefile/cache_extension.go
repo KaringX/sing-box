@@ -45,7 +45,7 @@ func (c *CacheFile) HasRuleSet(tag string) bool {
 	return err == nil
 }
 
-func (c *CacheFile) GetAllRuleSetLastUpdated() map[string]time.Time {
+func (c *CacheFile) GetAllRuleSetCachedLastUpdated() map[string]time.Time {
 	keys := make(map[string]time.Time)
 	if c.DB == nil {
 		return keys
@@ -69,7 +69,7 @@ func (c *CacheFile) GetAllRuleSetLastUpdated() map[string]time.Time {
 	return keys
 }
 
-func (c *CacheFile) GetAllRuleSetFetchError() map[string]string {
+func (c *CacheFile) GetAllRuleSetFailed() map[string]string {
 	return c.fetchError
 }
 

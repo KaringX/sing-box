@@ -61,11 +61,11 @@ type CacheFile interface {
 	StoreGroupExpand(group string, expand bool) error
 	LoadRuleSet(tag string) *SavedBinary
 	SaveRuleSet(tag string, set *SavedBinary) error
-	DeleteRuleSet(tag string)                       //karing
-	HasRuleSet(tag string) bool                     //karing
-	GetAllRuleSetLastUpdated() map[string]time.Time //karing
-	GetAllRuleSetFetchError() map[string]string     //karing
-	SetRulesetFetchError(tag string, err string)    //karing
+	DeleteRuleSet(tag string)                             //karing
+	HasRuleSet(tag string) bool                           //karing
+	GetAllRuleSetCachedLastUpdated() map[string]time.Time //karing
+	GetAllRuleSetFailed() map[string]string               //karing
+	SetRulesetFetchError(tag string, err string)          //karing
 }
 
 type Statistics interface { //karing

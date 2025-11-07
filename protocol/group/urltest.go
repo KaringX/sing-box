@@ -497,7 +497,7 @@ func (g *URLTestGroup) urlTest(ctx context.Context, force bool) (map[string]adap
 					Delay: t,
 					Err:   "",
 				})
-				g.quicOutboundInterfaceUpdated(detour, realTag)
+				//g.quicOutboundInterfaceUpdated(detour, realTag)
 			}
 			resultAccess.Lock()
 			if err == nil { //karing
