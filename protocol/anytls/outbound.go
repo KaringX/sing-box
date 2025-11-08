@@ -159,7 +159,6 @@ func (h *Outbound) InterfaceUpdated() {
 	defer func() {
 		h.Adapter.ConnectionsIn.Store(0)
 	}()
-	common.Close(h.client)
 }
 
 func (h *Outbound) Close() error {

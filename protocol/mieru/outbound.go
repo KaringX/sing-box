@@ -134,7 +134,6 @@ func (o *Outbound) InterfaceUpdated() { //karing
 	defer func() { //karing
 		o.Adapter.ConnectionsIn.Store(0)
 	}()
-	common.Close(o.client)
 }
 
 func (o *Outbound) Close() error { //karing
