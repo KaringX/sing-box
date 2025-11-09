@@ -161,9 +161,6 @@ func (o *Outbound) InterfaceUpdated() {
 	if o.endpoint == nil { //karing
 		return
 	}
-	defer func() { //karing
-		o.Adapter.ConnectionsIn.Store(0)
-	}()
 	o.endpoint.BindUpdate()
 }
 

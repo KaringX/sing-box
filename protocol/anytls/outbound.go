@@ -156,9 +156,7 @@ func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (c
 }
 
 func (h *Outbound) InterfaceUpdated() {
-	defer func() {
-		h.Adapter.ConnectionsIn.Store(0)
-	}()
+
 }
 
 func (h *Outbound) Close() error {

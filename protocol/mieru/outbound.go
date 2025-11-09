@@ -131,9 +131,6 @@ func (o *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (c
 }
 
 func (o *Outbound) InterfaceUpdated() { //karing
-	defer func() { //karing
-		o.Adapter.ConnectionsIn.Store(0)
-	}()
 }
 
 func (o *Outbound) Close() error { //karing

@@ -137,14 +137,8 @@ func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (c
 }
 
 func (h *Outbound) InterfaceUpdated() { //karing
-	defer func() { //karing
-		h.Adapter.ConnectionsIn.Store(0)
-	}()
 }
 
 func (h *Outbound) Close() error { //karing
-	defer func() { //karing
-		h.Adapter.ConnectionsIn.Store(0)
-	}()
 	return nil
 }

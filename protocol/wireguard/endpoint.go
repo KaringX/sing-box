@@ -139,9 +139,6 @@ func (w *Endpoint) InterfaceUpdated() {
 	if w.endpoint == nil { //karing
 		return
 	}
-	defer func() { //karing
-		w.Adapter.ConnectionsIn.Store(0)
-	}()
 	w.endpoint.BindUpdate()
 }
 
