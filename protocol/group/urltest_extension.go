@@ -127,10 +127,6 @@ func (g *URLTestGroup) HealthCheck(realTag string, skipActiveConnectionCheck boo
 				return
 			}
 			t, _, err := urltest.URLTest(ctx, g.link, p)
-			if err != nil {
-				g.outboundInterfaceUpdated(p)
-				t, _, err = urltest.URLTest(ctx, g.link, p)
-			}
 			if err == nil {
 				history := g.history.LoadURLTestHistory(realTag)
 				if (history == nil) || len(history.Err) != 0 {
@@ -220,25 +216,5 @@ func (g *URLTestGroup) loopHealthCheckSelected() {
 		case <-g.selectedHealthCheckTicker.C:
 		}
 		g.HealthCheckSelected()
-	}
-}
-
-func (g *URLTestGroup) quicOutboundInterfaceUpdated(detour adapter.Outbound, realTag string) {
-	listener, isListener := detour.(adapter.InterfaceUpdateListener)
-	needUpdate := detour.Type() == C.TypeHysteria || detour.Type() == C.TypeHysteria2 || detour.Type() == C.TypeTUIC
-	if isListener && needUpdate {
-		if outbound.OutboundGetLatestDownloadActiveConnection != nil {
-			has, _ := outbound.OutboundGetLatestDownloadActiveConnection(realTag)
-			if !has {
-				listener.InterfaceUpdated()
-			}
-		}
-	}
-}
-
-func (g *URLTestGroup) outboundInterfaceUpdated(detour adapter.Outbound) {
-	listener, isListener := detour.(adapter.InterfaceUpdateListener)
-	if isListener {
-		listener.InterfaceUpdated()
 	}
 }

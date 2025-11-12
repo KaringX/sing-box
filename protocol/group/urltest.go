@@ -173,7 +173,6 @@ func (s *URLTest) DialContext(ctx context.Context, network string, destination M
 		Delay: 0,
 		Err:   err.Error(),
 	})
-	s.group.outboundInterfaceUpdated(selectedOutbound)            //karing
 	s.recheckSelectedOutboundUDP(selectedOutbound, "DialContext") //karing
 	s.recheckSelectedOutboundTCP(selectedOutbound)                //karing
 
@@ -206,7 +205,6 @@ func (s *URLTest) ListenPacket(ctx context.Context, destination M.Socksaddr) (ne
 		Delay: 0,
 		Err:   err.Error(),
 	})
-	s.group.outboundInterfaceUpdated(selectedOutbound)             //karing
 	s.recheckSelectedOutboundUDP(selectedOutbound, "ListenPacket") //karing
 
 	return nil, err
@@ -497,7 +495,6 @@ func (g *URLTestGroup) urlTest(ctx context.Context, force bool) (map[string]adap
 					Delay: t,
 					Err:   "",
 				})
-				//g.quicOutboundInterfaceUpdated(detour, realTag) //todo
 			}
 			resultAccess.Lock()
 			if err == nil { //karing

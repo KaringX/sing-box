@@ -10,7 +10,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/sagernet/sing-box/adapter"
-	"github.com/sagernet/sing-box/adapter/outbound"
 	"github.com/sagernet/sing-box/common/urltest"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/protocol/group"
@@ -210,7 +209,6 @@ func getProxyDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 		}
 
 		proxy := r.Context().Value(CtxKeyProxy).(adapter.Outbound)
-		listener, isListener := proxy.(adapter.InterfaceUpdateListener) //karing
 
 		ctx, cancel := context.WithTimeout(server.ctx, time.Second*time.Duration(timeout)) //karing
 		defer cancel()
@@ -231,24 +229,6 @@ func getProxyDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 					Delay: delay,
 					Err:   "", //karing
 				})
-				needUpdate := false   //karing
-				switch proxy.Type() { //karing
-				case C.TypeHysteria:
-					needUpdate = true
-				case C.TypeHysteria2:
-					needUpdate = true
-				case C.TypeTUIC:
-					needUpdate = true
-				}
-				if isListener && needUpdate { //karing todo
-					if outbound.OutboundGetLatestDownloadActiveConnection != nil {
-						has, _ := outbound.OutboundGetLatestDownloadActiveConnection(realTag)
-						if !has {
-							listener.InterfaceUpdated()
-						}
-					}
-
-				}
 			}
 		}()
 
