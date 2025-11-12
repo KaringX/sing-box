@@ -101,8 +101,8 @@ func (g *URLTestGroup) HealthCheck(realTag string, skipActiveConnectionCheck boo
 	if pauseManager.IsNetworkPaused() || pauseManager.IsDevicePaused() {
 		return
 	}
-	if outbound.OutboundGetLatestDownloadActiveConnection != nil && !skipActiveConnectionCheck {
-		has, downloadLatest := outbound.OutboundGetLatestDownloadActiveConnection(realTag)
+	if outbound.GetLatestDownloadTime != nil && !skipActiveConnectionCheck {
+		has, downloadLatest := outbound.GetLatestDownloadTime(realTag)
 		if !has {
 			return
 		}

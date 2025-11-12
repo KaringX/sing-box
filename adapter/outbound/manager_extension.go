@@ -8,5 +8,5 @@ import (
 type OutboundGetLatestDownloadActiveConnectionFunc func(tag string) (bool, time.Time)
 
 var (
-	OutboundGetLatestDownloadActiveConnection OutboundGetLatestDownloadActiveConnectionFunc
+	GetLatestDownloadTime OutboundGetLatestDownloadActiveConnectionFunc
 )

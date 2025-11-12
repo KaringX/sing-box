@@ -115,7 +115,7 @@ func newManagerWithExtension(ctx context.Context, logFactory log.ObservableFacto
 	return manager
 }
 
-func (m *Manager) OutboundGetLatestDownloadActiveConnection(tag string) (bool, time.Time) {
+func (m *Manager) GetLatestDownloadTime(tag string) (bool, time.Time) {
 	hasConn := false
 	var downloadLatest time.Time
 	m.connections.Range(func(_ uuid.UUID, value Tracker) bool {
