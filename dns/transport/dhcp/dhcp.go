@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -53,6 +54,8 @@ type Transport struct {
 	search            []string
 	ndots             int
 	attempts          int
+	fetching          atomic.Bool
+	fetchFailTimes    atomic.Int32
 }
 
 func NewTransport(ctx context.Context, logger log.ContextLogger, tag string, options option.DHCPDNSServerOptions) (adapter.DNSTransport, error) {
@@ -129,6 +132,14 @@ func (t *Transport) Exchange0(ctx context.Context, message *mDNS.Msg, servers []
 }
 
 func (t *Transport) Fetch() ([]M.Socksaddr, error) {
+	if t.fetchFailTimes.Load() >= C.DHCPFetchMaxFaildTimes { //karing
+		t.logger.InfoContext(t.ctx, "dhcp: fetch failed too much times:", C.DHCPFetchMaxFaildTimes)
+		return t.servers, nil
+	}
+	if t.fetching.Load() { //karing
+		t.logger.InfoContext(t.ctx, "dhcp: fetching")
+		return t.servers, nil
+	}
 	t.transportLock.RLock()
 	updatedAt := t.updatedAt
 	servers := t.servers
@@ -143,6 +154,7 @@ func (t *Transport) Fetch() ([]M.Socksaddr, error) {
 	}
 	err := t.updateServers()
 	if err != nil {
+		t.fetchFailTimes.Add(1)                                  //karing
 		if len(cachedServers) > 0 && !cachedUpdatedAt.IsZero() { //karing
 			t.servers = cachedServers
 			t.updatedAt = cachedUpdatedAt
@@ -150,6 +162,7 @@ func (t *Transport) Fetch() ([]M.Socksaddr, error) {
 		}
 		return nil, err
 	}
+	t.fetchFailTimes.Store(0) //karing
 	return t.servers, nil
 }
 
@@ -169,6 +182,8 @@ func (t *Transport) fetchInterface() (*control.Interface, error) {
 }
 
 func (t *Transport) updateServers() error {
+	t.fetching.Store(true)        //karing
+	defer t.fetching.Store(false) //karing
 	iface, err := t.fetchInterface()
 	if err != nil {
 		return E.Cause(err, "dhcp: prepare interface")

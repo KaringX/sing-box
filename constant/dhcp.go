@@ -3,6 +3,7 @@ package constant
 import "time"
 
 const (
-	DHCPTTL     = time.Hour
-	DHCPTimeout = 20 * time.Second // time.Minute
+	DHCPTTL                = time.Hour
+	DHCPTimeout            = 20 * time.Second // time.Minute //karing
+	DHCPFetchMaxFaildTimes = 5                //karing
 )
