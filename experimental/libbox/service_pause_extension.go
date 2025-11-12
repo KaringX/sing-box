@@ -12,38 +12,38 @@ import (
 	"github.com/sagernet/sing/service"
 )
 
-func (s *BoxService) ScreenOn() { //karing
+func (s *BoxService) ScreenOn() {
 	if s.instance != nil && s.instance.Logger() != nil {
 		s.instance.Logger().Info("BoxService:ScreenOn")
 	}
 }
 
-func (s *BoxService) ScreenOff() { //karing
+func (s *BoxService) ScreenOff() {
 	if s.instance != nil && s.instance.Logger() != nil {
 		s.instance.Logger().Info("BoxService:ScreenOff")
 	}
 	s.stopResetTimer()
 }
 
-func (s *BoxService) UserPresent() { //karing
+func (s *BoxService) UserPresent() {
 	if s.instance != nil && s.instance.Logger() != nil {
 		s.instance.Logger().Info("BoxService:UserPresent")
 	}
 	s.startResetTimer(5, s.tryResetOutboundNetwork)
 }
 
-func (s *BoxService) startResetTimer(d time.Duration, f func()) { //karing
+func (s *BoxService) startResetTimer(d time.Duration, f func()) {
 	s.stopResetTimer()
 	s.endPauseTimer = time.AfterFunc(d, f)
 }
 
-func (s *BoxService) stopResetTimer() { //karing
+func (s *BoxService) stopResetTimer() {
 	if s.endPauseTimer != nil {
 		s.endPauseTimer.Stop()
 	}
 }
 
-func (s *BoxService) tryResetNetwork() { //karing
+func (s *BoxService) tryResetNetwork() {
 	tags := s.getOutboundIfHasIssue()
 	if len(tags) > 0 {
 		if s.instance != nil && s.instance.Logger() != nil {
@@ -53,7 +53,7 @@ func (s *BoxService) tryResetNetwork() { //karing
 	}
 }
 
-func (s *BoxService) tryResetOutboundNetwork() { //karing
+func (s *BoxService) tryResetOutboundNetwork() {
 	tags := s.getOutboundIfHasIssue()
 	if len(tags) > 0 {
 		if s.instance != nil && s.instance.Logger() != nil {
@@ -64,12 +64,12 @@ func (s *BoxService) tryResetOutboundNetwork() { //karing
 	}
 }
 
-type outboundTranffic struct { //karing
+type outboundTranffic struct {
 	upload   int64
 	download int64
 }
 
-func isProxyOutbound(outboundType string) bool { //karing
+func isProxyOutbound(outboundType string) bool {
 	switch outboundType {
 	case C.TypeSOCKS:
 		return true
@@ -110,7 +110,7 @@ func isProxyOutbound(outboundType string) bool { //karing
 	}
 }
 
-func (s *BoxService) getOutboundIfHasIssue() []string { //karing
+func (s *BoxService) getOutboundIfHasIssue() []string {
 	outboundTranffics := make(map[string]outboundTranffic)
 	clashServer := service.FromContext[adapter.ClashServer](s.ctx)
 	if clashServer != nil {
