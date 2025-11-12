@@ -198,9 +198,6 @@ func (t *Outbound) recvLoop() {
 }
 
 func (t *Outbound) Close() error {
-	defer func() { //karing
-		t.Adapter.ConnectionsIn.Store(0)
-	}()
 	err := common.Close(
 		common.PtrOrNil(t.proxy),
 		common.PtrOrNil(t.instance),
@@ -212,12 +209,7 @@ func (t *Outbound) Close() error {
 	return err
 }
 
-func (t *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (conn net.Conn, err error) { //karing
-	defer func() { //karing
-		if err == nil {
-			conn = t.OnNewConnection(conn)
-		}
-	}()
+func (t *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
 	if t.GetParseErr() != nil { //karing
 		return nil, t.GetParseErr()
 	}

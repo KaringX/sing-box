@@ -71,12 +71,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 	return outbound, nil
 }
 
-func (h *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (conn net.Conn, err error) { //karing
-	defer func() { //karing
-		if err == nil {
-			conn = h.OnNewConnection(conn)
-		}
-	}()
+func (h *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
 	if h.GetParseErr() != nil { //karing
 		return nil, h.GetParseErr()
 	}
@@ -105,12 +100,7 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 	return h.client.DialContext(ctx, network, destination)
 }
 
-func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (conn net.PacketConn, err error) { //karing
-	defer func() { //karing
-		if err == nil {
-			conn = h.OnNewPacketConnection(conn)
-		}
-	}()
+func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
 	if h.GetParseErr() != nil { //karing
 		return nil, h.GetParseErr()
 	}
@@ -134,11 +124,4 @@ func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (c
 	}
 	h.logger.InfoContext(ctx, "outbound packet connection to ", destination)
 	return h.client.ListenPacket(ctx, destination)
-}
-
-func (h *Outbound) InterfaceUpdated() { //karing
-}
-
-func (h *Outbound) Close() error { //karing
-	return nil
 }

@@ -98,12 +98,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 	}, nil
 }
 
-func (h *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (conn net.Conn, err error) { //karing
-	defer func() { //karing
-		if err == nil {
-			conn = h.OnNewConnection(conn)
-		}
-	}()
+func (h *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
 	if h.GetParseErr() != nil { //karing
 		return nil, h.GetParseErr()
 	}
@@ -134,12 +129,7 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 	}
 }
 
-func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (conn net.PacketConn, err error) { //karing
-	defer func() { //karing
-		if err == nil {
-			conn = h.OnNewPacketConnection(conn)
-		}
-	}()
+func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
 	if h.GetParseErr() != nil { //karing
 		return nil, h.GetParseErr()
 	}
@@ -163,9 +153,6 @@ func (h *Outbound) InterfaceUpdated() {
 	if h.client == nil { //karing
 		return
 	}
-	defer func() { //karing
-		h.Adapter.ConnectionsIn.Store(0)
-	}()
 	_ = h.client.CloseWithError(E.New("network changed"))
 }
 
@@ -176,8 +163,5 @@ func (h *Outbound) Close() error {
 	if h.client == nil { //karing
 		return nil
 	}
-	defer func() { //karing
-		h.Adapter.ConnectionsIn.Store(0)
-	}()
 	return h.client.CloseWithError(os.ErrClosed)
 }

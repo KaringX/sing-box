@@ -240,16 +240,14 @@ func getProxyDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 				case C.TypeTUIC:
 					needUpdate = true
 				}
-				if isListener && needUpdate { //karing
-					connections := proxy.Connections()
-					if connections == 0 {
-						if outbound.OutboundGetLatestDownloadActiveConnection != nil {
-							has, _ := outbound.OutboundGetLatestDownloadActiveConnection(realTag)
-							if !has {
-								listener.InterfaceUpdated()
-							}
+				if isListener && needUpdate { //karing todo
+					if outbound.OutboundGetLatestDownloadActiveConnection != nil {
+						has, _ := outbound.OutboundGetLatestDownloadActiveConnection(realTag)
+						if !has {
+							listener.InterfaceUpdated()
 						}
 					}
+
 				}
 			}
 		}()

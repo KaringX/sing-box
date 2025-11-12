@@ -227,10 +227,6 @@ func (g *URLTestGroup) quicOutboundInterfaceUpdated(detour adapter.Outbound, rea
 	listener, isListener := detour.(adapter.InterfaceUpdateListener)
 	needUpdate := detour.Type() == C.TypeHysteria || detour.Type() == C.TypeHysteria2 || detour.Type() == C.TypeTUIC
 	if isListener && needUpdate {
-		connections := detour.Connections()
-		if connections > 0 {
-			return
-		}
 		if outbound.OutboundGetLatestDownloadActiveConnection != nil {
 			has, _ := outbound.OutboundGetLatestDownloadActiveConnection(realTag)
 			if !has {

@@ -29,7 +29,7 @@ import (
 	"github.com/sagernet/sing-box/experimental/libbox/platform"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
-	tun "github.com/sagernet/sing-tun"
+	"github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/bufio"
 	"github.com/sagernet/sing/common/control"
@@ -318,9 +318,6 @@ func (t *Endpoint) watchState() {
 }
 
 func (t *Endpoint) Close() error {
-	defer func() {
-		t.Adapter.ConnectionsIn.Store(0)
-	}()
 	netmon.RegisterInterfaceGetter(nil)
 	if runtime.GOOS == "android" {
 		setAndroidProtectFunc(nil)
@@ -328,12 +325,7 @@ func (t *Endpoint) Close() error {
 	return common.Close(common.PtrOrNil(t.server))
 }
 
-func (t *Endpoint) DialContext(ctx context.Context, network string, destination M.Socksaddr) (conn net.Conn, err error) { //karing
-	defer func() { //karing
-		if err == nil {
-			conn = t.OnNewConnection(conn)
-		}
-	}()
+func (t *Endpoint) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
 	if t.GetParseErr() != nil { //karing
 		return nil, t.GetParseErr()
 	}
@@ -380,12 +372,7 @@ func (t *Endpoint) DialContext(ctx context.Context, network string, destination 
 	}
 }
 
-func (t *Endpoint) ListenPacket(ctx context.Context, destination M.Socksaddr) (conn net.PacketConn, err error) { //karing
-	defer func() { //karing
-		if err == nil {
-			conn = t.OnNewPacketConnection(conn)
-		}
-	}()
+func (t *Endpoint) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
 	if t.GetParseErr() != nil { //karing
 		return nil, t.GetParseErr()
 	}

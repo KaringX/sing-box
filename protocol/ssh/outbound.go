@@ -193,25 +193,14 @@ func (s *Outbound) connect() (*ssh.Client, error) {
 }
 
 func (s *Outbound) InterfaceUpdated() {
-	defer func() { //karing
-		s.Adapter.ConnectionsIn.Store(0)
-	}()
 	common.Close(s.clientConn)
 }
 
 func (s *Outbound) Close() error {
-	defer func() { //karing
-		s.Adapter.ConnectionsIn.Store(0)
-	}()
 	return common.Close(s.clientConn)
 }
 
-func (s *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (conn0 net.Conn, err error) { //karing
-	defer func() { //karing
-		if err == nil {
-			conn0 = s.OnNewConnection(conn0)
-		}
-	}()
+func (s *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
 	if s.GetParseErr() != nil { //karing
 		return nil, s.GetParseErr()
 	}

@@ -129,9 +129,6 @@ func (w *Endpoint) Close() error {
 	if w.endpoint == nil { //karing
 		return nil
 	}
-	defer func() { //karing
-		w.Adapter.ConnectionsIn.Store(0)
-	}()
 	return w.endpoint.Close()
 }
 
@@ -196,12 +193,7 @@ func (w *Endpoint) NewPacketConnectionEx(ctx context.Context, conn N.PacketConn,
 	w.router.RoutePacketConnectionEx(ctx, conn, metadata, onClose)
 }
 
-func (w *Endpoint) DialContext(ctx context.Context, network string, destination M.Socksaddr) (conn net.Conn, err error) { //karing
-	defer func() { //karing
-		if err == nil {
-			conn = w.OnNewConnection(conn)
-		}
-	}()
+func (w *Endpoint) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
 	if w.GetParseErr() != nil { //karing
 		return nil, w.GetParseErr()
 	}
@@ -223,12 +215,7 @@ func (w *Endpoint) DialContext(ctx context.Context, network string, destination 
 	return w.endpoint.DialContext(ctx, network, destination)
 }
 
-func (w *Endpoint) ListenPacket(ctx context.Context, destination M.Socksaddr) (conn net.PacketConn, err error) { //karing
-	defer func() { //karing
-		if err == nil {
-			conn = w.OnNewPacketConnection(conn)
-		}
-	}()
+func (w *Endpoint) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
 	if w.GetParseErr() != nil { //karing
 		return nil, w.GetParseErr()
 	}
