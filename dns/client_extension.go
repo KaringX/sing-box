@@ -26,6 +26,7 @@ func (c *Client) lookupToExchange_A_AAAA(ctx context.Context, transport adapter.
 	dnsQueryTypes := []uint16{dns.TypeA, dns.TypeAAAA}
 	var count atomic.Int64
 	var once sync.Once
+	var errOnce sync.Once
 	var returnError error
 	done := make(chan struct{})
 	ctx, cancel := context.WithCancel(ctx)
@@ -34,7 +35,6 @@ func (c *Client) lookupToExchange_A_AAAA(ctx context.Context, transport adapter.
 		go func() {
 			count.Add(1)
 			response, err := c.lookupToExchange(ctx, transport, dnsName, queryType, options, responseChecker)
-			count.Add(-1)
 			if err == nil {
 				if len(response) > 0 {
 					switch queryType {
@@ -55,9 +55,11 @@ func (c *Client) lookupToExchange_A_AAAA(ctx context.Context, transport adapter.
 					}
 				}
 			} else {
-				err = E.Cause(err, "dns exchange type: "+dns.TypeToString[queryType])
-				returnError = E.Errors(returnError, err)
+				errOnce.Do(func() {
+					returnError = E.Cause(err, "dns exchange type: "+dns.TypeToString[queryType])
+				})
 			}
+			count.Add(-1)
 			if count.Load() == 0 {
 				once.Do(func() {
 					done <- struct{}{}

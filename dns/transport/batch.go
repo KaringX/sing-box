@@ -85,17 +85,12 @@ func (t *BatchTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS
 		go func() {
 			copydMessage := message.Copy()
 			ret, err := transport.Exchange(ctx, copydMessage)
-			count.Add(-1)
 			if err == nil {
 				if len(ret.Answer) == 0 {
 					emptyOnce.Do(func() {
 						resultEmpty = ret
+						t.logger.InfoContext(ctx, "exchanged empty result ["+domain+"] by: ", transport.Tag())
 					})
-					if count.Load() == 0 {
-						once.Do(func() {
-							done <- struct{}{}
-						})
-					}
 				} else {
 					once.Do(func() {
 						result = ret
@@ -107,11 +102,12 @@ func (t *BatchTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS
 				errOnce.Do(func() {
 					errResult = err
 				})
-				if count.Load() == 0 {
-					once.Do(func() {
-						done <- struct{}{}
-					})
-				}
+			}
+			count.Add(-1)
+			if count.Load() == 0 {
+				once.Do(func() {
+					done <- struct{}{}
+				})
 			}
 		}()
 	}

@@ -447,6 +447,9 @@ func (c *Client) storeCache(transport adapter.DNSTransport, question dns.Questio
 	if timeToLive == 0 {
 		return
 	}
+	if len(message.Answer) == 0 { //karing
+		return
+	}
 	if c.disableExpire {
 		if !c.independentCache {
 			if c.cache == nil { //karing
