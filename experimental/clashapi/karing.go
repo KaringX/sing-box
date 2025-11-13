@@ -136,7 +136,27 @@ func dnsQueryWithDefaultRouter(ctx context.Context, logFactory log.Factory) func
 		domain := r.URL.Query().Get("domain")
 		strategy := r.URL.Query().Get("strategy")
 		var domainStrategy option.DomainStrategy
-		domainStrategy.UnmarshalJSON([]byte(strategy))
+		switch strategy {
+		case "", "as_is":
+			domainStrategy = option.DomainStrategy(C.DomainStrategyAsIS)
+		case "prefer_ipv4":
+			domainStrategy = option.DomainStrategy(C.DomainStrategyPreferIPv4)
+		case "prefer_ipv6":
+			domainStrategy = option.DomainStrategy(C.DomainStrategyPreferIPv6)
+		case "ipv4_only":
+			domainStrategy = option.DomainStrategy(C.DomainStrategyIPv4Only)
+		case "ipv6_only":
+			domainStrategy = option.DomainStrategy(C.DomainStrategyIPv6Only)
+		default:
+			render.JSON(w, r, render.M{
+				"err":     E.New("unknown domain strategy: ", domainStrategy).Error(),
+				"latency": nil,
+				"addr":    nil,
+				"tag":     "",
+			})
+			return
+		}
+
 		duration, addr, tag, err := LookupWithDefaultRouter(ctx, logFactory, domain, C.DomainStrategy(domainStrategy))
 		if err != nil {
 			render.JSON(w, r, render.M{

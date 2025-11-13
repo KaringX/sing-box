@@ -133,12 +133,12 @@ func (t *Transport) Exchange0(ctx context.Context, message *mDNS.Msg, servers []
 
 func (t *Transport) Fetch() ([]M.Socksaddr, error) {
 	if t.fetchFailTimes.Load() >= C.DHCPFetchMaxFaildTimes { //karing
-		t.logger.InfoContext(t.ctx, "dhcp: fetch failed too much times:", C.DHCPFetchMaxFaildTimes)
-		return t.servers, nil
+		t.logger.InfoContext(t.ctx, "dhcp: fetch server failed")
+		return nil, E.New("dhcp: fetch server failed")
 	}
 	if t.fetching.Load() { //karing
-		t.logger.InfoContext(t.ctx, "dhcp: fetching")
-		return t.servers, nil
+		t.logger.InfoContext(t.ctx, "dhcp: fetching server")
+		return nil, E.New("dhcp: fetching server")
 	}
 	t.transportLock.RLock()
 	updatedAt := t.updatedAt
@@ -207,6 +207,7 @@ func (t *Transport) interfaceUpdated(defaultInterface *control.Interface, flags 
 	var zeroTime time.Time     //karing
 	cachedServers = nil        //karing
 	cachedUpdatedAt = zeroTime //karing
+	t.fetchFailTimes.Store(0)  //karing
 	err := t.updateServers()
 	if err != nil {
 		t.logger.ErrorContext(t.ctx, "update servers: ", err) //karing
