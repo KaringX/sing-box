@@ -70,13 +70,18 @@ func (c *CacheFile) GetAllRuleSetCachedLastUpdated() map[string]time.Time {
 }
 
 func (c *CacheFile) GetAllRuleSetFailed() map[string]string {
-	return c.fetchError
+	var fetchErrors = make(map[string]string)
+	c.fetchError.Range(func(tag string, err string) bool {
+		fetchErrors[tag] = err
+		return true
+	})
+	return fetchErrors
 }
 
 func (c *CacheFile) SetRulesetFetchError(tag string, err string) {
 	if len(err) == 0 {
-		delete(c.fetchError, tag)
+		c.fetchError.Delete(tag)
 	} else {
-		c.fetchError[tag] = err
+		c.fetchError.Store(tag, err)
 	}
 }

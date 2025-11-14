@@ -9,12 +9,12 @@ import (
 	"os"
 	"runtime"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 
 	"github.com/sagernet/cors"
 	"github.com/sagernet/sing-box/adapter"
+	"github.com/sagernet/sing-box/common/compatible"
 	"github.com/sagernet/sing-box/common/urltest"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/experimental"
@@ -62,8 +62,7 @@ type Server struct {
 	externalUIDownloadURL    string
 	externalUIDownloadDetour string
 
-	access sync.RWMutex //karing
-	ticks  sync.Map     //karing
+	ticks compatible.Map[*time.Ticker, func()] //karing
 }
 
 func NewServer(ctx context.Context, logFactory log.ObservableFactory, options option.ClashAPIOptions) (adapter.ClashServer, error) {
@@ -86,7 +85,6 @@ func NewServer(ctx context.Context, logFactory log.ObservableFactory, options op
 		externalController:       options.ExternalController != "",
 		externalUIDownloadURL:    options.ExternalUIDownloadURL,
 		externalUIDownloadDetour: options.ExternalUIDownloadDetour,
-		ticks:                    sync.Map{}, //karing
 	}
 	s.urlTestHistory = service.FromContext[adapter.URLTestHistoryStorage](ctx)
 	if s.urlTestHistory == nil {
