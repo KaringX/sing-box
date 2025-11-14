@@ -2,6 +2,7 @@ package inbound
 
 import (
 	"context"
+	"net/netip"
 	"os"
 	"sync"
 
@@ -24,6 +25,7 @@ type Manager struct {
 	stage        adapter.StartStage
 	inbounds     []adapter.Inbound
 	inboundByTag map[string]adapter.Inbound
+	tunAddress   []netip.Prefix //karing
 }
 
 func NewManager(logger log.ContextLogger, registry adapter.InboundRegistry, endpoint adapter.EndpointManager) *Manager {

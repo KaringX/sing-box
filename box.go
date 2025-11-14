@@ -239,6 +239,17 @@ func New(options Options) (box *Box, err error) { //karing
 		timeService = new(tls.TimeServiceWrapper)
 		service.MustRegister[ntp.TimeService](ctx, timeService)
 	}
+	for _, inboundOptions := range options.Inbounds { //karing
+		if inboundOptions.Type == C.TypeTun {
+			var options *option.TunInboundOptions
+			if inboundOptions.Options != nil {
+				options = inboundOptions.Options.(*option.TunInboundOptions)
+			}
+
+			inboundManager.SetTunAddressPrefix(options.Address)
+			break
+		}
+	}
 	for i, transportOptions := range dnsOptions.Servers {
 		var tag string
 		if transportOptions.Tag != "" {
