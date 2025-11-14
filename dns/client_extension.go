@@ -32,8 +32,8 @@ func (c *Client) lookupToExchange_A_AAAA(ctx context.Context, transport adapter.
 	ctx, cancel := context.WithCancel(ctx)
 
 	for _, queryType := range dnsQueryTypes {
+		count.Add(1)
 		go func() {
-			count.Add(1)
 			response, err := c.lookupToExchange(ctx, transport, dnsName, queryType, options, responseChecker)
 			if err == nil {
 				if len(response) > 0 {
