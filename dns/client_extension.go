@@ -30,9 +30,8 @@ func (c *Client) lookupToExchange_A_AAAA(ctx context.Context, transport adapter.
 	var returnError error
 	done := make(chan struct{})
 	ctx, cancel := context.WithCancel(ctx)
-
+	count.Add(int64(len(dnsQueryTypes)))
 	for _, queryType := range dnsQueryTypes {
-		count.Add(1)
 		go func() {
 			response, err := c.lookupToExchange(ctx, transport, dnsName, queryType, options, responseChecker)
 			if err == nil {

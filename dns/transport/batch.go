@@ -79,8 +79,9 @@ func (t *BatchTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS
 	var emptyOnce sync.Once
 	done := make(chan struct{})
 	ctx, cancel := context.WithCancel(ctx)
+
+	count.Add(int64(len(transports)))
 	for _, transport := range transports {
-		count.Add(1)
 		transport := transport
 		go func() {
 			copydMessage := message.Copy()
