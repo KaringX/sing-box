@@ -70,8 +70,16 @@ func (c *Client) lookupToExchange_A_AAAA(ctx context.Context, transport adapter.
 	<-done
 	cancel()
 	close(done)
-	if len(response4) == 0 && len(response6) == 0 {
+	len4 := len(response4)
+	len6 := len(response6)
+	if len4 == 0 && len6 == 0 {
 		return nil, nil, returnError
+	}
+	if len4 != 0 && len6 == 0 {
+		return response4, nil, nil
+	}
+	if len4 == 0 && len6 != 0 {
+		return nil, response6, nil
 	}
 	return response4, response6, nil
 }
