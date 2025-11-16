@@ -55,28 +55,6 @@ func (r *Router) LookupTag(ctx context.Context, domain string, options adapter.D
 	ctx, metadata := adapter.ExtendContext(ctx)
 	metadata.Destination = M.Socksaddr{}
 	metadata.Domain = FqdnToDomain(domain)
-	if metadata.QueryType == 0 {
-		switch C.DomainStrategy(options.Strategy) {
-		case C.DomainStrategyAsIS:
-			metadata.IPVersion = 4
-			metadata.QueryType = mDNS.TypeA
-		case C.DomainStrategyPreferIPv4:
-			metadata.IPVersion = 4
-			metadata.QueryType = mDNS.TypeA
-		case C.DomainStrategyPreferIPv6:
-			metadata.IPVersion = 6
-			metadata.QueryType = mDNS.TypeAAAA
-		case C.DomainStrategyIPv4Only:
-			metadata.IPVersion = 4
-			metadata.QueryType = mDNS.TypeA
-		case C.DomainStrategyIPv6Only:
-			metadata.IPVersion = 6
-			metadata.QueryType = mDNS.TypeAAAA
-		default:
-			metadata.IPVersion = 4
-			metadata.QueryType = mDNS.TypeA
-		}
-	}
 	if options.Transport != nil {
 		transport := options.Transport
 		transportTag = transport.Tag() //karing
