@@ -90,13 +90,13 @@ func (t *BatchTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS
 				if len(ret.Answer) == 0 {
 					emptyOnce.Do(func() {
 						resultEmpty = ret
-						t.logger.InfoContext(ctx, "exchanged empty result ["+domain+"] by: ", transport.Tag())
+						t.logger.InfoContext(ctx, "exchanged empty result ["+domain+"] by: ", transport.Tag(), " queryType: ", question.Qtype)
 					})
 				} else {
 					once.Do(func() {
 						result = ret
 						done <- struct{}{}
-						t.logger.InfoContext(ctx, "exchanged ["+domain+"] by: ", transport.Tag())
+						t.logger.InfoContext(ctx, "exchanged ["+domain+"] by: ", transport.Tag(), " queryType: ", question.Qtype)
 					})
 				}
 			} else {
