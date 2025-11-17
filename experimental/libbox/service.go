@@ -51,8 +51,8 @@ func NewService(configContent string, platformInterface PlatformInterface) (boxS
 	SentryBoxServiceLaunch()
 	defer func() { //karing
 		if e := recover(); e != nil {
-			recoverMessage := fmt.Sprintf("%v", e)
-			SentryCaptureException(recoverMessage, "panic: create service", SentryTrim(string(debug.Stack())))
+			panicErrMessage := fmt.Sprintf("%v", e)
+			SentryCaptureErrorMessage(panicErrMessage, "panic: create service", SentryTrim(string(debug.Stack())))
 		}
 	}()
 	D.MainGoroutineId = D.GetCurrentGoroutineId()                                                                 //karing
@@ -62,7 +62,7 @@ func NewService(configContent string, platformInterface PlatformInterface) (boxS
 	var options option.Options                     //karing
 	options, err = parseConfig(ctx, configContent) //karing
 	if err != nil {
-		SentryCaptureMessage(E.Cause(err, "create service")) //karing
+		SentryCaptureError(err, "create service") //karing
 		return nil, err
 	}
 	runtimeDebug.FreeOSMemory()
@@ -89,7 +89,7 @@ func NewService(configContent string, platformInterface PlatformInterface) (boxS
 	})
 	if err != nil {
 		cancel()
-		SentryCaptureMessage(E.Cause(err, "create service")) //karing
+		SentryCaptureError(err, "create service") //karing
 		return nil, E.Cause(err, "create service")
 	}
 	runtimeDebug.FreeOSMemory()
@@ -106,8 +106,8 @@ func NewService(configContent string, platformInterface PlatformInterface) (boxS
 func (s *BoxService) Start() (err error) { //karing
 	defer func() { //karing
 		if e := recover(); e != nil {
-			recoverMessage := fmt.Sprintf("%v", e)
-			SentryCaptureException(recoverMessage, "panic: start service", SentryTrim(string(debug.Stack())))
+			panicErrMessage := fmt.Sprintf("%v", e)
+			SentryCaptureErrorMessage(panicErrMessage, "panic: start service", SentryTrim(string(debug.Stack())))
 		}
 	}()
 	D.MainGoroutineId = D.GetCurrentGoroutineId() //karing
@@ -124,7 +124,7 @@ func (s *BoxService) Start() (err error) { //karing
 		err = s.instance.Start() //karing
 	}
 	if err != nil { //karing
-		SentryCaptureMessage(E.Cause(err, "start service"))
+		SentryCaptureError(err, "start service")
 	} else { //karing
 		go func() {
 			runtime.GC()

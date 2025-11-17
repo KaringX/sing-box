@@ -8,17 +8,17 @@ import (
 
 type SentryBoxServiceLaunchCallbackFunc func()
 type SentryInitCallbackFunc func(configPath string) ([]byte, error)
-type SentryCaptureMessageCallbackFunc func(message error) bool
-type SentryCaptureExceptionCallbackFunc func(recoverMessage string, attachMessage string, stack string) bool
+type SentryCaptureMessageCallbackFunc func(panicErr error, attachMessage string) bool
+type SentryCaptureExceptionCallbackFunc func(panicErrMessage string, attachMessage string, stack string) bool
 
 var (
-	SentryBoxServiceLaunchCallback SentryBoxServiceLaunchCallbackFunc
-	SentryInitCallback             SentryInitCallbackFunc
-	SentryCaptureMessageCallback   SentryCaptureMessageCallbackFunc
-	SentryCaptureExceptionCallback SentryCaptureExceptionCallbackFunc
-	SentryDsn                      string
-	SentryDid                      string
-	SentryRelease                  string
+	SentryBoxServiceLaunchCallback         SentryBoxServiceLaunchCallbackFunc
+	SentryInitCallback                     SentryInitCallbackFunc
+	SentryCapturePanicErrorCallback        SentryCaptureMessageCallbackFunc
+	SentryCapturePanicErrorMessageCallback SentryCaptureExceptionCallbackFunc
+	SentryDsn                              string
+	SentryDid                              string
+	SentryRelease                          string
 )
 
 func SentryGetDsn() string {
@@ -46,18 +46,20 @@ func SentryInit(configPath string) ([]byte, error) {
 	return SentryInitCallback(configPath)
 }
 
-func SentryCaptureMessage(message error) {
-	if SentryCaptureMessageCallback == nil {
+func SentryCaptureError(panicErr error, attachMessage string) {
+	if SentryCapturePanicErrorCallback == nil {
 		return
 	}
-	SentryCaptureMessageCallback(message)
+	SentryCapturePanicErrorCallback(panicErr, attachMessage)
 }
-func SentryCaptureException(recoverMessage string, attachMessage string, stack string) {
-	if SentryCaptureExceptionCallback == nil {
+
+func SentryCaptureErrorMessage(panicErrMessage string, attachMessage string, stack string) {
+	if SentryCapturePanicErrorMessageCallback == nil {
 		return
 	}
-	SentryCaptureExceptionCallback(recoverMessage, attachMessage, stack)
+	SentryCapturePanicErrorMessageCallback(panicErrMessage, attachMessage, stack)
 }
+
 func SentryTrim(stack string) string {
 	lines := strings.Split(stack, "\n")
 	if len(lines) > 3 {

@@ -127,8 +127,8 @@ func destoryService() error {
 func createService() (err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			recoverMessage := fmt.Sprintf("%v", e)
-			libbox.SentryCaptureException(recoverMessage, "panic: createService", libbox.SentryTrim(string(debug.Stack())))
+			panicErrMessage := fmt.Sprintf("%v", e)
+			libbox.SentryCaptureErrorMessage(panicErrMessage, "panic: createService", libbox.SentryTrim(string(debug.Stack())))
 		}
 	}()
 
@@ -179,8 +179,8 @@ func runService() (err error) {
 func destoryAll() {
 	defer func() {
 		if e := recover(); e != nil {
-			recoverMessage := fmt.Sprintf("%v", e)
-			log.Error("panic: ", recoverMessage)
+			errMessage := fmt.Sprintf("%v", e)
+			log.Error("panic: ", errMessage)
 		}
 		terminateCurrentProcess()
 	}()
