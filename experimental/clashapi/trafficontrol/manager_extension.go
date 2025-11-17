@@ -330,7 +330,7 @@ func (m *Manager) persistConnectionsToDB(connections []TrackerMetadata, persistT
 			var processPath string
 			var packageName string
 
-			if !statistics.PrivacyDesensitize() {
+			if !statistics.DataDesensitize() {
 				if t.Metadata.Domain != "" {
 					domain = t.Metadata.Domain
 				} else {
@@ -363,7 +363,7 @@ func (m *Manager) persistConnectionsToDB(connections []TrackerMetadata, persistT
 			var chain0 string
 			var chain1 string
 			var outboundType string
-			if !statistics.PrivacyDesensitize() {
+			if !statistics.DataDesensitize() {
 				if t.Rule != nil {
 					rule0 = t.Rule.Name()
 					rule1 = t.Rule.Action().Target()
@@ -390,7 +390,7 @@ func (m *Manager) persistConnectionsToDB(connections []TrackerMetadata, persistT
 			if t.Metadata.Source.Addr.IsValid() {
 				source_ip = t.Metadata.Source.Addr.String()
 			}
-			if !statistics.PrivacyDesensitize() {
+			if !statistics.DataDesensitize() {
 				if t.Metadata.Destination.Addr.IsValid() {
 					destination_ip = t.Metadata.Destination.Addr.String()
 				}

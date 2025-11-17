@@ -11,10 +11,10 @@ type ExperimentalOptions struct {
 }
 
 type StatisticsOptions struct { //karing
-	Enabled            bool   `json:"enabled,omitempty"`
-	PrivacyDesensitize bool   `json:"privacy_desensitize,omitempty"`
-	CacheDays          int    `json:"cache_days,omitempty"`
-	Path               string `json:"path,omitempty"`
+	Enabled         bool   `json:"enabled,omitempty"`
+	DataDesensitize bool   `json:"data_desensitize,omitempty"`
+	CacheDays       int    `json:"cache_days,omitempty"`
+	Path            string `json:"path,omitempty"`
 }
 
 type CacheFileOptions struct {

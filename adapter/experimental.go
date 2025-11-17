@@ -76,7 +76,7 @@ type Statistics interface { //karing
 	ExecStmt(stmt *sql.Stmt, args ...any) (sql.Result, error)
 	BeginTx() (*sql.Tx, error)
 	Commit(tx *sql.Tx) error
-	PrivacyDesensitize() bool
+	DataDesensitize() bool
 	CacheDays() int
 }
 

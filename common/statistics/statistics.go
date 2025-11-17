@@ -12,10 +12,10 @@ import (
 )
 
 type Statistics struct {
-	ctx                context.Context
-	db                 *sql.DB
-	privacyDesensitize bool
-	cacheDays          int
+	ctx             context.Context
+	db              *sql.DB
+	dataDesensitize bool
+	cacheDays       int
 }
 
 // dbbackup go-sqlite3\_example\hook\hook.go
@@ -25,7 +25,7 @@ func New(ctx context.Context, options *option.StatisticsOptions) (*Statistics, e
 	if err != nil {
 		return nil, err
 	}
-	return &Statistics{ctx: ctx, db: db, privacyDesensitize: options.PrivacyDesensitize, cacheDays: options.CacheDays}, nil
+	return &Statistics{ctx: ctx, db: db, dataDesensitize: options.DataDesensitize, cacheDays: options.CacheDays}, nil
 }
 
 func (c *Statistics) Name() string {
@@ -86,8 +86,8 @@ func (d *Statistics) Commit(tx *sql.Tx) error {
 	return tx.Commit()
 }
 
-func (d *Statistics) PrivacyDesensitize() bool {
-	return d.privacyDesensitize
+func (d *Statistics) DataDesensitize() bool {
+	return d.dataDesensitize
 }
 
 func (d *Statistics) CacheDays() int {
