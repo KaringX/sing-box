@@ -436,12 +436,6 @@ func (c *Client) ExchangeCache(ctx context.Context, message *dns.Msg) (*dns.Msg,
 }
 
 func sortAddresses(response4 []netip.Addr, response6 []netip.Addr, strategy C.DomainStrategy) []netip.Addr {
-	if len(response4) == 0 { //karing
-		return response6
-	}
-	if len(response6) == 0 { //karing
-		return response4
-	}
 	if strategy == C.DomainStrategyPreferIPv6 {
 		return append(response6, response4...)
 	} else {
