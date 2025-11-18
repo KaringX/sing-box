@@ -32,11 +32,11 @@ func (c *Client) lookupToExchange_A_AAAA(ctx context.Context, transport adapter.
 	ctx, cancel := context.WithCancel(ctx)
 	count.Add(int64(len(dnsQueryTypes)))
 	for _, queryType := range dnsQueryTypes {
-		go func() {
-			response, err := c.lookupToExchange(ctx, transport, dnsName, queryType, options, responseChecker)
+		go func(qtype uint16) {
+			response, err := c.lookupToExchange(ctx, transport, dnsName, qtype, options, responseChecker)
 			if err == nil {
 				if len(response) > 0 {
-					switch queryType {
+					switch qtype {
 					case dns.TypeA:
 						response4 = response
 						if strategy == C.DomainStrategyPreferIPv4 {
@@ -55,7 +55,7 @@ func (c *Client) lookupToExchange_A_AAAA(ctx context.Context, transport adapter.
 				}
 			} else {
 				errOnce.Do(func() {
-					returnError = E.Cause(err, "dns exchange type: "+dns.TypeToString[queryType])
+					returnError = E.Cause(err, "dns exchange type: "+dns.TypeToString[qtype])
 				})
 			}
 			count.Add(-1)
@@ -64,7 +64,7 @@ func (c *Client) lookupToExchange_A_AAAA(ctx context.Context, transport adapter.
 					done <- struct{}{}
 				})
 			}
-		}()
+		}(queryType)
 	}
 	<-done
 	cancel()
