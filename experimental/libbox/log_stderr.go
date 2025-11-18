@@ -46,12 +46,13 @@ func StderrCheckAndCapture() {
 			index := strings.Index(content, "panic")
 			if index >= 0 {
 				lines := strings.Split(content[index:], "\n")
-				panicErrMessage := "stderr:"
+				panicErrMessage := ""
 				findStack := false
 				for i, line := range lines {
 					line = strings.Trim(line, "\r\t\n")
 					if i == 0 {
 						panicErrMessage += line
+						continue
 					}
 					if strings.HasPrefix(line, "goroutine ") {
 						if findStack {
