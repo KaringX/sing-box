@@ -51,7 +51,7 @@ func StderrCheckAndCapture() {
 				for i, line := range lines {
 					line = strings.Trim(line, "\r\t\n")
 					if i == 0 {
-						panicErrMessage += line
+						panicErrMessage = line
 						continue
 					}
 					if strings.HasPrefix(line, "goroutine ") {
