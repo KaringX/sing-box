@@ -62,8 +62,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 	var cipher string
 	switch options.Method {
 	case "none":
-		//cipher = "dummy" //karing
-		return empty, fmt.Errorf("method: %s is not supported", cipher) //karing
+		cipher = "dummy" //karing
 	default:
 		cipher = options.Method
 	}
