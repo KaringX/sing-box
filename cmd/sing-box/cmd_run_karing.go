@@ -104,6 +104,7 @@ func destoryServer() {
 }
 
 func restartService() (map[string]string, error) {
+	libbox.SetRestart(true)
 	err := destoryService()
 	if err != nil {
 		var extra = make(map[string]string)

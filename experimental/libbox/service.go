@@ -46,7 +46,6 @@ type BoxService struct {
 	iOSPauseFields
 }
 
-var contextId int //karing
 func NewService(configContent string, platformInterface PlatformInterface) (boxService *BoxService, err error) { //karing
 	SentryBoxServiceLaunch()
 	defer func() { //karing
