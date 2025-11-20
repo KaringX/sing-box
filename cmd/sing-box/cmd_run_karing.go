@@ -66,6 +66,7 @@ func createHttpServer() error {
 		})
 		r.Route("/stop", func(r chi.Router) {
 			r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+				libbox.SetRestart(false)
 				quit <- struct{}{}
 				render.JSON(w, r, render.M{
 					"err": nil,
