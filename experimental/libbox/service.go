@@ -221,11 +221,11 @@ func (w *platformInterfaceWrapper) OpenTun(options *tun.Options, platformOptions
 	}
 	routeRanges, err := options.BuildAutoRouteRanges(true)
 	if err != nil {
-		return nil, err
+		return nil, E.New("build auto_route_ranges") //karing
 	}
 	tunFd, err := w.iif.OpenTun(&tunOptions{options, routeRanges, platformOptions})
 	if err != nil {
-		return nil, err
+		return nil, E.New("opentun") //karing
 	}
 	options.Name, err = getTunnelName(tunFd)
 	if err != nil {
@@ -238,7 +238,11 @@ func (w *platformInterfaceWrapper) OpenTun(options *tun.Options, platformOptions
 	}
 	options.FileDescriptor = dupFd
 	w.myTunName = options.Name
-	return tun.New(*options)
+	tun, err := tun.New(*options) //karing
+	if err != nil {               //karing
+		return nil, E.Cause(err, "tun.new")
+	}
+	return tun, err //karing
 }
 
 func (w *platformInterfaceWrapper) CreateDefaultInterfaceMonitor(logger logger.Logger) tun.DefaultInterfaceMonitor {
