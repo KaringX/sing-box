@@ -761,7 +761,10 @@ func (r *Router) actionResolve(ctx context.Context, metadata *adapter.InboundCon
 			return err
 		}
 		metadata.DestinationAddresses = addresses
-		r.logger.DebugContext(ctx, "resolved [", strings.Join(F.MapToString(metadata.DestinationAddresses), " "), "]")
+		lateString := F.MakeLaterString(func() string { //karing
+			return strings.Join(F.MapToString(metadata.DestinationAddresses), " ")
+		})
+		r.logger.DebugContext(ctx, "resolved [", lateString, "]") //karing
 	}
 	return nil
 }

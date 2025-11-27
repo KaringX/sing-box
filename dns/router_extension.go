@@ -126,7 +126,10 @@ func (r *Router) LookupTag(ctx context.Context, domain string, options adapter.D
 response:
 	printResult()
 	if len(responseAddrs) > 0 {
-		r.logger.InfoContext(ctx, "lookup succeed for ", domain, ": ", strings.Join(F.MapToString(responseAddrs), " "))
+		lateString := F.MakeLaterString(func() string { //karing
+			return strings.Join(F.MapToString(responseAddrs), " ")
+		})
+		r.logger.InfoContext(ctx, "lookup succeed for ", domain, ": ", lateString) //karing
 	}
 	return responseAddrs, transportTag, err //karing
 }

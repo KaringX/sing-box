@@ -78,7 +78,7 @@ require ( //karing
 replace github.com/Dreamacro/clash => github.com/KaringX/clash v0.0.0-20241101044429-f71df89d4091
 
 //go get github.com/KaringX/sing@50a9c2efd67210376bb718ef766d53710768d5ae
-replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20251029013142-306d1f64d6e5 //karing_v0.7.13
+replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20251127032307-1e1d19b20728 //karing_v0.7.13
 
 //replace github.com/sagernet/sing => ../../KaringX/sing
 
