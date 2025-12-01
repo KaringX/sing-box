@@ -3,15 +3,15 @@ package taskmonitor
 import (
 	"time"
 
+	D "github.com/sagernet/sing-box/common/debug"
 	F "github.com/sagernet/sing/common/format"
 	"github.com/sagernet/sing/common/logger"
 )
 
 type Monitor struct {
-	logger   logger.Logger
-	timeout  time.Duration
-	timer    *time.Timer
-	taskName string //karing
+	logger  logger.Logger
+	timeout time.Duration
+	timer   *time.Timer
 }
 
 func New(logger logger.Logger, timeout time.Duration) *Monitor {
@@ -22,9 +22,11 @@ func New(logger logger.Logger, timeout time.Duration) *Monitor {
 }
 
 func (m *Monitor) Start(taskName ...any) {
-	m.taskName = F.ToString(taskName...) //karing
+	name := F.ToString(taskName...)          //karing
+	goroutineId := D.GetCurrentGoroutineId() //karing
 	m.timer = time.AfterFunc(m.timeout, func() {
-		m.logger.Warn(F.ToString(taskName...), " take too much time to finish!")
+		stack := D.GetGoroutineStack(goroutineId)                                   //karing
+		m.logger.Warn(name, " take too much time to finish! stack:\n", stack, "\n") //karing
 	})
 }
 
