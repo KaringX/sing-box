@@ -483,6 +483,7 @@ func (s *Box) PreStart() error {
 }
 
 func (s *Box) Start() error {
+	s.logger.InfoContext(s.ctx, "box start") //karing
 	err := s.start()
 	if err != nil {
 		// TODO: remove catch error
@@ -502,6 +503,7 @@ func (s *Box) Start() error {
 }
 
 func (s *Box) preStart() error {
+	s.logger.InfoContext(s.ctx, "box prestart") //karing
 	/*//karing
 	monitor := taskmonitor.New(s.logger, C.StartTimeout)
 	monitor.Start("start logger")
@@ -569,7 +571,8 @@ func (s *Box) start() error {
 }
 
 func (s *Box) Close() error {
-	closeDebug() //karing
+	s.logger.InfoContext(s.ctx, "box close") //karing
+	closeDebug()                             //karing
 	select {
 	case <-s.done:
 		return nil //karing
