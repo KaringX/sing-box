@@ -296,7 +296,7 @@ func NewLogicalRule(ctx context.Context, logger log.ContextLogger, options optio
 		subOptions.LogicalOptions.Name = options.Name //karing
 		subRule, err := NewRule(ctx, logger, subOptions, false)
 		if err != nil {
-			return nil, E.Cause(err, "sub rule[", i, "]")
+			return nil, E.Cause(err, "sub rule[", i, "]", options.Name) //karing
 		}
 		rule.rules[i] = subRule
 	}

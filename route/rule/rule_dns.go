@@ -325,7 +325,7 @@ func NewLogicalDNSRule(ctx context.Context, logger log.ContextLogger, options op
 		subRule.LogicalOptions.Name = options.Name //karing
 		rule, err := NewDNSRule(ctx, logger, subRule, false)
 		if err != nil {
-			return nil, E.Cause(err, "sub rule[", i, "]")
+			return nil, E.Cause(err, "sub rule[", i, "]", options.Name) //karing
 		}
 		r.rules[i] = rule
 	}

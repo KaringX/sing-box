@@ -49,6 +49,7 @@ type URLTest struct {
 	defaultTag                   string        //karing
 	selectedHealthCheckInterval  time.Duration //karing
 	reTestIfNetworkUpdate        bool          //karing
+	skipTest                     bool          //karing
 }
 
 func NewURLTest(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.URLTestOutboundOptions) (adapter.Outbound, error) {
@@ -68,6 +69,7 @@ func NewURLTest(ctx context.Context, router adapter.Router, logger log.ContextLo
 		defaultTag:                   options.Default,                                    //karing
 		selectedHealthCheckInterval:  time.Duration(options.SelectedHealthCheckInterval), //karing
 		reTestIfNetworkUpdate:        options.ReTestIfNetworkUpdate,                      //karing
+		skipTest:                     options.SkipTest,                                   //karing
 	}
 	if len(outbound.tags) == 0 {
 		return outbound, E.New("missing tags") //karing
@@ -90,7 +92,7 @@ func (s *URLTest) Start() error {
 		}
 		outbounds = append(outbounds, detour)
 	}
-	group, err := NewURLTestGroup(s.ctx, s.outbound, s.logger, outbounds, s.link, s.interval, s.tolerance, s.idleTimeout, s.interruptExternalConnections, s.defaultTag, s.selectedHealthCheckInterval) //karing
+	group, err := NewURLTestGroup(s.ctx, s.outbound, s.logger, outbounds, s.link, s.interval, s.tolerance, s.idleTimeout, s.interruptExternalConnections, s.defaultTag, s.selectedHealthCheckInterval, s.skipTest) //karing
 	if err != nil {
 		return err
 	}
@@ -249,6 +251,8 @@ type URLTestGroup struct {
 	selectedHealthCheckInterval time.Duration   //karing
 	healthChecking              map[string]bool //karing
 	selectedHealthCheckTicker   *time.Ticker    //karing
+	skipTest                    bool            //karing
+	testTimes                   int             //karing
 	access                      sync.Mutex
 	ticker                      *time.Ticker
 	close                       chan struct{}
@@ -256,7 +260,7 @@ type URLTestGroup struct {
 	lastActive                  common.TypedValue[time.Time]
 }
 
-func NewURLTestGroup(ctx context.Context, outboundManager adapter.OutboundManager, logger log.ContextLogger, outbounds []adapter.Outbound, link string, interval time.Duration, tolerance uint16, idleTimeout time.Duration, interruptExternalConnections bool, defaultTag string, selectedHealthCheckInterval time.Duration) (*URLTestGroup, error) { //karing
+func NewURLTestGroup(ctx context.Context, outboundManager adapter.OutboundManager, logger log.ContextLogger, outbounds []adapter.Outbound, link string, interval time.Duration, tolerance uint16, idleTimeout time.Duration, interruptExternalConnections bool, defaultTag string, selectedHealthCheckInterval time.Duration, skipTest bool) (*URLTestGroup, error) { //karing
 	if interval == 0 {
 		interval = C.DefaultURLTestInterval
 	}
@@ -294,6 +298,7 @@ func NewURLTestGroup(ctx context.Context, outboundManager adapter.OutboundManage
 		defaultTag:                   defaultTag,                  //karing
 		selectedHealthCheckInterval:  selectedHealthCheckInterval, //karing
 		healthChecking:               make(map[string]bool),       //karing
+		skipTest:                     skipTest,                    //karing
 	}, nil
 }
 
@@ -442,6 +447,13 @@ func (g *URLTestGroup) urlTest(ctx context.Context, force bool) (map[string]adap
 		return result, nil
 	}
 	defer g.checking.Store(false)
+	if g.skipTest { //karing
+		if g.testTimes != 0 {
+			g.performUpdateCheck(false)
+			return result, nil
+		}
+	}
+	g.testTimes++
 	//b, _ := batch.New(ctx, batch.WithConcurrencyNum[any](10)) //karing
 	pool := pond.New(10, 20) //karing
 	group := pool.Group()    //karing

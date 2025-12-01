@@ -18,4 +18,5 @@ type URLTestOutboundOptions struct {
 	Default                     string             `json:"default,omitempty"`                        //karing
 	SelectedHealthCheckInterval badoption.Duration `json:"selected_health_check_interval,omitempty"` //karing
 	ReTestIfNetworkUpdate       bool               `json:"retest_if_network_udpate,omitempty"`       //karing
+	SkipTest                    bool               `json:"skip_test,omitempty"`                      //karing
 }
