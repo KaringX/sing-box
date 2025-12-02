@@ -1,6 +1,6 @@
 module github.com/sagernet/sing-box
 
-go 1.23.2
+go 1.24
 
 toolchain go1.24.3
 
@@ -63,6 +63,10 @@ require ( //hiddify
 	github.com/pires/go-proxyproto v0.8.0
 )
 
+require ( //// https://github.com/starifly/sing-box
+	github.com/quic-go/quic-go v0.55.0
+)
+
 require ( //karing
 	github.com/alitto/pond v1.9.2
 	github.com/enfein/mieru/v3 v3.24.1
@@ -112,7 +116,6 @@ replace github.com/sagernet/tailscale => github.com/KaringX/tailscale v1.80.3-mo
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
-	github.com/Dreamacro/protobytes v0.0.0-20230617041236-6500a9f4f158 // indirect
 	github.com/ajg/form v1.5.1 // indirect
 	github.com/akutz/memconn v0.1.0 // indirect
 	github.com/alexbrainman/sspi v0.0.0-20231016080023-1a75b4708caa // indirect
@@ -194,7 +197,7 @@ require (
 	golang.org/x/sync v0.16.0 // indirect
 	golang.org/x/term v0.34.0 // indirect
 	golang.org/x/text v0.28.0 // indirect
-	golang.org/x/time v0.9.0 // indirect
+	golang.org/x/time v0.12.0 // indirect
 	golang.org/x/tools v0.36.0 // indirect
 	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2 // indirect
 	golang.zx2c4.com/wireguard/windows v0.5.3 // indirect
