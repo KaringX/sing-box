@@ -9,17 +9,20 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/Dreamacro/clash/transport/shadowsocks/core"
-	"github.com/Dreamacro/clash/transport/shadowsocks/shadowstream"
-	"github.com/Dreamacro/clash/transport/socks5"
+	EN "github.com/metacubex/mihomo/common/net"
+	"github.com/metacubex/mihomo/transport/shadowsocks/core"
+	"github.com/metacubex/mihomo/transport/shadowsocks/shadowaead"
+	"github.com/metacubex/mihomo/transport/shadowsocks/shadowstream"
+	"github.com/metacubex/mihomo/transport/socks5"
+	"github.com/metacubex/mihomo/transport/ssr/obfs"
+	"github.com/metacubex/mihomo/transport/ssr/protocol"
+
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/adapter/outbound"
 	"github.com/sagernet/sing-box/common/dialer"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
-	"github.com/sagernet/sing-box/transport/clashssr/obfs"
-	"github.com/sagernet/sing-box/transport/clashssr/protocol"
 	"github.com/sagernet/sing/common/bufio"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/logger"
@@ -123,10 +126,16 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 			return nil, err
 		}
 		conn = h.cipher.StreamConn(h.obfs.StreamConn(conn))
-		writeIv, err := conn.(*shadowstream.Conn).ObtainWriteIV()
-		if err != nil {
-			conn.Close()
-			return nil, err
+		var writeIv []byte
+		switch c := conn.(type) {
+		case *shadowstream.Conn:
+			writeIv, err = c.ObtainWriteIV()
+			if err != nil {
+				conn.Close()
+				return nil, err
+			}
+		case *shadowaead.Conn:
+			return nil, fmt.Errorf("invalid connection type")
 		}
 		conn = h.protocol.StreamConn(conn, writeIv)
 		err = M.SocksaddrSerializer.WriteAddrPort(conn, destination)
@@ -158,10 +167,9 @@ func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
 	if err != nil {
 		return nil, err
 	}
-	packetConn := h.cipher.PacketConn(bufio.NewUnbindPacketConn(outConn))
+	packetConn := h.cipher.PacketConn(EN.NewEnhancePacketConn(bufio.NewUnbindPacketConn(outConn)))
 	packetConn = h.protocol.PacketConn(packetConn)
-	packetConn = &ssPacketConn{packetConn, outConn.RemoteAddr()}
-	return packetConn, nil
+	return &ssPacketConn{packetConn, outConn.RemoteAddr()}, nil
 }
 
 type ssPacketConn struct {

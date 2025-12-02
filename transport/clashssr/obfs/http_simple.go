@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Dreamacro/clash/common/pool"
+	"github.com/metacubex/mihomo/common/pool"
 )
 
 func init() {
