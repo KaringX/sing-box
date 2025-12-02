@@ -22,6 +22,9 @@ var debugHTTPServer *http.Server
 
 func applyDebugListenOption(options option.DebugOptions) {
 	if debugHTTPServer != nil {
+		if options.Listen == debugHTTPServer.Addr { //karing
+			return
+		}
 		debugHTTPServer.Close()
 		debugHTTPServer = nil
 	}
@@ -74,11 +77,4 @@ func applyDebugListenOption(options option.DebugOptions) {
 			log.Warn(E.Cause(err, "serve debug HTTP server")) //karing
 		}
 	}()
-}
-
-func closeDebugListen() { //karing
-	if debugHTTPServer != nil {
-		debugHTTPServer.Close()
-		debugHTTPServer = nil
-	}
 }

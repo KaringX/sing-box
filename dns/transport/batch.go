@@ -111,7 +111,15 @@ func (t *BatchTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS
 			}
 		}(transport)
 	}
-	<-done
+	select {
+	case <-ctx.Done():
+		once.Do(func() {})
+		errOnce.Do(func() {
+			errResult = E.New("dns Exchange canceled :", domain)
+		})
+	case <-done:
+	}
+
 	cancel()
 	close(done)
 	if result != nil {

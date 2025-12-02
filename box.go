@@ -572,7 +572,6 @@ func (s *Box) start() error {
 
 func (s *Box) Close() error {
 	s.logger.InfoContext(s.ctx, "box close") //karing
-	closeDebug()                             //karing
 	select {
 	case <-s.done:
 		return nil //karing
@@ -603,7 +602,6 @@ func (s *Box) Close() error {
 	s.connection = nil      //karing
 	s.router = nil          //karing
 	s.internalService = nil //karing
-
 	return err
 }
 
