@@ -3,7 +3,6 @@ package transport
 
 import (
 	"context"
-	"sync"
 	"sync/atomic"
 
 	mDNS "github.com/miekg/dns"
@@ -70,13 +69,13 @@ func (t *BatchTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS
 	if mDNS.IsFqdn(domain) {
 		domain = domain[:len(domain)-1]
 	}
-	var count atomic.Int64
 	var result *mDNS.Msg
 	var resultEmpty *mDNS.Msg
 	var errResult error
-	var once sync.Once
-	var errOnce sync.Once
-	var emptyOnce sync.Once
+	var count atomic.Int64
+	var once atomic.Bool
+	var errOnce atomic.Bool
+	var emptyOnce atomic.Bool
 	done := make(chan struct{})
 	ctx, cancel := context.WithCancel(ctx)
 
@@ -87,36 +86,36 @@ func (t *BatchTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS
 			ret, err := trans.Exchange(ctx, copydMessage)
 			if err == nil {
 				if len(ret.Answer) == 0 {
-					emptyOnce.Do(func() {
+					if emptyOnce.CompareAndSwap(false, true) {
 						resultEmpty = ret
 						t.logger.InfoContext(ctx, "exchanged empty result ["+domain+"] by: ", trans.Tag(), " queryType: ", question.Qtype)
-					})
+					}
 				} else {
-					once.Do(func() {
+					if once.CompareAndSwap(false, true) {
 						result = ret
 						done <- struct{}{}
 						t.logger.InfoContext(ctx, "exchanged ["+domain+"] by: ", trans.Tag(), " queryType: ", question.Qtype)
-					})
+					}
 				}
 			} else {
-				errOnce.Do(func() {
+				if errOnce.CompareAndSwap(false, true) {
 					errResult = err
-				})
+				}
 			}
-			count.Add(-1)
-			if count.Load() == 0 {
-				once.Do(func() {
+
+			if count.Add(-1) == 0 {
+				if once.CompareAndSwap(false, true) {
 					done <- struct{}{}
-				})
+				}
 			}
 		}(transport)
 	}
 	select {
 	case <-ctx.Done():
-		once.Do(func() {})
-		errOnce.Do(func() {
+		once.CompareAndSwap(false, true)
+		if errOnce.CompareAndSwap(false, true) {
 			errResult = E.New("dns Exchange canceled :", domain)
-		})
+		}
 	case <-done:
 	}
 

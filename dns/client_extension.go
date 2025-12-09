@@ -4,7 +4,6 @@ package dns
 import (
 	"context"
 	"net/netip"
-	"sync"
 	"sync/atomic"
 
 	"github.com/miekg/dns"
@@ -24,10 +23,10 @@ func (c *Client) lookupToExchange_A_AAAA(ctx context.Context, transport adapter.
 	var response4 []netip.Addr = []netip.Addr{}
 	var response6 []netip.Addr = []netip.Addr{}
 	dnsQueryTypes := []uint16{dns.TypeA, dns.TypeAAAA}
-	var count atomic.Int64
-	var once sync.Once
-	var errOnce sync.Once
 	var returnError error
+	var count atomic.Int64
+	var once atomic.Bool
+	var errOnce atomic.Bool
 	done := make(chan struct{})
 	ctx, cancel := context.WithCancel(ctx)
 	count.Add(int64(len(dnsQueryTypes)))
@@ -40,29 +39,29 @@ func (c *Client) lookupToExchange_A_AAAA(ctx context.Context, transport adapter.
 					case dns.TypeA:
 						response4 = response
 						if strategy == C.DomainStrategyPreferIPv4 {
-							once.Do(func() {
+							if once.CompareAndSwap(false, true) {
 								done <- struct{}{}
-							})
+							}
 						}
 					case dns.TypeAAAA:
 						response6 = response
 						if strategy == C.DomainStrategyPreferIPv6 {
-							once.Do(func() {
+							if once.CompareAndSwap(false, true) {
 								done <- struct{}{}
-							})
+							}
 						}
 					}
 				}
 			} else {
-				errOnce.Do(func() {
+				if errOnce.CompareAndSwap(false, true) {
 					returnError = E.Cause(err, "dns exchange type: "+dns.TypeToString[qtype])
-				})
+				}
 			}
-			count.Add(-1)
-			if count.Load() == 0 {
-				once.Do(func() {
+
+			if count.Add(-1) == 0 {
+				if once.CompareAndSwap(false, true) {
 					done <- struct{}{}
-				})
+				}
 			}
 		}(queryType)
 	}
