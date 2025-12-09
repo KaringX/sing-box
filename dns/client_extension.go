@@ -77,7 +77,7 @@ func (c *Client) lookupToExchange_A_AAAA(ctx context.Context, transport adapter.
 		}(queryType)
 	}
 	<-done
-	onceFlag.CompareAndSwap(false, true)
+	onceFlag.Store(true)
 	cancel()
 	close(done)
 	if len(response4) == 0 && len(response6) == 0 {

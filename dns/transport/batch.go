@@ -135,7 +135,7 @@ func (t *BatchTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS
 		}
 	case <-done:
 	}
-	onceFlag.CompareAndSwap(false, true)
+	onceFlag.Store(true)
 	cancel()
 	close(done)
 	if result != nil {
