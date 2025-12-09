@@ -4,6 +4,7 @@ package dns
 import (
 	"context"
 	"net/netip"
+	"sync"
 	"sync/atomic"
 
 	"github.com/miekg/dns"
@@ -25,8 +26,10 @@ func (c *Client) lookupToExchange_A_AAAA(ctx context.Context, transport adapter.
 	dnsQueryTypes := []uint16{dns.TypeA, dns.TypeAAAA}
 	var returnError error
 	var count atomic.Int64
-	var once atomic.Bool
-	var errOnce atomic.Bool
+	var once sync.Once
+	var errOnce sync.Once
+	var onceFlag atomic.Bool
+	var errOnceFlag atomic.Bool
 	done := make(chan struct{})
 	ctx, cancel := context.WithCancel(ctx)
 	count.Add(int64(len(dnsQueryTypes)))
@@ -39,33 +42,42 @@ func (c *Client) lookupToExchange_A_AAAA(ctx context.Context, transport adapter.
 					case dns.TypeA:
 						response4 = response
 						if strategy == C.DomainStrategyPreferIPv4 {
-							if once.CompareAndSwap(false, true) {
-								done <- struct{}{}
+							if onceFlag.CompareAndSwap(false, true) {
+								once.Do(func() {
+									done <- struct{}{}
+								})
 							}
 						}
 					case dns.TypeAAAA:
 						response6 = response
 						if strategy == C.DomainStrategyPreferIPv6 {
-							if once.CompareAndSwap(false, true) {
-								done <- struct{}{}
+							if onceFlag.CompareAndSwap(false, true) {
+								once.Do(func() {
+									done <- struct{}{}
+								})
 							}
 						}
 					}
 				}
 			} else {
-				if errOnce.CompareAndSwap(false, true) {
-					returnError = E.Cause(err, "dns exchange type: "+dns.TypeToString[qtype])
+				if errOnceFlag.CompareAndSwap(false, true) {
+					errOnce.Do(func() {
+						returnError = E.Cause(err, "dns exchange type: "+dns.TypeToString[qtype])
+					})
 				}
 			}
 
 			if count.Add(-1) == 0 {
-				if once.CompareAndSwap(false, true) {
-					done <- struct{}{}
+				if onceFlag.CompareAndSwap(false, true) {
+					once.Do(func() {
+						done <- struct{}{}
+					})
 				}
 			}
 		}(queryType)
 	}
 	<-done
+	onceFlag.CompareAndSwap(false, true)
 	cancel()
 	close(done)
 	if len(response4) == 0 && len(response6) == 0 {

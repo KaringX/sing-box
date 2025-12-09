@@ -3,6 +3,7 @@ package transport
 
 import (
 	"context"
+	"sync"
 	"sync/atomic"
 
 	mDNS "github.com/miekg/dns"
@@ -72,10 +73,13 @@ func (t *BatchTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS
 	var result *mDNS.Msg
 	var resultEmpty *mDNS.Msg
 	var errResult error
+	var once sync.Once
+	var errOnce sync.Once
+	var emptyOnce sync.Once
 	var count atomic.Int64
-	var once atomic.Bool
-	var errOnce atomic.Bool
-	var emptyOnce atomic.Bool
+	var onceFlag atomic.Bool
+	var errOnceFlag atomic.Bool
+	var emptyOnceFlag atomic.Bool
 	done := make(chan struct{})
 	ctx, cancel := context.WithCancel(ctx)
 
@@ -86,39 +90,52 @@ func (t *BatchTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS
 			ret, err := trans.Exchange(ctx, copydMessage)
 			if err == nil {
 				if len(ret.Answer) == 0 {
-					if emptyOnce.CompareAndSwap(false, true) {
-						resultEmpty = ret
-						t.logger.InfoContext(ctx, "exchanged empty result ["+domain+"] by: ", trans.Tag(), " queryType: ", question.Qtype)
+					if emptyOnceFlag.CompareAndSwap(false, true) {
+						emptyOnce.Do(func() {
+							resultEmpty = ret
+							t.logger.InfoContext(ctx, "exchanged empty result ["+domain+"] by: ", trans.Tag(), " queryType: ", question.Qtype)
+						})
 					}
 				} else {
-					if once.CompareAndSwap(false, true) {
-						result = ret
-						done <- struct{}{}
-						t.logger.InfoContext(ctx, "exchanged ["+domain+"] by: ", trans.Tag(), " queryType: ", question.Qtype)
+					if onceFlag.CompareAndSwap(false, true) {
+						once.Do(func() {
+							result = ret
+							done <- struct{}{}
+							t.logger.InfoContext(ctx, "exchanged ["+domain+"] by: ", trans.Tag(), " queryType: ", question.Qtype)
+						})
 					}
 				}
 			} else {
-				if errOnce.CompareAndSwap(false, true) {
-					errResult = err
+				if errOnceFlag.CompareAndSwap(false, true) {
+					errOnce.Do(func() {
+						errResult = err
+					})
 				}
 			}
 
 			if count.Add(-1) == 0 {
-				if once.CompareAndSwap(false, true) {
-					done <- struct{}{}
+				if onceFlag.CompareAndSwap(false, true) {
+					once.Do(func() {
+						done <- struct{}{}
+					})
 				}
 			}
 		}(transport)
 	}
 	select {
 	case <-ctx.Done():
-		once.CompareAndSwap(false, true)
-		if errOnce.CompareAndSwap(false, true) {
-			errResult = E.New("dns Exchange canceled :", domain)
+		if onceFlag.CompareAndSwap(false, true) {
+			once.Do(func() {
+			})
+		}
+		if errOnceFlag.CompareAndSwap(false, true) {
+			errOnce.Do(func() {
+				errResult = E.New("dns Exchange canceled :", domain)
+			})
 		}
 	case <-done:
 	}
-
+	onceFlag.CompareAndSwap(false, true)
 	cancel()
 	close(done)
 	if result != nil {
