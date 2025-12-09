@@ -44,7 +44,13 @@ func (c *Client) lookupToExchange_A_AAAA(ctx context.Context, transport adapter.
 						if strategy == C.DomainStrategyPreferIPv4 {
 							if onceFlag.CompareAndSwap(false, true) {
 								once.Do(func() {
-									done <- struct{}{}
+									select {
+									case <-ctx.Done():
+										break
+									default:
+										done <- struct{}{}
+										break
+									}
 								})
 							}
 						}
@@ -53,7 +59,13 @@ func (c *Client) lookupToExchange_A_AAAA(ctx context.Context, transport adapter.
 						if strategy == C.DomainStrategyPreferIPv6 {
 							if onceFlag.CompareAndSwap(false, true) {
 								once.Do(func() {
-									done <- struct{}{}
+									select {
+									case <-ctx.Done():
+										break
+									default:
+										done <- struct{}{}
+										break
+									}
 								})
 							}
 						}
@@ -70,7 +82,13 @@ func (c *Client) lookupToExchange_A_AAAA(ctx context.Context, transport adapter.
 			if count.Add(-1) == 0 {
 				if onceFlag.CompareAndSwap(false, true) {
 					once.Do(func() {
-						done <- struct{}{}
+						select {
+						case <-ctx.Done():
+							break
+						default:
+							done <- struct{}{}
+							break
+						}
 					})
 				}
 			}
@@ -79,6 +97,7 @@ func (c *Client) lookupToExchange_A_AAAA(ctx context.Context, transport adapter.
 	<-done
 	onceFlag.Store(true)
 	cancel()
+
 	close(done)
 	if len(response4) == 0 && len(response6) == 0 {
 		return nil, nil, returnError

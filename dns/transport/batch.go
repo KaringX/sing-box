@@ -77,6 +77,7 @@ func (t *BatchTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS
 	var errOnce sync.Once
 	var emptyOnce sync.Once
 	var count atomic.Int64
+
 	var onceFlag atomic.Bool
 	var errOnceFlag atomic.Bool
 	var emptyOnceFlag atomic.Bool
@@ -100,7 +101,13 @@ func (t *BatchTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS
 					if onceFlag.CompareAndSwap(false, true) {
 						once.Do(func() {
 							result = ret
-							done <- struct{}{}
+							select {
+							case <-ctx.Done():
+								break
+							default:
+								done <- struct{}{}
+								break
+							}
 							t.logger.InfoContext(ctx, "exchanged ["+domain+"] by: ", trans.Tag(), " queryType: ", question.Qtype)
 						})
 					}
@@ -116,7 +123,13 @@ func (t *BatchTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS
 			if count.Add(-1) == 0 {
 				if onceFlag.CompareAndSwap(false, true) {
 					once.Do(func() {
-						done <- struct{}{}
+						select {
+						case <-ctx.Done():
+							break
+						default:
+							done <- struct{}{}
+							break
+						}
 					})
 				}
 			}
@@ -134,8 +147,13 @@ func (t *BatchTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS
 			})
 		}
 	case <-done:
+		if onceFlag.CompareAndSwap(false, true) {
+			once.Do(func() {
+			})
+		}
 	}
 	onceFlag.Store(true)
+
 	cancel()
 	close(done)
 	if result != nil {
