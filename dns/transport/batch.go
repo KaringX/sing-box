@@ -77,10 +77,7 @@ func (t *BatchTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS
 	var errOnce sync.Once
 	var emptyOnce sync.Once
 	var count atomic.Int64
-
 	var onceFlag atomic.Bool
-	var errOnceFlag atomic.Bool
-	var emptyOnceFlag atomic.Bool
 	done := make(chan struct{})
 	ctx, cancel := context.WithCancel(ctx)
 
@@ -91,45 +88,37 @@ func (t *BatchTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS
 			ret, err := trans.Exchange(ctx, copydMessage)
 			if err == nil {
 				if len(ret.Answer) == 0 {
-					if emptyOnceFlag.CompareAndSwap(false, true) {
-						emptyOnce.Do(func() {
-							resultEmpty = ret
-							t.logger.InfoContext(ctx, "exchanged empty result ["+domain+"] by: ", trans.Tag(), " queryType: ", question.Qtype)
-						})
-					}
+					emptyOnce.Do(func() {
+						resultEmpty = ret
+						t.logger.InfoContext(ctx, "exchanged empty result ["+domain+"] by: ", trans.Tag(), " queryType: ", question.Qtype)
+					})
 				} else {
 					if onceFlag.CompareAndSwap(false, true) {
 						once.Do(func() {
 							result = ret
-							select {
-							case <-ctx.Done():
-								break
-							default:
-								done <- struct{}{}
-								break
-							}
 							t.logger.InfoContext(ctx, "exchanged ["+domain+"] by: ", trans.Tag(), " queryType: ", question.Qtype)
+							select {
+							case done <- struct{}{}:
+							default:
+							}
+							close(done)
 						})
 					}
 				}
 			} else {
-				if errOnceFlag.CompareAndSwap(false, true) {
-					errOnce.Do(func() {
-						errResult = err
-					})
-				}
+				errOnce.Do(func() {
+					errResult = err
+				})
 			}
 
 			if count.Add(-1) == 0 {
 				if onceFlag.CompareAndSwap(false, true) {
 					once.Do(func() {
 						select {
-						case <-ctx.Done():
-							break
+						case done <- struct{}{}:
 						default:
-							done <- struct{}{}
-							break
 						}
+						close(done)
 					})
 				}
 			}
@@ -139,23 +128,15 @@ func (t *BatchTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS
 	case <-ctx.Done():
 		if onceFlag.CompareAndSwap(false, true) {
 			once.Do(func() {
+				close(done)
 			})
 		}
-		if errOnceFlag.CompareAndSwap(false, true) {
-			errOnce.Do(func() {
-				errResult = E.New("dns Exchange canceled :", domain)
-			})
-		}
+		errOnce.Do(func() {
+			errResult = E.New("dns Exchange canceled :", domain)
+		})
 	case <-done:
-		if onceFlag.CompareAndSwap(false, true) {
-			once.Do(func() {
-			})
-		}
 	}
-	onceFlag.Store(true)
-
 	cancel()
-	close(done)
 	if result != nil {
 		return result, nil
 	}

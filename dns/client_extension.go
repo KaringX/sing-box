@@ -28,8 +28,6 @@ func (c *Client) lookupToExchange_A_AAAA(ctx context.Context, transport adapter.
 	var count atomic.Int64
 	var once sync.Once
 	var errOnce sync.Once
-	var onceFlag atomic.Bool
-	var errOnceFlag atomic.Bool
 	done := make(chan struct{})
 	ctx, cancel := context.WithCancel(ctx)
 	count.Add(int64(len(dnsQueryTypes)))
@@ -42,63 +40,46 @@ func (c *Client) lookupToExchange_A_AAAA(ctx context.Context, transport adapter.
 					case dns.TypeA:
 						response4 = response
 						if strategy == C.DomainStrategyPreferIPv4 {
-							if onceFlag.CompareAndSwap(false, true) {
-								once.Do(func() {
-									select {
-									case <-ctx.Done():
-										break
-									default:
-										done <- struct{}{}
-										break
-									}
-								})
-							}
+							once.Do(func() {
+								select {
+								case done <- struct{}{}:
+								default:
+								}
+								close(done)
+							})
 						}
 					case dns.TypeAAAA:
 						response6 = response
 						if strategy == C.DomainStrategyPreferIPv6 {
-							if onceFlag.CompareAndSwap(false, true) {
-								once.Do(func() {
-									select {
-									case <-ctx.Done():
-										break
-									default:
-										done <- struct{}{}
-										break
-									}
-								})
-							}
+							once.Do(func() {
+								select {
+								case done <- struct{}{}:
+								default:
+								}
+								close(done)
+							})
 						}
 					}
 				}
 			} else {
-				if errOnceFlag.CompareAndSwap(false, true) {
-					errOnce.Do(func() {
-						returnError = E.Cause(err, "dns exchange type: "+dns.TypeToString[qtype])
-					})
-				}
+				errOnce.Do(func() {
+					returnError = E.Cause(err, "dns exchange type: "+dns.TypeToString[qtype])
+				})
 			}
 
 			if count.Add(-1) == 0 {
-				if onceFlag.CompareAndSwap(false, true) {
-					once.Do(func() {
-						select {
-						case <-ctx.Done():
-							break
-						default:
-							done <- struct{}{}
-							break
-						}
-					})
-				}
+				once.Do(func() {
+					select {
+					case done <- struct{}{}:
+					default:
+					}
+					close(done)
+				})
 			}
 		}(queryType)
 	}
 	<-done
-	onceFlag.Store(true)
 	cancel()
-
-	close(done)
 	if len(response4) == 0 && len(response6) == 0 {
 		return nil, nil, returnError
 	}
