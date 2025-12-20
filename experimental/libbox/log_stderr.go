@@ -18,7 +18,9 @@ func StderrRedirect(path string) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			panicErrMessage := fmt.Sprintf("%v", e)
-			SentryCaptureErrorMessage(panicErrMessage, "panic: StderrRedirect", SentryTrim(string(debug.Stack())))
+			stack := SentryTrim(string(debug.Stack()))
+			err = E.New(panicErrMessage, "\n", "panic: StderrRedirect", "\n", stack)
+			SentryCaptureErrorMessage(panicErrMessage, "panic: StderrRedirect", stack)
 		}
 	}()
 	if len(path) == 0 {

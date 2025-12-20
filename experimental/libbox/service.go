@@ -49,7 +49,9 @@ func NewService(configContent string, platformInterface PlatformInterface) (boxS
 	defer func() { //karing
 		if e := recover(); e != nil {
 			panicErrMessage := fmt.Sprintf("%v", e)
-			SentryCaptureErrorMessage(panicErrMessage, "panic: create service", SentryTrim(string(debug.Stack())))
+			stack := SentryTrim(string(debug.Stack()))
+			err = E.New(panicErrMessage, "\n", "panic: create service", "\n", stack)
+			SentryCaptureErrorMessage(panicErrMessage, "panic: create service", stack)
 		}
 	}()
 	D.MainGoroutineId = D.GetCurrentGoroutineId()                                                                 //karing
@@ -104,7 +106,9 @@ func (s *BoxService) Start() (err error) { //karing
 	defer func() { //karing
 		if e := recover(); e != nil {
 			panicErrMessage := fmt.Sprintf("%v", e)
-			SentryCaptureErrorMessage(panicErrMessage, "panic: start service", SentryTrim(string(debug.Stack())))
+			stack := SentryTrim(string(debug.Stack()))
+			err = E.New(panicErrMessage, "\n", "panic: start service", "\n", stack)
+			SentryCaptureErrorMessage(panicErrMessage, "panic: start service", stack)
 		}
 	}()
 	D.MainGoroutineId = D.GetCurrentGoroutineId() //karing
