@@ -2,9 +2,107 @@
 icon: material/alert-decagram
 ---
 
-#### 1.13.0-alpha.27
+#### 1.13.0-alpha.33
 
 * Fixes and improvements
+
+#### 1.13.0-alpha.32
+
+* Remove `certificate_public_key_sha256` option for NaiveProxy outbound **1**
+* Fixes and improvements
+
+**1**:
+
+Self-signed certificates change traffic behavior significantly, which defeats the purpose of NaiveProxy's design to resist traffic analysis.
+For this reason, and due to maintenance costs, there is no reason to continue supporting `certificate_public_key_sha256`, which was designed to simplify the use of self-signed certificates.
+
+#### 1.13.0-alpha.31
+
+* Add QUIC support for NaiveProxy outbound **1**
+* Add QUIC congestion control option for NaiveProxy **2**
+* Fixes and improvements
+
+**1**:
+
+NaiveProxy outbound now supports QUIC.
+
+See [NaiveProxy outbound](/configuration/outbound/naive/#quic).
+
+**2**:
+
+NaiveProxy inbound and outbound now supports configurable QUIC congestion control algorithms, including BBR and BBRv2.
+
+See [NaiveProxy inbound](/configuration/inbound/naive/#quic_congestion_control) and [NaiveProxy outbound](/configuration/outbound/naive/#quic_congestion_control).
+
+#### 1.13.0-alpha.30
+
+* Add ECH support for NaiveProxy outbound **1**
+* Add `tls.ech.query_server_name` option **2**
+* Fix NaiveProxy outbound on Windows **3**
+* Add OpenAI Codex Multiplexer service **4**
+* Fixes and improvements
+
+**1**:
+
+See [NaiveProxy outbound](/configuration/outbound/naive/#tls).
+
+**2**:
+
+See [TLS](/configuration/shared/tls/#query_server_name).
+
+**3**:
+
+Each Windows release now includes `libcronet.dll`.
+Ensure this file is in the same directory as `sing-box.exe` or in a directory listed in `PATH`.
+
+**4**:
+
+See [OCM](/configuration/service/ocm).
+
+#### 1.13.0-alpha.29
+
+* Add UDP over TCP support for naiveproxy outbound **1**
+* Fixes and improvements
+
+**1**:
+
+See [NaiveProxy outbound](/configuration/outbound/naive/#udp_over_tcp).
+
+#### 1.13.0-alpha.28
+
+* Add naiveproxy outbound **1**
+* Add `disable_tcp_keep_alive`, `tcp_keep_alive` and `tcp_keep_alive_interval` options for dial fields **2**
+* Update default TCP keep-alive initial period from 10 minutes to 5 minutes
+* Update quic-go to v0.57.1
+* Fixes and improvements
+
+**1**:
+
+Only available on Apple platforms, Android, Windows and some Linux architectures.
+
+See [NaiveProxy outbound](/configuration/outbound/naive/).
+
+**2**:
+
+See [Dial Fields](/configuration/shared/dial/#tcp_keep_alive).
+
+* __Unfortunately, for non-technical reasons, we are currently unable to notarize the standalone version of the macOS client:
+because system extensions require signatures to function, we have had to temporarily halt its release.__
+
+__We plan to fix the App Store release issue and launch a new standalone desktop client, but until then,
+only clients on TestFlight will be available (unless you have an Apple Developer Program and compile from source code).__
+
+
+#### 1.12.13
+
+* Fix naive inbound
+* Fixes and improvements
+
+__Unfortunately, for non-technical reasons, we are currently unable to notarize the standalone version of the macOS client:
+because system extensions require signatures to function, we have had to temporarily halt its release.__
+
+__We plan to fix the App Store release issue and launch a new standalone desktop client, but until then,
+only clients on TestFlight will be available (unless you have an Apple Developer Program and compile from source code).__
 
 #### 1.12.12
 

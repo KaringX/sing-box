@@ -12,7 +12,6 @@ import (
 	"github.com/sagernet/sing-box/common/conntrack"
 	"github.com/sagernet/sing-box/common/listener"
 	C "github.com/sagernet/sing-box/constant"
-	"github.com/sagernet/sing-box/experimental/libbox/platform"
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/control"
@@ -49,7 +48,7 @@ type DefaultDialer struct {
 
 func NewDefault(ctx context.Context, options option.DialerOptions) (*DefaultDialer, error) {
 	networkManager := service.FromContext[adapter.NetworkManager](ctx)
-	platformInterface := service.FromContext[platform.Interface](ctx)
+	platformInterface := service.FromContext[adapter.PlatformInterface](ctx)
 
 	var (
 		dialer                 net.Dialer
@@ -143,9 +142,18 @@ func NewDefault(ctx context.Context, options option.DialerOptions) (*DefaultDial
 	} else {
 		dialer.Timeout = C.TCPConnectTimeout
 	}
-	// TODO: Add an option to customize the keep alive period
-	dialer.KeepAlive = C.TCPKeepAliveInitial
-	dialer.Control = control.Append(dialer.Control, control.SetKeepAlivePeriod(C.TCPKeepAliveInitial, C.TCPKeepAliveInterval))
+	if !options.DisableTCPKeepAlive {
+		keepIdle := time.Duration(options.TCPKeepAlive)
+		if keepIdle == 0 {
+			keepIdle = C.TCPKeepAliveInitial
+		}
+		keepInterval := time.Duration(options.TCPKeepAliveInterval)
+		if keepInterval == 0 {
+			keepInterval = C.TCPKeepAliveInterval
+		}
+		dialer.KeepAlive = keepIdle
+		dialer.Control = control.Append(dialer.Control, control.SetKeepAlivePeriod(keepIdle, keepInterval))
+	}
 	var udpFragment bool
 	if options.UDPFragment != nil {
 		udpFragment = *options.UDPFragment

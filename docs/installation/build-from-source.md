@@ -57,6 +57,45 @@ go build -tags "tag_a tag_b" ./cmd/sing-box
 | `with_v2ray_api`                   | :material-close:️    | Build with V2Ray API support, see [Experimental](/configuration/experimental#v2ray-api-fields).                                                                                                                                                                                                                                |
 | `with_gvisor`                      | :material-check:     | Build with gVisor support, see [Tun inbound](/configuration/inbound/tun#stack) and [WireGuard outbound](/configuration/outbound/wireguard#system_interface).                                                                                                                                                                   |
 | `with_embedded_tor` (CGO required) | :material-close:️    | Build with embedded Tor support, see [Tor outbound](/configuration/outbound/tor/).                                                                                                                                                                                                                                             |
-| `with_tailscale`                   | :material-check:   | Build with Tailscale support, see [Tailscale endpoint](/configuration/endpoint/tailscale)                                                                                                                                                                                                                                      |
+| `with_tailscale`                   | :material-check:     | Build with Tailscale support, see [Tailscale endpoint](/configuration/endpoint/tailscale)                                                                                                                                                                                                                                      |
+| `with_naive_outbound`              | :material-close:️    | Build with NaiveProxy outbound support, see [NaiveProxy outbound](/configuration/outbound/naive/).                                                                                                                                                                                                                             |
 
 It is not recommended to change the default build tag list unless you really know what you are adding.
+
+## :material-layers: with_naive_outbound
+
+NaiveProxy outbound requires special build configurations depending on your target platform.
+
+### Supported Platforms
+
+| Platform        | Architectures          | Mode   | Requirements                                      |
+|-----------------|------------------------|--------|---------------------------------------------------|
+| Linux           | amd64, arm64           | purego | None (library included in official releases)      |
+| Linux           | 386, amd64, arm, arm64 | CGO    | Chromium toolchain, glibc >= 2.31 at runtime      |
+| Linux (musl)    | 386, amd64, arm, arm64 | CGO    | Chromium toolchain                                |
+| Windows         | amd64, arm64           | purego | None (library included in official releases)      |
+| Apple platforms | *                      | CGO    | Xcode                                             |
+| Android         | *                      | CGO    | Android NDK                                       |
+
+### Windows
+
+Use `with_purego` tag.
+
+For official releases, `libcronet.dll` is included in the archive. For self-built binaries, download from [cronet-go releases](https://github.com/sagernet/cronet-go/releases) and place in the same directory as `sing-box.exe` or in a directory listed in `PATH`.
+
+### Linux (purego, amd64/arm64 only)
+
+Use `with_purego` tag.
+
+For official releases, `libcronet.so` is included in the archive. For self-built binaries, download from [cronet-go releases](https://github.com/sagernet/cronet-go/releases) and place in the same directory as sing-box binary or in system library path.
+
+### Linux (CGO)
+
+See [cronet-go](https://github.com/sagernet/cronet-go#linux-build-instructions).
+
+- **glibc build**: Requires glibc >= 2.31 at runtime
+- **musl build**: Use `with_musl` tag, statically linked, no runtime requirements
+
+### Apple platforms / Android
+
+See [cronet-go](https://github.com/sagernet/cronet-go).
