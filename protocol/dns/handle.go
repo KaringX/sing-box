@@ -46,7 +46,8 @@ func HandleStreamDNSRequest(ctx context.Context, router adapter.DNSRouter, conn 
 			conn.Close()
 			return err
 		}
-		responseBuffer := buf.NewPacket()
+		responseLength := response.Len()
+		responseBuffer := buf.NewSize(3 + responseLength)
 		defer responseBuffer.Release()
 		responseBuffer.Resize(2, 0)
 		n, err := response.PackBuffer(responseBuffer.FreeBytes())
@@ -70,7 +71,7 @@ func NewDNSPacketConnection(ctx context.Context, router adapter.DNSRouter, conn 
 		reader, counters = N.UnwrapCountPacketReader(reader, counters)
 		if cachedReader, isCached := reader.(N.CachedPacketReader); isCached {
 			packet := cachedReader.ReadCachedPacket()
-			if packet != nil && packet.Buffer != nil{ //karing
+			if packet != nil && packet.Buffer != nil { //karing
 				cachedPackets = append(cachedPackets, packet)
 				continue
 			}
