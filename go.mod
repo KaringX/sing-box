@@ -63,7 +63,7 @@ require ( //hiddify
 	github.com/pires/go-proxyproto v0.8.0
 )
 
-require ( //// https://github.com/starifly/sing-box
+require ( //https://github.com/starifly/sing-box
 	github.com/quic-go/quic-go v0.55.0
 )
 
