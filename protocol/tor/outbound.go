@@ -43,6 +43,10 @@ type Outbound struct {
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.TorOutboundOptions) (adapter.Outbound, error) {
+	empty := &Outbound{ //karing
+		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeTor, tag, []string{}, options.DialerOptions),
+		logger:  logger,
+	}
 	var startConf tor.StartConf
 	startConf.DataDir = os.ExpandEnv(options.DataDirectory)
 	startConf.TempDataDirBase = os.TempDir()
@@ -70,14 +74,14 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		if !rw.IsFile(torrcFile) {
 			err := os.WriteFile(torrcFile, []byte(""), 0o600)
 			if err != nil {
-				return nil, err
+				return empty, err //karing
 			}
 		}
 		startConf.TorrcFile = torrcFile
 	}
 	outboundDialer, err := dialer.New(ctx, options.DialerOptions, false)
 	if err != nil {
-		return nil, err
+		return empty, err //karing
 	}
 	return &Outbound{
 		Adapter:   outbound.NewAdapterWithDialerOptions(C.TypeTor, tag, []string{N.NetworkTCP}, options.DialerOptions),
@@ -106,6 +110,9 @@ var torLogEvents = []control.EventCode{
 }
 
 func (t *Outbound) start() error {
+	if t.GetParseErr() != nil { //karing
+		return t.GetParseErr()
+	}
 	torInstance, err := tor.Start(t.ctx, t.startConf)
 	if err != nil {
 		return E.New(strings.ToLower(err.Error()))
@@ -124,9 +131,9 @@ func (t *Outbound) start() error {
 	proxyPort := "127.0.0.1:" + F.ToString(t.proxy.Port())
 	proxyUsername := t.proxy.Username()
 	proxyPassword := t.proxy.Password()
-	t.logger.Trace("created upstream proxy at ", proxyPort)
-	t.logger.Trace("upstream proxy username ", proxyUsername)
-	t.logger.Trace("upstream proxy password ", proxyPassword)
+	t.logger.TraceContext(t.ctx, "created upstream proxy at ", proxyPort)   //karing
+	t.logger.TraceContext(t.ctx, "upstream proxy username ", proxyUsername) //karing
+	t.logger.TraceContext(t.ctx, "upstream proxy password ", proxyPassword) //karing
 	confOptions := []*control.KeyVal{
 		control.NewKeyVal("Socks5Proxy", proxyPort),
 		control.NewKeyVal("Socks5ProxyUsername", proxyUsername),
@@ -161,7 +168,7 @@ func (t *Outbound) start() error {
 	if len(info) != 1 || info[0].Key != "net/listeners/socks" {
 		return E.New("get socks proxy address")
 	}
-	t.logger.Trace("obtained tor socks5 address ", info[0].Val)
+	t.logger.TraceContext(t.ctx, "obtained tor socks5 address ", info[0].Val) //karing
 	// TODO: set password for tor socks5 server if supported
 	t.socksClient = socks.NewClient(N.SystemDialer, M.ParseSocksaddr(info[0].Val), socks.Version5, "", "")
 	return nil
@@ -174,17 +181,17 @@ func (t *Outbound) recvLoop() {
 			event.Raw = strings.ToLower(event.Raw)
 			switch event.Severity {
 			case control.EventCodeLogDebug, control.EventCodeLogInfo:
-				t.logger.Trace(event.Raw)
+				t.logger.TraceContext(t.ctx, event.Raw) //karing
 			case control.EventCodeLogNotice:
 				if strings.Contains(event.Raw, "disablenetwork") || strings.Contains(event.Raw, "socks listener") {
-					t.logger.Trace(event.Raw)
+					t.logger.TraceContext(t.ctx, event.Raw) //karing
 					continue
 				}
-				t.logger.Info(event.Raw)
+				t.logger.InfoContext(t.ctx, event.Raw) //karing
 			case control.EventCodeLogWarn:
-				t.logger.Warn(event.Raw)
+				t.logger.WarnContext(t.ctx, event.Raw) //karing
 			case control.EventCodeLogErr:
-				t.logger.Error(event.Raw)
+				t.logger.ErrorContext(t.ctx, event.Raw) //karing
 			}
 		}
 	}
@@ -203,6 +210,9 @@ func (t *Outbound) Close() error {
 }
 
 func (t *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
+	if t.GetParseErr() != nil { //karing
+		return nil, t.GetParseErr()
+	}
 	t.logger.InfoContext(ctx, "outbound connection to ", destination)
 	return t.socksClient.DialContext(ctx, network, destination)
 }

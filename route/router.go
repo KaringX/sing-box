@@ -2,6 +2,7 @@ package route
 
 import (
 	"context"
+
 	"os"
 	"runtime"
 
@@ -22,24 +23,25 @@ import (
 var _ adapter.Router = (*Router)(nil)
 
 type Router struct {
-	ctx               context.Context
-	logger            log.ContextLogger
-	inbound           adapter.InboundManager
-	outbound          adapter.OutboundManager
-	dns               adapter.DNSRouter
-	dnsTransport      adapter.DNSTransportManager
-	connection        adapter.ConnectionManager
-	network           adapter.NetworkManager
-	rules             []adapter.Rule
-	needFindProcess   bool
-	ruleSets          []adapter.RuleSet
-	ruleSetMap        map[string]adapter.RuleSet
-	processSearcher   process.Searcher
-	pauseManager      pause.Manager
-	trackers          []adapter.ConnectionTracker
-	platformInterface platform.Interface
-	needWIFIState     bool
-	started           bool
+	ctx                     context.Context
+	logger                  log.ContextLogger
+	inbound                 adapter.InboundManager
+	outbound                adapter.OutboundManager
+	dns                     adapter.DNSRouter
+	dnsTransport            adapter.DNSTransportManager
+	connection              adapter.ConnectionManager
+	network                 adapter.NetworkManager
+	rules                   []adapter.Rule
+	needFindProcess         bool
+	ruleSetsRemoteWithLocal []adapter.RuleSet //karing
+	ruleSets                []adapter.RuleSet
+	ruleSetMap              map[string]adapter.RuleSet
+	processSearcher         process.Searcher
+	pauseManager            pause.Manager
+	trackers                []adapter.ConnectionTracker
+	platformInterface       platform.Interface
+	needWIFIState           bool
+	started                 bool
 }
 
 func NewRouter(ctx context.Context, logFactory log.Factory, options option.RouteOptions, dnsOptions option.DNSOptions) *Router {
@@ -73,6 +75,21 @@ func (r *Router) Initialize(rules []option.Rule, ruleSets []option.RuleSet) erro
 		if _, exists := r.ruleSetMap[options.Tag]; exists {
 			return E.New("duplicate rule-set tag: ", options.Tag)
 		}
+		if options.Type == C.RuleSetTypeRemote { //karing
+			if len(options.RemoteOptions.Path) != 0 {
+				cacheFile := service.FromContext[adapter.CacheFile](r.ctx)
+				if cacheFile != nil {
+					if !cacheFile.HasRuleSet(options.RemoteOptions.URL) {
+						ruleSet := R.NewRemoteRuleSet(r.ctx, r.logger, options)
+						r.ruleSetsRemoteWithLocal = append(r.ruleSetsRemoteWithLocal, ruleSet)
+
+						options.Type = C.RuleSetTypeLocal
+						options.LocalOptions.Path = options.RemoteOptions.Path
+						options.LocalOptions.IsAsset = options.RemoteOptions.IsAsset
+					}
+				}
+			}
+		}
 		ruleSet, err := R.NewRuleSet(r.ctx, r.logger, options)
 		if err != nil {
 			return E.Cause(err, "parse rule-set[", i, "]")
@@ -92,12 +109,12 @@ func (r *Router) Start(stage adapter.StartStage) error {
 			monitor.Start("initialize rule-set")
 			cacheContext = adapter.NewHTTPStartContext(r.ctx)
 			var ruleSetStartGroup task.Group
-			for i, ruleSet := range r.ruleSets {
+			for _, ruleSet := range r.ruleSets { //karing
 				ruleSetInPlace := ruleSet
 				ruleSetStartGroup.Append0(func(ctx context.Context) error {
 					err := ruleSetInPlace.StartContext(ctx, cacheContext)
 					if err != nil {
-						return E.Cause(err, "initialize rule-set[", i, "]")
+						return E.Cause(err, "initialize rule-set[", ruleSet.Name(), "]") //karing
 					}
 					return nil
 				})
@@ -113,6 +130,25 @@ func (r *Router) Start(stage adapter.StartStage) error {
 		if cacheContext != nil {
 			cacheContext.Close()
 		}
+		if len(r.ruleSetsRemoteWithLocal) > 0 { //karing
+			cacheRemoteContext := adapter.NewHTTPStartContext(r.ctx)
+			var ruleSetStartGroup task.Group
+			for _, ruleSet := range r.ruleSetsRemoteWithLocal { //karing
+				ruleSetInPlace := ruleSet
+				ruleSetStartGroup.Append0(func(ctx context.Context) error {
+					err := ruleSetInPlace.StartContext(ctx, cacheRemoteContext)
+					if err != nil {
+						return E.Cause(err, "initialize rule-set-remote[", ruleSet.Name(), "]") //karing
+					}
+					return nil
+				})
+			}
+			ruleSetStartGroup.Concurrency(5)
+			ruleSetStartGroup.FastFail()
+			ruleSetStartGroup.Run(r.ctx)
+
+			cacheRemoteContext.Close()
+		}
 		needFindProcess := r.needFindProcess
 		for _, ruleSet := range r.ruleSets {
 			metadata := ruleSet.Metadata()
@@ -123,8 +159,8 @@ func (r *Router) Start(stage adapter.StartStage) error {
 				r.needWIFIState = true
 			}
 		}
-		if needFindProcess {
-			if r.platformInterface != nil {
+		if needFindProcess && !C.IsIos { //karing
+			if r.platformInterface != nil && !C.IsDarwin { //karing
 				r.processSearcher = r.platformInterface
 			} else {
 				monitor.Start("initialize process searcher")
@@ -143,12 +179,12 @@ func (r *Router) Start(stage adapter.StartStage) error {
 			}
 		}
 	case adapter.StartStatePostStart:
-		for i, rule := range r.rules {
-			monitor.Start("initialize rule[", i, "]")
+		for _, rule := range r.rules { //karing
+			monitor.Start("initialize rule[", rule.Name(), "]") //karing
 			err := rule.Start()
 			monitor.Finish()
 			if err != nil {
-				return E.Cause(err, "initialize rule[", i, "]")
+				return E.Cause(err, "initialize rule[", rule.Name(), "]") //karing
 			}
 		}
 		for _, ruleSet := range r.ruleSets {
@@ -157,6 +193,14 @@ func (r *Router) Start(stage adapter.StartStage) error {
 			monitor.Finish()
 			if err != nil {
 				return E.Cause(err, "post start rule_set[", ruleSet.Name(), "]")
+			}
+		}
+		for _, ruleSet := range r.ruleSetsRemoteWithLocal { //karing
+			monitor.Start("post start rule_set_remote_with_local[", ruleSet.Name(), "]")
+			err := ruleSet.PostStart()
+			monitor.Finish()
+			if err != nil {
+				return E.Cause(err, "post start rule_set_remote_with_local[", ruleSet.Name(), "]")
 			}
 		}
 		r.started = true
@@ -187,6 +231,18 @@ func (r *Router) Close() error {
 		})
 		monitor.Finish()
 	}
+	r.inbound = nil                                        //karing
+	r.outbound = nil                                       //karing
+	r.connection = nil                                     //karing
+	r.network = nil                                        //karing
+	r.rules = make([]adapter.Rule, 0)                      //karing
+	r.ruleSetsRemoteWithLocal = make([]adapter.RuleSet, 0) //karing
+	r.ruleSets = make([]adapter.RuleSet, 0)                //karing
+	r.ruleSetMap = make(map[string]adapter.RuleSet)        //karing
+	r.processSearcher = nil                                //karing
+	r.pauseManager = nil                                   //karing
+	r.platformInterface = nil                              //karing
+
 	return err
 }
 
@@ -208,6 +264,13 @@ func (r *Router) AppendTracker(tracker adapter.ConnectionTracker) {
 }
 
 func (r *Router) ResetNetwork() {
-	r.network.ResetNetwork()
-	r.dns.ResetNetwork()
+	//r.network.ResetNetwork() //karing
+	//r.dns.ResetNetwork() //karing
+
+	if r.network != nil { //karing
+		r.network.ResetNetwork()
+	}
+	if r.dns != nil { //karing
+		r.dns.ResetNetwork()
+	}
 }

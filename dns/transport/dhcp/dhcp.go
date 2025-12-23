@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -16,7 +17,7 @@ import (
 	"github.com/sagernet/sing-box/dns"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
-	"github.com/sagernet/sing-tun"
+	tun "github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/buf"
 	"github.com/sagernet/sing/common/control"
@@ -53,6 +54,8 @@ type Transport struct {
 	search            []string
 	ndots             int
 	attempts          int
+	fetching          atomic.Bool
+	fetchFailTimes    atomic.Int32
 }
 
 func NewTransport(ctx context.Context, logger log.ContextLogger, tag string, options option.DHCPDNSServerOptions) (adapter.DNSTransport, error) {
@@ -129,6 +132,14 @@ func (t *Transport) Exchange0(ctx context.Context, message *mDNS.Msg, servers []
 }
 
 func (t *Transport) Fetch() ([]M.Socksaddr, error) {
+	if t.fetchFailTimes.Load() >= C.DHCPFetchMaxFaildTimes { //karing
+		t.logger.InfoContext(t.ctx, "dhcp: fetch server failed")
+		return nil, E.New("dhcp: fetch server failed")
+	}
+	if t.fetching.Load() { //karing
+		t.logger.InfoContext(t.ctx, "dhcp: fetching server")
+		return nil, E.New("dhcp: fetching server")
+	}
 	t.transportLock.RLock()
 	updatedAt := t.updatedAt
 	servers := t.servers
@@ -143,8 +154,15 @@ func (t *Transport) Fetch() ([]M.Socksaddr, error) {
 	}
 	err := t.updateServers()
 	if err != nil {
+		t.fetchFailTimes.Add(1)                                  //karing
+		if len(cachedServers) > 0 && !cachedUpdatedAt.IsZero() { //karing
+			t.servers = cachedServers
+			t.updatedAt = cachedUpdatedAt
+			return t.servers, nil
+		}
 		return nil, err
 	}
+	t.fetchFailTimes.Store(0) //karing
 	return t.servers, nil
 }
 
@@ -164,12 +182,22 @@ func (t *Transport) fetchInterface() (*control.Interface, error) {
 }
 
 func (t *Transport) updateServers() error {
+	serversFromSystemDNS := t.getServersFromSystemDNS() //karing
+	if len(serversFromSystemDNS) > 0 {                  //karing
+		t.servers = serversFromSystemDNS
+		t.updatedAt = time.Now()
+		t.logger.InfoContext(t.ctx, "dhcp: updated DNS servers from system dns", ": [", strings.Join(common.Map(t.servers, M.Socksaddr.String), ","), "]")
+		return nil
+	}
+
+	t.fetching.Store(true)        //karing
+	defer t.fetching.Store(false) //karing
 	iface, err := t.fetchInterface()
 	if err != nil {
 		return E.Cause(err, "dhcp: prepare interface")
 	}
 
-	t.logger.Info("dhcp: query DNS servers on ", iface.Name)
+	t.logger.InfoContext(t.ctx, "dhcp: query DNS servers on ", iface.Name) //karing
 	fetchCtx, cancel := context.WithTimeout(t.ctx, C.DHCPTimeout)
 	err = t.fetchServers0(fetchCtx, iface)
 	cancel()
@@ -184,9 +212,13 @@ func (t *Transport) updateServers() error {
 }
 
 func (t *Transport) interfaceUpdated(defaultInterface *control.Interface, flags int) {
+	var zeroTime time.Time     //karing
+	cachedServers = nil        //karing
+	cachedUpdatedAt = zeroTime //karing
+	t.fetchFailTimes.Store(0)  //karing
 	err := t.updateServers()
 	if err != nil {
-		t.logger.Error("update servers: ", err)
+		t.logger.ErrorContext(t.ctx, "update servers: ", err) //karing
 	}
 }
 
@@ -230,7 +262,7 @@ func (t *Transport) fetchServers0(ctx context.Context, iface *control.Interface)
 
 	var group task.Group
 	group.Append0(func(ctx context.Context) error {
-		return t.fetchServersResponse(iface, packetConn, discovery.TransactionID)
+		return t.fetchServersResponse(ctx, iface, packetConn, discovery.TransactionID) //karing
 	})
 	group.Cleanup(func() {
 		packetConn.Close()
@@ -238,14 +270,22 @@ func (t *Transport) fetchServers0(ctx context.Context, iface *control.Interface)
 	return group.Run(ctx)
 }
 
-func (t *Transport) fetchServersResponse(iface *control.Interface, packetConn net.PacketConn, transactionID dhcpv4.TransactionID) error {
+func (t *Transport) fetchServersResponse(ctx context.Context, iface *control.Interface, packetConn net.PacketConn, transactionID dhcpv4.TransactionID) error { //karing
 	buffer := buf.NewSize(dhcpv4.MaxMessageSize)
 	defer buffer.Release()
 
 	for {
+		deadline, ok := ctx.Deadline() //karing
+		if ok {                        //karing
+			if time.Now().After(deadline) {
+				return E.New("dhcp: fetchServersResponse timeout")
+			}
+		}
 		_, _, err := buffer.ReadPacketFrom(packetConn)
 		if err != nil {
+			t.logger.TraceContext(t.ctx, "dhcp: readPacketFrom: ", err) //karing
 			if errors.Is(err, io.ErrShortBuffer) {
+				buffer.Reset() //karing
 				continue
 			}
 			return err
@@ -253,17 +293,17 @@ func (t *Transport) fetchServersResponse(iface *control.Interface, packetConn ne
 
 		dhcpPacket, err := dhcpv4.FromBytes(buffer.Bytes())
 		if err != nil {
-			t.logger.Trace("dhcp: parse DHCP response: ", err)
+			t.logger.TraceContext(t.ctx, "dhcp: parse DHCP response: ", err) //karing
 			return err
 		}
 
 		if dhcpPacket.MessageType() != dhcpv4.MessageTypeOffer {
-			t.logger.Trace("dhcp: expected OFFER response, but got ", dhcpPacket.MessageType())
+			t.logger.TraceContext(t.ctx, "dhcp: expected OFFER response, but got ", dhcpPacket.MessageType()) //karing
 			continue
 		}
 
 		if dhcpPacket.TransactionID != transactionID {
-			t.logger.Trace("dhcp: expected transaction ID ", transactionID, ", but got ", dhcpPacket.TransactionID)
+			t.logger.TraceContext(t.ctx, "dhcp: expected transaction ID ", transactionID, ", but got ", dhcpPacket.TransactionID) //karing
 			continue
 		}
 
@@ -285,5 +325,7 @@ func (t *Transport) recreateServers(iface *control.Interface, dhcpPacket *dhcpv4
 		t.logger.Info("dhcp: updated DNS servers from ", iface.Name, ": [", strings.Join(common.Map(serverAddrs, M.Socksaddr.String), ","), "], search: [", strings.Join(t.search, ","), "]")
 	}
 	t.servers = serverAddrs
+	cachedServers = t.servers    //karing
+	cachedUpdatedAt = time.Now() //karing
 	return nil
 }

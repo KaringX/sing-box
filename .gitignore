@@ -18,3 +18,11 @@
 CLAUDE.md
 AGENTS.md
 /.claude/
+!/README.md
+/*.md
+cache.db
+*.exe
+/*.log
+/.vscode
+/experimental/libbox/sentry_private.go
+karingService

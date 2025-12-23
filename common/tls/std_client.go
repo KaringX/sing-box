@@ -78,7 +78,11 @@ func NewSTDClient(ctx context.Context, serverAddress string, options option.Outb
 	tlsConfig.Time = ntp.TimeFuncFromContext(ctx)
 	tlsConfig.RootCAs = adapter.RootPoolFromContext(ctx)
 	if !options.DisableSNI {
-		tlsConfig.ServerName = serverName
+		if options.TLSTricks != nil && options.TLSTricks.MixedCaseSNI { //hiddify
+			tlsConfig.ServerName = randomizeCase(tlsConfig.ServerName)
+		} else {
+			tlsConfig.ServerName = serverName
+		}
 	}
 	if options.Insecure {
 		tlsConfig.InsecureSkipVerify = options.Insecure

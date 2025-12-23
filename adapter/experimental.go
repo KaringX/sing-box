@@ -3,6 +3,7 @@ package adapter
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/binary"
 	"time"
 
@@ -20,6 +21,7 @@ type ClashServer interface {
 type URLTestHistory struct {
 	Time  time.Time `json:"time"`
 	Delay uint16    `json:"delay"`
+	Err   string    `json:"err,omitempty"` // karing
 }
 
 type URLTestHistoryStorage interface {
@@ -28,6 +30,12 @@ type URLTestHistoryStorage interface {
 	DeleteURLTestHistory(tag string)
 	StoreURLTestHistory(tag string, history *URLTestHistory)
 	Close() error
+	GetURLTestHistory() map[string]*URLTestHistory // karing
+}
+
+type URLTestResult struct { // karing
+	Delay uint16 `json:"delay,omitempty"`
+	Err   string `json:"err,omitempty"`
 }
 
 type V2RayServer interface {
@@ -36,6 +44,7 @@ type V2RayServer interface {
 }
 
 type CacheFile interface {
+	BeforeStart() error //karing
 	LifecycleService
 
 	StoreFakeIP() bool
@@ -52,6 +61,23 @@ type CacheFile interface {
 	StoreGroupExpand(group string, expand bool) error
 	LoadRuleSet(tag string) *SavedBinary
 	SaveRuleSet(tag string, set *SavedBinary) error
+	DeleteRuleSet(tag string)                             //karing
+	HasRuleSet(tag string) bool                           //karing
+	GetAllRuleSetCachedLastUpdated() map[string]time.Time //karing
+	GetAllRuleSetFailed() map[string]string               //karing
+	SetRulesetFetchError(tag string, err string)          //karing
+}
+
+type Statistics interface { //karing
+	LifecycleService
+	Exec(sql string) (sql.Result, error)
+	Query(query string, args ...any) (*sql.Rows, error)
+	Prepare(tx *sql.Tx, sql string) (*sql.Stmt, error)
+	ExecStmt(stmt *sql.Stmt, args ...any) (sql.Result, error)
+	BeginTx() (*sql.Tx, error)
+	Commit(tx *sql.Tx) error
+	DataDesensitize() bool
+	CacheDays() int
 }
 
 type SavedBinary struct {
@@ -113,7 +139,8 @@ type OutboundGroup interface {
 
 type URLTestGroup interface {
 	OutboundGroup
-	URLTest(ctx context.Context) (map[string]uint16, error)
+	URLTest(ctx context.Context, force bool) (map[string]URLTestResult, error) //karing
+	UpdateCheck()                                                              //karing
 }
 
 func OutboundTag(detour Outbound) string {

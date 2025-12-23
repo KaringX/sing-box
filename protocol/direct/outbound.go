@@ -43,6 +43,10 @@ type Outbound struct {
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.DirectOutboundOptions) (adapter.Outbound, error) {
+	empty := &Outbound{ //karing
+		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeDirect, tag, []string{}, options.DialerOptions),
+		logger:  logger,
+	}
 	options.UDPFragmentDefault = true
 	if options.Detour != "" {
 		return nil, E.New("`detour` is not supported in direct context")
@@ -54,7 +58,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		DirectOutbound: true,
 	})
 	if err != nil {
-		return nil, err
+		return empty, err //karing
 	}
 	outbound := &Outbound{
 		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeDirect, tag, []string{N.NetworkTCP, N.NetworkUDP}, options.DialerOptions),
@@ -69,7 +73,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 	}
 	//nolint:staticcheck
 	if options.ProxyProtocol != 0 {
-		return nil, E.New("Proxy Protocol is deprecated and removed in sing-box 1.6.0")
+		return empty, E.New("Proxy Protocol is deprecated and removed in sing-box 1.6.0") //karing
 	}
 	//nolint:staticcheck
 	if options.OverrideAddress != "" && options.OverridePort != 0 {
@@ -86,6 +90,9 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 }
 
 func (h *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
+	if h.GetParseErr() != nil { //karing
+		return nil, h.GetParseErr()
+	}
 	ctx, metadata := adapter.ExtendContext(ctx)
 	metadata.Outbound = h.Tag()
 	metadata.Destination = destination
@@ -115,6 +122,9 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 }
 
 func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
+	if h.GetParseErr() != nil { //karing
+		return nil, h.GetParseErr()
+	}
 	ctx, metadata := adapter.ExtendContext(ctx)
 	metadata.Outbound = h.Tag()
 	metadata.Destination = destination

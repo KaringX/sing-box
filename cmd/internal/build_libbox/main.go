@@ -9,6 +9,7 @@ import (
 
 	_ "github.com/sagernet/gomobile"
 	"github.com/sagernet/sing-box/cmd/internal/build_shared"
+	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/log"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/rw"
@@ -20,6 +21,7 @@ var (
 	target        string
 	platform      string
 	withTailscale bool
+	version       string //karing
 )
 
 func init() {
@@ -27,10 +29,12 @@ func init() {
 	flag.StringVar(&target, "target", "android", "target platform")
 	flag.StringVar(&platform, "platform", "", "specify platform")
 	flag.BoolVar(&withTailscale, "with-tailscale", false, "build tailscale for iOS and tvOS")
+	flag.StringVar(&version, "version", "", "additional version") //karing
 }
 
 func main() {
 	flag.Parse()
+	initFlags() //karing
 
 	build_shared.FindMobile()
 
@@ -52,23 +56,33 @@ var (
 	debugTags   []string
 )
 
-func init() {
+func initFlags() { //karing
 	sharedFlags = append(sharedFlags, "-trimpath")
 	sharedFlags = append(sharedFlags, "-buildvcs=false")
+	/* //karing
 	currentTag, err := build_shared.ReadTag()
 	if err != nil {
 		currentTag = "unknown"
 	}
-	sharedFlags = append(sharedFlags, "-ldflags", "-X github.com/sagernet/sing-box/constant.Version="+currentTag+" -s -w -buildid=")
-	debugFlags = append(debugFlags, "-ldflags", "-X github.com/sagernet/sing-box/constant.Version="+currentTag)
+	*/
+	currentTag := version                                                                                                                                 //karing
+	sharedFlags = append(sharedFlags, "-ldflags", "-X github.com/sagernet/sing-box/constant.Version="+currentTag+" -checklinkname=0 "+" -s -w -buildid=") //karing
+	debugFlags = append(debugFlags, "-ldflags", "-X github.com/sagernet/sing-box/constant.Version="+currentTag+" -checklinkname=0 ")                      //karing
 
 	sharedTags = append(sharedTags, "with_gvisor", "with_quic", "with_wireguard", "with_utls", "with_clash_api", "with_conntrack")
+	sharedTags = append(sharedTags, "with_low_memory", "with_tailscale", "with_acme", "with_shadowsocksr", "with_grpc", "with_karing") //karing
 	darwinTags = append(darwinTags, "with_dhcp")
 	memcTags = append(memcTags, "with_tailscale")
 	notMemcTags = append(notMemcTags, "with_low_memory")
 	debugTags = append(debugTags, "debug")
 }
 
+func getGoMobilePath() string { // karing
+	if C.IsWindows {
+		return "/gomobile.exe"
+	}
+	return "/gomobile"
+}
 func buildAndroid() {
 	build_shared.FindSDK()
 
@@ -122,7 +136,7 @@ func buildAndroid() {
 	args = append(args, "-tags", strings.Join(tags, ","))
 	args = append(args, "./experimental/libbox")
 
-	command := exec.Command(build_shared.GoBinPath+"/gomobile", args...)
+	command := exec.Command(build_shared.GoBinPath+getGoMobilePath(), args...) //karing
 	command.Stdout = os.Stdout
 	command.Stderr = os.Stderr
 	err = command.Run()
@@ -149,7 +163,7 @@ func buildApple() {
 	} else if debugEnabled {
 		bindTarget = "ios"
 	} else {
-		bindTarget = "ios,tvos,macos"
+		bindTarget = "ios,tvos,macos,iossimulator"
 	}
 
 	args := []string{
@@ -157,7 +171,7 @@ func buildApple() {
 		"-v",
 		"-target", bindTarget,
 		"-libname=box",
-		"-tags-not-macos=with_low_memory",
+		//"-tags-not-macos=with_low_memory", //karing
 	}
 	if !withTailscale {
 		args = append(args, "-tags-macos="+strings.Join(memcTags, ","))
@@ -180,7 +194,7 @@ func buildApple() {
 	args = append(args, "-tags", strings.Join(tags, ","))
 	args = append(args, "./experimental/libbox")
 
-	command := exec.Command(build_shared.GoBinPath+"/gomobile", args...)
+	command := exec.Command(build_shared.GoBinPath+getGoMobilePath(), args...) //karing
 	command.Stdout = os.Stdout
 	command.Stderr = os.Stderr
 	err := command.Run()

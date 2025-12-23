@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/sagernet/sing-box/adapter"
-	"github.com/sagernet/sing-box/common/tlsfragment"
+	tf "github.com/sagernet/sing-box/common/tlsfragment"
 	"github.com/sagernet/sing-box/option"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/ntp"
@@ -29,6 +29,7 @@ type UTLSClientConfig struct {
 	fragment              bool
 	fragmentFallbackDelay time.Duration
 	recordFragment        bool
+	paddingSize           option.IntRange //hiddify
 }
 
 func (c *UTLSClientConfig) ServerName() string {
@@ -57,8 +58,21 @@ func (c *UTLSClientConfig) Config() (*STDConfig, error) {
 func (c *UTLSClientConfig) Client(conn net.Conn) (Conn, error) {
 	if c.recordFragment {
 		conn = tf.NewConn(conn, c.ctx, c.fragment, c.recordFragment, c.fragmentFallbackDelay)
+		return &utlsALPNWrapper{utlsConnWrapper{utls.UClient(conn, c.config.Clone(), c.id)}, c.config.NextProtos}, nil //hiddify
 	}
-	return &utlsALPNWrapper{utlsConnWrapper{utls.UClient(conn, c.config.Clone(), c.id)}, c.config.NextProtos}, nil
+	var uConn *utls.UConn
+	if c.id != utls.HelloCustom { //hiddify
+		uConn = utls.UClient(conn, c.config.Clone(), c.id)
+	} else { //hiddify
+		uConn = utls.UClient(conn, c.config.Clone(), randomFingerprint)
+		var err error
+		uConn, err = makeTLSHelloPacketWithPadding(uConn, c.paddingSize, c.config.ServerName)
+		if err != nil {
+			return nil, err
+		}
+	}
+	//return &utlsALPNWrapper{utlsConnWrapper{utls.UClient(conn, c.config.Clone(), c.id)}, c.config.NextProtos}, nil //hiddify
+	return &utlsALPNWrapper{utlsConnWrapper{UConn: uConn}, c.config.NextProtos}, nil //hiddify
 }
 
 func (c *UTLSClientConfig) SetSessionIDGenerator(generator func(clientHello []byte, sessionID []byte) error) {
@@ -68,6 +82,7 @@ func (c *UTLSClientConfig) SetSessionIDGenerator(generator func(clientHello []by
 func (c *UTLSClientConfig) Clone() Config {
 	return &UTLSClientConfig{
 		c.ctx, c.config.Clone(), c.id, c.fragment, c.fragmentFallbackDelay, c.recordFragment,
+		c.paddingSize, //hiddify
 	}
 }
 
@@ -150,6 +165,10 @@ func NewUTLSClient(ctx context.Context, serverAddress string, options option.Out
 		return nil, E.New("missing server_name or insecure=true")
 	}
 
+	if options.TLSTricks != nil && options.TLSTricks.MixedCaseSNI { //hiddify
+		serverName = randomizeCase(serverName)
+	}
+
 	var tlsConfig utls.Config
 	tlsConfig.Time = ntp.TimeFuncFromContext(ctx)
 	tlsConfig.RootCAs = adapter.RootPoolFromContext(ctx)
@@ -214,7 +233,17 @@ func NewUTLSClient(ctx context.Context, serverAddress string, options option.Out
 	if err != nil {
 		return nil, err
 	}
-	uConfig := &UTLSClientConfig{ctx, &tlsConfig, id, options.Fragment, time.Duration(options.FragmentFallbackDelay), options.RecordFragment}
+	var paddingSize = option.IntRange{0, 0} //hiddify
+	if options.TLSTricks != nil {           //hiddify
+		switch options.TLSTricks.PaddingMode {
+		case "random":
+			paddingSize, err = option.Parse2IntRange(options.TLSTricks.PaddingSize)
+			if err != nil {
+				return nil, E.Cause(err, "invalid Padding Size supplied")
+			}
+		}
+	}
+	uConfig := &UTLSClientConfig{ctx, &tlsConfig, id, options.Fragment, time.Duration(options.FragmentFallbackDelay), options.RecordFragment, paddingSize} //hiddify
 	if options.ECH != nil && options.ECH.Enabled {
 		if options.Reality != nil && options.Reality.Enabled {
 			return nil, E.New("Reality is conflict with ECH")
@@ -272,6 +301,8 @@ func uTLSClientHelloID(name string) (utls.ClientHelloID, error) {
 		return randomFingerprint, nil
 	case "randomized":
 		return randomizedFingerprint, nil
+	case "custom": //hiddify
+		return utls.HelloCustom, nil
 	default:
 		return utls.ClientHelloID{}, E.New("unknown uTLS fingerprint: ", name)
 	}

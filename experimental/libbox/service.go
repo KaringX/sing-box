@@ -2,16 +2,19 @@ package libbox
 
 import (
 	"context"
+	"fmt"
 	"net/netip"
-	"os"
 	"runtime"
+	"runtime/debug"
 	runtimeDebug "runtime/debug"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
 
-	"github.com/sagernet/sing-box"
+	box "github.com/sagernet/sing-box"
 	"github.com/sagernet/sing-box/adapter"
+	D "github.com/sagernet/sing-box/common/debug"
 	"github.com/sagernet/sing-box/common/process"
 	"github.com/sagernet/sing-box/common/urltest"
 	C "github.com/sagernet/sing-box/constant"
@@ -20,7 +23,7 @@ import (
 	"github.com/sagernet/sing-box/experimental/libbox/platform"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
-	"github.com/sagernet/sing-tun"
+	tun "github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/control"
 	E "github.com/sagernet/sing/common/exceptions"
@@ -41,29 +44,51 @@ type BoxService struct {
 	iOSPauseFields
 }
 
-func NewService(configContent string, platformInterface PlatformInterface) (*BoxService, error) {
-	ctx := BaseContext(platformInterface)
+func NewService(configContent string, platformInterface PlatformInterface) (boxService *BoxService, err error) { //karing
+	SentryBoxServiceLaunch()
+	defer func() { //karing
+		if e := recover(); e != nil {
+			panicErrMessage := fmt.Sprintf("%v", e)
+			stack := SentryTrim(string(debug.Stack()))
+			err = E.New(panicErrMessage, "\n", "panic: create service", "\n", stack)
+			SentryCaptureErrorMessage(panicErrMessage, "panic: create service", stack)
+		}
+	}()
+	D.MainGoroutineId = D.GetCurrentGoroutineId()                                                                 //karing
+	ctx := context.WithValue(BaseContext(platformInterface), log.CtxKeyLogContextIdName, strconv.Itoa(contextId)) //karing
+	contextId++                                                                                                   //karing
 	service.MustRegister[deprecated.Manager](ctx, new(deprecatedManager))
-	options, err := parseConfig(ctx, configContent)
+	var options option.Options                     //karing
+	options, err = parseConfig(ctx, configContent) //karing
 	if err != nil {
+		SentryCaptureError(err, "create service") //karing
 		return nil, err
 	}
 	runtimeDebug.FreeOSMemory()
 	ctx, cancel := context.WithCancel(ctx)
 	urlTestHistoryStorage := urltest.NewHistoryStorage()
-	ctx = service.ContextWithPtr(ctx, urlTestHistoryStorage)
-	platformWrapper := &platformInterfaceWrapper{
-		iif:       platformInterface,
-		useProcFS: platformInterface.UseProcFS(),
+	service.MustRegister[adapter.URLTestHistoryStorage](ctx, urlTestHistoryStorage) //karing
+	//ctx = service.ContextWithPtr(ctx, urlTestHistoryStorage)//karing
+	var platformLogWriter log.PlatformWriter //karing
+	if platformInterface != nil {            //karing
+		var platformWrapper *platformInterfaceWrapper //karing
+		platformWrapper = &platformInterfaceWrapper{  //karing
+			iif:       platformInterface,
+			useProcFS: platformInterface.UseProcFS(),
+		}
+		service.MustRegister[platform.Interface](ctx, platformWrapper)
+		platformLogWriter = platformWrapper //karing
 	}
-	service.MustRegister[platform.Interface](ctx, platformWrapper)
-	instance, err := box.New(box.Options{
+
+	var instance *box.Box                //karing
+	instance, err = box.New(box.Options{ //karing
 		Context:           ctx,
 		Options:           options,
-		PlatformLogWriter: platformWrapper,
+		PlatformLogWriter: platformLogWriter, //karing
 	})
 	if err != nil {
 		cancel()
+		SentryCaptureError(err, "create service") //karing
 		return nil, E.Cause(err, "create service")
 	}
 	runtimeDebug.FreeOSMemory()
@@ -77,36 +102,67 @@ func NewService(configContent string, platformInterface PlatformInterface) (*Box
 	}, nil
 }
 
-func (s *BoxService) Start() error {
+func (s *BoxService) Start() (err error) { //karing
+	defer func() { //karing
+		if e := recover(); e != nil {
+			panicErrMessage := fmt.Sprintf("%v", e)
+			stack := SentryTrim(string(debug.Stack()))
+			err = E.New(panicErrMessage, "\n", "panic: start service", "\n", stack)
+			SentryCaptureErrorMessage(panicErrMessage, "panic: start service", stack)
+		}
+	}()
+	D.MainGoroutineId = D.GetCurrentGoroutineId() //karing
 	if sFixAndroidStack {
-		var err error
+		//var err error //karing
 		done := make(chan struct{})
 		go func() {
 			err = s.instance.Start()
 			close(done)
 		}()
 		<-done
-		return err
+		//return err //karing
 	} else {
-		return s.instance.Start()
+		err = s.instance.Start() //karing
 	}
+	if err != nil { //karing
+		SentryCaptureError(err, "start service")
+	} else { //karing
+		go func() {
+			runtime.GC()
+			runtimeDebug.FreeOSMemory()
+		}()
+	}
+	return err
 }
 
 func (s *BoxService) Close() error {
 	s.cancel()
-	s.urlTestHistoryStorage.Close()
+	if s.urlTestHistoryStorage != nil { //karing
+		s.urlTestHistoryStorage.Close()
+	}
+
+	var goroutineId int //karing
 	var err error
 	done := make(chan struct{})
 	go func() {
+		goroutineId = D.GetCurrentGoroutineId()
 		err = s.instance.Close()
 		close(done)
+		s.urlTestHistoryStorage = nil //karing
+		s.clashServer = nil           //karing
+		s.pauseManager = nil          //karing
+		s.instance = nil              //karing
+
+		runtime.GC()                //karing
+		runtimeDebug.FreeOSMemory() //karing
 	}()
 	select {
 	case <-done:
 		return err
 	case <-time.After(C.FatalStopTimeout):
-		os.Exit(1)
-		return nil
+		stack := D.GetGoroutineStack(goroutineId)      //karing
+		return E.New("close service timeout:" + stack) //karing
+		//os.Exit(1) //karing
 	}
 }
 
@@ -152,11 +208,11 @@ func (w *platformInterfaceWrapper) OpenTun(options *tun.Options, platformOptions
 	}
 	routeRanges, err := options.BuildAutoRouteRanges(true)
 	if err != nil {
-		return nil, err
+		return nil, E.New("build auto_route_ranges") //karing
 	}
 	tunFd, err := w.iif.OpenTun(&tunOptions{options, routeRanges, platformOptions})
 	if err != nil {
-		return nil, err
+		return nil, E.New("opentun") //karing
 	}
 	options.Name, err = getTunnelName(tunFd)
 	if err != nil {
@@ -169,7 +225,11 @@ func (w *platformInterfaceWrapper) OpenTun(options *tun.Options, platformOptions
 	}
 	options.FileDescriptor = dupFd
 	w.myTunName = options.Name
-	return tun.New(*options)
+	tun, err := tun.New(*options) //karing
+	if err != nil {               //karing
+		return nil, E.Cause(err, "tun.new")
+	}
+	return tun, err //karing
 }
 
 func (w *platformInterfaceWrapper) CreateDefaultInterfaceMonitor(logger logger.Logger) tun.DefaultInterfaceMonitor {

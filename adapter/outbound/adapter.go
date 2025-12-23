@@ -1,14 +1,18 @@
 package outbound
 
 import (
+	"sync/atomic"
+
 	"github.com/sagernet/sing-box/option"
 )
 
 type Adapter struct {
-	outboundType string
-	outboundTag  string
-	network      []string
-	dependencies []string
+	outboundType  string
+	outboundTag   string
+	network       []string
+	dependencies  []string
+	parseErr      error        //karing
+	ConnectionsIn atomic.Int32 //karing
 }
 
 func NewAdapter(outboundType string, outboundTag string, network []string, dependencies []string) Adapter {

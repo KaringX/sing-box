@@ -56,7 +56,7 @@ func NewSelector(ctx context.Context, router adapter.Router, logger log.ContextL
 		interruptExternalConnections: options.InterruptExistConnections,
 	}
 	if len(outbound.tags) == 0 {
-		return nil, E.New("missing tags")
+		return outbound, E.New("missing tags") //karing
 	}
 	return outbound, nil
 }
@@ -139,6 +139,9 @@ func (s *Selector) SelectOutbound(tag string) bool {
 }
 
 func (s *Selector) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
+	if s.GetParseErr() != nil { //karing
+		return nil, s.GetParseErr()
+	}
 	conn, err := s.selected.Load().DialContext(ctx, network, destination)
 	if err != nil {
 		return nil, err
@@ -147,6 +150,9 @@ func (s *Selector) DialContext(ctx context.Context, network string, destination 
 }
 
 func (s *Selector) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
+	if s.GetParseErr() != nil { //karing
+		return nil, s.GetParseErr()
+	}
 	conn, err := s.selected.Load().ListenPacket(ctx, destination)
 	if err != nil {
 		return nil, err
@@ -155,6 +161,9 @@ func (s *Selector) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
 }
 
 func (s *Selector) NewConnectionEx(ctx context.Context, conn net.Conn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) {
+	if s.GetParseErr() != nil { //karing
+		return
+	}
 	ctx = interrupt.ContextWithIsExternalConnection(ctx)
 	selected := s.selected.Load()
 	if outboundHandler, isHandler := selected.(adapter.ConnectionHandlerEx); isHandler {
@@ -165,6 +174,9 @@ func (s *Selector) NewConnectionEx(ctx context.Context, conn net.Conn, metadata 
 }
 
 func (s *Selector) NewPacketConnectionEx(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) {
+	if s.GetParseErr() != nil { //karing
+		return
+	}
 	ctx = interrupt.ContextWithIsExternalConnection(ctx)
 	selected := s.selected.Load()
 	if outboundHandler, isHandler := selected.(adapter.PacketConnectionHandlerEx); isHandler {
@@ -174,7 +186,15 @@ func (s *Selector) NewPacketConnectionEx(ctx context.Context, conn N.PacketConn,
 	}
 }
 
-func RealTag(detour adapter.Outbound) string {
+func RealTag(detour adapter.Outbound) (tag string) { //karing
+	defer func() { //karing
+		if e := recover(); e != nil {
+			tag = ""
+		}
+	}()
+	if detour == nil { //karing
+		return ""
+	}
 	if group, isGroup := detour.(adapter.OutboundGroup); isGroup {
 		return group.Now()
 	}

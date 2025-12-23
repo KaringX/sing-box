@@ -90,6 +90,7 @@ type dnsConfig struct {
 	useTCP        bool
 	trustAD       bool
 	noReload      bool
+	NameServer    []string //karing
 }
 
 func (c *dnsConfig) serverOffset() uint32 {

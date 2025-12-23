@@ -10,7 +10,7 @@ import (
 
 var (
 	connAccess     sync.RWMutex
-	openConnection list.List[io.Closer]
+	openConnection list.List[OutboundConn] //karing
 )
 
 func Count() int {
@@ -28,7 +28,7 @@ func List() []io.Closer {
 	defer connAccess.RUnlock()
 	connList := make([]io.Closer, 0, openConnection.Len())
 	for element := openConnection.Front(); element != nil; element = element.Next() {
-		connList = append(connList, element.Value)
+		connList = append(connList, element.Value.Closer) //karing
 	}
 	return connList
 }
@@ -40,8 +40,9 @@ func Close() {
 	connAccess.Lock()
 	defer connAccess.Unlock()
 	for element := openConnection.Front(); element != nil; element = element.Next() {
-		common.Close(element.Value)
-		element.Value = nil
+		common.Close(element.Value.Closer) //karing
+		element.Value.Closer = nil         //karing
+		element.Value.Outbound = ""        //karing
 	}
 	openConnection.Init()
 }

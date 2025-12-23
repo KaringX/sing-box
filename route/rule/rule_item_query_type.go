@@ -29,9 +29,11 @@ func NewQueryTypeItem(typeList []option.DNSQueryType) *QueryTypeItem {
 }
 
 func (r *QueryTypeItem) Match(metadata *adapter.InboundContext) bool {
+	/*karing
 	if metadata.QueryType == 0 {
 		return false
 	}
+	*/
 	return r.typeMap[metadata.QueryType]
 }
 

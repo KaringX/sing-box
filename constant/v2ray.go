@@ -6,4 +6,6 @@ const (
 	V2RayTransportTypeQUIC        = "quic"
 	V2RayTransportTypeGRPC        = "grpc"
 	V2RayTransportTypeHTTPUpgrade = "httpupgrade"
+	V2RayTransportTypeXHTTP       = "xhttp" // https://github.com/starifly/sing-box
+	V2RayTransportTypeKCP         = "kcp"   // https://github.com/starifly/sing-box
 )

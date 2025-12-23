@@ -27,6 +27,11 @@ type EndpointOptions struct {
 	ResolvePeer  func(domain string) (netip.Addr, error)
 	Peers        []PeerOptions
 	Workers      int
+
+	FakePackets      string //hiddify
+	FakePacketsSize  string //hiddify
+	FakePacketsDelay string //hiddify
+	FakePacketsMode  string //hiddify
 }
 
 type PeerOptions struct {

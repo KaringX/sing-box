@@ -62,6 +62,7 @@ func NewDefaultRule(ctx context.Context, logger log.ContextLogger, options optio
 		abstractDefaultRule{
 			invert: options.Invert,
 			action: action,
+			name:   options.Name, //karing
 		},
 	}
 	router := service.FromContext[adapter.Router](ctx)
@@ -279,6 +280,7 @@ func NewLogicalRule(ctx context.Context, logger log.ContextLogger, options optio
 			rules:  make([]adapter.HeadlessRule, len(options.Rules)),
 			invert: options.Invert,
 			action: action,
+			name:   options.Name, //karing
 		},
 	}
 	switch options.Mode {
@@ -290,9 +292,11 @@ func NewLogicalRule(ctx context.Context, logger log.ContextLogger, options optio
 		return nil, E.New("unknown logical mode: ", options.Mode)
 	}
 	for i, subOptions := range options.Rules {
+		subOptions.DefaultOptions.Name = options.Name //karing
+		subOptions.LogicalOptions.Name = options.Name //karing
 		subRule, err := NewRule(ctx, logger, subOptions, false)
 		if err != nil {
-			return nil, E.Cause(err, "sub rule[", i, "]")
+			return nil, E.Cause(err, "sub rule[", i, "]", options.Name) //karing
 		}
 		rule.rules[i] = subRule
 	}
