@@ -239,10 +239,15 @@ func getProxyDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 
-		if err != nil || delay == 0 {
+		if err != nil /*|| delay == 0*/ { //karing
 			//render.Status(r, http.StatusServiceUnavailable) //karing
 			//render.JSON(w, r, newError("An error occurred in the delay test")) //karing
 			render.JSON(w, r, newError(err.Error())) //karing
+			return
+		}
+
+		if delay == 0 { //karing
+			render.JSON(w, r, newError("An unknown error occurred in the delay test"))
 			return
 		}
 
