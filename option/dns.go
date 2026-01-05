@@ -222,7 +222,7 @@ func (o *DNSServerOptions) Upgrade(ctx context.Context) error {
 			serverAddr = M.ParseSocksaddr(serverURL.Host)
 		}
 		if !serverAddr.IsValid() {
-			return E.New("invalid server address:", serverURL.Host, "-", options.Address) //karing
+			return E.New("invalid server address:", options.Address) //karing
 		}
 		remoteOptions.Server = serverAddr.AddrString()
 		if serverAddr.Port != 0 && serverAddr.Port != 53 {
