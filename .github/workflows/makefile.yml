@@ -1,0 +1,105 @@
+name: Build-test
+
+on:
+  push:
+    branches:
+      - karing_v1.12.13
+    tags:
+      - v*
+  pull_request:
+    branches:
+      - karing_v1.12.13
+  workflow_dispatch:
+
+env:
+  GO_VERSION: '1.22'
+  GO111MODULE: 'on'
+  CGO_ENABLED: '1'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux amd64
+          - goos: linux
+            goarch: amd64
+            suffix: linux-amd64
+            cc: gcc
+          # Windows amd64
+          - goos: windows
+            goarch: amd64
+            suffix: windows-amd64.exe
+            cc: x86_64-w64-mingw32-gcc
+          # Android arm64
+          - goos: android
+            goarch: arm64
+            suffix: android-arm64
+            ndk_version: r25c
+            api_level: 21
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: karing_v1.12.13
+          submodules: false  # 跳过子模块，解决clients/android报错
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Install build dependencies
+        run: |
+          # 安装Windows交叉编译工具
+          sudo apt-get update && sudo apt-get install -y gcc-mingw-w64-x86-64
+          # 安装Linux编译依赖
+          sudo apt-get install -y build-essential
+
+      - name: Install Android NDK (only for Android arm64)
+        if: matrix.goos == 'android'
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: ${{ matrix.ndk_version }}
+          add-to-path: false
+
+      - name: Build binary
+        run: |
+          # 配置编译环境变量
+          export GOOS=${{ matrix.goos }}
+          export GOARCH=${{ matrix.goarch }}
+          export CGO_ENABLED=${{ env.CGO_ENABLED }}
+          
+          # 针对不同架构设置编译器
+          if [ "${{ matrix.goos }}" = "android" ]; then
+            export ANDROID_NDK_HOME=/usr/local/android-ndk
+            export CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android${{ matrix.api_level }}-clang
+          elif [ "${{ matrix.goos }}" = "windows" ]; then
+            export CC=${{ matrix.cc }}
+          fi
+          
+          # 执行编译
+          make build
+          # 重命名二进制文件
+          mv sing-box sing-box-${{ matrix.suffix }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sing-box-${{ matrix.suffix }}
+          path: sing-box-${{ matrix.suffix }}
+
+      - name: Create release (on tag push)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: sing-box-${{ matrix.suffix }}
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
