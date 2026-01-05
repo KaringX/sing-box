@@ -212,7 +212,7 @@ func (w *platformInterfaceWrapper) OpenTun(options *tun.Options, platformOptions
 	}
 	tunFd, err := w.iif.OpenTun(&tunOptions{options, routeRanges, platformOptions})
 	if err != nil {
-		return nil, E.New("opentun") //karing
+		return nil, E.Cause(err, "openTun") //karing
 	}
 	options.Name, err = getTunnelName(tunFd)
 	if err != nil {
