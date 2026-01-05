@@ -27,6 +27,7 @@ on:
     branches:
       - main-next
       - dev-next
+      - karing_v1.12.13
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}-${{ inputs.build }}
