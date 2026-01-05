@@ -11,7 +11,7 @@ import (
 	"sync"
 
 	"github.com/sagernet/sing-box/common/vision"
-	"github.com/sagernet/sing-box/common/xray"
+	common "github.com/sagernet/sing-box/common/xray"
 	"github.com/sagernet/sing-box/common/xray/signal/done"
 	"github.com/sagernet/sing-box/option"
 )
@@ -62,7 +62,10 @@ func (c *DefaultDialerClient) OpenStream(ctx context.Context, url string, body i
 		method = "POST" // stream-up/one
 	}
 	req, _ := http.NewRequestWithContext(context.WithoutCancel(ctx), method, url, body)
-	req.Header = c.options.GetRequestHeader(url)
+	req.Header, err = c.options.GetRequestHeader(url) //karing
+	if err != nil {                                   //karing
+		return
+	}
 	if method == "POST" && !c.options.NoGRPCHeader {
 		req.Header.Set("Content-Type", "application/grpc")
 	}
@@ -95,7 +98,10 @@ func (c *DefaultDialerClient) PostPacket(ctx context.Context, url string, body i
 		return err
 	}
 	req.ContentLength = contentLength
-	req.Header = c.options.GetRequestHeader(url)
+	req.Header, err = c.options.GetRequestHeader(url) //karing
+	if err != nil {                                   //karing
+		return err
+	}
 	if c.httpVersion != "1.1" {
 		resp, err := c.client.Do(req)
 		if err != nil {
