@@ -87,7 +87,7 @@ func (t *BatchTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS
 			copydMessage := message.Copy()
 			ret, err := trans.Exchange(ctx, copydMessage)
 			if err == nil {
-				if len(ret.Answer) == 0 {
+				if ret != nil && len(ret.Answer) == 0 {
 					emptyOnce.Do(func() {
 						resultEmpty = ret
 						t.logger.InfoContext(ctx, "exchanged empty result ["+domain+"] by: ", trans.Tag(), " queryType: ", question.Qtype)
