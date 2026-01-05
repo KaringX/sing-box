@@ -1,14 +1,10 @@
-name: Build-test
-
+name: Build SSR Binaries
 on:
   push:
-    branches:
-      - karing_v1.12.13
-    tags:
-      - v*
+    branches: [karing_v1.12.13]
+    tags: [v*]
   pull_request:
-    branches:
-      - karing_v1.12.13
+    branches: [karing_v1.12.13]
   workflow_dispatch:
 
 env:
@@ -29,73 +25,79 @@ jobs:
           - goos: linux
             goarch: amd64
             suffix: linux-amd64
-            cc: gcc
+            compiler: gcc
           # Windows amd64
           - goos: windows
             goarch: amd64
             suffix: windows-amd64.exe
-            cc: x86_64-w64-mingw32-gcc
+            compiler: x86_64-w64-mingw32-gcc
           # Android arm64
           - goos: android
             goarch: arm64
             suffix: android-arm64
-            ndk_version: r25c
-            api_level: 21
+            ndk_ver: r25c
+            api: 21
 
     steps:
-      - name: Checkout code
+      - name: Checkout (Skip Invalid Submodules)
         uses: actions/checkout@v4
         with:
           ref: karing_v1.12.13
-          submodules: false  # 跳过子模块，解决clients/android报错
+          submodules: false  # 完全跳过所有子模块拉取
+          clean: true        # 清理工作区，避免残留子模块文件干扰
 
-      - name: Set up Go
+      - name: Remove Invalid Submodule Directories
+        run: |
+          # 删除.gitmodules中声明但无实际内容的clients目录
+          rm -rf clients/android clients/apple
+          # 确保编译时不会读取到无效的子模块配置
+          sed -i '/clients\/android/d' .gitmodules 2>/dev/null || true
+          sed -i '/clients\/apple/d' .gitmodules 2>/dev/null || true
+
+      - name: Set Up Go
         uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
 
-      - name: Install build dependencies
+      - name: Install Build Dependencies
         run: |
-          # 安装Windows交叉编译工具
-          sudo apt-get update && sudo apt-get install -y gcc-mingw-w64-x86-64
-          # 安装Linux编译依赖
-          sudo apt-get install -y build-essential
+          sudo apt-get update && sudo apt-get install -y \
+            build-essential \
+            gcc-mingw-w64-x86-64  # Windows交叉编译工具
 
-      - name: Install Android NDK (only for Android arm64)
+      - name: Install Android NDK (Only for Android arm64)
         if: matrix.goos == 'android'
         uses: nttld/setup-ndk@v1
         with:
-          ndk-version: ${{ matrix.ndk_version }}
+          ndk-version: ${{ matrix.ndk_ver }}
           add-to-path: false
 
-      - name: Build binary
+      - name: Compile Binary
         run: |
-          # 配置编译环境变量
           export GOOS=${{ matrix.goos }}
           export GOARCH=${{ matrix.goarch }}
           export CGO_ENABLED=${{ env.CGO_ENABLED }}
-          
-          # 针对不同架构设置编译器
+
+          # 配置对应架构的编译器
           if [ "${{ matrix.goos }}" = "android" ]; then
             export ANDROID_NDK_HOME=/usr/local/android-ndk
-            export CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android${{ matrix.api_level }}-clang
+            export CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android${{ matrix.api }}-clang
           elif [ "${{ matrix.goos }}" = "windows" ]; then
-            export CC=${{ matrix.cc }}
+            export CC=${{ matrix.compiler }}
           fi
-          
-          # 执行编译
+
+          # 执行KaringX分支的编译命令（兼容官方makefile）
           make build
-          # 重命名二进制文件
           mv sing-box sing-box-${{ matrix.suffix }}
 
-      - name: Upload artifact
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: sing-box-${{ matrix.suffix }}
           path: sing-box-${{ matrix.suffix }}
 
-      - name: Create release (on tag push)
+      - name: Release on Tag
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
