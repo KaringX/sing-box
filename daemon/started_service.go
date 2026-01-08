@@ -50,6 +50,7 @@ type StartedService struct {
 	logSubscriber           *observable.Subscriber[*log.Entry]
 	logObserver             *observable.Observer[*log.Entry]
 	instance                *Instance
+	startedAt               time.Time
 	urlTestSubscriber       *observable.Subscriber[struct{}]
 	urlTestObserver         *observable.Observer[struct{}]
 	urlTestHistoryStorage   *urltest.HistoryStorage
@@ -193,6 +194,7 @@ func (s *StartedService) StartOrReloadService(profileContent string, options *Ov
 	if err != nil {
 		return s.updateStatusError(err)
 	}
+	s.startedAt = time.Now()
 	s.updateStatus(ServiceStatus_STARTED)
 	s.serviceAccess.Unlock()
 	runtime.GC()
@@ -215,6 +217,7 @@ func (s *StartedService) CloseService() error {
 		}
 	}
 	s.instance = nil
+	s.startedAt = time.Time{}
 	s.updateStatus(ServiceStatus_IDLE)
 	s.serviceAccess.Unlock()
 	runtime.GC()
@@ -734,6 +737,16 @@ func newConnection(connections map[uuid.UUID]*Connection, metadata trafficontrol
 		uplink = 0
 		downlink = 0
 	}
+	var processInfo *ProcessInfo
+	if metadata.Metadata.ProcessInfo != nil {
+		processInfo = &ProcessInfo{
+			ProcessId:   metadata.Metadata.ProcessInfo.ProcessID,
+			UserId:      metadata.Metadata.ProcessInfo.UserId,
+			UserName:    metadata.Metadata.ProcessInfo.UserName,
+			ProcessPath: metadata.Metadata.ProcessInfo.ProcessPath,
+			PackageName: metadata.Metadata.ProcessInfo.AndroidPackageName,
+		}
+	}
 	connection := &Connection{
 		Id:            metadata.ID.String(),
 		Inbound:       metadata.Metadata.Inbound,
@@ -756,6 +769,7 @@ func newConnection(connections map[uuid.UUID]*Connection, metadata trafficontrol
 		Outbound:      metadata.Outbound,
 		OutboundType:  metadata.OutboundType,
 		ChainList:     metadata.Chain,
+		ProcessInfo:   processInfo,
 	}
 	connections[metadata.ID] = connection
 	return connection
@@ -803,12 +817,10 @@ func (s *StartedService) GetDeprecatedWarnings(ctx context.Context, empty *empty
 	}, nil
 }
 
-func (s *StartedService) SubscribeHelperEvents(empty *emptypb.Empty, server grpc.ServerStreamingServer[HelperRequest]) error {
-	return os.ErrInvalid
-}
-
-func (s *StartedService) SendHelperResponse(ctx context.Context, response *HelperResponse) (*emptypb.Empty, error) {
-	return nil, os.ErrInvalid
+func (s *StartedService) GetStartedAt(ctx context.Context, empty *emptypb.Empty) (*StartedAt, error) {
+	s.serviceAccess.RLock()
+	defer s.serviceAccess.RUnlock()
+	return &StartedAt{StartedAt: s.startedAt.UnixMilli()}, nil
 }
 
 func (s *StartedService) mustEmbedUnimplementedStartedServiceServer() {

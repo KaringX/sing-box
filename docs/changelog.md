@@ -2,6 +2,85 @@
 icon: material/alert-decagram
 ---
 
+#### 1.13.0-beta.1
+
+* Add system interface support for Tailscale endpoint **1**
+* Fixes and improvements
+
+**1**:
+
+Tailscale endpoint can now create a system TUN interface to handle traffic directly.
+
+See [Tailscale endpoint](/configuration/endpoint/tailscale/#system_interface).
+
+#### 1.12.15
+
+* Fixes and improvements
+
+#### 1.13.0-alpha.36
+
+* Downgrade quic-go to v0.57.1
+* Fixes and improvements
+
+#### 1.13.0-alpha.35
+
+* Add pre-match support for `auto_redirect` **1**
+* Fixes and improvements
+
+**1**:
+
+`auto_redirect` now allows you to bypass sing-box for connections based on routing rules.
+
+A new rule action `bypass` is introduced to support this feature. When matched during pre-match, the connection will bypass sing-box and connect directly.
+
+This feature requires Linux with `auto_redirect` enabled.
+
+See [Pre-match](/configuration/shared/pre-match/) and [Rule Action](/configuration/route/rule_action/#bypass).
+
+#### 1.13.0-alpha.34
+
+* Add Chrome Root Store certificate option **1**
+* Add new options for ACME DNS-01 challenge providers **2**
+* Add Wi-Fi state support for Linux and Windows **3**
+* Update naiveproxy to 143.0.7499.109
+* Update quic-go to v0.58.0
+* Update tailscale to v1.92.4
+* Drop support for go1.23 **4**
+* Drop support for Android 5.0 **5**
+
+**1**:
+
+Adds `chrome` as a new certificate store option alongside `mozilla`.
+Both stores filter out China-based CA certificates.
+
+See [Certificate](/configuration/certificate/#store).
+
+**2**:
+
+See [DNS-01 Challenge](/configuration/shared/dns01_challenge/).
+
+**3**:
+
+sing-box can now monitor Wi-Fi state on Linux and Windows to enable routing rules based on `wifi_ssid` and `wifi_bssid`.
+
+See [Wi-Fi State](/configuration/shared/wifi-state/).
+
+**4**:
+
+Due to maintenance difficulties, sing-box 1.13.0 requires at least Go 1.24 to compile.
+
+**5**:
+
+Due to maintenance difficulties, sing-box 1.13.0 will be the last version to support Android 5.0,
+and only through a separate legacy build (with `-legacy-android-5` suffix).
+
+For standalone binaries, the minimum Android version has been raised to Android 6.0,
+since Termux requires Android 7.0 or later.
+
+#### 1.12.14
+
+* Fixes and improvements
+
 #### 1.13.0-alpha.33
 
 * Fixes and improvements

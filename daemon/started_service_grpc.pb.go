@@ -35,8 +35,7 @@ const (
 	StartedService_CloseConnection_FullMethodName        = "/daemon.StartedService/CloseConnection"
 	StartedService_CloseAllConnections_FullMethodName    = "/daemon.StartedService/CloseAllConnections"
 	StartedService_GetDeprecatedWarnings_FullMethodName  = "/daemon.StartedService/GetDeprecatedWarnings"
-	StartedService_SubscribeHelperEvents_FullMethodName  = "/daemon.StartedService/SubscribeHelperEvents"
-	StartedService_SendHelperResponse_FullMethodName     = "/daemon.StartedService/SendHelperResponse"
+	StartedService_GetStartedAt_FullMethodName           = "/daemon.StartedService/GetStartedAt"
 )
 
 // StartedServiceClient is the client API for StartedService service.
@@ -63,8 +62,7 @@ type StartedServiceClient interface {
 	CloseConnection(ctx context.Context, in *CloseConnectionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	CloseAllConnections(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetDeprecatedWarnings(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*DeprecatedWarnings, error)
-	SubscribeHelperEvents(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[HelperRequest], error)
-	SendHelperResponse(ctx context.Context, in *HelperResponse, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	GetStartedAt(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*StartedAt, error)
 }
 
 type startedServiceClient struct {
@@ -329,29 +327,10 @@ func (c *startedServiceClient) GetDeprecatedWarnings(ctx context.Context, in *em
 	return out, nil
 }
 
-func (c *startedServiceClient) SubscribeHelperEvents(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[HelperRequest], error) {
+func (c *startedServiceClient) GetStartedAt(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*StartedAt, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &StartedService_ServiceDesc.Streams[6], StartedService_SubscribeHelperEvents_FullMethodName, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &grpc.GenericClientStream[emptypb.Empty, HelperRequest]{ClientStream: stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	return x, nil
-}
-
-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type StartedService_SubscribeHelperEventsClient = grpc.ServerStreamingClient[HelperRequest]
-
-func (c *startedServiceClient) SendHelperResponse(ctx context.Context, in *HelperResponse, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, StartedService_SendHelperResponse_FullMethodName, in, out, cOpts...)
+	out := new(StartedAt)
+	err := c.cc.Invoke(ctx, StartedService_GetStartedAt_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -382,8 +361,7 @@ type StartedServiceServer interface {
 	CloseConnection(context.Context, *CloseConnectionRequest) (*emptypb.Empty, error)
 	CloseAllConnections(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	GetDeprecatedWarnings(context.Context, *emptypb.Empty) (*DeprecatedWarnings, error)
-	SubscribeHelperEvents(*emptypb.Empty, grpc.ServerStreamingServer[HelperRequest]) error
-	SendHelperResponse(context.Context, *HelperResponse) (*emptypb.Empty, error)
+	GetStartedAt(context.Context, *emptypb.Empty) (*StartedAt, error)
 	mustEmbedUnimplementedStartedServiceServer()
 }
 
@@ -474,12 +452,8 @@ func (UnimplementedStartedServiceServer) GetDeprecatedWarnings(context.Context, 
 	return nil, status.Errorf(codes.Unimplemented, "method GetDeprecatedWarnings not implemented")
 }
 
-func (UnimplementedStartedServiceServer) SubscribeHelperEvents(*emptypb.Empty, grpc.ServerStreamingServer[HelperRequest]) error {
-	return status.Errorf(codes.Unimplemented, "method SubscribeHelperEvents not implemented")
-}
-
-func (UnimplementedStartedServiceServer) SendHelperResponse(context.Context, *HelperResponse) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SendHelperResponse not implemented")
+func (UnimplementedStartedServiceServer) GetStartedAt(context.Context, *emptypb.Empty) (*StartedAt, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetStartedAt not implemented")
 }
 func (UnimplementedStartedServiceServer) mustEmbedUnimplementedStartedServiceServer() {}
 func (UnimplementedStartedServiceServer) testEmbeddedByValue()                        {}
@@ -820,31 +794,20 @@ func _StartedService_GetDeprecatedWarnings_Handler(srv interface{}, ctx context.
 	return interceptor(ctx, in, info, handler)
 }
 
-func _StartedService_SubscribeHelperEvents_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(emptypb.Empty)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(StartedServiceServer).SubscribeHelperEvents(m, &grpc.GenericServerStream[emptypb.Empty, HelperRequest]{ServerStream: stream})
-}
-
-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type StartedService_SubscribeHelperEventsServer = grpc.ServerStreamingServer[HelperRequest]
-
-func _StartedService_SendHelperResponse_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(HelperResponse)
+func _StartedService_GetStartedAt_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(StartedServiceServer).SendHelperResponse(ctx, in)
+		return srv.(StartedServiceServer).GetStartedAt(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: StartedService_SendHelperResponse_FullMethodName,
+		FullMethod: StartedService_GetStartedAt_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(StartedServiceServer).SendHelperResponse(ctx, req.(*HelperResponse))
+		return srv.(StartedServiceServer).GetStartedAt(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -913,8 +876,8 @@ var StartedService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _StartedService_GetDeprecatedWarnings_Handler,
 		},
 		{
-			MethodName: "SendHelperResponse",
-			Handler:    _StartedService_SendHelperResponse_Handler,
+			MethodName: "GetStartedAt",
+			Handler:    _StartedService_GetStartedAt_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
@@ -946,11 +909,6 @@ var StartedService_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "SubscribeConnections",
 			Handler:       _StartedService_SubscribeConnections_Handler,
-			ServerStreams: true,
-		},
-		{
-			StreamName:    "SubscribeHelperEvents",
-			Handler:       _StartedService_SubscribeHelperEvents_Handler,
 			ServerStreams: true,
 		},
 	},

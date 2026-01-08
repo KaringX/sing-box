@@ -4,7 +4,6 @@ package daemon;
 option go_package = "github.com/sagernet/sing-box/daemon";
 
 import "google/protobuf/empty.proto";
-import "daemon/helper.proto";
 
 service StartedService {
   rpc StopService(google.protobuf.Empty) returns (google.protobuf.Empty);
@@ -32,9 +31,7 @@ service StartedService {
   rpc CloseConnection(CloseConnectionRequest) returns(google.protobuf.Empty) {}
   rpc CloseAllConnections(google.protobuf.Empty) returns(google.protobuf.Empty) {}
   rpc GetDeprecatedWarnings(google.protobuf.Empty) returns(DeprecatedWarnings) {}
-
-  rpc SubscribeHelperEvents(google.protobuf.Empty) returns(stream HelperRequest) {}
-  rpc SendHelperResponse(HelperResponse) returns(google.protobuf.Empty) {}
+  rpc GetStartedAt(google.protobuf.Empty) returns(StartedAt) {}
 }
 
 message ServiceStatus {
@@ -188,6 +185,15 @@ message Connection {
   string outbound = 19;
   string outboundType = 20;
   repeated string chainList = 21;
+  ProcessInfo processInfo = 22;
+}
+
+message ProcessInfo {
+  uint32 processId = 1;
+  int32 userId = 2;
+  string userName = 3;
+  string processPath = 4;
+  string packageName = 5;
 }
 
 message CloseConnectionRequest {
@@ -202,4 +208,8 @@ message DeprecatedWarning {
   string message = 1;
   bool impending = 2;
   string migrationLink = 3;
+}
+
+message StartedAt {
+  int64 startedAt = 1;
 }

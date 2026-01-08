@@ -4,6 +4,7 @@ icon: material/new-box
 
 !!! quote "Changes in sing-box 1.13.0"
 
+    :material-plus: [bypass](#bypass)  
     :material-alert: [reject](#reject)
 
 !!! quote "Changes in sing-box 1.12.0"
@@ -39,6 +40,40 @@ icon: material/new-box
 ==Required==
 
 Tag of target outbound.
+
+#### route-options Fields
+
+See `route-options` fields below.
+
+### bypass
+
+!!! question "Since sing-box 1.13.0"
+
+!!! quote ""
+
+    Only supported on Linux with `auto_redirect` enabled.
+
+```json
+{
+  "action": "bypass",
+  "outbound": "",
+
+  ... // route-options Fields
+}
+```
+
+`bypass` bypasses sing-box at the kernel level for auto redirect connections in pre-match.
+
+For non-auto-redirect connections and already established connections,
+if `outbound` is specified, the behavior is the same as `route`;
+otherwise, the rule will be skipped.
+
+#### outbound
+
+Tag of target outbound.
+
+If not specified, the rule only matches in [pre-match](/configuration/shared/pre-match/)
+from auto redirect, and will be skipped in other contexts.
 
 #### route-options Fields
 

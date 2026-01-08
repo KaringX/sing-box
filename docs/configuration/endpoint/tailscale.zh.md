@@ -2,6 +2,14 @@
 icon: material/new-box
 ---
 
+!!! quote "sing-box 1.13.0 中的更改"
+
+    :material-plus: [relay_server_port](#relay_server_port)
+    :material-plus: [relay_server_static_endpoints](#relay_server_static_endpoints)
+    :material-plus: [system_interface](#system_interface)
+    :material-plus: [system_interface_name](#system_interface_name)
+    :material-plus: [system_interface_mtu](#system_interface_mtu)
+
 !!! question "自 sing-box 1.12.0 起"
 
 ### 结构
@@ -20,6 +28,11 @@ icon: material/new-box
   "exit_node_allow_lan_access": false,
   "advertise_routes": [],
   "advertise_exit_node": false,
+  "relay_server_port": 0,
+  "relay_server_static_endpoints": [],
+  "system_interface": false,
+  "system_interface_name": "",
+  "system_interface_mtu": 0,
   "udp_timeout": "5m",
 
   ... // 拨号字段
@@ -87,6 +100,36 @@ icon: material/new-box
 #### advertise_exit_node
 
 指示节点是否应将自己通告为出口节点。
+
+#### relay_server_port
+
+!!! question "自 sing-box 1.13.0 起"
+
+监听来自其他 Tailscale 节点的中继连接的端口。
+
+#### relay_server_static_endpoints
+
+!!! question "自 sing-box 1.13.0 起"
+
+为中继服务器通告的静态端点。
+
+#### system_interface
+
+!!! question "自 sing-box 1.13.0 起"
+
+为 Tailscale 创建系统 TUN 接口。
+
+#### system_interface_name
+
+!!! question "自 sing-box 1.13.0 起"
+
+自定义 TUN 接口名。默认使用 `tailscale`（macOS 上为 `utun`）。
+
+#### system_interface_mtu
+
+!!! question "自 sing-box 1.13.0 起"
+
+覆盖 TUN 的 MTU。默认使用 Tailscale 自己的 MTU。
 
 #### udp_timeout
 
