@@ -23,7 +23,6 @@ func (r *Router) LookupTag(ctx context.Context, domain string, options adapter.D
 	}
 	var (
 		responseAddrs []netip.Addr
-		cached        bool
 		err           error
 		transportTag  string //karing
 	)
@@ -43,13 +42,6 @@ func (r *Router) LookupTag(ctx context.Context, domain string, options adapter.D
 		if err != nil {
 			err = E.Cause(err, "lookup ", domain)
 		}
-	}
-	responseAddrs, cached = r.client.LookupCache(domain, options.Strategy)
-	if cached {
-		if len(responseAddrs) == 0 {
-			return nil, "", E.New("lookup ", domain, ": empty result (cached)") //karing
-		}
-		return responseAddrs, "", nil //karing
 	}
 	r.logger.DebugContext(ctx, "lookup domain ", domain)
 	ctx, metadata := adapter.ExtendContext(ctx)

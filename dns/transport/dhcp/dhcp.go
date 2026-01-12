@@ -281,11 +281,11 @@ func (t *Transport) fetchServersResponse(ctx context.Context, iface *control.Int
 				return E.New("dhcp: fetchServersResponse timeout")
 			}
 		}
+		buffer.Reset()
 		_, _, err := buffer.ReadPacketFrom(packetConn)
 		if err != nil {
 			t.logger.TraceContext(t.ctx, "dhcp: readPacketFrom: ", err) //karing
 			if errors.Is(err, io.ErrShortBuffer) {
-				buffer.Reset() //karing
 				continue
 			}
 			return err
