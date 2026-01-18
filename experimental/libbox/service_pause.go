@@ -12,7 +12,10 @@ func (s *BoxService) Pause() {
 	if s.instance != nil && s.instance.Logger() != nil { //karing
 		s.instance.Logger().Info("BoxService:Pause")
 	}
-	s.pauseManager.DevicePause()
+	if s.pauseManager != nil { //karing
+		s.pauseManager.DevicePause()
+	}
+
 	/*//karing
 	if C.IsIos {
 		if s.endPauseTimer == nil {
@@ -34,9 +37,10 @@ func (s *BoxService) Wake() {
 		s.pauseManager.DeviceWake()
 	}
 	*/
-
-	s.ResetNetwork()            //karing
-	s.pauseManager.DeviceWake() //karing
+	if s.pauseManager != nil { //karing
+		s.ResetNetwork()            //karing
+		s.pauseManager.DeviceWake() //karing
+	}
 
 	s.startResetTimer(15*time.Second, s.tryResetNetwork) //karing
 }

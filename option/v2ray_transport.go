@@ -171,7 +171,7 @@ func (c *V2RayXHTTPBaseOptions) GetRequestHeader(rawURL string) (http.Header, er
 	}
 	u, err := url.Parse(rawURL) //karing
 	if err != nil {             //karing
-		return nil, err
+		return header, err
 	}
 	// https://www.rfc-editor.org/rfc/rfc7541.html#appendix-B
 	// h2's HPACK Header Compression feature employs a huffman encoding using a static table.
