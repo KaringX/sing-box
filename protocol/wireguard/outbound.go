@@ -154,13 +154,6 @@ func (o *Outbound) Close() error {
 	return o.endpoint.Close()
 }
 
-func (o *Outbound) InterfaceUpdated() {
-	if o.endpoint == nil { //karing
-		return
-	}
-	o.endpoint.BindUpdate()
-}
-
 func (o *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
 	if o.GetParseErr() != nil { //karing
 		return nil, o.GetParseErr()

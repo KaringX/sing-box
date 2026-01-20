@@ -72,7 +72,7 @@ func (s *HistoryStorage) Close() error {
 	s.access.Lock()
 	defer s.access.Unlock()
 	s.updateHook = nil
-	for k := range s.delayHistory { //kariing
+	for k := range s.delayHistory { //karing
 		delete(s.delayHistory, k)
 	}
 	return nil

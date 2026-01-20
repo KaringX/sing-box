@@ -312,16 +312,6 @@ func (e *Endpoint) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
 	return e.tunDevice.ListenPacket(ctx, destination)
 }
 
-func (e *Endpoint) BindUpdate() error {
-	if e.parseErr != nil { //karing
-		return e.parseErr
-	}
-	if e.device == nil { //karing
-		return nil
-	}
-	return e.device.BindUpdate()
-}
-
 func (e *Endpoint) Close() error {
 	if e.device != nil {
 		e.device.Close()

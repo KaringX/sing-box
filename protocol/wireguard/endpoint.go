@@ -132,13 +132,6 @@ func (w *Endpoint) Close() error {
 	return w.endpoint.Close()
 }
 
-func (w *Endpoint) InterfaceUpdated() {
-	if w.endpoint == nil { //karing
-		return
-	}
-	w.endpoint.BindUpdate()
-}
-
 func (w *Endpoint) PrepareConnection(network string, source M.Socksaddr, destination M.Socksaddr) error {
 	return w.router.PreMatch(adapter.InboundContext{
 		Inbound:     w.Tag(),
