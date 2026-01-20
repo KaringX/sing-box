@@ -39,6 +39,8 @@ type InboundManager interface {
 	Get(tag string) (Inbound, bool)
 	Remove(tag string) error
 	Create(ctx context.Context, router Router, logger log.ContextLogger, tag string, inboundType string, options any) error
+	SetTunAddressPrefix(address []netip.Prefix) //karing
+	GetTunAddressPrefix() []netip.Prefix        //karing
 }
 
 type InboundContext struct {

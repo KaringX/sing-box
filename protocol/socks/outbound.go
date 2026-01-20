@@ -36,6 +36,10 @@ type Outbound struct {
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.SOCKSOutboundOptions) (adapter.Outbound, error) {
+	empty := &Outbound{ //karing
+		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeSOCKS, tag, []string{}, options.DialerOptions),
+		logger:  logger,
+	}
 	var version socks.Version
 	var err error
 	if options.Version != "" {
@@ -44,11 +48,11 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		version = socks.Version5
 	}
 	if err != nil {
-		return nil, err
+		return empty, err //karing
 	}
 	outboundDialer, err := dialer.New(ctx, options.DialerOptions, options.ServerIsDomain())
 	if err != nil {
-		return nil, err
+		return empty, err //karing
 	}
 	outbound := &Outbound{
 		Adapter:   outbound.NewAdapterWithDialerOptions(C.TypeSOCKS, tag, options.Network.Build(), options.DialerOptions),
@@ -68,6 +72,9 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 }
 
 func (h *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
+	if h.GetParseErr() != nil { //karing
+		return nil, h.GetParseErr()
+	}
 	ctx, metadata := adapter.ExtendContext(ctx)
 	metadata.Outbound = h.Tag()
 	metadata.Destination = destination
@@ -94,6 +101,9 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 }
 
 func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
+	if h.GetParseErr() != nil { //karing
+		return nil, h.GetParseErr()
+	}
 	ctx, metadata := adapter.ExtendContext(ctx)
 	metadata.Outbound = h.Tag()
 	metadata.Destination = destination

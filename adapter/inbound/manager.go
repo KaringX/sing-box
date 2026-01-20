@@ -2,6 +2,7 @@ package inbound
 
 import (
 	"context"
+	"net/netip"
 	"os"
 	"sync"
 
@@ -24,6 +25,7 @@ type Manager struct {
 	stage        adapter.StartStage
 	inbounds     []adapter.Inbound
 	inboundByTag map[string]adapter.Inbound
+	tunAddress   []netip.Prefix //karing
 }
 
 func NewManager(logger log.ContextLogger, registry adapter.InboundRegistry, endpoint adapter.EndpointManager) *Manager {
@@ -38,6 +40,7 @@ func NewManager(logger log.ContextLogger, registry adapter.InboundRegistry, endp
 func (m *Manager) Start(stage adapter.StartStage) error {
 	m.access.Lock()
 	if m.started && m.stage >= stage {
+		m.access.Unlock() //karing
 		panic("already started")
 	}
 	m.started = true
@@ -62,6 +65,8 @@ func (m *Manager) Close() error {
 	m.started = false
 	inbounds := m.inbounds
 	m.inbounds = nil
+	m.endpoint = nil                                  //karing
+	m.inboundByTag = make(map[string]adapter.Inbound) //karing
 	monitor := taskmonitor.New(m.logger, C.StopTimeout)
 	var err error
 	for _, inbound := range inbounds {
@@ -86,6 +91,9 @@ func (m *Manager) Get(tag string) (adapter.Inbound, bool) {
 	m.access.Unlock()
 	if found {
 		return inbound, true
+	}
+	if m.endpoint == nil { //karing
+		return nil, false
 	}
 	return m.endpoint.Get(tag)
 }

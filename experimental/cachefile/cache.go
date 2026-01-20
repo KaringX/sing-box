@@ -12,6 +12,7 @@ import (
 	"github.com/sagernet/bbolt"
 	bboltErrors "github.com/sagernet/bbolt/errors"
 	"github.com/sagernet/sing-box/adapter"
+	"github.com/sagernet/sing-box/common/compatible"
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing/common"
 	E "github.com/sagernet/sing/common/exceptions"
@@ -52,6 +53,7 @@ type CacheFile struct {
 	saveAddress6      map[string]netip.Addr
 	saveRDRCAccess    sync.RWMutex
 	saveRDRC          map[saveRDRCCacheKey]bool
+	fetchError        compatible.Map[string, string] //karing
 }
 
 type saveRDRCCacheKey struct {
@@ -101,7 +103,10 @@ func (c *CacheFile) Dependencies() []string {
 	return nil
 }
 
-func (c *CacheFile) Start(stage adapter.StartStage) error {
+func (c *CacheFile) Start(stage adapter.StartStage) error { //karing
+	return nil
+}
+func (c *CacheFile) start(stage adapter.StartStage) error { //karing
 	if stage != adapter.StartStateInitialize {
 		return nil
 	}
@@ -130,11 +135,11 @@ func (c *CacheFile) Start(stage adapter.StartStage) error {
 	if err != nil {
 		return err
 	}
-	err = filemanager.Chown(c.ctx, c.path)
+	/*err = filemanager.Chown(c.ctx, c.path)//karing
 	if err != nil {
 		db.Close()
 		return E.Cause(err, "platform chown")
-	}
+	}*/
 	err = db.Batch(func(tx *bbolt.Tx) error {
 		return tx.ForEach(func(name []byte, b *bbolt.Bucket) error {
 			if name[0] == 0 {
@@ -166,7 +171,10 @@ func (c *CacheFile) Close() error {
 	if c.DB == nil {
 		return nil
 	}
-	return c.DB.Close()
+	c.fetchError.Clear() //karing
+	err := c.DB.Close()  //karing
+	c.DB = nil           //karing
+	return err           //karing
 }
 
 func (c *CacheFile) StoreFakeIP() bool {
@@ -174,6 +182,9 @@ func (c *CacheFile) StoreFakeIP() bool {
 }
 
 func (c *CacheFile) LoadMode() string {
+	if c.DB == nil { //karing
+		return ""
+	}
 	var mode string
 	c.DB.View(func(t *bbolt.Tx) error {
 		bucket := t.Bucket(bucketMode)
@@ -193,6 +204,9 @@ func (c *CacheFile) LoadMode() string {
 }
 
 func (c *CacheFile) StoreMode(mode string) error {
+	if c.DB == nil { //karing
+		return nil
+	}
 	return c.DB.Batch(func(t *bbolt.Tx) error {
 		bucket, err := t.CreateBucketIfNotExists(bucketMode)
 		if err != nil {
@@ -229,6 +243,9 @@ func (c *CacheFile) createBucket(t *bbolt.Tx, key []byte) (*bbolt.Bucket, error)
 }
 
 func (c *CacheFile) LoadSelected(group string) string {
+	if c.DB == nil { //karing
+		return ""
+	}
 	var selected string
 	c.DB.View(func(t *bbolt.Tx) error {
 		bucket := c.bucket(t, bucketSelected)
@@ -245,6 +262,9 @@ func (c *CacheFile) LoadSelected(group string) string {
 }
 
 func (c *CacheFile) StoreSelected(group, selected string) error {
+	if c.DB == nil { //karing
+		return nil
+	}
 	return c.DB.Batch(func(t *bbolt.Tx) error {
 		bucket, err := c.createBucket(t, bucketSelected)
 		if err != nil {
@@ -255,6 +275,9 @@ func (c *CacheFile) StoreSelected(group, selected string) error {
 }
 
 func (c *CacheFile) LoadGroupExpand(group string) (isExpand bool, loaded bool) {
+	if c.DB == nil { //karing
+		return false, false
+	}
 	c.DB.View(func(t *bbolt.Tx) error {
 		bucket := c.bucket(t, bucketExpand)
 		if bucket == nil {
@@ -271,6 +294,9 @@ func (c *CacheFile) LoadGroupExpand(group string) (isExpand bool, loaded bool) {
 }
 
 func (c *CacheFile) StoreGroupExpand(group string, isExpand bool) error {
+	if c.DB == nil { //karing
+		return nil
+	}
 	return c.DB.Batch(func(t *bbolt.Tx) error {
 		bucket, err := c.createBucket(t, bucketExpand)
 		if err != nil {
@@ -285,6 +311,9 @@ func (c *CacheFile) StoreGroupExpand(group string, isExpand bool) error {
 }
 
 func (c *CacheFile) LoadRuleSet(tag string) *adapter.SavedBinary {
+	if c.DB == nil { //karing
+		return nil
+	}
 	var savedSet adapter.SavedBinary
 	err := c.DB.View(func(t *bbolt.Tx) error {
 		bucket := c.bucket(t, bucketRuleSet)
@@ -304,6 +333,9 @@ func (c *CacheFile) LoadRuleSet(tag string) *adapter.SavedBinary {
 }
 
 func (c *CacheFile) SaveRuleSet(tag string, set *adapter.SavedBinary) error {
+	if c.DB == nil { //karing
+		return nil
+	}
 	return c.DB.Batch(func(t *bbolt.Tx) error {
 		bucket, err := c.createBucket(t, bucketRuleSet)
 		if err != nil {

@@ -18,7 +18,7 @@ import (
 	"github.com/sagernet/sing-box/experimental/libbox/platform"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
-	"github.com/sagernet/sing-tun"
+	tun "github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/json/badoption"
@@ -184,6 +184,8 @@ func NewInbound(ctx context.Context, router adapter.Router, logger log.ContextLo
 	}
 	networkManager := service.FromContext[adapter.NetworkManager](ctx)
 	multiPendingPackets := C.IsDarwin && ((options.Stack == "gvisor" && tunMTU < 32768) || (options.Stack != "gvisor" && options.MTU <= 9000))
+	SetTunnelType(options.InterfaceName) //karing
+
 	inbound := &Inbound{
 		tag:            tag,
 		ctx:            ctx,
@@ -218,6 +220,7 @@ func NewInbound(ctx context.Context, router adapter.Router, logger log.ContextLo
 			ExcludePackage:           options.ExcludePackage,
 			InterfaceMonitor:         networkManager.InterfaceMonitor(),
 			EXP_MultiPendingPackets:  multiPendingPackets,
+			Logger:                   logger, //karing
 		},
 		udpTimeout:        udpTimeout,
 		stack:             options.Stack,
@@ -250,7 +253,7 @@ func NewInbound(ctx context.Context, router adapter.Router, logger log.ContextLo
 			Logger:                 logger,
 			NetworkMonitor:         networkManager.NetworkMonitor(),
 			InterfaceFinder:        networkManager.InterfaceFinder(),
-			TableName:              "sing-box",
+			TableName:              "karing", //karing
 			DisableNFTables:        dErr == nil && disableNFTables,
 			RouteAddressSet:        &inbound.routeAddressSet,
 			RouteExcludeAddressSet: &inbound.routeExcludeAddressSet,
@@ -323,7 +326,7 @@ func (t *Inbound) Start(stage adapter.StartStage) error {
 			for _, routeRuleSet := range t.routeRuleSet {
 				ipSets := routeRuleSet.ExtractIPSet()
 				if len(ipSets) == 0 {
-					t.logger.Warn("route_address_set: no destination IP CIDR rules found in rule-set: ", routeRuleSet.Name())
+					t.logger.WarnContext(t.ctx, "route_address_set: no destination IP CIDR rules found in rule-set: ", routeRuleSet.Name()) //karing
 				}
 				routeRuleSet.IncRef()
 				t.routeAddressSet = append(t.routeAddressSet, ipSets...)
@@ -335,7 +338,7 @@ func (t *Inbound) Start(stage adapter.StartStage) error {
 			for _, routeExcludeRuleSet := range t.routeExcludeRuleSet {
 				ipSets := routeExcludeRuleSet.ExtractIPSet()
 				if len(ipSets) == 0 {
-					t.logger.Warn("route_address_set: no destination IP CIDR rules found in rule-set: ", routeExcludeRuleSet.Name())
+					t.logger.WarnContext(t.ctx, "route_address_set: no destination IP CIDR rules found in rule-set: ", routeExcludeRuleSet.Name()) //karing
 				}
 				routeExcludeRuleSet.IncRef()
 				t.routeExcludeAddressSet = append(t.routeExcludeAddressSet, ipSets...)
@@ -384,7 +387,7 @@ func (t *Inbound) Start(stage adapter.StartStage) error {
 		if err != nil {
 			return E.Cause(err, "configure tun interface")
 		}
-		t.logger.Trace("creating stack")
+		t.logger.TraceContext(t.ctx, "creating stack") //karing
 		t.tunIf = tunInterface
 		var (
 			forwarderBindInterface bool
@@ -409,7 +412,7 @@ func (t *Inbound) Start(stage adapter.StartStage) error {
 			return err
 		}
 		t.tunStack = tunStack
-		t.logger.Info("started at ", t.tunOptions.Name)
+		t.logger.InfoContext(t.ctx, "started at ", t.tunOptions.Name) //karing
 	case adapter.StartStatePostStart:
 		monitor := taskmonitor.New(t.logger, C.StartTimeout)
 		monitor.Start("starting tun stack")

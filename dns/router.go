@@ -14,7 +14,7 @@ import (
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
 	R "github.com/sagernet/sing-box/route/rule"
-	"github.com/sagernet/sing-tun"
+	tun "github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common"
 	E "github.com/sagernet/sing/common/exceptions"
 	F "github.com/sagernet/sing/common/format"
@@ -115,6 +115,14 @@ func (r *Router) Close() error {
 		})
 		monitor.Finish()
 	}
+	if r.client != nil { //karing
+		r.client.Close()
+	}
+	r.transport = nil                    //karing
+	r.outbound = nil                     //karing
+	r.rules = make([]adapter.DNSRule, 0) //karing
+	r.dnsReverseMapping = nil            //karing
+
 	return err
 }
 
@@ -140,9 +148,9 @@ func (r *Router) matchDNS(ctx context.Context, allowFakeIP bool, ruleIndex int, 
 			}
 			ruleDescription := currentRule.String()
 			if ruleDescription != "" {
-				r.logger.DebugContext(ctx, "match[", displayRuleIndex, "] ", currentRule, " => ", currentRule.Action())
+				r.logger.DebugContext(ctx, metadata.Domain, " ", "match[", displayRuleIndex, "] ", currentRule, " => ", currentRule.Action()) //karing
 			} else {
-				r.logger.DebugContext(ctx, "match[", displayRuleIndex, "] => ", currentRule.Action())
+				r.logger.DebugContext(ctx, metadata.Domain, " ", "match[", displayRuleIndex, "] => ", currentRule.Action())
 			}
 			switch action := currentRule.Action().(type) {
 			case *R.RuleActionDNSRoute:
@@ -196,10 +204,17 @@ func (r *Router) matchDNS(ctx context.Context, allowFakeIP bool, ruleIndex int, 
 			}
 		}
 	}
+	if r.transport == nil { //karing
+		return nil, nil, -1
+	}
+
 	return r.transport.Default(), nil, -1
 }
 
 func (r *Router) Exchange(ctx context.Context, message *mDNS.Msg, options adapter.DNSQueryOptions) (*mDNS.Msg, error) {
+	if r.transport == nil { //karing
+		return nil, E.New("router closed")
+	}
 	if len(message.Question) != 1 {
 		r.logger.WarnContext(ctx, "bad question size: ", len(message.Question))
 		responseMessage := mDNS.Msg{
@@ -286,16 +301,20 @@ func (r *Router) Exchange(ctx context.Context, message *mDNS.Msg, options adapte
 			response, err = r.client.Exchange(dnsCtx, transport, message, dnsOptions, responseCheck)
 			var rejected bool
 			if err != nil {
+				transportTag := ""    //karing
+				if transport != nil { //karing
+					transportTag = transport.Tag()
+				}
 				if errors.Is(err, ErrResponseRejectedCached) {
 					rejected = true
-					r.logger.DebugContext(ctx, E.Cause(err, "response rejected for ", FormatQuestion(message.Question[0].String())), " (cached)")
+					r.logger.DebugContext(ctx, E.Cause(err, "response rejected for ", FormatQuestion(message.Question[0].String())), " (cached)", " query_type:", metadata.QueryType, " by ", transportTag) //karing
 				} else if errors.Is(err, ErrResponseRejected) {
 					rejected = true
-					r.logger.DebugContext(ctx, E.Cause(err, "response rejected for ", FormatQuestion(message.Question[0].String())))
+					r.logger.DebugContext(ctx, E.Cause(err, "response rejected for ", FormatQuestion(message.Question[0].String()), " query_type:", metadata.QueryType, " by ", transportTag)) //karing
 				} else if len(message.Question) > 0 {
-					r.logger.ErrorContext(ctx, E.Cause(err, "exchange failed for ", FormatQuestion(message.Question[0].String())))
+					r.logger.ErrorContext(ctx, E.Cause(err, "exchange failed for ", FormatQuestion(message.Question[0].String()), " query_type:", metadata.QueryType, " by ", transportTag)) //karing
 				} else {
-					r.logger.ErrorContext(ctx, E.Cause(err, "exchange failed for <empty query>"))
+					r.logger.ErrorContext(ctx, E.Cause(err, "exchange failed for <empty query>", " query_type:", metadata.QueryType, " by ", transportTag)) //karing
 				}
 			}
 			if responseCheck != nil && rejected {
@@ -323,6 +342,9 @@ func (r *Router) Exchange(ctx context.Context, message *mDNS.Msg, options adapte
 }
 
 func (r *Router) Lookup(ctx context.Context, domain string, options adapter.DNSQueryOptions) ([]netip.Addr, error) {
+	if r.transport == nil { //karing
+		return nil, E.New("router closed")
+	}
 	var (
 		responseAddrs []netip.Addr
 		err           error
@@ -413,7 +435,10 @@ func (r *Router) Lookup(ctx context.Context, domain string, options adapter.DNSQ
 response:
 	printResult()
 	if len(responseAddrs) > 0 {
-		r.logger.InfoContext(ctx, "lookup succeed for ", domain, ": ", strings.Join(F.MapToString(responseAddrs), " "))
+		lateString := F.MakeLaterString(func() string { //karing
+			return strings.Join(F.MapToString(responseAddrs), " ")
+		})
+		r.logger.InfoContext(ctx, "lookup succeed for ", domain, ": ", lateString) //karing
 	}
 	return responseAddrs, err
 }
@@ -444,6 +469,9 @@ func (r *Router) LookupReverseMapping(ip netip.Addr) (string, bool) {
 
 func (r *Router) ResetNetwork() {
 	r.ClearCache()
+	if r.transport == nil { //karing
+		return
+	}
 	for _, transport := range r.transport.Transports() {
 		transport.Close()
 	}

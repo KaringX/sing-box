@@ -9,6 +9,8 @@ import (
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/experimental/clashapi/trafficontrol"
 	"github.com/sagernet/sing/common/json"
+	"github.com/sagernet/sing/service"
+	"github.com/sagernet/sing/service/pause"
 	"github.com/sagernet/ws"
 	"github.com/sagernet/ws/wsutil"
 
@@ -17,18 +19,19 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
-func connectionRouter(router adapter.Router, trafficManager *trafficontrol.Manager) http.Handler {
+func connectionRouter(server *Server, router adapter.Router, trafficManager *trafficontrol.Manager) http.Handler { //karing
 	r := chi.NewRouter()
-	r.Get("/", getConnections(trafficManager))
+	r.Get("/", getConnections(server, trafficManager)) //karing
 	r.Delete("/", closeAllConnections(router, trafficManager))
 	r.Delete("/{id}", closeConnection(trafficManager))
 	return r
 }
 
-func getConnections(trafficManager *trafficontrol.Manager) func(w http.ResponseWriter, r *http.Request) {
+func getConnections(server *Server, trafficManager *trafficontrol.Manager) func(w http.ResponseWriter, r *http.Request) { //karing
 	return func(w http.ResponseWriter, r *http.Request) {
+		noConnections := r.URL.Query().Get("noConnections") //karing
 		if r.Header.Get("Upgrade") != "websocket" {
-			snapshot := trafficManager.Snapshot()
+			snapshot := trafficManager.Snapshot(noConnections != "true") //karing
 			render.JSON(w, r, snapshot)
 			return
 		}
@@ -54,7 +57,7 @@ func getConnections(trafficManager *trafficontrol.Manager) func(w http.ResponseW
 		buf := &bytes.Buffer{}
 		sendSnapshot := func() error {
 			buf.Reset()
-			snapshot := trafficManager.Snapshot()
+			snapshot := trafficManager.Snapshot(noConnections != "true") //karing
 			if err := json.NewEncoder(buf).Encode(snapshot); err != nil {
 				return err
 			}
@@ -66,8 +69,23 @@ func getConnections(trafficManager *trafficontrol.Manager) func(w http.ResponseW
 		}
 
 		tick := time.NewTicker(time.Millisecond * time.Duration(interval))
-		defer tick.Stop()
+		closed := false //karing
+		server.AddTick(tick, func() { //karing
+			closed = true
+		})
+		defer func() { //karing
+			server.RemoveTick(tick)
+			tick.Stop()
+		}()
+
 		for range tick.C {
+			if closed { //karing
+				break
+			}
+			pauseManager := service.FromContext[pause.Manager](server.ctx) //karing
+			if pauseManager == nil || pauseManager.IsDevicePaused() {      //karing
+				break
+			}
 			if err = sendSnapshot(); err != nil {
 				break
 			}
@@ -78,7 +96,7 @@ func getConnections(trafficManager *trafficontrol.Manager) func(w http.ResponseW
 func closeConnection(trafficManager *trafficontrol.Manager) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := uuid.FromStringOrNil(chi.URLParam(r, "id"))
-		snapshot := trafficManager.Snapshot()
+		snapshot := trafficManager.Snapshot(true) //karing
 		for _, c := range snapshot.Connections {
 			if id == c.Metadata().ID {
 				c.Close()
@@ -91,7 +109,7 @@ func closeConnection(trafficManager *trafficontrol.Manager) func(w http.Response
 
 func closeAllConnections(router adapter.Router, trafficManager *trafficontrol.Manager) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		snapshot := trafficManager.Snapshot()
+		snapshot := trafficManager.Snapshot(true) //karing
 		for _, c := range snapshot.Connections {
 			c.Close()
 		}

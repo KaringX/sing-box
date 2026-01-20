@@ -58,7 +58,7 @@ func NewTLS(ctx context.Context, logger log.ContextLogger, tag string, options o
 		serverAddr.Port = 853
 	}
 	if !serverAddr.IsValid() {
-		return nil, E.New("invalid server address: ", serverAddr)
+		return nil, E.New("invalid server address: ", options.DNSServerAddressOptions.Server, ":", options.DNSServerAddressOptions.ServerPort) //karing
 	}
 	return NewTLSRaw(logger, dns.NewTransportAdapterWithRemoteOptions(C.DNSTypeTLS, tag, options.RemoteDNSServerOptions), transportDialer, serverAddr, tlsConfig), nil
 }

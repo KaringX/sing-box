@@ -53,6 +53,7 @@ func NewDefaultDNSRule(ctx context.Context, logger log.ContextLogger, options op
 		abstractDefaultRule: abstractDefaultRule{
 			invert: options.Invert,
 			action: NewDNSRuleAction(logger, options.DNSRuleAction),
+			name:   options.Name, //karing
 		},
 	}
 	if len(options.Inbound) > 0 {
@@ -308,6 +309,7 @@ func NewLogicalDNSRule(ctx context.Context, logger log.ContextLogger, options op
 			rules:  make([]adapter.HeadlessRule, len(options.Rules)),
 			invert: options.Invert,
 			action: NewDNSRuleAction(logger, options.DNSRuleAction),
+			name:   options.Name, //karing
 		},
 	}
 	switch options.Mode {
@@ -319,9 +321,11 @@ func NewLogicalDNSRule(ctx context.Context, logger log.ContextLogger, options op
 		return nil, E.New("unknown logical mode: ", options.Mode)
 	}
 	for i, subRule := range options.Rules {
+		subRule.DefaultOptions.Name = options.Name //karing
+		subRule.LogicalOptions.Name = options.Name //karing
 		rule, err := NewDNSRule(ctx, logger, subRule, false)
 		if err != nil {
-			return nil, E.Cause(err, "sub rule[", i, "]")
+			return nil, E.Cause(err, "sub rule[", i, "]", options.Name) //karing
 		}
 		r.rules[i] = rule
 	}
@@ -363,15 +367,16 @@ func (r *LogicalDNSRule) Match(metadata *adapter.InboundContext) bool {
 }
 
 func (r *LogicalDNSRule) MatchAddressLimit(metadata *adapter.InboundContext) bool {
+	metadataCopy := *metadata //karing
 	if r.mode == C.LogicalTypeAnd {
 		return common.All(r.rules, func(it adapter.HeadlessRule) bool {
 			metadata.ResetRuleCache()
-			return it.(adapter.DNSRule).MatchAddressLimit(metadata)
+			return it.(adapter.DNSRule).MatchAddressLimit(&metadataCopy) //karing
 		}) != r.invert
 	} else {
 		return common.Any(r.rules, func(it adapter.HeadlessRule) bool {
 			metadata.ResetRuleCache()
-			return it.(adapter.DNSRule).MatchAddressLimit(metadata)
+			return it.(adapter.DNSRule).MatchAddressLimit(&metadataCopy) //karing
 		}) != r.invert
 	}
 }

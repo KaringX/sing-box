@@ -165,7 +165,7 @@ func determinePkgTypeSecondary(pkgName string) (string, bool) {
 func determineCorePath(pkgInfo *buildinfo.BuildInfo, pkgType string) (string, bool) {
 	switch pkgType {
 	case androidVPNCoreTypeClash:
-		return determineCorePathForPkgs(pkgInfo, []string{"github.com/Dreamacro/clash"}, []string{"clash"})
+		return determineCorePathForPkgs(pkgInfo, []string{"github.com/Dreamacro/clash", "github.com/metacubex/mihomo"}, []string{"clash"}) //karing
 	case androidVPNCoreTypeV2Ray:
 		if v2rayVersion, loaded := determineCorePathForPkgs(pkgInfo, []string{
 			"github.com/v2fly/v2ray-core",

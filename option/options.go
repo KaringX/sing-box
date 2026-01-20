@@ -22,13 +22,14 @@ type _Options struct {
 	Route        *RouteOptions        `json:"route,omitempty"`
 	Services     []Service            `json:"services,omitempty"`
 	Experimental *ExperimentalOptions `json:"experimental,omitempty"`
+	Custom       *map[string]interface{} `json:"custom,omitempty"` //hiddify
 }
 
 type Options _Options
 
 func (o *Options) UnmarshalJSONContext(ctx context.Context, content []byte) error {
 	decoder := json.NewDecoderContext(ctx, bytes.NewReader(content))
-	decoder.DisallowUnknownFields()
+	//decoder.DisallowUnknownFields() //karing
 	err := decoder.Decode((*_Options)(o))
 	if err != nil {
 		return err

@@ -74,7 +74,7 @@ func NewClient(ctx context.Context, dialer N.Dialer, serverAddr M.Socksaddr, opt
 	}, nil
 }
 
-func (c *Client) connect() (*grpc.ClientConn, error) {
+func (c *Client) connect(ctx context.Context) (*grpc.ClientConn, error) { //karing
 	conn := c.conn.Load()
 	if conn != nil && conn.GetState() != connectivity.Shutdown {
 		return conn, nil
@@ -95,7 +95,7 @@ func (c *Client) connect() (*grpc.ClientConn, error) {
 }
 
 func (c *Client) DialContext(ctx context.Context) (net.Conn, error) {
-	clientConn, err := c.connect()
+	clientConn, err := c.connect(ctx) //karing
 	if err != nil {
 		return nil, err
 	}

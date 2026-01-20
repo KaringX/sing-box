@@ -1,12 +1,15 @@
 package endpoint
 
-import "github.com/sagernet/sing-box/option"
+import (
+	"github.com/sagernet/sing-box/option"
+)
 
 type Adapter struct {
 	endpointType string
 	endpointTag  string
 	network      []string
 	dependencies []string
+	parseErr     error //karing
 }
 
 func NewAdapter(endpointType string, endpointTag string, network []string, dependencies []string) Adapter {

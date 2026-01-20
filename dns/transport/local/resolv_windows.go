@@ -28,7 +28,8 @@ func dnsReadConfig(ctx context.Context, _ string) *dnsConfig {
 	}()
 	addresses, err := adapterAddresses()
 	if err != nil {
-		return nil
+		conf.err = err //karing
+		return conf    //karing
 	}
 	var dnsAddresses []struct {
 		ifName string
@@ -43,6 +44,12 @@ func dnsReadConfig(ctx context.Context, _ string) *dnsConfig {
 		}
 		if address.FirstGatewayAddress == nil {
 			continue
+		}
+		if address.Dhcpv4Server.SockaddrLength != 0 { //karing
+			conf.NameServer = append(conf.NameServer, address.Dhcpv4Server.IP().String())
+		}
+		if address.Dhcpv6Server.SockaddrLength != 0 { //karing
+			conf.NameServer = append(conf.NameServer, address.Dhcpv6Server.IP().String())
 		}
 		for dnsServerAddress := address.FirstDnsServerAddress; dnsServerAddress != nil; dnsServerAddress = dnsServerAddress.Next {
 			rawSockaddr, err := dnsServerAddress.Address.Sockaddr.Sockaddr()

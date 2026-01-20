@@ -9,10 +9,14 @@ type SelectorOutboundOptions struct {
 }
 
 type URLTestOutboundOptions struct {
-	Outbounds                 []string           `json:"outbounds"`
-	URL                       string             `json:"url,omitempty"`
-	Interval                  badoption.Duration `json:"interval,omitempty"`
-	Tolerance                 uint16             `json:"tolerance,omitempty"`
-	IdleTimeout               badoption.Duration `json:"idle_timeout,omitempty"`
-	InterruptExistConnections bool               `json:"interrupt_exist_connections,omitempty"`
+	Outbounds                   []string           `json:"outbounds"`
+	URL                         string             `json:"url,omitempty"`
+	Interval                    badoption.Duration `json:"interval,omitempty"`
+	Tolerance                   uint16             `json:"tolerance,omitempty"`
+	IdleTimeout                 badoption.Duration `json:"idle_timeout,omitempty"`
+	InterruptExistConnections   bool               `json:"interrupt_exist_connections,omitempty"`
+	Default                     string             `json:"default,omitempty"`                        //karing
+	SelectedHealthCheckInterval badoption.Duration `json:"selected_health_check_interval,omitempty"` //karing
+	ReTestIfNetworkUpdate       bool               `json:"retest_if_network_udpate,omitempty"`       //karing
+	SkipTest                    bool               `json:"skip_test,omitempty"`                      //karing
 }

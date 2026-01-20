@@ -1,11 +1,13 @@
 package trafficontrol
 
 import (
+	"context"
 	"net"
 	"sync/atomic"
 	"time"
 
 	"github.com/sagernet/sing-box/adapter"
+	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/bufio"
 	F "github.com/sagernet/sing/common/format"
@@ -16,16 +18,25 @@ import (
 )
 
 type TrackerMetadata struct {
-	ID           uuid.UUID
-	Metadata     adapter.InboundContext
-	CreatedAt    time.Time
-	ClosedAt     time.Time
-	Upload       *atomic.Int64
-	Download     *atomic.Int64
-	Chain        []string
-	Rule         adapter.Rule
-	Outbound     string
-	OutboundType string
+	ID            uuid.UUID
+	Metadata      adapter.InboundContext
+	CreatedAt     time.Time
+	ClosedAt      time.Time
+	Upload        *atomic.Int64
+	Download      *atomic.Int64
+	UploadBlip    *atomic.Int64 //karing
+	DownloadBlip  *atomic.Int64 //karing
+	UploadSpeed   int64         //karing
+	DownloadSpeed int64         //karing
+	Chain         []string
+	Rule          adapter.Rule
+	Outbound      string
+	OutboundType  string
+	User          string       //karing
+	Protocol      string       //karing
+	UploadLast    *time.Time   //karing
+	DownloadLast  *time.Time   //karing
+	Dirty         *atomic.Bool //karing
 }
 
 func (t TrackerMetadata) MarshalJSON() ([]byte, error) {
@@ -42,11 +53,12 @@ func (t TrackerMetadata) MarshalJSON() ([]byte, error) {
 		domain = t.Metadata.Destination.Fqdn
 	}
 	var processPath string
+	var packageName string //karing
 	if t.Metadata.ProcessInfo != nil {
 		if t.Metadata.ProcessInfo.ProcessPath != "" {
 			processPath = t.Metadata.ProcessInfo.ProcessPath
 		} else if t.Metadata.ProcessInfo.PackageName != "" {
-			processPath = t.Metadata.ProcessInfo.PackageName
+			packageName = t.Metadata.ProcessInfo.PackageName //karing
 		}
 		if processPath == "" {
 			if t.Metadata.ProcessInfo.UserId != -1 {
@@ -76,6 +88,9 @@ func (t TrackerMetadata) MarshalJSON() ([]byte, error) {
 			"host":            domain,
 			"dnsMode":         "normal",
 			"processPath":     processPath,
+			"packageName":     packageName, //karing
+			"user":            t.User,      //karing
+			"protocol":        t.Protocol,  //karing
 		},
 		"upload":      t.Upload.Load(),
 		"download":    t.Download.Load(),
@@ -102,6 +117,8 @@ func (tt *TCPConn) Metadata() TrackerMetadata {
 }
 
 func (tt *TCPConn) Close() error {
+	tt.metadata.ClosedAt = time.Now() //karing
+	tt.metadata.Dirty.Store(true)     //karing
 	tt.manager.Leave(tt)
 	return tt.ExtendedConn.Close()
 }
@@ -118,8 +135,10 @@ func (tt *TCPConn) WriterReplaceable() bool {
 	return true
 }
 
-func NewTCPTracker(conn net.Conn, manager *Manager, metadata adapter.InboundContext, outboundManager adapter.OutboundManager, matchRule adapter.Rule, matchOutbound adapter.Outbound) *TCPConn {
+func NewTCPTracker(ctx context.Context, conn net.Conn, manager *Manager, metadata adapter.InboundContext, outboundManager adapter.OutboundManager, matchRule adapter.Rule, matchOutbound adapter.Outbound) *TCPConn { //karing
 	id, _ := uuid.NewV4()
+	chain, outbound, outboundType := GetMatchRuleChain(outboundManager, matchOutbound.Tag()) //karing
+	/* //karing
 	var (
 		chain        []string
 		next         string
@@ -145,26 +164,48 @@ func NewTCPTracker(conn net.Conn, manager *Manager, metadata adapter.InboundCont
 		}
 		next = group.Now()
 	}
+	*/
 	upload := new(atomic.Int64)
 	download := new(atomic.Int64)
+	uploadBlip := new(atomic.Int64)   //karing
+	downloadBlip := new(atomic.Int64) //karing
+	uploadLast := new(time.Time)      //karing
+	downloadLast := new(time.Time)    //karing
+	dirty := new(atomic.Bool)         //karing
+	dirty.Store(true)
 	tracker := &TCPConn{
 		ExtendedConn: bufio.NewCounterConn(conn, []N.CountFunc{func(n int64) {
 			upload.Add(n)
-			manager.PushUploaded(n)
+			uploadBlip.Add(n)                                     //karing
+			dirty.Store(true)                                     //karing
+			*uploadLast = time.Now()                              //karing
+			manager.PushUploaded(n, outboundType == C.TypeDirect) //karing
 		}}, []N.CountFunc{func(n int64) {
 			download.Add(n)
-			manager.PushDownloaded(n)
+			downloadBlip.Add(n)                                     //karing
+			dirty.Store(true)                                       //karing
+			*downloadLast = time.Now()                              //karing
+			manager.PushDownloaded(n, outboundType == C.TypeDirect) //karing
 		}}),
 		metadata: TrackerMetadata{
-			ID:           id,
-			Metadata:     metadata,
-			CreatedAt:    time.Now(),
-			Upload:       upload,
-			Download:     download,
-			Chain:        common.Reverse(chain),
-			Rule:         matchRule,
-			Outbound:     outbound,
-			OutboundType: outboundType,
+			ID:            id,
+			Metadata:      metadata,
+			CreatedAt:     time.Now(),
+			Upload:        upload,
+			Download:      download,
+			UploadBlip:    uploadBlip,   //karing
+			DownloadBlip:  downloadBlip, //karing
+			UploadSpeed:   0,            //karing
+			DownloadSpeed: 0,            //karing
+			Chain:         common.Reverse(chain),
+			Rule:          matchRule,
+			Outbound:      outbound,
+			OutboundType:  outboundType,
+			User:          metadata.User,     //karing
+			Protocol:      metadata.Protocol, //karing
+			UploadLast:    uploadLast,        //karing
+			DownloadLast:  downloadLast,      //karing
+			Dirty:         dirty,             //karing
 		},
 		manager: manager,
 	}
@@ -199,8 +240,10 @@ func (ut *UDPConn) WriterReplaceable() bool {
 	return true
 }
 
-func NewUDPTracker(conn N.PacketConn, manager *Manager, metadata adapter.InboundContext, outboundManager adapter.OutboundManager, matchRule adapter.Rule, matchOutbound adapter.Outbound) *UDPConn {
+func NewUDPTracker(ctx context.Context, conn N.PacketConn, manager *Manager, metadata adapter.InboundContext, outboundManager adapter.OutboundManager, matchRule adapter.Rule, matchOutbound adapter.Outbound) *UDPConn { //karing
 	id, _ := uuid.NewV4()
+	chain, outbound, outboundType := GetMatchRuleChain(outboundManager, matchOutbound.Tag()) //karing
+	/* //karing
 	var (
 		chain        []string
 		next         string
@@ -226,15 +269,28 @@ func NewUDPTracker(conn N.PacketConn, manager *Manager, metadata adapter.Inbound
 		}
 		next = group.Now()
 	}
+	*/
 	upload := new(atomic.Int64)
 	download := new(atomic.Int64)
+	uploadBlip := new(atomic.Int64)   //karing
+	downloadBlip := new(atomic.Int64) //karing
+	uploadLast := new(time.Time)      //karing
+	downloadLast := new(time.Time)    //karing
+	dirty := new(atomic.Bool)         //karing
+	dirty.Store(true)
 	trackerConn := &UDPConn{
 		PacketConn: bufio.NewCounterPacketConn(conn, []N.CountFunc{func(n int64) {
 			upload.Add(n)
-			manager.PushUploaded(n)
+			dirty.Store(true)                                     //karing
+			uploadBlip.Add(n)                                     //karing
+			*uploadLast = time.Now()                              //karing
+			manager.PushUploaded(n, outboundType == C.TypeDirect) //karing
 		}}, []N.CountFunc{func(n int64) {
 			download.Add(n)
-			manager.PushDownloaded(n)
+			downloadBlip.Add(n)                                     //karing
+			dirty.Store(true)                                       //karing
+			*downloadLast = time.Now()                              //karing
+			manager.PushDownloaded(n, outboundType == C.TypeDirect) //karing
 		}}),
 		metadata: TrackerMetadata{
 			ID:           id,
@@ -242,10 +298,17 @@ func NewUDPTracker(conn N.PacketConn, manager *Manager, metadata adapter.Inbound
 			CreatedAt:    time.Now(),
 			Upload:       upload,
 			Download:     download,
+			UploadBlip:   uploadBlip,   //karing
+			DownloadBlip: downloadBlip, //karing
 			Chain:        common.Reverse(chain),
 			Rule:         matchRule,
 			Outbound:     outbound,
 			OutboundType: outboundType,
+			User:         metadata.User,     //karing
+			Protocol:     metadata.Protocol, //karing
+			UploadLast:   uploadLast,        //karing
+			DownloadLast: downloadLast,      //karing
+			Dirty:        dirty,             //karing
 		},
 		manager: manager,
 	}

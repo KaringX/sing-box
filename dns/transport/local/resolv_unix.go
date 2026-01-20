@@ -68,6 +68,7 @@ func dnsReadConfig(_ context.Context, name string) *dnsConfig {
 				if _, err := netip.ParseAddr(f[1]); err == nil {
 					conf.servers = append(conf.servers, net.JoinHostPort(f[1], "53"))
 				}
+				conf.NameServer = conf.servers //karing
 			}
 		case "domain":
 			if len(f) > 1 {

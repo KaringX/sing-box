@@ -15,7 +15,6 @@ import (
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/logger"
 	M "github.com/sagernet/sing/common/metadata"
-	"github.com/sagernet/sing/common/task"
 	"github.com/sagernet/sing/contrab/freelru"
 	"github.com/sagernet/sing/contrab/maphash"
 
@@ -110,6 +109,9 @@ func extractNegativeTTL(response *dns.Msg) (uint32, bool) {
 }
 
 func (c *Client) Exchange(ctx context.Context, transport adapter.DNSTransport, message *dns.Msg, options adapter.DNSQueryOptions, responseChecker func(responseAddrs []netip.Addr) bool) (*dns.Msg, error) {
+	if transport == nil { //karing
+		return nil, E.New("transport closed")
+	}
 	if len(message.Question) == 0 {
 		if c.logger != nil {
 			c.logger.WarnContext(ctx, "bad question size: ", len(message.Question))
@@ -141,10 +143,17 @@ func (c *Client) Exchange(ctx context.Context, transport adapter.DNSTransport, m
 		!options.ClientSubnet.IsValid()
 	disableCache := !isSimpleRequest || c.disableCache || options.DisableCache
 	if !disableCache {
+		ctx, cancel := context.WithTimeout(ctx, c.timeout) //karing
+		defer cancel()                                     //karing
+
 		if c.cache != nil {
 			cond, loaded := c.cacheLock.LoadOrStore(question, make(chan struct{}))
 			if loaded {
-				<-cond
+				select { //karing
+				case <-ctx.Done():
+					return nil, ctx.Err()
+				case <-cond:
+				}
 			} else {
 				defer func() {
 					c.cacheLock.Delete(question)
@@ -154,7 +163,11 @@ func (c *Client) Exchange(ctx context.Context, transport adapter.DNSTransport, m
 		} else if c.transportCache != nil {
 			cond, loaded := c.transportCacheLock.LoadOrStore(question, make(chan struct{}))
 			if loaded {
-				<-cond
+				select { //karing
+				case <-ctx.Done():
+					return nil, ctx.Err()
+				case <-cond:
+				}
 			} else {
 				defer func() {
 					c.transportCacheLock.Delete(question)
@@ -187,7 +200,7 @@ func (c *Client) Exchange(ctx context.Context, transport adapter.DNSTransport, m
 	cancel()
 	if err != nil {
 		var rcodeError RcodeError
-		if errors.As(err, &rcodeError) {
+		if (response == nil || response.MsgHdr.Rcode == 0) && errors.As(err, &rcodeError) { //karing
 			response = FixedResponseStatus(message, int(rcodeError))
 		} else {
 			return nil, err
@@ -306,6 +319,9 @@ func (c *Client) Exchange(ctx context.Context, transport adapter.DNSTransport, m
 }
 
 func (c *Client) Lookup(ctx context.Context, transport adapter.DNSTransport, domain string, options adapter.DNSQueryOptions, responseChecker func(responseAddrs []netip.Addr) bool) ([]netip.Addr, error) {
+	if transport == nil { //karing
+		return nil, E.New("transport closed")
+	}
 	domain = FqdnToDomain(domain)
 	dnsName := dns.Fqdn(domain)
 	var strategy C.DomainStrategy
@@ -319,6 +335,7 @@ func (c *Client) Lookup(ctx context.Context, transport adapter.DNSTransport, dom
 	} else if strategy == C.DomainStrategyIPv6Only {
 		return c.lookupToExchange(ctx, transport, dnsName, dns.TypeAAAA, options, responseChecker)
 	}
+	/*//karing
 	var response4 []netip.Addr
 	var response6 []netip.Addr
 	var group task.Group
@@ -339,6 +356,9 @@ func (c *Client) Lookup(ctx context.Context, transport adapter.DNSTransport, dom
 		return nil
 	})
 	err := group.Run(ctx)
+	*/
+
+	response4, response6, err := c.lookupToExchange_A_AAAA(ctx, transport, dnsName, strategy, options, responseChecker) //karing
 	if len(response4) == 0 && len(response6) == 0 {
 		return nil, err
 	}
@@ -367,8 +387,14 @@ func (c *Client) storeCache(transport adapter.DNSTransport, question dns.Questio
 	}
 	if c.disableExpire {
 		if !c.independentCache {
+			if c.cache == nil { //karing
+				return
+			}
 			c.cache.Add(question, message)
 		} else {
+			if c.transportCache == nil { //karing
+				return
+			}
 			c.transportCache.Add(transportCacheKey{
 				Question:     question,
 				transportTag: transport.Tag(),
@@ -376,8 +402,14 @@ func (c *Client) storeCache(transport adapter.DNSTransport, question dns.Questio
 		}
 	} else {
 		if !c.independentCache {
+			if c.cache == nil { //karing
+				return
+			}
 			c.cache.AddWithLifetime(question, message, time.Second*time.Duration(timeToLive))
 		} else {
+			if c.transportCache == nil { //karing
+				return
+			}
 			c.transportCache.AddWithLifetime(transportCacheKey{
 				Question:     question,
 				transportTag: transport.Tag(),
@@ -433,8 +465,14 @@ func (c *Client) loadResponse(question dns.Question, transport adapter.DNSTransp
 	)
 	if c.disableExpire {
 		if !c.independentCache {
+			if c.cache == nil { //karing
+				return nil, 0
+			}
 			response, loaded = c.cache.Get(question)
 		} else {
+			if c.transportCache == nil { //karing
+				return nil, 0
+			}
 			response, loaded = c.transportCache.Get(transportCacheKey{
 				Question:     question,
 				transportTag: transport.Tag(),
@@ -447,8 +485,14 @@ func (c *Client) loadResponse(question dns.Question, transport adapter.DNSTransp
 	} else {
 		var expireAt time.Time
 		if !c.independentCache {
+			if c.cache == nil { //karing
+				return nil, 0
+			}
 			response, expireAt, loaded = c.cache.GetWithLifetime(question)
 		} else {
+			if c.transportCache == nil { //karing
+				return nil, 0
+			}
 			response, expireAt, loaded = c.transportCache.GetWithLifetime(transportCacheKey{
 				Question:     question,
 				transportTag: transport.Tag(),
@@ -460,8 +504,14 @@ func (c *Client) loadResponse(question dns.Question, transport adapter.DNSTransp
 		timeNow := time.Now()
 		if timeNow.After(expireAt) {
 			if !c.independentCache {
+				if c.cache == nil { //karing
+					return nil, 0
+				}
 				c.cache.Remove(question)
 			} else {
+				if c.transportCache == nil { //karing
+					return nil, 0
+				}
 				c.transportCache.Remove(transportCacheKey{
 					Question:     question,
 					transportTag: transport.Tag(),

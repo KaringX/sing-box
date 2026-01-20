@@ -8,10 +8,12 @@ import (
 	"os"
 	"runtime"
 	"sync"
+	"sync/atomic"
 
 	"github.com/sagernet/sing-box/adapter"
-	"github.com/sagernet/sing-tun"
+	tun "github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common"
+	E "github.com/sagernet/sing/common/exceptions"
 	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
 	"github.com/sagernet/sing/service"
@@ -26,6 +28,7 @@ type systemDevice struct {
 	dialer      N.Dialer
 	device      tun.Tun
 	batchDevice tun.LinuxTUN
+	closed      atomic.Bool //karing
 	events      chan wgTun.Event
 	closeOnce   sync.Once
 }
@@ -53,6 +56,9 @@ func (w *systemDevice) SetDevice(device *device.Device) {
 }
 
 func (w *systemDevice) Start() error {
+	if w.closed.Load() { //karing
+		return E.New("[systemDevice] device closed")
+	}
 	networkManager := service.FromContext[adapter.NetworkManager](w.options.Context)
 	tunOptions := tun.Options{
 		Name: w.options.Name,
@@ -149,6 +155,7 @@ func (w *systemDevice) Events() <-chan wgTun.Event {
 }
 
 func (w *systemDevice) Close() error {
+	w.closed.Store(true) //karing
 	close(w.events)
 	return w.device.Close()
 }

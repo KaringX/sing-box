@@ -2,8 +2,6 @@ package libbox
 
 import (
 	"time"
-
-	C "github.com/sagernet/sing-box/constant"
 )
 
 type iOSPauseFields struct {
@@ -11,7 +9,14 @@ type iOSPauseFields struct {
 }
 
 func (s *BoxService) Pause() {
-	s.pauseManager.DevicePause()
+	if s.instance != nil && s.instance.Logger() != nil { //karing
+		s.instance.Logger().Info("BoxService:Pause")
+	}
+	if s.pauseManager != nil { //karing
+		s.pauseManager.DevicePause()
+	}
+
+	/*//karing
 	if C.IsIos {
 		if s.endPauseTimer == nil {
 			s.endPauseTimer = time.AfterFunc(time.Minute, s.pauseManager.DeviceWake)
@@ -19,12 +24,25 @@ func (s *BoxService) Pause() {
 			s.endPauseTimer.Reset(time.Minute)
 		}
 	}
+	*/
+	s.stopResetTimer() //karing
 }
 
 func (s *BoxService) Wake() {
+	if s.instance != nil && s.instance.Logger() != nil { //karing
+		s.instance.Logger().Info("BoxService:Wake")
+	}
+	/*//karing
 	if !C.IsIos {
 		s.pauseManager.DeviceWake()
 	}
+	*/
+	if s.pauseManager != nil { //karing
+		s.ResetNetwork()            //karing
+		s.pauseManager.DeviceWake() //karing
+	}
+
+	s.startResetTimer(15*time.Second, s.tryResetNetwork) //karing
 }
 
 func (s *BoxService) ResetNetwork() {

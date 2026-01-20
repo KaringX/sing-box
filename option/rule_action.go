@@ -137,7 +137,11 @@ func (r *DNSRuleAction) UnmarshalJSONContext(ctx context.Context, data []byte) e
 	default:
 		return E.New("unknown DNS rule action: " + r.Action)
 	}
-	return badjson.UnmarshallExcludedContext(ctx, data, (*_DNSRuleAction)(r), v)
+	err = badjson.UnmarshallExcludedContext(ctx, data, (*_DNSRuleAction)(r), v) //karing
+	if err != nil {                                                             //karing
+		return E.Cause(err, string(data)) //karing
+	}
+	return err
 }
 
 type RouteActionOptions struct {

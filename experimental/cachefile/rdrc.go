@@ -26,6 +26,9 @@ func (c *CacheFile) LoadRDRC(transportName string, qName string, qType uint16) (
 	if cached {
 		return
 	}
+	if c.DB == nil { //karing
+		return
+	}
 	key := buf.Get(2 + len(qName))
 	binary.BigEndian.PutUint16(key, qType)
 	copy(key[2:], qName)
@@ -72,6 +75,9 @@ func (c *CacheFile) LoadRDRC(transportName string, qName string, qType uint16) (
 }
 
 func (c *CacheFile) SaveRDRC(transportName string, qName string, qType uint16) error {
+	if c.DB == nil { //karing
+		return nil
+	}
 	return c.DB.Batch(func(tx *bbolt.Tx) error {
 		bucket, err := c.createBucket(tx, bucketRDRC)
 		if err != nil {

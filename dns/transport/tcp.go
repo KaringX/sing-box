@@ -42,7 +42,7 @@ func NewTCP(ctx context.Context, logger log.ContextLogger, tag string, options o
 		serverAddr.Port = 53
 	}
 	if !serverAddr.IsValid() {
-		return nil, E.New("invalid server address: ", serverAddr)
+		return nil, E.New("invalid server address: ", options.DNSServerAddressOptions.Server, ":", options.DNSServerAddressOptions.ServerPort) //karing
 	}
 	return &TCPTransport{
 		TransportAdapter: dns.NewTransportAdapterWithRemoteOptions(C.DNSTypeTCP, tag, options),

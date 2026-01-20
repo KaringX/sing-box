@@ -11,7 +11,6 @@ import (
 	"github.com/sagernet/sing-box/experimental/libbox/platform"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
-	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/service"
 
 	mDNS "github.com/miekg/dns"
@@ -199,6 +198,7 @@ func (f *FallbackTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*m
 		}
 		return response, nil
 	} else {
-		return nil, E.New("only A, AAAA, NS, CNAME, TXT, MX queries are supported on current platform when using TUN, please switch to a fixed DNS server.")
+		return f.DNSTransport.Exchange(ctx, message) //karing
+		//return nil, E.New(question.Qtype, "->only A, AAAA, NS, CNAME, TXT, MX queries are supported on current platform when using TUN, please switch to a fixed DNS server.") //karing
 	}
 }

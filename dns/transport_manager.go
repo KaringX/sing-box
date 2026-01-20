@@ -278,7 +278,7 @@ func (m *TransportManager) Create(ctx context.Context, logger log.ContextLogger,
 		}
 		m.defaultTransport = transport
 		if m.started {
-			m.logger.Info("updated default server to ", transport.Tag())
+			m.logger.InfoContext(ctx, "updated default server to ", transport.Tag()) //karing
 		}
 	}
 	if transport.Type() == C.DNSTypeFakeIP {

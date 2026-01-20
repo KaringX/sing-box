@@ -44,6 +44,7 @@ func dnsReadConfig(_ context.Context, _ string) *dnsConfig {
 		}
 		conf.servers = append(conf.servers, C.GoString(addr))
 	}
+	conf.NameServer = conf.servers //karing
 	for i := 0; ; i++ {
 		search := state.dnsrch[i]
 		if search == nil {

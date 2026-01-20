@@ -66,14 +66,17 @@ func NewRealityClient(ctx context.Context, serverAddress string, options option.
 	if len(publicKey) != 32 {
 		return nil, E.New("invalid public_key")
 	}
+	maxDecodedLen := hex.DecodedLen(len([]byte(options.Reality.ShortID))) //karing
+	maxShortID := make([]byte, maxDecodedLen)                             //karing
 	var shortID [8]byte
-	decodedLen, err := hex.Decode(shortID[:], []byte(options.Reality.ShortID))
+	decodedLen, err := hex.Decode(maxShortID[:], []byte(options.Reality.ShortID)) //karing
 	if err != nil {
 		return nil, E.Cause(err, "decode short_id")
 	}
 	if decodedLen > 8 {
 		return nil, E.New("invalid short_id")
 	}
+	copy(shortID[:], maxShortID[:decodedLen]) //karing
 	return &RealityClientConfig{ctx, uClient.(*UTLSClientConfig), publicKey, shortID}, nil
 }
 

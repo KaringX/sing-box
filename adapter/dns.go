@@ -18,6 +18,7 @@ type DNSRouter interface {
 	Lifecycle
 	Exchange(ctx context.Context, message *dns.Msg, options DNSQueryOptions) (*dns.Msg, error)
 	Lookup(ctx context.Context, domain string, options DNSQueryOptions) ([]netip.Addr, error)
+	LookupTag(ctx context.Context, domain string, options DNSQueryOptions) ([]netip.Addr, string, error) //karing
 	ClearCache()
 	LookupReverseMapping(ip netip.Addr) (string, bool)
 	ResetNetwork()
@@ -28,6 +29,7 @@ type DNSClient interface {
 	Exchange(ctx context.Context, transport DNSTransport, message *dns.Msg, options DNSQueryOptions, responseChecker func(responseAddrs []netip.Addr) bool) (*dns.Msg, error)
 	Lookup(ctx context.Context, transport DNSTransport, domain string, options DNSQueryOptions, responseChecker func(responseAddrs []netip.Addr) bool) ([]netip.Addr, error)
 	ClearCache()
+	Close() //karing
 }
 
 type DNSQueryOptions struct {
