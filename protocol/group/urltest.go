@@ -342,6 +342,8 @@ func (g *URLTestGroup) Close() error {
 	g.pause.UnregisterCallback(g.pauseCallback)
 	close(g.close)
 	g.outbounds = make([]adapter.Outbound, 0) //karing
+	g.selectedOutboundTCP = nil               //karing
+	g.selectedOutboundUDP = nil               //karing
 	return nil
 }
 
@@ -366,6 +368,9 @@ func (g *URLTestGroup) Select(network string) (adapter.Outbound, bool) {
 			}
 		}
 	}
+	if len(g.outbounds) == 0 { //karing
+		return nil, false
+	}
 	for _, detour := range g.outbounds {
 		if !common.Contains(detour.Network(), network) {
 			continue
@@ -382,9 +387,6 @@ func (g *URLTestGroup) Select(network string) (adapter.Outbound, bool) {
 			minDelay = history.Delay
 			minOutbound = detour
 		}
-	}
-	if len(g.outbounds) == 0 { //karing
-		return nil, false
 	}
 	if minOutbound == nil {
 		if g.defaultTag != "" { //karing
