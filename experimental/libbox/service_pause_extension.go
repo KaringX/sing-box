@@ -57,7 +57,7 @@ func (s *BoxService) tryResetOutboundNetwork() {
 	tags := s.getOutboundIfHasIssue()
 	if len(tags) > 0 {
 		if s.instance != nil && s.instance.Logger() != nil {
-			s.instance.Logger().Info("BoxService:tryResetOutboundNetwork:", tags)
+			s.instance.Logger().Info("BoxService:tryResetOutboundNetwork")
 		}
 		s.instance.Router().ResetOutboundNetwork(tags)
 		//conntrack.Close()

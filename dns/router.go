@@ -435,7 +435,14 @@ func (r *Router) Lookup(ctx context.Context, domain string, options adapter.DNSQ
 response:
 	printResult()
 	if len(responseAddrs) > 0 {
-		lateString := F.MakeLaterString(func() string { //karing
+		lateString := F.MakeLaterString(func() (s string) { //karing
+			defer func() {
+				v := recover()
+				if v != nil {
+					r.logger.ErrorContext(ctx, "panic on makeLaterString")
+					s = "panic on makeLaterString"
+				}
+			}()
 			return strings.Join(F.MapToString(responseAddrs), " ")
 		})
 		r.logger.InfoContext(ctx, "lookup succeed for ", domain, ": ", lateString) //karing
