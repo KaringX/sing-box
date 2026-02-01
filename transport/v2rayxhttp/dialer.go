@@ -61,7 +61,10 @@ func (c *DefaultDialerClient) OpenStream(ctx context.Context, url string, body i
 	if body != nil {
 		method = "POST" // stream-up/one
 	}
-	req, _ := http.NewRequestWithContext(context.WithoutCancel(ctx), method, url, body)
+	req, err := http.NewRequestWithContext(context.WithoutCancel(ctx), method, url, body) //karing
+	if err != nil {                                                                       //karing
+		return
+	}
 	req.Header, err = c.options.GetRequestHeader(url) //karing
 	if err != nil {                                   //karing
 		return
