@@ -2,6 +2,22 @@
 icon: material/alert-decagram
 ---
 
+#### 1.12.19
+
+* Fixes and improvements
+
+#### 1.12.18
+
+* Add fallback routing rule for `auto_redirect` **1**
+* Fixes and improvements
+
+**1**:
+
+Adds a fallback iproute2 rule checked after system default rules (32766: main, 32767: default),
+ensuring traffic is routed to the sing-box table when no route is found in system tables.
+
+The rule index can be customized via `auto_redirect_iproute2_fallback_rule_index` (default: 32768).
+
 #### 1.12.17
 
 * Update uTLS to v1.8.2 **1**
