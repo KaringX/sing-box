@@ -80,7 +80,7 @@ require ( //karing
 //replace github.com/metacubex/mihomo => github.com/KaringX/clash v0.0.0-20241101044429-f71df89d4091
 
 //go get github.com/KaringX/sing@50a9c2efd67210376bb718ef766d53710768d5ae
-replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20260202014906-8fb3f6759199 //karing_v0.7.18
+replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20260203103810-bcb480e5f215 //karing_v0.7.18
 
 //replace github.com/sagernet/sing => ../../KaringX/sing
 
