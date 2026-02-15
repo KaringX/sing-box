@@ -31,11 +31,11 @@ require (
 	github.com/sagernet/quic-go v0.52.0-sing-box-mod.3
 	github.com/sagernet/sing v0.7.18
 	github.com/sagernet/sing-mux v0.3.4
-	github.com/sagernet/sing-quic v0.5.2
+	github.com/sagernet/sing-quic v0.5.3
 	github.com/sagernet/sing-shadowsocks v0.2.8
 	github.com/sagernet/sing-shadowsocks2 v0.2.1
 	github.com/sagernet/sing-shadowtls v0.2.1-0.20250503051639-fcd445d33c11
-	github.com/sagernet/sing-tun v0.7.10
+	github.com/sagernet/sing-tun v0.7.11
 	github.com/sagernet/sing-vmess v0.2.7
 	github.com/sagernet/smux v1.5.50-sing-box-mod.1
 	github.com/sagernet/tailscale v1.80.3-sing-box-1.12-mod.2
@@ -88,7 +88,7 @@ replace github.com/sagernet/sing-dns => github.com/KaringX/sing-dns v0.3.0-beta.
 
 //replace github.com/sagernet/sing-dns => ../../KaringX/sing-dns
 
-replace github.com/sagernet/sing-quic => github.com/KaringX/sing-quic v0.2.0-beta.12.0.20260120052231-b0a2c84d8097 //karing_v0.5.2
+replace github.com/sagernet/sing-quic => github.com/KaringX/sing-quic v0.2.0-beta.12.0.20260215124852-64690622dd76 //karing_v0.5.3
 
 //replace github.com/sagernet/sing-quic => ../../KaringX/sing-quic
 
