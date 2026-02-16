@@ -1,3 +1,7 @@
+//go:build with_inbound
+
+//karing
+
 package anytls
 
 import (

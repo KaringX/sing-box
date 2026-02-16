@@ -3,7 +3,7 @@ package include
 import (
 	"context"
 
-	"github.com/sagernet/sing-box"
+	box "github.com/sagernet/sing-box"
 
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/adapter/endpoint"
@@ -59,15 +59,15 @@ func InboundRegistry() *inbound.Registry {
 	http.RegisterInbound(registry)
 	mixed.RegisterInbound(registry)
 
-	shadowsocks.RegisterInbound(registry)
-	vmess.RegisterInbound(registry)
-	trojan.RegisterInbound(registry)
+	//shadowsocks.RegisterInbound(registry)//karing
+	//vmess.RegisterInbound(registry)//karing
+	//trojan.RegisterInbound(registry)//karing
 	naive.RegisterInbound(registry)
-	shadowtls.RegisterInbound(registry)
-	vless.RegisterInbound(registry)
-	anytls.RegisterInbound(registry)
+	//shadowtls.RegisterInbound(registry)//karing
+	//vless.RegisterInbound(registry)//karing
+	//anytls.RegisterInbound(registry)//karing
 
-	registerQUICInbounds(registry)
+	//registerQUICInbounds(registry)//karing
 	//registerStubForRemovedInbounds(registry) //karing
 
 	return registry

@@ -15,9 +15,9 @@ import (
 )
 
 func registerQUICInbounds(registry *inbound.Registry) {
-	hysteria.RegisterInbound(registry)
-	tuic.RegisterInbound(registry)
-	hysteria2.RegisterInbound(registry)
+	//hysteria.RegisterInbound(registry) //karing
+	//tuic.RegisterInbound(registry)//karing
+	//hysteria2.RegisterInbound(registry)//karing
 }
 
 func registerQUICOutbounds(registry *outbound.Registry) {

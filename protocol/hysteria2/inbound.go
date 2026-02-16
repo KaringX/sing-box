@@ -1,3 +1,6 @@
+//go:build with_inbound
+
+// karing
 package hysteria2
 
 import (
