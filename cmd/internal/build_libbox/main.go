@@ -105,8 +105,8 @@ func buildAndroid() {
 	var bindTarget string
 	if platform != "" {
 		bindTarget = platform
-	} else if debugEnabled {
-		bindTarget = "android/arm64"
+		//} else if debugEnabled { //karing
+		//	bindTarget = "android/arm64" //karing
 	} else {
 		bindTarget = "android"
 	}
