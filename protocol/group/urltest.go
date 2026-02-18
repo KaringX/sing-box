@@ -121,10 +121,15 @@ func (s *URLTest) Close() error {
 }
 
 func (s *URLTest) Now() string {
-	if selectedOutbound := s.group.selectedOutboundTCP; selectedOutbound != nil { //karing
-		return selectedOutbound.Tag() //karing
-	} else if selectedOutbound := s.group.selectedOutboundUDP; selectedOutbound != nil { //karing
-		return selectedOutbound.Tag() //karing
+	s.group.access.Lock()
+	selectedTCP := s.group.selectedOutboundTCP
+	selectedUDP := s.group.selectedOutboundUDP
+	s.group.access.Unlock()
+
+	if selectedTCP != nil { //karing
+		return selectedTCP.Tag() //karing
+	} else if selectedUDP != nil { //karing
+		return selectedUDP.Tag() //karing
 	}
 	return ""
 }
@@ -149,9 +154,13 @@ func (s *URLTest) DialContext(ctx context.Context, network string, destination M
 	var selectedOutbound adapter.Outbound //karing
 	switch N.NetworkName(network) {
 	case N.NetworkTCP:
+		s.group.access.Lock()
 		selectedOutbound = s.group.selectedOutboundTCP //karing
+		s.group.access.Unlock()
 	case N.NetworkUDP:
+		s.group.access.Lock()
 		selectedOutbound = s.group.selectedOutboundUDP //karing
+		s.group.access.Unlock()
 	default:
 		return nil, E.Extend(N.ErrUnknownNetwork, network)
 	}
@@ -186,8 +195,10 @@ func (s *URLTest) ListenPacket(ctx context.Context, destination M.Socksaddr) (ne
 		return nil, s.GetParseErr()
 	}
 	s.group.Touch()
+	s.group.access.Lock()
 	selectedOutbound := s.group.selectedOutboundUDP //karing
-	if selectedOutbound == nil {                    //karing
+	s.group.access.Unlock()
+	if selectedOutbound == nil { //karing
 		selectedOutbound, _ = s.group.Select(N.NetworkUDP) //karing
 	}
 	if selectedOutbound == nil { //karing
@@ -540,26 +551,36 @@ func (g *URLTestGroup) urlTest(ctx context.Context, force bool) (map[string]adap
 func (g *URLTestGroup) performUpdateCheck(retestGroupIfAllFailed bool) {
 	var updated bool
 	var retest bool
+
 	if outbound, exists := g.Select(N.NetworkTCP); outbound != nil && (g.selectedOutboundTCP == nil || (exists && outbound != g.selectedOutboundTCP)) {
+		g.access.Lock()
 		if g.selectedOutboundTCP != nil {
 			updated = true
 		}
 		g.selectedOutboundTCP = outbound
+		g.access.Unlock()
 		retest = !exists //karing
 	}
 	if outbound, exists := g.Select(N.NetworkUDP); outbound != nil && (g.selectedOutboundUDP == nil || (exists && outbound != g.selectedOutboundUDP)) {
+		g.access.Lock()
 		if g.selectedOutboundUDP != nil {
 			updated = true
 		}
 		g.selectedOutboundUDP = outbound
+		g.access.Unlock()
 		if !retest { //karing
 			retest = !exists
 		}
 	}
+	g.access.Lock()
+	selectedTCP := g.selectedOutboundTCP
+	selectedUDP := g.selectedOutboundUDP
+	g.access.Unlock()
+
 	if updated {
 		g.interruptGroup.Interrupt(g.interruptExternalConnections)
 	}
-	if (g.selectedOutboundTCP != nil || g.selectedOutboundUDP != nil) && g.selectedHealthCheckTicker == nil && g.selectedHealthCheckInterval != 0 { //karing
+	if (selectedTCP != nil || selectedUDP != nil) && g.selectedHealthCheckTicker == nil && g.selectedHealthCheckInterval != 0 { //karing
 		g.selectedHealthCheckTicker = time.NewTicker(g.selectedHealthCheckInterval)
 		go g.loopHealthCheckSelected()
 	}
