@@ -28,6 +28,7 @@ import (
 	"unsafe"
 
 	"github.com/sagernet/sing-box/adapter"
+	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/debug"
@@ -227,15 +228,22 @@ func realityClientFallback(ctx context.Context, uConn net.Conn, serverName strin
 			},
 		},
 	}
-	request, _ := http.NewRequest("GET", "https://"+serverName, nil)
+	request, err := http.NewRequest("GET", "https://"+serverName, nil) //karing
+	if err != nil || request == nil {                                  //karing
+		log.Warn("realityClientFallback request creation failed:%s, %v", serverName, err) //karing
+		return
+	}
 	request.Header.Set("User-Agent", fingerprint.Client)
 	request.AddCookie(&http.Cookie{Name: "padding", Value: strings.Repeat("0", mRand.Intn(32)+30)})
 	response, err := client.Do(request)
-	if err != nil {
+	if err != nil || response == nil { //karing
+		log.Warn("realityClientFallback response failed:%s, %v", serverName, err) //karing
 		return
 	}
-	_, _ = io.Copy(io.Discard, response.Body)
-	response.Body.Close()
+	if response.Body != nil { //karing
+		_, _ = io.Copy(io.Discard, response.Body)
+		response.Body.Close()
+	}
 }
 
 func (e *RealityClientConfig) Clone() Config {
