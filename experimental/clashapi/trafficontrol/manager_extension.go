@@ -12,6 +12,7 @@ import (
 	"github.com/gofrs/uuid/v5"
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/common/conntrack"
+	safe "github.com/sagernet/sing-box/common/fix"
 	"github.com/sagernet/sing-box/common/gofree"
 	"github.com/sagernet/sing-box/log"
 	F "github.com/sagernet/sing/common/format"
@@ -388,11 +389,11 @@ func (m *Manager) persistConnectionsToDB(connections []TrackerMetadata, persistT
 			var source_ip string
 			var destination_ip string
 			if t.Metadata.Source.Addr.IsValid() {
-				source_ip = t.Metadata.Source.Addr.String()
+				source_ip = safe.SafeAddrString(t.Metadata.Source.Addr) //karing
 			}
 			if !statistics.DataDesensitize() {
 				if t.Metadata.Destination.Addr.IsValid() {
-					destination_ip = t.Metadata.Destination.Addr.String()
+					destination_ip = safe.SafeAddrString(t.Metadata.Destination.Addr) //karing
 				}
 			} else {
 				destination_ip = "*"

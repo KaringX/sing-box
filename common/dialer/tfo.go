@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	safe "github.com/sagernet/sing-box/common/fix"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/bufio"
 	M "github.com/sagernet/sing/common/metadata"
@@ -84,7 +85,7 @@ func (c *slowOpenConn) Write(b []byte) (n int, err error) {
 		return 0, os.ErrClosed
 	default:
 	}
-	conn, err := c.dialer.DialContext(c.ctx, c.network, c.destination.String(), b)
+	conn, err := c.dialer.DialContext(c.ctx, c.network, safe.SafeSocksaddrString(c.destination), b) //karing
 	if err != nil {
 		c.err = err
 	} else {

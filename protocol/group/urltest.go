@@ -315,9 +315,10 @@ func NewURLTestGroup(ctx context.Context, outboundManager adapter.OutboundManage
 
 func (g *URLTestGroup) PostStart() {
 	g.access.Lock()
-	defer g.access.Unlock()
+	//defer g.access.Unlock()//karing
 	g.started = true
 	g.lastActive.Store(time.Now())
+	g.access.Unlock()           //karing
 	g.performUpdateCheck(false) //karing
 	go g.CheckOutbounds(false)
 }

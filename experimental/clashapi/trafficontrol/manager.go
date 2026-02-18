@@ -11,6 +11,7 @@ import (
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/common/compatible"
 	"github.com/sagernet/sing-box/common/conntrack"
+	safe "github.com/sagernet/sing-box/common/fix"
 	"github.com/sagernet/sing-box/common/gofree"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing/common"
@@ -123,8 +124,8 @@ func (m *Manager) Snapshot(includeConnections bool) *Snapshot { //karing
 			return TrackerMetadataOut{
 				CreatedAt:   t.CreatedAt,
 				Network:     t.Network,
-				Source:      t.Source.String(),
-				Destination: t.Destination.String(),
+				Source:      safe.SafeSocksaddrString(t.Source),      //karing
+				Destination: safe.SafeSocksaddrString(t.Destination), //karing
 				Fqdn:        t.Fqdn,
 				Outbound:    t.Outbound,
 			}
