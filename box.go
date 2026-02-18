@@ -578,6 +578,10 @@ func (s *Box) Close() error {
 	default:
 		close(s.done)
 	}
+	cacheFile := service.FromContext[adapter.CacheFile](s.ctx) //karing
+	if cacheFile != nil {                                      //karing
+		cacheFile.Close()
+	}
 	err := common.Close(
 		s.service, s.endpoint, s.inbound, s.outbound, s.router, s.connection, s.dnsRouter, s.dnsTransport, s.network,
 	)
