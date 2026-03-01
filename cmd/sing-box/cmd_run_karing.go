@@ -173,13 +173,6 @@ func createService() (err error) {
 }
 
 func runService() (err error) {
-	if invokingError != nil {
-		return nil, invokingError
-	}
-	invokingError = errors.New("service is creating, please retry later")
-	defer func() {
-		invokingError = nil
-	}()
 	err = createService()
 	if err != nil {
 		return err
@@ -190,7 +183,7 @@ func runService() (err error) {
 	}
 
 	<-quit
-	destoryAll()
+	destroyAll()
 	terminateCurrentProcess()
 	return nil
 }
@@ -203,13 +196,6 @@ func destroyAll() {
 		}
 		terminateCurrentProcess()
 	}()
-	destroyServer()
-	if invokingError != nil {
-		return invokingError
-	}
-	invokingError = errors.New("service is destroying, please retry later")
-	defer func() {
-		invokingError = nil
-	}()
+	destoryServer()
 	destroyService()
 }
