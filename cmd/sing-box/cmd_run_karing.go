@@ -35,6 +35,7 @@ var commandRun2 = &cobra.Command{
 var httpServer *http.Server
 var boxService *libbox.BoxService
 var quit = make(chan struct{})
+var invokingError error
 
 func init() {
 	mainCommand.AddCommand(commandRun2)
@@ -105,8 +106,15 @@ func destoryServer() {
 }
 
 func restartService() (map[string]string, error) {
+	if invokingError != nil {
+		return nil, invokingError
+	}
+	invokingError = errors.New("service is restarting, please retry later")
+	defer func() {
+		invokingError = nil
+	}()
 	libbox.SetRestart(true)
-	err := destoryService()
+	err := destroyService()
 	if err != nil {
 		var extra = make(map[string]string)
 		extra["is_close_error"] = "true"
@@ -117,7 +125,7 @@ func restartService() (map[string]string, error) {
 	return nil, err
 }
 
-func destoryService() error {
+func destroyService() error {
 	service := boxService
 	boxService = nil
 	if service != nil {
@@ -165,6 +173,13 @@ func createService() (err error) {
 }
 
 func runService() (err error) {
+	if invokingError != nil {
+		return nil, invokingError
+	}
+	invokingError = errors.New("service is creating, please retry later")
+	defer func() {
+		invokingError = nil
+	}()
 	err = createService()
 	if err != nil {
 		return err
@@ -180,7 +195,7 @@ func runService() (err error) {
 	return nil
 }
 
-func destoryAll() {
+func destroyAll() {
 	defer func() {
 		if e := recover(); e != nil {
 			errMessage := fmt.Sprintf("%v", e)
@@ -188,6 +203,13 @@ func destoryAll() {
 		}
 		terminateCurrentProcess()
 	}()
-	destoryServer()
-	destoryService()
+	destroyServer()
+	if invokingError != nil {
+		return invokingError
+	}
+	invokingError = errors.New("service is destroying, please retry later")
+	defer func() {
+		invokingError = nil
+	}()
+	destroyService()
 }
