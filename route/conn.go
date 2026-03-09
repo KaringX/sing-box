@@ -79,7 +79,11 @@ func (m *ConnectionManager) NewConnection(ctx context.Context, this N.Dialer, co
 		}
 		err = E.Cause(err, "open connection to ", remoteString, dialerString)
 		N.CloseOnHandshakeFailure(conn, onClose, err)
-		m.logger.ErrorContext(ctx, err)
+		if len(dialerString) > 0 { //karing
+			m.logger.WarnContext(ctx, err)
+		} else {
+			m.logger.ErrorContext(ctx, err)
+		}
 		return
 	}
 	err = N.ReportConnHandshakeSuccess(conn, remoteConn)
