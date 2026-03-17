@@ -2,6 +2,7 @@ package clashapi
 
 import (
 	"bytes"
+	"context"
 	"net/http"
 	"strconv"
 	"time"
@@ -19,15 +20,16 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
-func connectionRouter(server *Server, router adapter.Router, trafficManager *trafficontrol.Manager) http.Handler { //karing
+func connectionRouter(ctx context.Context, server *Server, router adapter.Router, trafficManager *trafficontrol.Manager) http.Handler { //karing
 	r := chi.NewRouter()
-	r.Get("/", getConnections(server, trafficManager)) //karing
+	r.Get("/", getConnections(ctx, server, trafficManager)) //karing
+
 	r.Delete("/", closeAllConnections(router, trafficManager))
 	r.Delete("/{id}", closeConnection(trafficManager))
 	return r
 }
 
-func getConnections(server *Server, trafficManager *trafficontrol.Manager) func(w http.ResponseWriter, r *http.Request) { //karing
+func getConnections(ctx context.Context, server *Server, trafficManager *trafficontrol.Manager) func(w http.ResponseWriter, r *http.Request) { //karing
 	return func(w http.ResponseWriter, r *http.Request) {
 		noConnections := r.URL.Query().Get("noConnections") //karing
 		if r.Header.Get("Upgrade") != "websocket" {
@@ -40,6 +42,7 @@ func getConnections(server *Server, trafficManager *trafficontrol.Manager) func(
 		if err != nil {
 			return
 		}
+		defer conn.Close()
 
 		intervalStr := r.URL.Query().Get("interval")
 		interval := 1000
@@ -69,7 +72,7 @@ func getConnections(server *Server, trafficManager *trafficontrol.Manager) func(
 		}
 
 		tick := time.NewTicker(time.Millisecond * time.Duration(interval))
-		closed := false //karing
+		closed := false               //karing
 		server.AddTick(tick, func() { //karing
 			closed = true
 		})
@@ -78,7 +81,7 @@ func getConnections(server *Server, trafficManager *trafficontrol.Manager) func(
 			tick.Stop()
 		}()
 
-		for range tick.C {
+		for range tick.C { //karing
 			if closed { //karing
 				break
 			}

@@ -65,11 +65,11 @@ func NewLocalRuleSet(ctx context.Context, logger logger.Logger, options option.R
 		if err != nil {
 			return nil, err
 		}
-		if options.LocalOptions.AutoReload {
+		if options.LocalOptions.AutoReload { //karing
 			watcher, err := fswatch.NewWatcher(fswatch.Options{
 				Path: []string{filePath},
 				Callback: func(path string) {
-					uErr := ruleSet.reloadFile(path, options.LocalOptions.IsAsset)
+					uErr := ruleSet.reloadFile(path, options.LocalOptions.IsAsset) //karing
 					if uErr != nil {
 						logger.Error(E.Cause(uErr, "reload rule-set ", options.Tag))
 					}
@@ -81,7 +81,6 @@ func NewLocalRuleSet(ctx context.Context, logger logger.Logger, options option.R
 			ruleSet.watcher = watcher
 		}
 	}
-
 	return ruleSet, nil
 }
 
@@ -165,9 +164,9 @@ func (s *LocalRuleSet) reloadRules(headlessRules []option.HeadlessRule) error {
 		}
 	}
 	var metadata adapter.RuleSetMetadata
-	metadata.ContainsProcessRule = hasHeadlessRule(headlessRules, isProcessHeadlessRule)
-	metadata.ContainsWIFIRule = hasHeadlessRule(headlessRules, isWIFIHeadlessRule)
-	metadata.ContainsIPCIDRRule = hasHeadlessRule(headlessRules, isIPCIDRHeadlessRule)
+	metadata.ContainsProcessRule = HasHeadlessRule(headlessRules, isProcessHeadlessRule)
+	metadata.ContainsWIFIRule = HasHeadlessRule(headlessRules, isWIFIHeadlessRule)
+	metadata.ContainsIPCIDRRule = HasHeadlessRule(headlessRules, isIPCIDRHeadlessRule)
 	s.access.Lock()
 	s.rules = rules
 	s.metadata = metadata

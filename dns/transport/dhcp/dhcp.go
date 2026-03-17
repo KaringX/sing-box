@@ -50,12 +50,13 @@ type Transport struct {
 	interfaceCallback *list.Element[tun.DefaultInterfaceUpdateCallback]
 	transportLock     sync.RWMutex
 	updatedAt         time.Time
+	lastError         error
 	servers           []M.Socksaddr
 	search            []string
 	ndots             int
 	attempts          int
-	fetching          atomic.Bool
-	fetchFailTimes    atomic.Int32
+	fetching          atomic.Bool //karing
+	fetchFailTimes    atomic.Int32 //karing
 }
 
 func NewTransport(ctx context.Context, logger log.ContextLogger, tag string, options option.DHCPDNSServerOptions) (adapter.DNSTransport, error) {
@@ -95,7 +96,7 @@ func (t *Transport) Start(stage adapter.StartStage) error {
 		t.interfaceCallback = t.networkManager.InterfaceMonitor().RegisterCallback(t.interfaceUpdated)
 	}
 	go func() {
-		_, err := t.Fetch()
+		_, err := t.fetch()
 		if err != nil {
 			t.logger.Error(E.Cause(err, "fetch DNS servers"))
 		}
@@ -110,8 +111,15 @@ func (t *Transport) Close() error {
 	return nil
 }
 
+func (t *Transport) Reset() {
+	t.transportLock.Lock()
+	t.updatedAt = time.Time{}
+	t.servers = nil
+	t.transportLock.Unlock()
+}
+
 func (t *Transport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS.Msg, error) {
-	servers, err := t.Fetch()
+	servers, err := t.fetch()
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +139,12 @@ func (t *Transport) Exchange0(ctx context.Context, message *mDNS.Msg, servers []
 	}
 }
 
-func (t *Transport) Fetch() ([]M.Socksaddr, error) {
+func (t *Transport) Fetch() []M.Socksaddr {
+	servers, _ := t.fetch()
+	return servers
+}
+
+func (t *Transport) fetch() ([]M.Socksaddr, error) {
 	if t.fetchFailTimes.Load() >= C.DHCPFetchMaxFaildTimes { //karing
 		t.logger.InfoContext(t.ctx, "dhcp: fetch server failed")
 		return nil, E.New("dhcp: fetch server failed")
@@ -142,8 +155,12 @@ func (t *Transport) Fetch() ([]M.Socksaddr, error) {
 	}
 	t.transportLock.RLock()
 	updatedAt := t.updatedAt
+	lastError := t.lastError
 	servers := t.servers
 	t.transportLock.RUnlock()
+	if lastError != nil {
+		return nil, lastError
+	}
 	if time.Since(updatedAt) < C.DHCPTTL {
 		return servers, nil
 	}
@@ -201,12 +218,15 @@ func (t *Transport) updateServers() error {
 	fetchCtx, cancel := context.WithTimeout(t.ctx, C.DHCPTimeout)
 	err = t.fetchServers0(fetchCtx, iface)
 	cancel()
+	t.updatedAt = time.Now()
 	if err != nil {
+		t.lastError = err
 		return err
 	} else if len(t.servers) == 0 {
-		return E.New("dhcp: empty DNS servers response")
+		t.lastError = E.New("dhcp: empty DNS servers response")
+		return t.lastError
 	} else {
-		t.updatedAt = time.Now()
+		t.lastError = nil
 		return nil
 	}
 }

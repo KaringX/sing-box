@@ -108,7 +108,6 @@ func (s *RemoteRuleSet) StartContext(ctx context.Context, startContext *adapter.
 			}
 		}
 	}
-
 	/*if s.lastUpdated.IsZero() {//karing
 		err := s.fetch(ctx, startContext)
 		if err != nil {
@@ -195,9 +194,9 @@ func (s *RemoteRuleSet) loadBytes(content []byte) error {
 		}
 	}
 	s.access.Lock()
-	s.metadata.ContainsProcessRule = hasHeadlessRule(plainRuleSet.Rules, isProcessHeadlessRule)
-	s.metadata.ContainsWIFIRule = hasHeadlessRule(plainRuleSet.Rules, isWIFIHeadlessRule)
-	s.metadata.ContainsIPCIDRRule = hasHeadlessRule(plainRuleSet.Rules, isIPCIDRHeadlessRule)
+	s.metadata.ContainsProcessRule = HasHeadlessRule(plainRuleSet.Rules, isProcessHeadlessRule)
+	s.metadata.ContainsWIFIRule = HasHeadlessRule(plainRuleSet.Rules, isWIFIHeadlessRule)
+	s.metadata.ContainsIPCIDRRule = HasHeadlessRule(plainRuleSet.Rules, isIPCIDRHeadlessRule)
 	s.rules = rules
 	callbacks := s.callbacks.Array()
 	s.access.Unlock()
@@ -333,7 +332,6 @@ func (s *RemoteRuleSet) fetch(ctx context.Context, startContext *adapter.HTTPSta
 		s.lastEtag = eTagHeader
 	}
 	s.lastUpdated = time.Now()
-
 	if cacheFile != nil { //karing
 		err = cacheFile.SaveRuleSet(s.options.RemoteOptions.URL, &adapter.SavedBinary{ //karing
 			LastUpdated: s.lastUpdated,

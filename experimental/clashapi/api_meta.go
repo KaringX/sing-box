@@ -2,6 +2,7 @@ package clashapi
 
 import (
 	"bytes"
+	"context"
 	"net"
 	"net/http"
 	"runtime/debug"
@@ -29,7 +30,7 @@ func (s *Server) setupMetaAPI(r chi.Router) {
 		})
 		r.Mount("/", middleware.Profiler())
 	}
-	r.Get("/memory", memory(s, s.trafficManager)) //karing
+	r.Get("/memory", memory(s.ctx, s, s.trafficManager)) //karing
 	r.Mount("/group", groupRouter(s))
 	//r.Mount("/upgrade", upgradeRouter(s)) //karing
 }
@@ -39,7 +40,7 @@ type Memory struct {
 	OSLimit uint64 `json:"oslimit"` // maybe we need it in the future
 }
 
-func memory(server *Server, trafficManager *trafficontrol.Manager) func(w http.ResponseWriter, r *http.Request) { //karing
+func memory(ctx context.Context, server *Server, trafficManager *trafficontrol.Manager) func(w http.ResponseWriter, r *http.Request) { //karing
 	return func(w http.ResponseWriter, r *http.Request) {
 		var conn net.Conn
 		if r.Header.Get("Upgrade") == "websocket" {
@@ -48,6 +49,7 @@ func memory(server *Server, trafficManager *trafficontrol.Manager) func(w http.R
 			if err != nil {
 				return
 			}
+			defer conn.Close()
 		}
 
 		if conn == nil {
@@ -56,7 +58,7 @@ func memory(server *Server, trafficManager *trafficontrol.Manager) func(w http.R
 		}
 
 		tick := time.NewTicker(time.Second)
-		closed := false //karing
+		closed := false               //karing
 		server.AddTick(tick, func() { //karing
 			closed = true
 		})
@@ -68,7 +70,12 @@ func memory(server *Server, trafficManager *trafficontrol.Manager) func(w http.R
 		buf := &bytes.Buffer{}
 		var err error
 		first := true
-		for range tick.C {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-tick.C:
+			}
 			buf.Reset()
 			if closed { //karing
 				break

@@ -7,10 +7,13 @@ import (
 	"net/http"
 	"net/netip"
 	"sync"
+	"time"
 
 	C "github.com/sagernet/sing-box/constant"
 
 	"github.com/sagernet/sing-box/common/process"
+
+	"github.com/sagernet/sing-tun"
 
 	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
@@ -23,21 +26,19 @@ import (
 type Router interface {
 	Lifecycle
 	ConnectionRouter
-	PreMatch(metadata InboundContext) error
+	PreMatch(metadata InboundContext, context tun.DirectRouteContext, timeout time.Duration, supportBypass bool) (tun.DirectRouteDestination, error)
 	ConnectionRouterEx
 	RuleSet(tag string) (RuleSet, bool)
-	NeedWIFIState() bool
-
+	Rules() []Rule
+	NeedFindProcess() bool
+	AppendTracker(tracker ConnectionTracker)
+	ResetNetwork()
+	ResetOutboundNetwork(tags []string)                                                                    //karing
 	GetRemoteRuleSetRulesCount() map[string]int                                                            //karing
 	FindProcessInfo(ctx context.Context, network string, source netip.AddrPort) (*process.Info, error)     //karing
 	GetMatchRuleChain(outboundManager OutboundManager, matchOutboundTag string) ([]string, string, string) //karing
 	GetMatchRule(ctx context.Context, metadata *InboundContext) (Rule, error)                              //karing
 	GetAssetContent(path string) ([]byte, error)                                                           //karing
-
-	Rules() []Rule
-	AppendTracker(tracker ConnectionTracker)
-	ResetNetwork()
-	ResetOutboundNetwork(tags []string) //karing
 }
 
 type ConnectionTracker interface {

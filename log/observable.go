@@ -57,9 +57,9 @@ func NewDefaultFactory(
 		level:          LevelTrace,
 		subscriber:     observable.NewSubscriber[Entry](128),
 	}
-	if platformWriter != nil {
+	/*if platformWriter != nil {
 		factory.platformFormatter.DisableColors = platformWriter.DisableColors()
-	}
+	}*/
 	if needObservable {
 		factory.observer = observable.NewObserver[Entry](factory.subscriber, 64)
 	}
@@ -130,7 +130,7 @@ type observableLogger struct {
 // karing
 func (l *observableLogger) log(ctx context.Context, level Level, deep int, args []any) {
 	level = OverrideLevelFromContext(level, ctx)
-	if level > l.level {
+	if level > l.level && l.platformWriter == nil {
 		return
 	}
 	if l.writer == nil { //karing

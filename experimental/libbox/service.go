@@ -1,179 +1,173 @@
 package libbox
 
 import (
-	"context"
-	"fmt"
 	"net/netip"
 	"runtime"
-	"runtime/debug"
-	runtimeDebug "runtime/debug"
+
+	"crypto/rand"
+	"encoding/hex"
+	"errors"
+	"net"
+	"net/netip"
+	"runtime"
+
 	"strconv"
 	"sync"
 	"syscall"
-	"time"
 
-	box "github.com/sagernet/sing-box"
 	"github.com/sagernet/sing-box/adapter"
-	D "github.com/sagernet/sing-box/common/debug"
-	"github.com/sagernet/sing-box/common/process"
-	"github.com/sagernet/sing-box/common/urltest"
+
+	"github.com/sagernet/sing-box/adapter"
+
 	C "github.com/sagernet/sing-box/constant"
-	"github.com/sagernet/sing-box/experimental/deprecated"
 	"github.com/sagernet/sing-box/experimental/libbox/internal/procfs"
-	"github.com/sagernet/sing-box/experimental/libbox/platform"
-	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
 	tun "github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/control"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/logger"
-	N "github.com/sagernet/sing/common/network"
-	"github.com/sagernet/sing/service"
-	"github.com/sagernet/sing/service/pause"
 )
 
-type BoxService struct {
-	ctx                   context.Context
-	cancel                context.CancelFunc
-	urlTestHistoryStorage adapter.URLTestHistoryStorage
-	instance              *box.Box
-	clashServer           adapter.ClashServer
-	pauseManager          pause.Manager
+/*
+	type BoxService struct {
+		ctx                   context.Context
+		cancel                context.CancelFunc
+		urlTestHistoryStorage adapter.URLTestHistoryStorage
+		instance              *box.Box
+		clashServer           adapter.ClashServer
+		pauseManager          pause.Manager
 
-	iOSPauseFields
-}
+		iOSPauseFields
+	}
 
 func NewService(configContent string, platformInterface PlatformInterface) (boxService *BoxService, err error) { //karing
-	SentryBoxServiceLaunch()
-	defer func() { //karing
-		if e := recover(); e != nil {
-			panicErrMessage := fmt.Sprintf("%v", e)
-			stack := SentryTrim(string(debug.Stack()))
-			err = E.New(panicErrMessage, "\n", "panic: create service", "\n", stack)
-			SentryCaptureErrorMessage(panicErrMessage, "panic: create service", stack)
-		}
-	}()
-	D.MainGoroutineId = D.GetCurrentGoroutineId()                                                                 //karing
-	ctx := context.WithValue(BaseContext(platformInterface), log.CtxKeyLogContextIdName, strconv.Itoa(contextId)) //karing
-	contextId++                                                                                                   //karing
-	service.MustRegister[deprecated.Manager](ctx, new(deprecatedManager))
-	var options option.Options                     //karing
-	options, err = parseConfig(ctx, configContent) //karing
-	if err != nil {
-		SentryCaptureError(err, "create service") //karing
-		return nil, err
-	}
-	runtimeDebug.FreeOSMemory()
-	ctx, cancel := context.WithCancel(ctx)
-	urlTestHistoryStorage := urltest.NewHistoryStorage()
-	service.MustRegister[adapter.URLTestHistoryStorage](ctx, urlTestHistoryStorage) //karing
-	//ctx = service.ContextWithPtr(ctx, urlTestHistoryStorage)//karing
-	var platformLogWriter log.PlatformWriter //karing
-	if platformInterface != nil {            //karing
-		var platformWrapper *platformInterfaceWrapper //karing
-		platformWrapper = &platformInterfaceWrapper{  //karing
-			iif:       platformInterface,
-			useProcFS: platformInterface.UseProcFS(),
-		}
-		service.MustRegister[platform.Interface](ctx, platformWrapper)
-		platformLogWriter = platformWrapper //karing
-	}
 
-	var instance *box.Box                //karing
-	instance, err = box.New(box.Options{ //karing
-		Context:           ctx,
-		Options:           options,
-		PlatformLogWriter: platformLogWriter, //karing
-	})
-	if err != nil {
-		cancel()
-		SentryCaptureError(err, "create service") //karing
-		return nil, E.Cause(err, "create service")
+		SentryBoxServiceLaunch()
+		defer func() { //karing
+			if e := recover(); e != nil {
+				panicErrMessage := fmt.Sprintf("%v", e)
+				stack := SentryTrim(string(debug.Stack()))
+				err = E.New(panicErrMessage, "\n", "panic: create service", "\n", stack)
+				SentryCaptureErrorMessage(panicErrMessage, "panic: create service", stack)
+			}
+		}()
+		D.MainGoroutineId = D.GetCurrentGoroutineId()                                                                 //karing
+		ctx := context.WithValue(BaseContext(platformInterface), log.CtxKeyLogContextIdName, strconv.Itoa(contextId)) //karing
+		contextId++                                                                                                   //karing
+		service.MustRegister[deprecated.Manager](ctx, new(deprecatedManager))
+		var options option.Options                     //karing
+		options, err = parseConfig(ctx, configContent) //karing
+		if err != nil {
+			SentryCaptureError(err, "create service") //karing
+			return nil, err
+		}
+		runtimeDebug.FreeOSMemory()
+		ctx, cancel := context.WithCancel(ctx)
+		urlTestHistoryStorage := urltest.NewHistoryStorage()
+		service.MustRegister[adapter.URLTestHistoryStorage](ctx, urlTestHistoryStorage) //karing
+		//ctx = service.ContextWithPtr(ctx, urlTestHistoryStorage)//karing
+		var platformLogWriter log.PlatformWriter //karing
+		if platformInterface != nil {            //karing
+			var platformWrapper *platformInterfaceWrapper //karing
+			platformWrapper = &platformInterfaceWrapper{  //karing
+				iif:       platformInterface,
+				useProcFS: platformInterface.UseProcFS(),
+			}
+			service.MustRegister[platform.Interface](ctx, platformWrapper)
+			platformLogWriter = platformWrapper //karing
+		}
+
+		var instance *box.Box                //karing
+		instance, err = box.New(box.Options{ //karing
+			Context:           ctx,
+			Options:           options,
+			PlatformLogWriter: platformLogWriter, //karing
+		})
+		if err != nil {
+			cancel()
+			SentryCaptureError(err, "create service") //karing
+			return nil, E.Cause(err, "create service")
+		}
+		runtimeDebug.FreeOSMemory()
+		return &BoxService{
+			ctx:                   ctx,
+			cancel:                cancel,
+			instance:              instance,
+			urlTestHistoryStorage: urlTestHistoryStorage,
+			pauseManager:          service.FromContext[pause.Manager](ctx),
+			clashServer:           service.FromContext[adapter.ClashServer](ctx),
+		}, nil
 	}
-	runtimeDebug.FreeOSMemory()
-	return &BoxService{
-		ctx:                   ctx,
-		cancel:                cancel,
-		instance:              instance,
-		urlTestHistoryStorage: urlTestHistoryStorage,
-		pauseManager:          service.FromContext[pause.Manager](ctx),
-		clashServer:           service.FromContext[adapter.ClashServer](ctx),
-	}, nil
-}
 
 func (s *BoxService) Start() (err error) { //karing
-	defer func() { //karing
-		if e := recover(); e != nil {
-			panicErrMessage := fmt.Sprintf("%v", e)
-			stack := SentryTrim(string(debug.Stack()))
-			err = E.New(panicErrMessage, "\n", "panic: start service", "\n", stack)
-			SentryCaptureErrorMessage(panicErrMessage, "panic: start service", stack)
+
+		defer func() { //karing
+			if e := recover(); e != nil {
+				panicErrMessage := fmt.Sprintf("%v", e)
+				stack := SentryTrim(string(debug.Stack()))
+				err = E.New(panicErrMessage, "\n", "panic: start service", "\n", stack)
+				SentryCaptureErrorMessage(panicErrMessage, "panic: start service", stack)
+			}
+		}()
+		D.MainGoroutineId = D.GetCurrentGoroutineId() //karing
+		if sFixAndroidStack {
+			//var err error //karing
+			done := make(chan struct{})
+			go func() {
+				err = s.instance.Start()
+				close(done)
+			}()
+			<-done
+			//return err //karing
+		} else {
+			err = s.instance.Start() //karing
 		}
-	}()
-	D.MainGoroutineId = D.GetCurrentGoroutineId() //karing
-	if sFixAndroidStack {
-		//var err error //karing
+		if err != nil { //karing
+			SentryCaptureError(err, "start service")
+		} else { //karing
+			go func() {
+				runtime.GC()
+				runtimeDebug.FreeOSMemory()
+			}()
+		}
+		return err
+	}
+
+	func (s *BoxService) Close() error {
+		s.cancel()
+		if s.urlTestHistoryStorage != nil { //karing
+			s.urlTestHistoryStorage.Close()
+		}
+
+		var goroutineId int //karing
+		var err error
 		done := make(chan struct{})
 		go func() {
-			err = s.instance.Start()
+			goroutineId = D.GetCurrentGoroutineId()
+			err = s.instance.Close()
 			close(done)
+			s.urlTestHistoryStorage = nil //karing
+			s.clashServer = nil           //karing
+			s.pauseManager = nil          //karing
+			s.instance = nil              //karing
+
+			runtime.GC()                //karing
+			runtimeDebug.FreeOSMemory() //karing
 		}()
-		<-done
-		//return err //karing
-	} else {
-		err = s.instance.Start() //karing
-	}
-	if err != nil { //karing
-		SentryCaptureError(err, "start service")
-	} else { //karing
-		go func() {
-			runtime.GC()
-			runtimeDebug.FreeOSMemory()
-		}()
-	}
-	return err
-}
-
-func (s *BoxService) Close() error {
-	s.cancel()
-	if s.urlTestHistoryStorage != nil { //karing
-		s.urlTestHistoryStorage.Close()
+		select {
+		case <-done:
+			return err
+		case <-time.After(C.FatalStopTimeout):
+			stack := D.GetGoroutineStack(goroutineId)      //karing
+			return E.New("close service timeout:" + stack) //karing
+			//os.Exit(1) //karing
+		}
 	}
 
-	var goroutineId int //karing
-	var err error
-	done := make(chan struct{})
-	go func() {
-		goroutineId = D.GetCurrentGoroutineId()
-		err = s.instance.Close()
-		close(done)
-		s.urlTestHistoryStorage = nil //karing
-		s.clashServer = nil           //karing
-		s.pauseManager = nil          //karing
-		s.instance = nil              //karing
-
-		runtime.GC()                //karing
-		runtimeDebug.FreeOSMemory() //karing
-	}()
-	select {
-	case <-done:
-		return err
-	case <-time.After(C.FatalStopTimeout):
-		stack := D.GetGoroutineStack(goroutineId)      //karing
-		return E.New("close service timeout:" + stack) //karing
-		//os.Exit(1) //karing
-	}
-}
-
-func (s *BoxService) NeedWIFIState() bool {
-	return s.instance.Router().NeedWIFIState()
-}
-
-var (
-	_ platform.Interface = (*platformInterfaceWrapper)(nil)
-	_ log.PlatformWriter = (*platformInterfaceWrapper)(nil)
-)
+=======
+*/
+var _ adapter.PlatformInterface = (*platformInterfaceWrapper)(nil)
 
 type platformInterfaceWrapper struct {
 	iif                    PlatformInterface
@@ -199,7 +193,11 @@ func (w *platformInterfaceWrapper) AutoDetectInterfaceControl(fd int) error {
 	return w.iif.AutoDetectInterfaceControl(int32(fd))
 }
 
-func (w *platformInterfaceWrapper) OpenTun(options *tun.Options, platformOptions option.TunPlatformOptions) (tun.Tun, error) {
+func (w *platformInterfaceWrapper) UsePlatformInterface() bool {
+	return true
+}
+
+func (w *platformInterfaceWrapper) OpenInterface(options *tun.Options, platformOptions option.TunPlatformOptions) (tun.Tun, error) {
 	if len(options.IncludeUID) > 0 || len(options.ExcludeUID) > 0 {
 		return nil, E.New("platform: unsupported uid options")
 	}
@@ -232,6 +230,10 @@ func (w *platformInterfaceWrapper) OpenTun(options *tun.Options, platformOptions
 	return tun, err //karing
 }
 
+func (w *platformInterfaceWrapper) UsePlatformDefaultInterfaceMonitor() bool {
+	return true
+}
+
 func (w *platformInterfaceWrapper) CreateDefaultInterfaceMonitor(logger logger.Logger) tun.DefaultInterfaceMonitor {
 	return &platformDefaultInterfaceMonitor{
 		platformInterfaceWrapper: w,
@@ -239,7 +241,11 @@ func (w *platformInterfaceWrapper) CreateDefaultInterfaceMonitor(logger logger.L
 	}
 }
 
-func (w *platformInterfaceWrapper) Interfaces() ([]adapter.NetworkInterface, error) {
+func (w *platformInterfaceWrapper) UsePlatformNetworkInterfaces() bool {
+	return true
+}
+
+func (w *platformInterfaceWrapper) NetworkInterfaces() ([]adapter.NetworkInterface, error) {
 	interfaceIterator, err := w.iif.GetInterfaces()
 	if err != nil {
 		return nil, err
@@ -269,6 +275,9 @@ func (w *platformInterfaceWrapper) Interfaces() ([]adapter.NetworkInterface, err
 			Constrained: isDefault && w.isConstrained,
 		})
 	}
+	interfaces = common.UniqBy(interfaces, func(it adapter.NetworkInterface) string {
+		return it.Name
+	})
 	return interfaces, nil
 }
 
@@ -276,12 +285,20 @@ func (w *platformInterfaceWrapper) UnderNetworkExtension() bool {
 	return w.iif.UnderNetworkExtension()
 }
 
-func (w *platformInterfaceWrapper) IncludeAllNetworks() bool {
+func (w *platformInterfaceWrapper) NetworkExtensionIncludeAllNetworks() bool {
 	return w.iif.IncludeAllNetworks()
 }
 
 func (w *platformInterfaceWrapper) ClearDNSCache() {
 	w.iif.ClearDNSCache()
+}
+
+func (w *platformInterfaceWrapper) RequestPermissionForWIFIState() error {
+	return nil
+}
+
+func (w *platformInterfaceWrapper) UsePlatformWIFIMonitor() bool {
+	return true
 }
 
 func (w *platformInterfaceWrapper) ReadWIFIState() adapter.WIFIState {
@@ -296,41 +313,84 @@ func (w *platformInterfaceWrapper) SystemCertificates() []string {
 	return iteratorToArray[string](w.iif.SystemCertificates())
 }
 
-func (w *platformInterfaceWrapper) FindProcessInfo(ctx context.Context, network string, source netip.AddrPort, destination netip.AddrPort) (*process.Info, error) {
-	var uid int32
+func (w *platformInterfaceWrapper) UsePlatformConnectionOwnerFinder() bool {
+	return true
+}
+
+func (w *platformInterfaceWrapper) FindConnectionOwner(request *adapter.FindConnectionOwnerRequest) (*adapter.ConnectionOwner, error) {
 	if w.useProcFS {
-		uid = procfs.ResolveSocketByProcSearch(network, source, destination)
+		var source netip.AddrPort
+		var destination netip.AddrPort
+		sourceAddr, _ := netip.ParseAddr(request.SourceAddress)
+		source = netip.AddrPortFrom(sourceAddr, uint16(request.SourcePort))
+		destAddr, _ := netip.ParseAddr(request.DestinationAddress)
+		destination = netip.AddrPortFrom(destAddr, uint16(request.DestinationPort))
+
+		var network string
+		switch request.IpProtocol {
+		case int32(syscall.IPPROTO_TCP):
+			network = "tcp"
+		case int32(syscall.IPPROTO_UDP):
+			network = "udp"
+		default:
+			return nil, E.New("unknown protocol: ", request.IpProtocol)
+		}
+
+		uid := procfs.ResolveSocketByProcSearch(network, source, destination)
 		if uid == -1 {
 			return nil, E.New("procfs: not found")
 		}
-	} else {
-		var ipProtocol int32
-		switch N.NetworkName(network) {
-		case N.NetworkTCP:
-			ipProtocol = syscall.IPPROTO_TCP
-		case N.NetworkUDP:
-			ipProtocol = syscall.IPPROTO_UDP
-		default:
-			return nil, E.New("unknown network: ", network)
-		}
-		var err error
-		uid, err = w.iif.FindConnectionOwner(ipProtocol, source.Addr().String(), int32(source.Port()), destination.Addr().String(), int32(destination.Port()))
-		if err != nil {
-			return nil, err
-		}
+		return &adapter.ConnectionOwner{
+			UserId: uid,
+		}, nil
 	}
-	packageName, _ := w.iif.PackageNameByUid(uid)
-	return &process.Info{UserId: uid, PackageName: packageName}, nil
+
+	result, err := w.iif.FindConnectionOwner(request.IpProtocol, request.SourceAddress, request.SourcePort, request.DestinationAddress, request.DestinationPort)
+	if err != nil {
+		return nil, err
+	}
+	return &adapter.ConnectionOwner{
+		UserId:             result.UserId,
+		UserName:           result.UserName,
+		ProcessPath:        result.ProcessPath,
+		AndroidPackageName: result.AndroidPackageName,
+	}, nil
 }
 
 func (w *platformInterfaceWrapper) DisableColors() bool {
 	return runtime.GOOS != "android"
 }
 
-func (w *platformInterfaceWrapper) WriteMessage(level log.Level, message string) {
-	w.iif.WriteLog(message)
+func (w *platformInterfaceWrapper) UsePlatformNotification() bool {
+	return true
 }
 
-func (w *platformInterfaceWrapper) SendNotification(notification *platform.Notification) error {
+func (w *platformInterfaceWrapper) SendNotification(notification *adapter.Notification) error {
 	return w.iif.SendNotification((*Notification)(notification))
+}
+
+func AvailablePort(startPort int32) (int32, error) {
+	for port := int(startPort); ; port++ {
+		if port > 65535 {
+			return 0, E.New("no available port found")
+		}
+		listener, err := net.Listen("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(int(port))))
+		if err != nil {
+			if errors.Is(err, syscall.EADDRINUSE) {
+				continue
+			}
+			return 0, E.Cause(err, "find available port")
+		}
+		err = listener.Close()
+		if err != nil {
+			return 0, E.Cause(err, "close listener")
+		}
+		return int32(port), nil
+	}
+}
+
+func RandomHex(length int32) *StringBox {
+	bytes := make([]byte, length)
+	common.Must1(rand.Read(bytes))
+	return wrapString(hex.EncodeToString(bytes))
 }
