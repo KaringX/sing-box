@@ -97,6 +97,7 @@ func (s *StartedService) newInstance(profileContent string, overrideOptions *Ove
 		}
 	}
 	urlTestHistoryStorage := urltest.NewHistoryStorage()
+	service.MustRegister[adapter.URLTestHistoryStorage](ctx, urlTestHistoryStorage) //karing
 	ctx = service.ContextWithPtr(ctx, urlTestHistoryStorage)
 	i := &Instance{
 		ctx:                   ctx,

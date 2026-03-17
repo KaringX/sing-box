@@ -7,7 +7,7 @@ import (
 	"context"
 	"net"
 
-	"github.com/metacubex/tfo-go"
+	"github.com/database64128/tfo-go/v2"
 	safe "github.com/sagernet/sing-box/common/fix"
 	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"

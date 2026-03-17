@@ -36,6 +36,7 @@ type PlatformInterface interface {
 
 	UsePlatformNotification() bool
 	SendNotification(notification *Notification) error
+	GetAssetContent(path string) ([]byte, error) //karing
 }
 
 type FindConnectionOwnerRequest struct {

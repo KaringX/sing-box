@@ -4,10 +4,6 @@ import (
 	"time"
 )
 
-type iOSPauseFields struct {
-	endPauseTimer *time.Timer
-}
-
 func (s *BoxService) Pause() {
 	if s.instance != nil && s.instance.Logger() != nil { //karing
 		s.instance.Logger().Info("BoxService:Pause")

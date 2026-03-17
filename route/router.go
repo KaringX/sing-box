@@ -22,23 +22,24 @@ import (
 var _ adapter.Router = (*Router)(nil)
 
 type Router struct {
-	ctx               context.Context
-	logger            log.ContextLogger
-	inbound           adapter.InboundManager
-	outbound          adapter.OutboundManager
-	dns               adapter.DNSRouter
-	dnsTransport      adapter.DNSTransportManager
-	connection        adapter.ConnectionManager
-	network           adapter.NetworkManager
-	rules             []adapter.Rule
-	needFindProcess   bool
-	ruleSets          []adapter.RuleSet
-	ruleSetMap        map[string]adapter.RuleSet
-	processSearcher   process.Searcher
-	pauseManager      pause.Manager
-	trackers          []adapter.ConnectionTracker
-	platformInterface adapter.PlatformInterface
-	started           bool
+	ctx                     context.Context
+	logger                  log.ContextLogger
+	inbound                 adapter.InboundManager
+	outbound                adapter.OutboundManager
+	dns                     adapter.DNSRouter
+	dnsTransport            adapter.DNSTransportManager
+	connection              adapter.ConnectionManager
+	network                 adapter.NetworkManager
+	rules                   []adapter.Rule
+	needFindProcess         bool
+	ruleSets                []adapter.RuleSet
+	ruleSetsRemoteWithLocal []adapter.RuleSet //karing
+	ruleSetMap              map[string]adapter.RuleSet
+	processSearcher         process.Searcher
+	pauseManager            pause.Manager
+	trackers                []adapter.ConnectionTracker
+	platformInterface       adapter.PlatformInterface
+	started                 bool
 }
 
 func NewRouter(ctx context.Context, logFactory log.Factory, options option.RouteOptions, dnsOptions option.DNSOptions) *Router {

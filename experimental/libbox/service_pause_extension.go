@@ -14,7 +14,7 @@ import (
 
 func (s *BoxService) ScreenOn() {
 	if s.instance != nil && s.instance.Logger() != nil {
-		s.instance.Logger().Info("BoxService:ScreenOn")
+		s.instance.Instance().Logger().Info("BoxService:ScreenOn")
 	}
 }
 

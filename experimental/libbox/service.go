@@ -1,5 +1,6 @@
 package libbox
 
+//karing
 import (
 	"net/netip"
 	"runtime"
@@ -14,8 +15,8 @@ import (
 	"syscall"
 
 	"github.com/sagernet/sing-box/adapter"
-
 	C "github.com/sagernet/sing-box/constant"
+	"github.com/sagernet/sing-box/daemon"
 	"github.com/sagernet/sing-box/experimental/libbox/internal/procfs"
 	"github.com/sagernet/sing-box/option"
 	tun "github.com/sagernet/sing-tun"
@@ -25,144 +26,141 @@ import (
 	"github.com/sagernet/sing/common/logger"
 )
 
-/*
-	type BoxService struct {
-		ctx                   context.Context
-		cancel                context.CancelFunc
-		urlTestHistoryStorage adapter.URLTestHistoryStorage
-		instance              *box.Box
-		clashServer           adapter.ClashServer
-		pauseManager          pause.Manager
-
-		iOSPauseFields
-	}
+type BoxService struct {
+	instance      *daemon.StartedService
+	endPauseTimer *time.Timer
+}
 
 func NewService(configContent string, platformInterface PlatformInterface) (boxService *BoxService, err error) { //karing
+	SentryBoxServiceLaunch()
+	defer func() { //karing
+		if e := recover(); e != nil {
+			panicErrMessage := fmt.Sprintf("%v", e)
+			stack := SentryTrim(string(debug.Stack()))
+			err = E.New(panicErrMessage, "\n", "panic: create service", "\n", stack)
+			SentryCaptureErrorMessage(panicErrMessage, "panic: create service", stack)
+		}
+	}()
+	D.MainGoroutineId = D.GetCurrentGoroutineId()                                                                 //karing
+	ctx := context.WithValue(BaseContext(platformInterface), log.CtxKeyLogContextIdName, strconv.Itoa(contextId)) //karing
+	contextId++                                                                                                   //karing
 
-		SentryBoxServiceLaunch()
-		defer func() { //karing
-			if e := recover(); e != nil {
-				panicErrMessage := fmt.Sprintf("%v", e)
-				stack := SentryTrim(string(debug.Stack()))
-				err = E.New(panicErrMessage, "\n", "panic: create service", "\n", stack)
-				SentryCaptureErrorMessage(panicErrMessage, "panic: create service", stack)
-			}
-		}()
-		D.MainGoroutineId = D.GetCurrentGoroutineId()                                                                 //karing
-		ctx := context.WithValue(BaseContext(platformInterface), log.CtxKeyLogContextIdName, strconv.Itoa(contextId)) //karing
-		contextId++                                                                                                   //karing
-		service.MustRegister[deprecated.Manager](ctx, new(deprecatedManager))
-		var options option.Options                     //karing
-		options, err = parseConfig(ctx, configContent) //karing
-		if err != nil {
-			SentryCaptureError(err, "create service") //karing
-			return nil, err
+	var platformLogWriter log.PlatformWriter //karing
+	if platformInterface != nil {            //karing
+		var platformWrapper *platformInterfaceWrapper //karing
+		platformWrapper = &platformInterfaceWrapper{  //karing
+			iif:       platformInterface,
+			useProcFS: platformInterface.UseProcFS(),
 		}
-		runtimeDebug.FreeOSMemory()
-		ctx, cancel := context.WithCancel(ctx)
-		urlTestHistoryStorage := urltest.NewHistoryStorage()
-		service.MustRegister[adapter.URLTestHistoryStorage](ctx, urlTestHistoryStorage) //karing
-		//ctx = service.ContextWithPtr(ctx, urlTestHistoryStorage)//karing
-		var platformLogWriter log.PlatformWriter //karing
-		if platformInterface != nil {            //karing
-			var platformWrapper *platformInterfaceWrapper //karing
-			platformWrapper = &platformInterfaceWrapper{  //karing
-				iif:       platformInterface,
-				useProcFS: platformInterface.UseProcFS(),
-			}
-			service.MustRegister[platform.Interface](ctx, platformWrapper)
-			platformLogWriter = platformWrapper //karing
-		}
-
-		var instance *box.Box                //karing
-		instance, err = box.New(box.Options{ //karing
-			Context:           ctx,
-			Options:           options,
-			PlatformLogWriter: platformLogWriter, //karing
-		})
-		if err != nil {
-			cancel()
-			SentryCaptureError(err, "create service") //karing
-			return nil, E.Cause(err, "create service")
-		}
-		runtimeDebug.FreeOSMemory()
-		return &BoxService{
-			ctx:                   ctx,
-			cancel:                cancel,
-			instance:              instance,
-			urlTestHistoryStorage: urlTestHistoryStorage,
-			pauseManager:          service.FromContext[pause.Manager](ctx),
-			clashServer:           service.FromContext[adapter.ClashServer](ctx),
-		}, nil
+		service.MustRegister[platform.Interface](ctx, platformWrapper)
+		platformLogWriter = platformWrapper //karing
 	}
+
+	boxService := &BoxService{}
+	boxService.instance = daemon.NewStartedService(daemon.ServiceOptions{
+		Context: ctx,
+		// Platform:         platformWrapper,
+		Handler:     (*platformHandler)(boxService),
+		Debug:       sDebug,
+		LogMaxLines: sLogMaxLines,
+		OOMKiller:   memoryLimitEnabled,
+		// WorkingDirectory: sWorkingPath,
+		// TempDirectory:    sTempPath,
+		// UserID:           sUserID,
+		// GroupID:          sGroupID,
+		// SystemProxyEnabled: false,
+	})
+	return boxService, nil
+}
 
 func (s *BoxService) Start() (err error) { //karing
-
-		defer func() { //karing
-			if e := recover(); e != nil {
-				panicErrMessage := fmt.Sprintf("%v", e)
-				stack := SentryTrim(string(debug.Stack()))
-				err = E.New(panicErrMessage, "\n", "panic: start service", "\n", stack)
-				SentryCaptureErrorMessage(panicErrMessage, "panic: start service", stack)
-			}
-		}()
-		D.MainGoroutineId = D.GetCurrentGoroutineId() //karing
-		if sFixAndroidStack {
-			//var err error //karing
-			done := make(chan struct{})
-			go func() {
-				err = s.instance.Start()
-				close(done)
-			}()
-			<-done
-			//return err //karing
-		} else {
-			err = s.instance.Start() //karing
+	defer func() { //karing
+		if e := recover(); e != nil {
+			panicErrMessage := fmt.Sprintf("%v", e)
+			stack := SentryTrim(string(debug.Stack()))
+			err = E.New(panicErrMessage, "\n", "panic: start service", "\n", stack)
+			SentryCaptureErrorMessage(panicErrMessage, "panic: start service", stack)
 		}
-		if err != nil { //karing
-			SentryCaptureError(err, "start service")
-		} else { //karing
-			go func() {
-				runtime.GC()
-				runtimeDebug.FreeOSMemory()
-			}()
-		}
-		return err
-	}
-
-	func (s *BoxService) Close() error {
-		s.cancel()
-		if s.urlTestHistoryStorage != nil { //karing
-			s.urlTestHistoryStorage.Close()
-		}
-
-		var goroutineId int //karing
-		var err error
+	}()
+	D.MainGoroutineId = D.GetCurrentGoroutineId() //karing
+	if sFixAndroidStack {
+		//var err error //karing
 		done := make(chan struct{})
 		go func() {
-			goroutineId = D.GetCurrentGoroutineId()
-			err = s.instance.Close()
+			err = s.instance.Start()
 			close(done)
-			s.urlTestHistoryStorage = nil //karing
-			s.clashServer = nil           //karing
-			s.pauseManager = nil          //karing
-			s.instance = nil              //karing
-
-			runtime.GC()                //karing
-			runtimeDebug.FreeOSMemory() //karing
 		}()
-		select {
-		case <-done:
-			return err
-		case <-time.After(C.FatalStopTimeout):
-			stack := D.GetGoroutineStack(goroutineId)      //karing
-			return E.New("close service timeout:" + stack) //karing
-			//os.Exit(1) //karing
-		}
+		<-done
+		//return err //karing
+	} else {
+		err = s.instance.Start() //karing
 	}
+	if err != nil { //karing
+		SentryCaptureError(err, "start service")
+	} else { //karing
+		go func() {
+			runtime.GC()
+			runtimeDebug.FreeOSMemory()
+		}()
+	}
+	return err
+}
 
-=======
-*/
+func (s *BoxService) Close() error {
+	var goroutineId int //karing
+	var err error
+	done := make(chan struct{})
+	go func() {
+		goroutineId = D.GetCurrentGoroutineId()
+		err = s.instance.Close()
+		close(done)
+		s.instance = nil //karing
+
+		runtime.GC()                //karing
+		runtimeDebug.FreeOSMemory() //karing
+	}()
+	select {
+	case <-done:
+		return err
+	case <-time.After(C.FatalStopTimeout):
+		stack := D.GetGoroutineStack(goroutineId)      //karing
+		return E.New("close service timeout:" + stack) //karing
+		//os.Exit(1) //karing
+	}
+}
+
+func (h *BoxService) ServiceStop() error {
+	return nil
+	//return h.handler.ServiceStop()
+}
+
+func (h *BoxService) ServiceReload() error {
+	return nil
+	//return h.handler.ServiceReload()
+}
+
+func (h *BoxService) SystemProxyStatus() (*daemon.SystemProxyStatus, error) {
+	return nil, nil
+	/*status, err := h.handler.GetSystemProxyStatus()
+	if err != nil {
+		return nil, err
+	}
+	return &daemon.SystemProxyStatus{
+		Enabled:   status.Enabled,
+		Available: status.Available,
+	}, nil*/
+}
+
+func (h *BoxService) SetSystemProxyEnabled(enabled bool) error {
+	return nil
+	//return h.handler.SetSystemProxyEnabled(enabled)
+}
+
+func (h *BoxService) WriteDebugMessage(message string) {
+	//h.handler.WriteDebugMessage(message)
+}
+
+/*
 var _ adapter.PlatformInterface = (*platformInterfaceWrapper)(nil)
 
 type platformInterfaceWrapper struct {
@@ -390,3 +388,4 @@ func RandomHex(length int32) *StringBox {
 	common.Must1(rand.Read(bytes))
 	return wrapString(hex.EncodeToString(bytes))
 }
+*/

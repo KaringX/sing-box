@@ -18,8 +18,6 @@ import (
 	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
 	"github.com/sagernet/sing/service"
-
-	"github.com/database64128/tfo-go/v2"
 )
 
 var (
@@ -28,8 +26,8 @@ var (
 )
 
 type DefaultDialer struct {
-	dialer4                tfo.Dialer
-	dialer6                tfo.Dialer
+	dialer4                tcpDialer //hiddify
+	dialer6                tcpDialer //hiddify
 	udpDialer4             net.Dialer
 	udpDialer6             net.Dialer
 	udpListener            net.ListenConfig
@@ -231,8 +229,8 @@ func NewDefault(ctx context.Context, options option.DialerOptions) (*DefaultDial
 	if err != nil {
 		return nil, err
 	}
-	tcpDialer4 := tfo.Dialer{Dialer: dialer4, DisableTFO: !options.TCPFastOpen}
-	tcpDialer6 := tfo.Dialer{Dialer: dialer6, DisableTFO: !options.TCPFastOpen}
+	//tcpDialer4 := tfo.Dialer{Dialer: dialer4, DisableTFO: !options.TCPFastOpen} //hiddify
+	//tcpDialer6 := tfo.Dialer{Dialer: dialer6, DisableTFO: !options.TCPFastOpen} //hiddify
 	return &DefaultDialer{
 		dialer4:                tcpDialer4,
 		dialer6:                tcpDialer6,
@@ -290,8 +288,8 @@ func (d *DefaultDialer) DialContext(ctx context.Context, network string, address
 				return DialSlowContext(&d.dialer6, ctx, network, address)
 			}
 		})
-		inbound := adapter.ContextFrom(ctx)           //karing
-		return trackConn(conn, err, address, inbound) //karing
+		inbound := adapter.ContextFrom(ctx)             //karing
+		return d.trackConn(conn, err, address, inbound) //karing
 	} else {
 		return d.DialParallelInterface(ctx, network, address, d.networkStrategy, d.networkType, d.fallbackNetworkType, d.networkFallbackDelay)
 	}
@@ -342,8 +340,8 @@ func (d *DefaultDialer) DialParallelInterface(ctx context.Context, network strin
 	if !fastFallback && !isPrimary {
 		d.networkLastFallback.Store(time.Now())
 	}
-	inbound := adapter.ContextFrom(ctx)           //karing
-	return trackConn(conn, nil, address, inbound) //karing
+	inbound := adapter.ContextFrom(ctx)             //karing
+	return d.trackConn(conn, nil, address, inbound) //karing
 }
 
 func (d *DefaultDialer) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {

@@ -76,7 +76,6 @@ require ( //karing
 	github.com/klauspost/compress v1.18.0
 	github.com/mattn/go-sqlite3 v1.14.32
 	github.com/metacubex/mihomo v1.19.16
-	github.com/metacubex/tfo-go v0.0.0-20251024101424-368b42b59148
 	github.com/shirou/gopsutil/v3 v3.24.5
 	github.com/valyala/fastjson v1.6.4
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1

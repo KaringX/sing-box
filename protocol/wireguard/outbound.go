@@ -42,7 +42,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeWireGuard, tag, []string{}, options.DialerOptions),
 		logger:  logger,
 	}
-	deprecated.Report(ctx, deprecated.OptionWireGuardOutbound)
+	//deprecated.Report(ctx, deprecated.OptionWireGuardOutbound) //karing
 	if options.GSO {
 		deprecated.Report(ctx, deprecated.OptionWireGuardGSO)
 	}
