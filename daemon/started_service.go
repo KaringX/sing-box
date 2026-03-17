@@ -612,7 +612,7 @@ func (s *StartedService) URLTest(ctx context.Context, request *URLTestRequest) (
 			outboundToTest := detour
 			outboundTag := outboundToTest.Tag()
 			b.Go(outboundTag, func() (any, error) {
-				t, err := urltest.URLTest(boxService.ctx, "", outboundToTest)
+				t, _, err := urltest.URLTest(boxService.ctx, "", outboundToTest) //karing
 				if err != nil {
 					historyStorage.DeleteURLTestHistory(outboundTag)
 				} else {
