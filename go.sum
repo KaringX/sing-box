@@ -12,8 +12,8 @@ github.com/KaringX/sing-tun v0.6.2-0.20260317042254-de2cfb8538b0 h1:kY9XnuzM2pQL
 github.com/KaringX/sing-tun v0.6.2-0.20260317042254-de2cfb8538b0/go.mod h1:pLCo4o+LacXEzz0bhwhJkKBjLlKOGPBNOAZ97ZVZWzs=
 github.com/KaringX/tailscale v1.80.3-mod.5.0.20260317044500-a09517ff99a6 h1:gx4r8I2Bdn39848935hxw9LjI8Oy4R3nNO6hk/KbsMU=
 github.com/KaringX/tailscale v1.80.3-mod.5.0.20260317044500-a09517ff99a6/go.mod h1:m87GAn4UcesHQF3leaPFEINZETO5za1LGn1GJdNDgNc=
-github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20250531024932-ebfb2f0492e2 h1:2mHFfrNKRVE0ihBELtNU7BONQoEHDwtc/S5tvf9SEIM=
-github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20250531024932-ebfb2f0492e2/go.mod h1:jGXij2Gn2wbrWuYNUmmNhf1dwcZtvyAvQoe8Xd8MbUo=
+github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20260317043318-ac9cb00c5e3c h1:9AdhGC/gZuXYfvdJp3oAzEUoFr0Eyb2UrsYsAufNeBY=
+github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20260317043318-ac9cb00c5e3c/go.mod h1:WUxgxUDZoCF2sxVmW+STSxatP02Qn3FcafTiI2BLtE0=
 github.com/KaringX/ws v0.0.0-20250301004503-082f57b5c845 h1:WQC0VxbvsoQlocfnRKDgNfZ9nnp29tqHOeWxxN0PUs0=
 github.com/KaringX/ws v0.0.0-20250301004503-082f57b5c845/go.mod h1:LtfoSK3+NG57tvnVEHgcuBW9ujgE8enPSgzgwStwCAA=
 github.com/ajg/form v1.5.1 h1:t9c7v8JUKu/XxOGBU0yjNpaMloxGEJhUkqFRq0ibGeU=
@@ -169,8 +169,6 @@ github.com/metacubex/randv2 v0.2.0 h1:uP38uBvV2SxYfLj53kuvAjbND4RUDfFJjwr4UigMiL
 github.com/metacubex/randv2 v0.2.0/go.mod h1:kFi2SzrQ5WuneuoLLCMkABtiBu6VRrMrWFqSPyj2cxY=
 github.com/metacubex/sing v0.5.6 h1:mEPDCadsCj3DB8gn+t/EtposlYuALEkExa/LUguw6/c=
 github.com/metacubex/sing v0.5.6/go.mod h1:ypf0mjwlZm0sKdQSY+yQvmsbWa0hNPtkeqyRMGgoN+w=
-github.com/metacubex/tfo-go v0.0.0-20251024101424-368b42b59148 h1:Zd0QqciLIhv9MKbGKTPEgN8WUFsgQGA1WJBy6spEnVU=
-github.com/metacubex/tfo-go v0.0.0-20251024101424-368b42b59148/go.mod h1:l9oLnLoEXyGZ5RVLsh7QCC5XsouTUyKk4F2nLm2DHLw=
 github.com/metacubex/utls v1.8.4 h1:HmL9nUApDdWSkgUyodfwF6hSjtiwCGGdyhaSpEejKpg=
 github.com/metacubex/utls v1.8.4/go.mod h1:kncGGVhFaoGn5M3pFe3SXhZCzsbCJayNOH4UEqTKTko=
 github.com/mholt/acmez/v3 v3.1.6 h1:eGVQNObP0pBN4sxqrXeg7MYqTOWyoiYpQqITVWlrevk=
