@@ -57,8 +57,6 @@ func (t TrackerMetadata) MarshalJSON() ([]byte, error) {
 	if t.Metadata.ProcessInfo != nil {
 		if t.Metadata.ProcessInfo.ProcessPath != "" {
 			processPath = t.Metadata.ProcessInfo.ProcessPath
-		} else if t.Metadata.ProcessInfo.PackageName != "" { //karing
-			packageName = t.Metadata.ProcessInfo.PackageName //karing
 		} else if t.Metadata.ProcessInfo.AndroidPackageName != "" {
 			processPath = t.Metadata.ProcessInfo.AndroidPackageName
 		}

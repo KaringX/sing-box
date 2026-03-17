@@ -91,7 +91,7 @@ func (m *Manager) Leave(c Tracker) {
 		if statistics != nil {                                       //karing
 			m.persistAccess.Lock()
 			defer m.persistAccess.Unlock()
-			m.closedConnectionsForPersist.PushBack(metadata)
+			m.closedConnectionsForPersist.PushBack(*metadata)
 		}
 
 		m.closedConnectionsAccess.Unlock()
@@ -226,7 +226,7 @@ func (s *Snapshot) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]any{
 		"downloadTotal":       s.Download,
 		"uploadTotal":         s.Upload,
-		"connections":         common.Map(s.Connections, func(t Tracker) TrackerMetadata { return t.Metadata() }),
+		"connections":         common.Map(s.Connections, func(t Tracker) TrackerMetadata { return *t.Metadata() }),
 		"memory":              s.Memory,
 		"startTime":           s.StartTime,           //karing
 		"downloadTotalDirect": s.DownloadDirect,      //karing

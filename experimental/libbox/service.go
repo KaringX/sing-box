@@ -17,8 +17,6 @@ import (
 
 	"github.com/sagernet/sing-box/adapter"
 
-	"github.com/sagernet/sing-box/adapter"
-
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/experimental/libbox/internal/procfs"
 	"github.com/sagernet/sing-box/option"

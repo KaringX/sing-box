@@ -38,6 +38,10 @@ func (t *PredefinedTransport) Close() error {
 	return nil
 }
 
+func (t *PredefinedTransport) Reset() {
+
+}
+
 func (t *PredefinedTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS.Msg, error) {
 	question := message.Question[0]
 	return &mDNS.Msg{

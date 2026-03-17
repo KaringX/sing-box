@@ -357,7 +357,7 @@ func (d *DefaultDialer) ListenPacket(ctx context.Context, destination M.Socksadd
 				return d.udpListener.ListenPacket(ctx, N.NetworkUDP, d.udpAddr4)
 			}
 		})
-		inbound := adapter.ContextFrom(ctx)                     //karing
+		inbound := adapter.ContextFrom(ctx)                       //karing
 		return d.trackPacketConn(conn, err, destination, inbound) //karing
 	} else {
 		return d.ListenSerialInterfacePacket(ctx, destination, d.networkStrategy, d.networkType, d.fallbackNetworkType, d.networkFallbackDelay)
@@ -402,7 +402,7 @@ func (d *DefaultDialer) ListenSerialInterfacePacket(ctx context.Context, destina
 			return nil, err
 		}
 	}
-	inbound := adapter.ContextFrom(ctx)                           //karing
+	inbound := adapter.ContextFrom(ctx)                             //karing
 	return d.trackPacketConn(packetConn, nil, destination, inbound) //karing
 }
 
@@ -410,14 +410,14 @@ func (d *DefaultDialer) WireGuardControl() control.Func {
 	return d.udpListener.Control
 }
 
-func trackConn(conn net.Conn, err error, destination M.Socksaddr, inbound *adapter.InboundContext) (net.Conn, error) { //karing
+func (d *DefaultDialer) trackConn(conn net.Conn, err error, destination M.Socksaddr, inbound *adapter.InboundContext) (net.Conn, error) { //karing
 	if d.connectionManager == nil || err != nil {
 		return conn, err
 	}
-	return d.connectionManager.TrackConn(conn, destination, inbound) , nil//karing
+	return d.connectionManager.TrackConn(conn, destination, inbound), nil //karing
 }
 
-func trackPacketConn(conn net.PacketConn, err error, destination M.Socksaddr, inbound *adapter.InboundContext) (net.PacketConn, error) { //karing
+func (d *DefaultDialer) trackPacketConn(conn net.PacketConn, err error, destination M.Socksaddr, inbound *adapter.InboundContext) (net.PacketConn, error) { //karing
 	if d.connectionManager == nil || err != nil {
 		return conn, err
 	}

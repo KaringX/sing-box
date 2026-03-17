@@ -64,7 +64,7 @@ require (
 require ( //hiddify
 	github.com/pion/logging v0.2.2
 	github.com/pion/turn/v3 v3.0.3
-	github.com/pires/go-proxyproto v0.8.0
+	github.com/pires/go-proxyproto v0.8.1
 )
 
 require github.com/quic-go/quic-go v0.55.0
@@ -73,9 +73,10 @@ require ( //karing
 	github.com/alitto/pond v1.9.2
 	github.com/enfein/mieru/v3 v3.24.1
 	github.com/getsentry/sentry-go v0.33.0
-	github.com/klauspost/compress v1.17.11
+	github.com/klauspost/compress v1.18.0
 	github.com/mattn/go-sqlite3 v1.14.32
 	github.com/metacubex/mihomo v1.19.16
+	github.com/metacubex/tfo-go v0.0.0-20251024101424-368b42b59148
 	github.com/shirou/gopsutil/v3 v3.24.5
 	github.com/valyala/fastjson v1.6.4
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
@@ -84,7 +85,7 @@ require ( //karing
 //replace github.com/metacubex/mihomo => github.com/KaringX/clash v0.0.0-20241101044429-f71df89d4091
 
 //go get github.com/KaringX/sing@50a9c2efd67210376bb718ef766d53710768d5ae
-replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20260203103810-bcb480e5f215 //karing_v0.7.18
+replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20260317040733-353fa7c7b521 //karing_v0.8.2
 
 //replace github.com/sagernet/sing => ../../KaringX/sing
 
@@ -92,15 +93,15 @@ replace github.com/sagernet/sing-dns => github.com/KaringX/sing-dns v0.3.0-beta.
 
 //replace github.com/sagernet/sing-dns => ../../KaringX/sing-dns
 
-replace github.com/sagernet/sing-quic => github.com/KaringX/sing-quic v0.2.0-beta.12.0.20260215124852-64690622dd76 //karing_v0.5.3
+replace github.com/sagernet/sing-quic => github.com/KaringX/sing-quic v0.2.0-beta.12.0.20260317041508-4e1c112f0290 //karing_v0.6.0
 
 //replace github.com/sagernet/sing-quic => ../../KaringX/sing-quic
 
-replace github.com/sagernet/quic-go => github.com/KaringX/quic-go v0.49.0-beta.1.0.20251029013454-709207724d17 //karing_v0.52.0-sing-box-mod.3
+replace github.com/sagernet/quic-go => github.com/KaringX/quic-go v0.49.0-beta.1.0.20260317040402-5ea144f8de33 //karing_v0.59.0-sing-box-mod.4
 
 //replace github.com/sagernet/quic-go => ../../KaringX/quic-go
 
-replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.20260218033857-dc83214764a4 //karing_v0.7.10
+replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.20260317042254-de2cfb8538b0 //karing_v0.8.3
 
 //replace github.com/sagernet/sing-tun => ../../KaringX/sing-tun
 
@@ -108,11 +109,11 @@ replace github.com/sagernet/ws => github.com/KaringX/ws v0.0.0-20250301004503-08
 
 //replace github.com/sagernet/ws => ../../KaringX/ws
 
-replace github.com/sagernet/wireguard-go => github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20250531024932-ebfb2f0492e2 //karing_v0.0.1-beta.7-2
+replace github.com/sagernet/wireguard-go => github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20260317043318-ac9cb00c5e3c //karing_v0.2.1-beta.1
 
 //replace github.com/sagernet/wireguard-go => ../../KaringX/wireguard-go
 
-replace github.com/sagernet/tailscale => github.com/KaringX/tailscale v1.80.3-mod.5.0.20251029014326-85e6a9898d6f //karing_v1.80.3-sing-box-1.12-mod.2
+replace github.com/sagernet/tailscale => github.com/KaringX/tailscale v1.80.3-mod.5.0.20260317044500-a09517ff99a6 //karing_v1.92.4-sing-box-1.13-mod.6
 
 //replace github.com/sagernet/tailscale => ../../KaringX/tailscale
 
@@ -124,14 +125,14 @@ require (
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/caddyserver/zerossl v0.1.5 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
-	github.com/coreos/go-iptables v0.7.1-0.20240112124308-65c67c9f46e6 // indirect
+	github.com/coreos/go-iptables v0.8.0 // indirect
 	github.com/database64128/netx-go v0.1.1 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dblohm7/wingoes v0.0.0-20240119213807-a09d6be7affa // indirect
 	github.com/dgrijalva/jwt-go/v4 v4.0.0-preview1 // indirect
 	github.com/ebitengine/purego v0.9.1 // indirect
 	github.com/florianl/go-nfqueue/v2 v2.0.2 // indirect
-	github.com/fsnotify/fsnotify v1.7.0 // indirect
+	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/gaissmai/bart v0.18.0 // indirect
 	github.com/go-json-experiment/json v0.0.0-20250813024750-ebf49471dced // indirect
@@ -148,15 +149,23 @@ require (
 	github.com/hdevalence/ed25519consensus v0.2.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jsimonetti/rtnetlink v1.4.0 // indirect
-	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/libdns/libdns v1.1.1 // indirect
+	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mdlayher/netlink v1.9.0 // indirect
 	github.com/mdlayher/socket v0.5.1 // indirect
+	github.com/metacubex/chacha v0.1.5 // indirect
+	github.com/metacubex/randv2 v0.2.0 // indirect
+	github.com/metacubex/sing v0.5.6 // indirect
 	github.com/mitchellh/go-ps v1.0.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.21 // indirect
-	github.com/pires/go-proxyproto v0.8.1 // indirect
+	github.com/pion/dtls/v2 v2.2.7 // indirect
+	github.com/pion/randutil v0.1.0 // indirect
+	github.com/pion/stun/v2 v2.0.0 // indirect
+	github.com/pion/transport/v2 v2.2.1 // indirect
+	github.com/pion/transport/v3 v3.0.2 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
+	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/prometheus-community/pro-bing v0.4.0 // indirect
 	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/safchain/ethtool v0.3.0 // indirect
@@ -191,6 +200,8 @@ require (
 	github.com/sagernet/cronet-go/lib/windows_arm64 v0.0.0-20260309101654-0cbdcfddded9 // indirect
 	github.com/sagernet/netlink v0.0.0-20240612041022-b9a21c07ac6a // indirect
 	github.com/sagernet/nftables v0.3.0-beta.4 // indirect
+	github.com/shoenig/go-m1cpu v0.1.6 // indirect
+	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spf13/pflag v1.0.9 // indirect
 	github.com/tailscale/certstore v0.1.1-0.20231202035212-d3fa0460f47e // indirect
 	github.com/tailscale/go-winio v0.0.0-20231025203758-c4f33415bf55 // indirect
@@ -203,9 +214,13 @@ require (
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect
+	github.com/tklauser/go-sysconf v0.3.12 // indirect
+	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/u-root/uio v0.0.0-20240224005618-d2acac8f3701 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
+	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	github.com/zeebo/blake3 v0.2.4 // indirect
+	gitlab.com/go-extension/aes-ccm v0.0.0-20230221065045-e58665ef23c7 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap/exp v0.3.0 // indirect
 	go4.org/mem v0.0.0-20240501181205-ae6ca9944745 // indirect

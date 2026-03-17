@@ -54,6 +54,10 @@ func (t *BatchTransport) Close() error {
 	return nil
 }
 
+func (t *BatchTransport) Reset() {
+
+}
+
 func (t *BatchTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS.Msg, error) {
 	var transports []adapter.DNSTransport
 	for _, server := range t.servers {
