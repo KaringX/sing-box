@@ -30,7 +30,7 @@ func (r *Router) GetRemoteRuleSetRulesCount() map[string]int {
 	return counts
 }
 
-func (r *Router) FindProcessInfo(ctx context.Context, network string, source netip.AddrPort) (*process.Info, error) {
+func (r *Router) FindProcessInfo(ctx context.Context, network string, source netip.AddrPort) (*adapter.ConnectionOwner, error) {
 	if r.processSearcher != nil {
 		var originDestination netip.AddrPort
 		return process.FindProcessInfo(r.processSearcher, ctx, network, source, originDestination)

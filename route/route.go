@@ -15,10 +15,8 @@ import (
 	C "github.com/sagernet/sing-box/constant"
 	R "github.com/sagernet/sing-box/route/rule"
 	"github.com/sagernet/sing-mux"
-	mux "github.com/sagernet/sing-mux"
 	"github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing-tun/ping"
-	"github.com/sagernet/sing-vmess"
 	vmess "github.com/sagernet/sing-vmess"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/buf"
@@ -634,8 +632,8 @@ match:
 		if len(metadata.ProcessInfo.ProcessPath) > 0 {
 			meta += ",processPath:" + metadata.ProcessInfo.ProcessPath
 		}
-		if len(metadata.ProcessInfo.PackageName) > 0 {
-			meta += ",packageName:" + metadata.ProcessInfo.PackageName
+		if len(metadata.ProcessInfo.AndroidPackageName) > 0 {
+			meta += ",packageName:" + metadata.ProcessInfo.AndroidPackageName
 		}
 	}
 	meta += ",destination domain:" + metadata.Domain + ",destination ip:" + metadata.Destination.String() + "] "

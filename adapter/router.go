@@ -11,8 +11,6 @@ import (
 
 	C "github.com/sagernet/sing-box/constant"
 
-	"github.com/sagernet/sing-box/common/process"
-
 	"github.com/sagernet/sing-tun"
 
 	M "github.com/sagernet/sing/common/metadata"
@@ -35,7 +33,7 @@ type Router interface {
 	ResetNetwork()
 	ResetOutboundNetwork(tags []string)                                                                    //karing
 	GetRemoteRuleSetRulesCount() map[string]int                                                            //karing
-	FindProcessInfo(ctx context.Context, network string, source netip.AddrPort) (*process.Info, error)     //karing
+	FindProcessInfo(ctx context.Context, network string, source netip.AddrPort) (*ConnectionOwner, error)  //karing
 	GetMatchRuleChain(outboundManager OutboundManager, matchOutboundTag string) ([]string, string, string) //karing
 	GetMatchRule(ctx context.Context, metadata *InboundContext) (Rule, error)                              //karing
 	GetAssetContent(path string) ([]byte, error)                                                           //karing

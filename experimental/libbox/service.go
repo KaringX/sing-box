@@ -8,8 +8,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"net"
-	"net/netip"
-	"runtime"
 
 	"strconv"
 	"sync"
