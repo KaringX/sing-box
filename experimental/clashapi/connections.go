@@ -23,7 +23,6 @@ import (
 func connectionRouter(ctx context.Context, server *Server, router adapter.Router, trafficManager *trafficontrol.Manager) http.Handler { //karing
 	r := chi.NewRouter()
 	r.Get("/", getConnections(ctx, server, trafficManager)) //karing
-
 	r.Delete("/", closeAllConnections(router, trafficManager))
 	r.Delete("/{id}", closeConnection(trafficManager))
 	return r

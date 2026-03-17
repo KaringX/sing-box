@@ -49,7 +49,6 @@ type Outbound struct {
 	clientConn        net.Conn
 	client            *ssh.Client
 	uotClient         *uot.Client //hiddify
-
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.SSHOutboundOptions) (adapter.Outbound, error) {

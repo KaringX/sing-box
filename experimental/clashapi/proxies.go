@@ -209,7 +209,6 @@ func getProxyDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 		}
 
 		proxy := r.Context().Value(CtxKeyProxy).(adapter.Outbound)
-
 		ctx, cancel := context.WithTimeout(server.ctx, time.Second*time.Duration(timeout)) //karing
 		defer cancel()
 
