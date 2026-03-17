@@ -29,9 +29,10 @@ import (
 var _ adapter.ConnectionManager = (*ConnectionManager)(nil)
 
 type ConnectionManager struct {
-	logger      logger.ContextLogger
-	access      sync.Mutex
-	connections list.List[io.Closer]
+	logger             logger.ContextLogger
+	access             sync.Mutex
+	connections        list.List[io.Closer]
+	outBoundConnection list.List[adapter.OutboundContext] //karing
 }
 
 func NewConnectionManager(logger logger.ContextLogger) *ConnectionManager {
@@ -72,10 +73,29 @@ func (m *ConnectionManager) TrackConn(conn net.Conn, destination M.Socksaddr, in
 	m.access.Lock()
 	element := m.connections.PushBack(conn)
 	m.access.Unlock()
+	var ( //karing
+		Source   M.Socksaddr
+		Fqdn     string
+		Outbound string
+	)
+	if inbound != nil { //karing
+		Source = inbound.Source
+		Fqdn = inbound.Destination.Fqdn
+		Outbound = inbound.Outbound
+	}
+	outbound := adapter.OutboundContext{ //karing
+		CreatedAt:   time.Now(),
+		Network:     "tcp",
+		Source:      Source,
+		Destination: destination,
+		Fqdn:        Fqdn,
+		Outbound:    Outbound,
+	}
 	return &trackedConn{
-		Conn:    conn,
-		manager: m,
-		element: element,
+		Conn:     conn,
+		manager:  m,
+		element:  element,
+		outbound: outbound, //karing
 	}
 }
 
@@ -83,10 +103,29 @@ func (m *ConnectionManager) TrackPacketConn(conn net.PacketConn, destination M.S
 	m.access.Lock()
 	element := m.connections.PushBack(conn)
 	m.access.Unlock()
+	var ( //karing
+		Source   M.Socksaddr
+		Fqdn     string
+		Outbound string
+	)
+	if inbound != nil { //karing
+		Source = inbound.Source
+		Fqdn = inbound.Destination.Fqdn
+		Outbound = inbound.Outbound
+	}
+	outbound := adapter.OutboundContext{ //karing
+		CreatedAt:   time.Now(),
+		Network:     "udp",
+		Source:      Source,
+		Destination: destination,
+		Fqdn:        Fqdn,
+		Outbound:    Outbound,
+	}
 	return &trackedPacketConn{
 		PacketConn: conn,
 		manager:    m,
 		element:    element,
+		outbound:   outbound, //karing
 	}
 }
 
@@ -389,8 +428,9 @@ func (m *ConnectionManager) packetConnectionCopy(ctx context.Context, source N.P
 
 type trackedConn struct {
 	net.Conn
-	manager *ConnectionManager
-	element *list.Element[io.Closer]
+	manager  *ConnectionManager
+	element  *list.Element[io.Closer]
+	outbound adapter.OutboundContext //karing
 }
 
 func (c *trackedConn) Close() error {
@@ -414,8 +454,9 @@ func (c *trackedConn) WriterReplaceable() bool {
 
 type trackedPacketConn struct {
 	net.PacketConn
-	manager *ConnectionManager
-	element *list.Element[io.Closer]
+	manager  *ConnectionManager
+	element  *list.Element[io.Closer]
+	outbound adapter.OutboundContext //karing
 }
 
 func (c *trackedPacketConn) Close() error {

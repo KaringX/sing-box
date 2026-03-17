@@ -277,7 +277,8 @@ func remoteRuleSetRulesStates(ctx context.Context) func(w http.ResponseWriter, r
 
 func resetOutboundConnections() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		conntrack.Close()
+		connectionManager := service.FromContext[adapter.ConnectionManager](r.Context())
+		connectionManager.Close()
 		go func() {
 			runtime.GC()
 			runtimeDebug.FreeOSMemory()

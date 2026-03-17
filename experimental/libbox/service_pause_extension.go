@@ -60,7 +60,6 @@ func (s *BoxService) tryResetOutboundNetwork() {
 			s.instance.Logger().Info("BoxService:tryResetOutboundNetwork")
 		}
 		s.instance.Router().ResetOutboundNetwork(tags)
-		//conntrack.Close()
 	}
 }
 

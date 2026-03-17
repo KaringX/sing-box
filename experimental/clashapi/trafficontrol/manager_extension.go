@@ -301,6 +301,7 @@ func (m *Manager) persistConnectionsToDB(connections []TrackerMetadata, persistT
 	if len(connections) == 0 {
 		return 0
 	}
+	connectionManager := service.FromContext[adapter.ConnectionManager](m.ctx)
 	statistics := service.FromContext[adapter.Statistics](m.ctx)
 	if statistics != nil {
 		tx, err := statistics.BeginTx()
@@ -416,7 +417,7 @@ func (m *Manager) persistConnectionsToDB(connections []TrackerMetadata, persistT
 				m.uploadTotalDirect.Load(),
 				m.downloadTotalDirect.Load(),
 				int32(m.connections.Len()),
-				int32(conntrack.Count()),
+				int32(connectionManager.Count()),
 				int32(runtime.NumGoroutine()),
 				int32(gofree.ThreadNum()),
 				m.memory,
@@ -461,6 +462,7 @@ func (m *Manager) persistDeviceEventsToDB(events []DeviceEventTracker, persistTi
 	if len(events) == 0 {
 		return 0
 	}
+	connectionManager := service.FromContext[adapter.ConnectionManager](m.ctx)
 	statistics := service.FromContext[adapter.Statistics](m.ctx)
 	if statistics != nil {
 		tx, err := statistics.BeginTx()
@@ -491,7 +493,7 @@ func (m *Manager) persistDeviceEventsToDB(events []DeviceEventTracker, persistTi
 				m.uploadTotalDirect.Load(),
 				m.downloadTotalDirect.Load(),
 				int32(m.connections.Len()),
-				int32(conntrack.Count()),
+				int32(connectionManager.Count()),
 				int32(runtime.NumGoroutine()),
 				int32(gofree.ThreadNum()),
 				m.memory,

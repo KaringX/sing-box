@@ -139,3 +139,12 @@ func OverrideContext(ctx context.Context) context.Context {
 	}
 	return ctx
 }
+
+type OutboundContext struct { //karing
+	CreatedAt   time.Time
+	Network     string
+	Source      M.Socksaddr
+	Destination M.Socksaddr
+	Fqdn        string
+	Outbound    string
+}

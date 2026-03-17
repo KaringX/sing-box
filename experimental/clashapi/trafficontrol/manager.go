@@ -162,15 +162,16 @@ func (m *Manager) Connection(id uuid.UUID) Tracker {
 
 func (m *Manager) Snapshot(includeConnections bool) *Snapshot { //karing
 	var connections []Tracker
-	var connectionsOut []TrackerMetadataOut //karing
-	if includeConnections {                 //karing
+	var connectionsOut []TrackerMetadataOut                                    //karing
+	connectionManager := service.FromContext[adapter.ConnectionManager](m.ctx) //karing
+	if includeConnections {
 		m.connections.Range(func(_ uuid.UUID, value Tracker) bool {
 			//if value.Metadata().OutboundType != C.TypeDNS {//karing
 			connections = append(connections, value)
 			//}
 			return true
 		})
-		connectionsOut = common.Map(conntrack.Connections(), func(t conntrack.OutboundConn) TrackerMetadataOut { //karing
+		connectionsOut = common.Map(connectionManager.Connections(), func(t adapter.OutboundContext) TrackerMetadataOut { //karing
 			return TrackerMetadataOut{
 				CreatedAt:   t.CreatedAt,
 				Network:     t.Network,
@@ -198,7 +199,7 @@ func (m *Manager) Snapshot(includeConnections bool) *Snapshot { //karing
 			DownloadSpeed:       m.downloadBlip.Load(),
 			UploadSpeed:         m.uploadBlip.Load(),
 			ConnectionsOut:      connectionsOut,
-			ConnectionsOutCount: int32(conntrack.Count()),
+			ConnectionsOutCount: int32(connectionManager.Count()),
 			ConnectionsInCount:  int32(m.connections.Len()),
 			Goroutines:          int32(runtime.NumGoroutine()),
 			ThreadCount:         int32(gofree.ThreadNum()),
