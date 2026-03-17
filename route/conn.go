@@ -29,10 +29,9 @@ import (
 var _ adapter.ConnectionManager = (*ConnectionManager)(nil)
 
 type ConnectionManager struct {
-	logger             logger.ContextLogger
-	access             sync.Mutex
-	connections        list.List[io.Closer]
-	outBoundConnection list.List[adapter.OutboundContext] //karing
+	logger      logger.ContextLogger
+	access      sync.Mutex
+	connections list.List[adapter.OutboundContext] //karing
 }
 
 func NewConnectionManager(logger logger.ContextLogger) *ConnectionManager {
@@ -54,7 +53,9 @@ func (m *ConnectionManager) CloseAll() {
 	var closers []io.Closer
 	for element := m.connections.Front(); element != nil; {
 		nextElement := element.Next()
-		closers = append(closers, element.Value)
+		if element.Value.Closer != nil { //karing
+			closers = append(closers, element.Value.Closer)
+		}
 		m.connections.Remove(element)
 		element = nextElement
 	}
@@ -70,9 +71,6 @@ func (m *ConnectionManager) Close() error {
 }
 
 func (m *ConnectionManager) TrackConn(conn net.Conn, destination M.Socksaddr, inbound *adapter.InboundContext) net.Conn { //karing
-	m.access.Lock()
-	element := m.connections.PushBack(conn)
-	m.access.Unlock()
 	var ( //karing
 		Source   M.Socksaddr
 		Fqdn     string
@@ -91,18 +89,17 @@ func (m *ConnectionManager) TrackConn(conn net.Conn, destination M.Socksaddr, in
 		Fqdn:        Fqdn,
 		Outbound:    Outbound,
 	}
+	m.access.Lock()
+	element := m.connections.PushBack(outbound) //karing
+	m.access.Unlock()
 	return &trackedConn{
-		Conn:     conn,
-		manager:  m,
-		element:  element,
-		outbound: outbound, //karing
+		Conn:    conn,
+		manager: m,
+		element: element,
 	}
 }
 
 func (m *ConnectionManager) TrackPacketConn(conn net.PacketConn, destination M.Socksaddr, inbound *adapter.InboundContext) net.PacketConn { //karing
-	m.access.Lock()
-	element := m.connections.PushBack(conn)
-	m.access.Unlock()
 	var ( //karing
 		Source   M.Socksaddr
 		Fqdn     string
@@ -114,6 +111,7 @@ func (m *ConnectionManager) TrackPacketConn(conn net.PacketConn, destination M.S
 		Outbound = inbound.Outbound
 	}
 	outbound := adapter.OutboundContext{ //karing
+		Closer:      conn,
 		CreatedAt:   time.Now(),
 		Network:     "udp",
 		Source:      Source,
@@ -121,11 +119,13 @@ func (m *ConnectionManager) TrackPacketConn(conn net.PacketConn, destination M.S
 		Fqdn:        Fqdn,
 		Outbound:    Outbound,
 	}
+	m.access.Lock()
+	element := m.connections.PushBack(outbound) //karing
+	m.access.Unlock()
 	return &trackedPacketConn{
 		PacketConn: conn,
 		manager:    m,
 		element:    element,
-		outbound:   outbound, //karing
 	}
 }
 
@@ -428,14 +428,16 @@ func (m *ConnectionManager) packetConnectionCopy(ctx context.Context, source N.P
 
 type trackedConn struct {
 	net.Conn
-	manager  *ConnectionManager
-	element  *list.Element[io.Closer]
-	outbound adapter.OutboundContext //karing
+	manager *ConnectionManager
+	element *list.Element[adapter.OutboundContext] //karing
 }
 
 func (c *trackedConn) Close() error {
 	c.manager.access.Lock()
-	c.manager.connections.Remove(c.element)
+	if c.element.Value.Closer != nil { //karing
+		c.manager.connections.Remove(c.element)
+		c.element.Value.Closer = nil //karing
+	}
 	c.manager.access.Unlock()
 	return c.Conn.Close()
 }
@@ -454,14 +456,16 @@ func (c *trackedConn) WriterReplaceable() bool {
 
 type trackedPacketConn struct {
 	net.PacketConn
-	manager  *ConnectionManager
-	element  *list.Element[io.Closer]
-	outbound adapter.OutboundContext //karing
+	manager *ConnectionManager
+	element *list.Element[adapter.OutboundContext] //karing
 }
 
 func (c *trackedPacketConn) Close() error {
 	c.manager.access.Lock()
-	c.manager.connections.Remove(c.element)
+	if c.element.Value.Closer != nil { //karing
+		c.manager.connections.Remove(c.element)
+		c.element.Value.Closer = nil //karing
+	}
 	c.manager.access.Unlock()
 	return c.PacketConn.Close()
 }

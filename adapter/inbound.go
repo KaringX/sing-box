@@ -2,6 +2,7 @@ package adapter
 
 import (
 	"context"
+	"io"
 	"net/netip"
 	"time"
 
@@ -141,6 +142,7 @@ func OverrideContext(ctx context.Context) context.Context {
 }
 
 type OutboundContext struct { //karing
+	Closer      io.Closer
 	CreatedAt   time.Time
 	Network     string
 	Source      M.Socksaddr
