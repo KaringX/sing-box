@@ -24,6 +24,7 @@ import (
 	"github.com/sagernet/sing-box/common/xray/pipe"
 	"github.com/sagernet/sing-box/common/xray/signal/done"
 	"github.com/sagernet/sing-box/common/xray/uuid"
+	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/bufio"
@@ -44,14 +45,14 @@ type Client struct {
 	getHTTPClient2 func() (DialerClient, *XmuxClient)
 }
 
-func NewClient(ctx context.Context, dialer N.Dialer, serverAddr M.Socksaddr, options option.V2RayXHTTPOptions, tlsConfig tls.Config) (adapter.V2RayClientTransport, error) {
+func NewClient(ctx context.Context, logger log.ContextLogger, dialer N.Dialer, serverAddr M.Socksaddr, options option.V2RayXHTTPOptions, tlsConfig tls.Config) (adapter.V2RayClientTransport, error) { //karing
 	mode := strings.TrimSpace(options.Mode)
 	dest := serverAddr
 	var gotlsConfig *gotls.Config
 	var tlsConfigErr error
 	if tlsConfig != nil {
 		var err error
-		gotlsConfig, err = tlsConfig.Config()
+		gotlsConfig, err = tlsConfig.STDConfig() //karing
 		if err != nil {
 			tlsConfigErr = err
 			// uTLS doesn't support Config(), use HTTP/2 only
@@ -103,11 +104,11 @@ func NewClient(ctx context.Context, dialer N.Dialer, serverAddr M.Socksaddr, opt
 		var tlsConfig2 tls.Config
 		var gotlsConfig2 *gotls.Config
 		if options2.TLS != nil {
-			tlsConfig2, err = tls.NewClient(ctx, options2.Server, common.PtrValueOrDefault(options2.TLS))
+			tlsConfig2, err = tls.NewClient(ctx, logger, options2.Server, common.PtrValueOrDefault(options2.TLS)) //karing
 			if err != nil {
 				return nil, err
 			}
-			gotlsConfig2, err = tlsConfig2.Config()
+			gotlsConfig2, err = tlsConfig2.STDConfig() //karing
 			if err != nil {
 				// uTLS doesn't support Config(), use HTTP/2 only
 				gotlsConfig2 = nil

@@ -5,6 +5,7 @@ import (
 	"net"
 
 	"github.com/sagernet/sing-box/adapter"
+	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/transport/simple-obfs"
 	E "github.com/sagernet/sing/common/exceptions"
 	F "github.com/sagernet/sing/common/format"
@@ -18,7 +19,7 @@ func init() {
 	RegisterPlugin("obfs-local", newObfsLocal)
 }
 
-func newObfsLocal(ctx context.Context, pluginOpts Args, router adapter.Router, dialer N.Dialer, serverAddr M.Socksaddr) (Plugin, error) {
+func newObfsLocal(ctx context.Context, logger log.ContextLogger, pluginOpts Args, router adapter.Router, dialer N.Dialer, serverAddr M.Socksaddr) (Plugin, error) { //karing
 	plugin := &ObfsLocal{
 		dialer:     dialer,
 		serverAddr: serverAddr,

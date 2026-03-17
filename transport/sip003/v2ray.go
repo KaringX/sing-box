@@ -8,12 +8,12 @@ import (
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/common/tls"
 	C "github.com/sagernet/sing-box/constant"
+	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing-box/transport/v2ray"
 	"github.com/sagernet/sing-vmess"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/json/badoption"
-	"github.com/sagernet/sing/common/logger"
 	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
 )
@@ -22,7 +22,7 @@ func init() {
 	RegisterPlugin("v2ray-plugin", newV2RayPlugin)
 }
 
-func newV2RayPlugin(ctx context.Context, pluginOpts Args, router adapter.Router, dialer N.Dialer, serverAddr M.Socksaddr) (Plugin, error) {
+func newV2RayPlugin(ctx context.Context, logger log.ContextLogger, pluginOpts Args, router adapter.Router, dialer N.Dialer, serverAddr M.Socksaddr) (Plugin, error) { //karing
 	var tlsOptions option.OutboundTLSOptions
 	if _, loaded := pluginOpts.Get("tls"); loaded {
 		tlsOptions.Enabled = true
@@ -56,7 +56,7 @@ func newV2RayPlugin(ctx context.Context, pluginOpts Args, router adapter.Router,
 	var tlsClient tls.Config
 	var err error
 	if tlsOptions.Enabled {
-		tlsClient, err = tls.NewClient(ctx, logger.NOP(), serverAddr.AddrString(), tlsOptions)
+		tlsClient, err = tls.NewClient(ctx, logger, serverAddr.AddrString(), tlsOptions) //karing
 		if err != nil {
 			return nil, err
 		}
@@ -92,7 +92,7 @@ func newV2RayPlugin(ctx context.Context, pluginOpts Args, router adapter.Router,
 		return nil, E.New("v2ray-plugin: unknown mode: " + mode)
 	}
 
-	transport, err := v2ray.NewClientTransport(context.Background(), dialer, serverAddr, transportOptions, tlsClient)
+	transport, err := v2ray.NewClientTransport(context.Background(), logger, dialer, serverAddr, transportOptions, tlsClient) //karing
 	if err != nil {
 		return nil, err
 	}

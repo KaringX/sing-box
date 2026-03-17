@@ -68,7 +68,7 @@ func (m *ConnectionManager) Close() error {
 	return nil
 }
 
-func (m *ConnectionManager) TrackConn(conn net.Conn) net.Conn {
+func (m *ConnectionManager) TrackConn(conn net.Conn, destination M.Socksaddr, inbound *adapter.InboundContext) net.Conn { //karing
 	m.access.Lock()
 	element := m.connections.PushBack(conn)
 	m.access.Unlock()
@@ -79,7 +79,7 @@ func (m *ConnectionManager) TrackConn(conn net.Conn) net.Conn {
 	}
 }
 
-func (m *ConnectionManager) TrackPacketConn(conn net.PacketConn) net.PacketConn {
+func (m *ConnectionManager) TrackPacketConn(conn net.PacketConn, destination M.Socksaddr, inbound *adapter.InboundContext) net.PacketConn { //karing
 	m.access.Lock()
 	element := m.connections.PushBack(conn)
 	m.access.Unlock()

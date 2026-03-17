@@ -9,7 +9,6 @@ import (
 	"github.com/sagernet/sing-box/adapter/outbound"
 	"github.com/sagernet/sing-box/common/dialer"
 	C "github.com/sagernet/sing-box/constant"
-	"github.com/sagernet/sing-box/experimental/deprecated"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option" //hiddify
 	"github.com/sagernet/sing-box/protocol/wireguard/houtbound"
@@ -43,9 +42,9 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		logger:  logger,
 	}
 	//deprecated.Report(ctx, deprecated.OptionWireGuardOutbound) //karing
-	if options.GSO {
-		deprecated.Report(ctx, deprecated.OptionWireGuardGSO)
-	}
+	//if options.GSO { //karing
+	//	deprecated.Report(ctx, deprecated.OptionWireGuardGSO)
+	//}
 	if len(options.LocalAddress) == 0 { //karing
 		return empty, E.New("missing local address")
 	}

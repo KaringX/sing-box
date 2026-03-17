@@ -160,7 +160,6 @@ func (h *BoxService) WriteDebugMessage(message string) {
 	//h.handler.WriteDebugMessage(message)
 }
 
-/*
 var _ adapter.PlatformInterface = (*platformInterfaceWrapper)(nil)
 
 type platformInterfaceWrapper struct {
@@ -388,4 +387,3 @@ func RandomHex(length int32) *StringBox {
 	common.Must1(rand.Read(bytes))
 	return wrapString(hex.EncodeToString(bytes))
 }
-*/

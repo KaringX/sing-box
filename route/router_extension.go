@@ -43,7 +43,7 @@ func (r *Router) GetMatchRuleChain(outboundManager adapter.OutboundManager, matc
 }
 
 func (r *Router) GetMatchRule(ctx context.Context, metadata *adapter.InboundContext) (adapter.Rule, error) {
-	rule, _, _, _, err := r.matchRule(ctx, metadata, false, nil, nil)
+	rule, _, _, _, err := r.matchRule(ctx, metadata, false, false, nil, nil)
 	if err != nil {
 		return nil, err
 	}

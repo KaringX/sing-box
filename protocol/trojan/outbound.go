@@ -69,7 +69,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		outbound.tlsDialer = tls.NewDialer(outboundDialer, outbound.tlsConfig)
 	}
 	if options.Transport != nil {
-		outbound.transport, err = v2ray.NewClientTransport(ctx, outbound.dialer, outbound.serverAddr, common.PtrValueOrDefault(options.Transport), outbound.tlsConfig)
+		outbound.transport, err = v2ray.NewClientTransport(ctx, logger, outbound.dialer, outbound.serverAddr, common.PtrValueOrDefault(options.Transport), outbound.tlsConfig) //karing
 		if err != nil {
 			return empty, E.Cause(err, "create client transport: ", options.Transport.Type) //karing
 		}
