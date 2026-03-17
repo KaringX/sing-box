@@ -19,7 +19,6 @@ import (
 	"github.com/sagernet/sing-box/dns/transport/local"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
-	"github.com/sagernet/sing/common"
 	E "github.com/sagernet/sing/common/exceptions"
 	F "github.com/sagernet/sing/common/format"
 	"github.com/sagernet/sing/common/json"
@@ -96,13 +95,14 @@ func Lookup(ctx context.Context, router adapter.Router, logFactory log.Factory, 
 			return 0, nil, E.Cause(err, "initialize DNS server[", i, "]")
 		}
 	}
-	dnsTransportManager.Initialize(common.Must1(
-		local.NewTransport(
+	dnsTransportManager.Initialize(func() (adapter.DNSTransport, error) {
+		return local.NewTransport(
 			ctxClone,
 			logFactory.NewLogger("dns_Lookup/local"),
 			"local",
 			option.LocalDNSServerOptions{},
-		)))
+		)
+	})
 	transport, ok := dnsTransportManager.Transport(req.Tag)
 	if !ok {
 		return 0, nil, E.New("server tag[", req.Tag, "] not found")
