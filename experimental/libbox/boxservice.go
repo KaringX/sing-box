@@ -3,7 +3,9 @@ package libbox
 //karing
 import (
 	"fmt"
+	"runtime"
 	"runtime/debug"
+	runtimeDebug "runtime/debug"
 	"time"
 
 	"github.com/sagernet/sing-box/adapter"
@@ -82,11 +84,20 @@ func (s *BoxService) Start(configContent string) (err error) {
 		}
 	}()
 	//daemon.RegisterStartedServiceServer(nil, s.StartedService)
-	return s.StartOrReloadService(configContent, &BoxServiceOverrideOptions{
+	err = s.StartOrReloadService(configContent, &BoxServiceOverrideOptions{
 		AutoRedirect:   false,
-		IncludePackage: nil,
-		ExcludePackage: nil,
+		IncludePackage: nil, //todo
+		ExcludePackage: nil, //todo
 	})
+	if err != nil { //karing
+		SentryCaptureError(err, "start service")
+		return err
+	}
+	go func() {
+		runtime.GC()
+		runtimeDebug.FreeOSMemory()
+	}()
+	return nil
 }
 
 func (s *BoxService) Close() error {

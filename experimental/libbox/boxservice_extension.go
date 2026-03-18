@@ -15,34 +15,6 @@ func GetRestart() bool {
 	return restartFlag
 }
 
-/*
-func (s *BoxService) Start() (err error) { //karing
-
-		defer func() { //karing
-			if e := recover(); e != nil {
-				panicErrMessage := fmt.Sprintf("%v", e)
-				stack := SentryTrim(string(debug.Stack()))
-				err = E.New(panicErrMessage, "\n", "panic: start service", "\n", stack)
-				SentryCaptureErrorMessage(panicErrMessage, "panic: start service", stack)
-			}
-		}()
-		D.MainGoroutineId = D.GetCurrentGoroutineId() //karing
-
-			err = s.instance.Start() //karing
-
-		if err != nil { //karing
-			SentryCaptureError(err, "start service")
-		} else { //karing
-			go func() {
-				runtime.GC()
-				runtimeDebug.FreeOSMemory()
-			}()
-		}
-		return err
-	}
-
-*/
-
 func (s *BoxService) ScreenOn() {
 	instance := s.StartedService.Instance()
 	if instance != nil && instance.Box() == nil && instance.Box().Logger() != nil {
