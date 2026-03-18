@@ -70,12 +70,13 @@ func (m *ConnectionManager) Close() error {
 	return nil
 }
 
-func (m *ConnectionManager) TrackConn(conn net.Conn, destination M.Socksaddr, inbound *adapter.InboundContext) net.Conn { //karing
+func (m *ConnectionManager) TrackConn(ctx context.Context, conn net.Conn, destination M.Socksaddr) net.Conn { //karing
 	var ( //karing
 		Source   M.Socksaddr
 		Fqdn     string
 		Outbound string
 	)
+	inbound := adapter.ContextFrom(ctx)
 	if inbound != nil { //karing
 		Source = inbound.Source
 		Fqdn = inbound.Destination.Fqdn
@@ -99,12 +100,13 @@ func (m *ConnectionManager) TrackConn(conn net.Conn, destination M.Socksaddr, in
 	}
 }
 
-func (m *ConnectionManager) TrackPacketConn(conn net.PacketConn, destination M.Socksaddr, inbound *adapter.InboundContext) net.PacketConn { //karing
+func (m *ConnectionManager) TrackPacketConn(ctx context.Context, conn net.PacketConn, destination M.Socksaddr) net.PacketConn { //karing
 	var ( //karing
 		Source   M.Socksaddr
 		Fqdn     string
 		Outbound string
 	)
+	inbound := adapter.ContextFrom(ctx)
 	if inbound != nil { //karing
 		Source = inbound.Source
 		Fqdn = inbound.Destination.Fqdn

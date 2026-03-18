@@ -12,8 +12,8 @@ type ConnectionManager interface {
 	Lifecycle
 	Count() int
 	CloseAll()
-	TrackConn(conn net.Conn, destination M.Socksaddr, inbound *InboundContext) net.Conn                   //karing
-	TrackPacketConn(conn net.PacketConn, destination M.Socksaddr, inbound *InboundContext) net.PacketConn //karing
+	TrackConn(ctx context.Context, conn net.Conn, destination M.Socksaddr) net.Conn                   //karing
+	TrackPacketConn(ctx context.Context, conn net.PacketConn, destination M.Socksaddr) net.PacketConn //karing
 	NewConnection(ctx context.Context, this N.Dialer, conn net.Conn, metadata InboundContext, onClose N.CloseHandlerFunc)
 	NewPacketConnection(ctx context.Context, this N.Dialer, conn N.PacketConn, metadata InboundContext, onClose N.CloseHandlerFunc)
 	Connections() []OutboundContext //karing

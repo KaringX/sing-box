@@ -288,8 +288,7 @@ func (d *DefaultDialer) DialContext(ctx context.Context, network string, address
 				return DialSlowContext(&d.dialer6, ctx, network, address)
 			}
 		})
-		inbound := adapter.ContextFrom(ctx)             //karing
-		return d.trackConn(conn, err, address, inbound) //karing
+		return d.trackConn(ctx, conn, err, address) //karing
 	} else {
 		return d.DialParallelInterface(ctx, network, address, d.networkStrategy, d.networkType, d.fallbackNetworkType, d.networkFallbackDelay)
 	}
@@ -340,8 +339,7 @@ func (d *DefaultDialer) DialParallelInterface(ctx context.Context, network strin
 	if !fastFallback && !isPrimary {
 		d.networkLastFallback.Store(time.Now())
 	}
-	inbound := adapter.ContextFrom(ctx)             //karing
-	return d.trackConn(conn, nil, address, inbound) //karing
+	return d.trackConn(ctx, conn, nil, address) //karing
 }
 
 func (d *DefaultDialer) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
@@ -355,8 +353,7 @@ func (d *DefaultDialer) ListenPacket(ctx context.Context, destination M.Socksadd
 				return d.udpListener.ListenPacket(ctx, N.NetworkUDP, d.udpAddr4)
 			}
 		})
-		inbound := adapter.ContextFrom(ctx)                       //karing
-		return d.trackPacketConn(conn, err, destination, inbound) //karing
+		return d.trackPacketConn(ctx, conn, err, destination) //karing
 	} else {
 		return d.ListenSerialInterfacePacket(ctx, destination, d.networkStrategy, d.networkType, d.fallbackNetworkType, d.networkFallbackDelay)
 	}
@@ -400,24 +397,23 @@ func (d *DefaultDialer) ListenSerialInterfacePacket(ctx context.Context, destina
 			return nil, err
 		}
 	}
-	inbound := adapter.ContextFrom(ctx)                             //karing
-	return d.trackPacketConn(packetConn, nil, destination, inbound) //karing
+	return d.trackPacketConn(ctx, packetConn, nil, destination) //karing
 }
 
 func (d *DefaultDialer) WireGuardControl() control.Func {
 	return d.udpListener.Control
 }
 
-func (d *DefaultDialer) trackConn(conn net.Conn, err error, destination M.Socksaddr, inbound *adapter.InboundContext) (net.Conn, error) { //karing
+func (d *DefaultDialer) trackConn(ctx context.Context, conn net.Conn, err error, destination M.Socksaddr) (net.Conn, error) { //karing
 	if d.connectionManager == nil || err != nil {
 		return conn, err
 	}
-	return d.connectionManager.TrackConn(conn, destination, inbound), nil //karing
+	return d.connectionManager.TrackConn(ctx, conn, destination), nil //karing
 }
 
-func (d *DefaultDialer) trackPacketConn(conn net.PacketConn, err error, destination M.Socksaddr, inbound *adapter.InboundContext) (net.PacketConn, error) { //karing
+func (d *DefaultDialer) trackPacketConn(ctx context.Context, conn net.PacketConn, err error, destination M.Socksaddr) (net.PacketConn, error) { //karing
 	if d.connectionManager == nil || err != nil {
 		return conn, err
 	}
-	return d.connectionManager.TrackPacketConn(conn, destination, inbound), nil //karing
+	return d.connectionManager.TrackPacketConn(ctx, conn, destination), nil //karing
 }
