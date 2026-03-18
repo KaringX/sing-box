@@ -41,8 +41,6 @@ import (
 
 var _ adapter.SimpleLifecycle = (*Box)(nil)
 
-var contextId int //karing
-
 type Box struct {
 	ctx             context.Context //karing
 	createdAt       time.Time
@@ -102,7 +100,7 @@ func Context(
 }
 
 func New(options Options) (box *Box, err error) { //karing
-	D.MainGoroutineId = D.GetCurrentGoroutineId()
+	D.MainGoroutineId = D.GetCurrentGoroutineId() //karing
 	createdAt := time.Now()
 	ctx := options.Context
 	if ctx == nil {
@@ -162,13 +160,13 @@ func New(options Options) (box *Box, err error) { //karing
 	}
 	//karing
 	ctx = context.WithValue(ctx, log.CtxKeyLogContextIdName, strconv.Itoa(contextId)) //karing
-	contextId++
+	contextId++                                                                       //karing
 	platformInterface := service.FromContext[adapter.PlatformInterface](ctx)
 	var defaultLogWriter io.Writer
 	if platformInterface != nil {
 		defaultLogWriter = io.Discard
 	}
-	logFactory, err = log.New(log.Options{
+	logFactory, err = log.New(log.Options{ //karing
 		Context:        ctx,
 		Options:        common.PtrValueOrDefault(options.Log),
 		Observable:     needClashAPI,
