@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/sagernet/sing-box"
+	box "github.com/sagernet/sing-box"
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/common/urltest"
 	C "github.com/sagernet/sing-box/constant"
@@ -97,7 +97,7 @@ func (s *StartedService) newInstance(profileContent string, overrideOptions *Ove
 		}
 	}
 	urlTestHistoryStorage := urltest.NewHistoryStorage()
-	service.MustRegister[adapter.URLTestHistoryStorage](ctx, urlTestHistoryStorage) //karing
+	//service.MustRegister[adapter.URLTestHistoryStorage](ctx, urlTestHistoryStorage) //karing
 	ctx = service.ContextWithPtr(ctx, urlTestHistoryStorage)
 	i := &Instance{
 		ctx:                   ctx,
@@ -127,9 +127,12 @@ func (i *Instance) Start() error {
 }
 
 func (i *Instance) Close() error {
-	i.cancel()
-	i.urlTestHistoryStorage.Close()
-	return i.instance.Close()
+	/*
+		i.cancel()
+		i.urlTestHistoryStorage.Close()
+		return i.instance.Close()
+	*/
+	return i.close() //karing
 }
 
 func (i *Instance) Box() *box.Box {

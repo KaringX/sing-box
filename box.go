@@ -6,6 +6,7 @@ import (
 	"io"
 	"runtime"
 	"runtime/debug"
+	"strconv"
 	"time"
 
 	"github.com/sagernet/sing-box/adapter"
@@ -14,6 +15,7 @@ import (
 	"github.com/sagernet/sing-box/adapter/outbound"
 	boxService "github.com/sagernet/sing-box/adapter/service"
 	"github.com/sagernet/sing-box/common/certificate"
+	D "github.com/sagernet/sing-box/common/debug"
 	"github.com/sagernet/sing-box/common/dialer"
 	statistics "github.com/sagernet/sing-box/common/statistics"
 	"github.com/sagernet/sing-box/common/tls"
@@ -38,6 +40,8 @@ import (
 )
 
 var _ adapter.SimpleLifecycle = (*Box)(nil)
+
+var contextId int //karing
 
 type Box struct {
 	ctx             context.Context //karing
@@ -98,6 +102,7 @@ func Context(
 }
 
 func New(options Options) (box *Box, err error) { //karing
+	D.MainGoroutineId = D.GetCurrentGoroutineId()
 	createdAt := time.Now()
 	ctx := options.Context
 	if ctx == nil {
@@ -155,6 +160,9 @@ func New(options Options) (box *Box, err error) { //karing
 	if experimentalOptions.V2RayAPI != nil && experimentalOptions.V2RayAPI.Listen != "" {
 		needV2RayAPI = true
 	}
+	//karing
+	ctx = context.WithValue(ctx, log.CtxKeyLogContextIdName, strconv.Itoa(contextId)) //karing
+	contextId++
 	platformInterface := service.FromContext[adapter.PlatformInterface](ctx)
 	var defaultLogWriter io.Writer
 	if platformInterface != nil {

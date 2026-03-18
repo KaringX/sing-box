@@ -2,21 +2,18 @@ package libbox
 
 //karing
 import (
-	"net/netip"
-	"runtime"
-
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
 	"net"
-
+	"net/netip"
+	"runtime"
 	"strconv"
 	"sync"
 	"syscall"
 
 	"github.com/sagernet/sing-box/adapter"
 	C "github.com/sagernet/sing-box/constant"
-	"github.com/sagernet/sing-box/daemon"
 	"github.com/sagernet/sing-box/experimental/libbox/internal/procfs"
 	"github.com/sagernet/sing-box/option"
 	tun "github.com/sagernet/sing-tun"
@@ -25,140 +22,6 @@ import (
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/logger"
 )
-
-type BoxService struct {
-	instance      *daemon.StartedService
-	endPauseTimer *time.Timer
-}
-
-func NewService(configContent string, platformInterface PlatformInterface) (boxService *BoxService, err error) { //karing
-	SentryBoxServiceLaunch()
-	defer func() { //karing
-		if e := recover(); e != nil {
-			panicErrMessage := fmt.Sprintf("%v", e)
-			stack := SentryTrim(string(debug.Stack()))
-			err = E.New(panicErrMessage, "\n", "panic: create service", "\n", stack)
-			SentryCaptureErrorMessage(panicErrMessage, "panic: create service", stack)
-		}
-	}()
-	D.MainGoroutineId = D.GetCurrentGoroutineId()                                                                 //karing
-	ctx := context.WithValue(BaseContext(platformInterface), log.CtxKeyLogContextIdName, strconv.Itoa(contextId)) //karing
-	contextId++                                                                                                   //karing
-
-	var platformLogWriter log.PlatformWriter //karing
-	if platformInterface != nil {            //karing
-		var platformWrapper *platformInterfaceWrapper //karing
-		platformWrapper = &platformInterfaceWrapper{  //karing
-			iif:       platformInterface,
-			useProcFS: platformInterface.UseProcFS(),
-		}
-		service.MustRegister[platform.Interface](ctx, platformWrapper)
-		platformLogWriter = platformWrapper //karing
-	}
-
-	boxService := &BoxService{}
-	boxService.instance = daemon.NewStartedService(daemon.ServiceOptions{
-		Context: ctx,
-		// Platform:         platformWrapper,
-		Handler:     (*platformHandler)(boxService),
-		Debug:       sDebug,
-		LogMaxLines: sLogMaxLines,
-		OOMKiller:   memoryLimitEnabled,
-		// WorkingDirectory: sWorkingPath,
-		// TempDirectory:    sTempPath,
-		// UserID:           sUserID,
-		// GroupID:          sGroupID,
-		// SystemProxyEnabled: false,
-	})
-	return boxService, nil
-}
-
-func (s *BoxService) Start() (err error) { //karing
-	defer func() { //karing
-		if e := recover(); e != nil {
-			panicErrMessage := fmt.Sprintf("%v", e)
-			stack := SentryTrim(string(debug.Stack()))
-			err = E.New(panicErrMessage, "\n", "panic: start service", "\n", stack)
-			SentryCaptureErrorMessage(panicErrMessage, "panic: start service", stack)
-		}
-	}()
-	D.MainGoroutineId = D.GetCurrentGoroutineId() //karing
-	if sFixAndroidStack {
-		//var err error //karing
-		done := make(chan struct{})
-		go func() {
-			err = s.instance.Start()
-			close(done)
-		}()
-		<-done
-		//return err //karing
-	} else {
-		err = s.instance.Start() //karing
-	}
-	if err != nil { //karing
-		SentryCaptureError(err, "start service")
-	} else { //karing
-		go func() {
-			runtime.GC()
-			runtimeDebug.FreeOSMemory()
-		}()
-	}
-	return err
-}
-
-func (s *BoxService) Close() error {
-	var goroutineId int //karing
-	var err error
-	done := make(chan struct{})
-	go func() {
-		goroutineId = D.GetCurrentGoroutineId()
-		err = s.instance.Close()
-		close(done)
-		s.instance = nil //karing
-
-		runtime.GC()                //karing
-		runtimeDebug.FreeOSMemory() //karing
-	}()
-	select {
-	case <-done:
-		return err
-	case <-time.After(C.FatalStopTimeout):
-		stack := D.GetGoroutineStack(goroutineId)      //karing
-		return E.New("close service timeout:" + stack) //karing
-		//os.Exit(1) //karing
-	}
-}
-
-func (h *BoxService) ServiceStop() error {
-	return nil
-	//return h.handler.ServiceStop()
-}
-
-func (h *BoxService) ServiceReload() error {
-	return nil
-	//return h.handler.ServiceReload()
-}
-
-func (h *BoxService) SystemProxyStatus() (*daemon.SystemProxyStatus, error) {
-	return nil, nil
-	/*status, err := h.handler.GetSystemProxyStatus()
-	if err != nil {
-		return nil, err
-	}
-	return &daemon.SystemProxyStatus{
-		Enabled:   status.Enabled,
-		Available: status.Available,
-	}, nil*/
-}
-
-func (h *BoxService) SetSystemProxyEnabled(enabled bool) error {
-	return nil
-	//return h.handler.SetSystemProxyEnabled(enabled)
-}
-
-func (h *BoxService) WriteDebugMessage(message string) {
-	//h.handler.WriteDebugMessage(message)
-}
 
 var _ adapter.PlatformInterface = (*platformInterfaceWrapper)(nil)
 
@@ -360,6 +223,10 @@ func (w *platformInterfaceWrapper) UsePlatformNotification() bool {
 
 func (w *platformInterfaceWrapper) SendNotification(notification *adapter.Notification) error {
 	return w.iif.SendNotification((*Notification)(notification))
+}
+
+func (w *platformInterfaceWrapper) GetAssetContent(path string) ([]byte, error) { //karing
+	return w.iif.GetAssetContent(path)
 }
 
 func AvailablePort(startPort int32) (int32, error) {
