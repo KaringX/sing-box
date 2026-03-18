@@ -1,6 +1,5 @@
 package libbox
 
-//karing
 import (
 	"crypto/rand"
 	"encoding/hex"
@@ -62,7 +61,7 @@ func (w *platformInterfaceWrapper) OpenInterface(options *tun.Options, platformO
 	}
 	routeRanges, err := options.BuildAutoRouteRanges(true)
 	if err != nil {
-		return nil, E.New("build auto_route_ranges") //karing
+		return nil, err
 	}
 	tunFd, err := w.iif.OpenTun(&tunOptions{options, routeRanges, platformOptions})
 	if err != nil {
@@ -223,10 +222,6 @@ func (w *platformInterfaceWrapper) UsePlatformNotification() bool {
 
 func (w *platformInterfaceWrapper) SendNotification(notification *adapter.Notification) error {
 	return w.iif.SendNotification((*Notification)(notification))
-}
-
-func (w *platformInterfaceWrapper) GetAssetContent(path string) ([]byte, error) { //karing
-	return w.iif.GetAssetContent(path)
 }
 
 func AvailablePort(startPort int32) (int32, error) {

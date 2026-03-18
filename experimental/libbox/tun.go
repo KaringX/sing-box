@@ -167,7 +167,3 @@ func (o *tunOptions) GetHTTPProxyBypassDomain() StringIterator {
 func (o *tunOptions) GetHTTPProxyMatchDomain() StringIterator {
 	return newIterator(o.TunPlatformOptions.HTTPProxy.MatchDomain)
 }
-
-func (o *tunOptions) GetAllowBypass() bool { //karing
-	return o.TunPlatformOptions.AllowBypass
-}

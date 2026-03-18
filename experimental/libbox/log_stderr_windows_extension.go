@@ -8,15 +8,13 @@ import (
 	"syscall"
 )
 
- 
-
 func setStdHandle(stdhandle int32, handle syscall.Handle) error {
 	var (
-		kernel32	*syscall.DLL
+		kernel32         *syscall.DLL
 		procSetStdHandle *syscall.Proc
-		err         error
+		err              error
 	)
-	kernel32 ,err = syscall.LoadDLL("kernel32.dll")
+	kernel32, err = syscall.LoadDLL("kernel32.dll")
 	if err != nil {
 		return err
 	}
