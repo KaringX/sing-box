@@ -30,7 +30,7 @@ type BoxServiceHandler interface {
 	WriteDebugMessage(message string)
 }
 
-func NewService(handler BoxServiceHandler, platformInterface PlatformInterface) (boxService *BoxService, err error) {
+func NewService(handler BoxServiceHandler, configContent string, platformInterface PlatformInterface) (boxService *BoxService, err error) {
 	SentryBoxServiceLaunch()
 	defer func() {
 		if e := recover(); e != nil {
@@ -80,8 +80,9 @@ func (s *BoxService) Start() (err error) {
 	return nil
 }
 
-func (s *BoxService) Close() {
+func (s *BoxService) Close() error {
 	s.StartedService.Close()
+	return nil
 }
 
 type BoxServiceOverrideOptions struct {
@@ -90,7 +91,7 @@ type BoxServiceOverrideOptions struct {
 	ExcludePackage StringIterator
 }
 
-func (s *BoxService) StartOrReloadService(configContent string, options *OverrideOptions) error {
+func (s *BoxService) StartOrReloadService(configContent string, options *BoxServiceOverrideOptions) error {
 	return s.StartedService.StartOrReloadService(configContent, &daemon.OverrideOptions{
 		AutoRedirect:   options.AutoRedirect,
 		IncludePackage: iteratorToArray(options.IncludePackage),

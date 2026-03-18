@@ -159,7 +159,7 @@ func createService() (err error) {
 		break
 	}
 
-	boxService, err = libbox.NewService(string(configContent), nil)
+	boxService, err = libbox.NewService(nil, string(configContent), nil)
 	if err != nil {
 		return err
 	}
