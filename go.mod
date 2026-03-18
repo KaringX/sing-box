@@ -67,7 +67,7 @@ require ( //hiddify
 	github.com/pires/go-proxyproto v0.8.1
 )
 
-require github.com/quic-go/quic-go v0.55.0
+require github.com/quic-go/quic-go v0.59.0
 
 require ( //karing
 	github.com/alitto/pond v1.9.2
@@ -100,7 +100,7 @@ replace github.com/sagernet/quic-go => github.com/KaringX/quic-go v0.49.0-beta.1
 
 //replace github.com/sagernet/quic-go => ../../KaringX/quic-go
 
-replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.20260317042254-de2cfb8538b0 //karing_v0.8.3
+replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.20260318025910-f8920b732f13 //karing_v0.8.3
 
 //replace github.com/sagernet/sing-tun => ../../KaringX/sing-tun
 
@@ -108,11 +108,11 @@ replace github.com/sagernet/ws => github.com/KaringX/ws v0.0.0-20250301004503-08
 
 //replace github.com/sagernet/ws => ../../KaringX/ws
 
-replace github.com/sagernet/wireguard-go => github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20260317043318-ac9cb00c5e3c //karing_v0.2.1-beta.1
+replace github.com/sagernet/wireguard-go => github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20260318024955-40f226cd344e //karing_v0.2.1-beta.1
 
 //replace github.com/sagernet/wireguard-go => ../../KaringX/wireguard-go
 
-replace github.com/sagernet/tailscale => github.com/KaringX/tailscale v1.80.3-mod.5.0.20260317044500-a09517ff99a6 //karing_v1.92.4-sing-box-1.13-mod.6
+replace github.com/sagernet/tailscale => github.com/KaringX/tailscale v1.80.3-mod.5.0.20260318025337-07070f0f0010 //karing_v1.92.4-sing-box-1.13-mod.6
 
 //replace github.com/sagernet/tailscale => ../../KaringX/tailscale
 
