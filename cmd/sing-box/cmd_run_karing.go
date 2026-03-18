@@ -159,12 +159,12 @@ func createService() (err error) {
 		break
 	}
 
-	boxService, err = libbox.NewService(nil, string(configContent), nil)
+	boxService, err = libbox.NewService(nil, nil)
 	if err != nil {
 		return err
 	}
 
-	err = boxService.Start()
+	err = boxService.Start(string(configContent))
 	if err != nil {
 		return err
 	}

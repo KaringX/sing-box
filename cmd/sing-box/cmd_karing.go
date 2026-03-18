@@ -112,12 +112,9 @@ func setUpDir(content []byte) error {
 	configPaths = append(configPaths, core_path)
 
 	setupOptions := libbox.SetupOptions{
-		BasePath:        stringNotNil(value.GetStringBytes("base_dir")),
-		WorkingPath:     stringNotNil(value.GetStringBytes("work_dir")),
-		TempPath:        stringNotNil(value.GetStringBytes("cache_dir")),
-		Username:        "",
-		IsTVOS:          false,
-		FixAndroidStack: false,
+		BasePath:    stringNotNil(value.GetStringBytes("base_dir")),
+		WorkingPath: stringNotNil(value.GetStringBytes("work_dir")),
+		TempPath:    stringNotNil(value.GetStringBytes("cache_dir")),
 	}
 	libbox.StderrRedirect(err_path)
 	return libbox.Setup(&setupOptions)

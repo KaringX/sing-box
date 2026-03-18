@@ -30,7 +30,7 @@ type BoxServiceHandler interface {
 	WriteDebugMessage(message string)
 }
 
-func NewService(handler BoxServiceHandler, configContent string, platformInterface PlatformInterface) (boxService *BoxService, err error) {
+func NewService(handler BoxServiceHandler, platformInterface PlatformInterface) (boxService *BoxService, err error) {
 	SentryBoxServiceLaunch()
 	defer func() {
 		if e := recover(); e != nil {
@@ -41,11 +41,16 @@ func NewService(handler BoxServiceHandler, configContent string, platformInterfa
 		}
 	}()
 	ctx := baseContext(platformInterface)
-	platformWrapper := &platformInterfaceWrapper{
-		iif:       platformInterface,
-		useProcFS: platformInterface.UseProcFS(),
+
+	var platformWrapper *platformInterfaceWrapper //karing
+	if platformInterface != nil {                 //karing
+		platformWrapper = &platformInterfaceWrapper{ //karing
+			iif:       platformInterface,
+			useProcFS: platformInterface.UseProcFS(),
+		}
+		service.MustRegister[adapter.PlatformInterface](ctx, platformWrapper)
 	}
-	service.MustRegister[adapter.PlatformInterface](ctx, platformWrapper)
+
 	server := &BoxService{
 		handler:           handler,
 		platformInterface: platformInterface,
@@ -67,7 +72,7 @@ func NewService(handler BoxServiceHandler, configContent string, platformInterfa
 	return server, nil
 }
 
-func (s *BoxService) Start() (err error) {
+func (s *BoxService) Start(configContent string) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			panicErrMessage := fmt.Sprintf("%v", e)
@@ -76,8 +81,12 @@ func (s *BoxService) Start() (err error) {
 			SentryCaptureErrorMessage(panicErrMessage, "panic: start service", stack)
 		}
 	}()
-	daemon.RegisterStartedServiceServer(nil, s.StartedService)
-	return nil
+	//daemon.RegisterStartedServiceServer(nil, s.StartedService)
+	return s.StartOrReloadService(configContent, &BoxServiceOverrideOptions{
+		AutoRedirect:   false,
+		IncludePackage: nil,
+		ExcludePackage: nil,
+	})
 }
 
 func (s *BoxService) Close() error {
