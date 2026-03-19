@@ -84,11 +84,7 @@ func (s *BoxService) Start(configContent string) (err error) {
 		}
 	}()
 	//daemon.RegisterStartedServiceServer(nil, s.StartedService)
-	err = s.StartOrReloadService(configContent, &BoxServiceOverrideOptions{
-		AutoRedirect:   false,
-		IncludePackage: nil, //todo
-		ExcludePackage: nil, //todo
-	})
+	err = s.StartOrReloadService(configContent)
 	if err != nil { //karing
 		SentryCaptureError(err, "start service")
 		return err
@@ -105,18 +101,8 @@ func (s *BoxService) Close() error {
 	return nil
 }
 
-type BoxServiceOverrideOptions struct {
-	AutoRedirect   bool
-	IncludePackage StringIterator
-	ExcludePackage StringIterator
-}
-
-func (s *BoxService) StartOrReloadService(configContent string, options *BoxServiceOverrideOptions) error {
-	return s.StartedService.StartOrReloadService(configContent, &daemon.OverrideOptions{
-		AutoRedirect:   options.AutoRedirect,
-		IncludePackage: iteratorToArray(options.IncludePackage),
-		ExcludePackage: iteratorToArray(options.ExcludePackage),
-	})
+func (s *BoxService) StartOrReloadService(configContent string) error {
+	return s.StartedService.StartOrReloadService(configContent, nil)
 }
 
 func (s *BoxService) CloseService() error {
