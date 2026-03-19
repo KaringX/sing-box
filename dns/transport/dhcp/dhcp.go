@@ -55,7 +55,7 @@ type Transport struct {
 	search            []string
 	ndots             int
 	attempts          int
-	fetching          atomic.Bool //karing
+	fetching          atomic.Bool  //karing
 	fetchFailTimes    atomic.Int32 //karing
 }
 
@@ -199,14 +199,15 @@ func (t *Transport) fetchInterface() (*control.Interface, error) {
 }
 
 func (t *Transport) updateServers() error {
-	serversFromSystemDNS := t.getServersFromSystemDNS() //karing
-	if len(serversFromSystemDNS) > 0 {                  //karing
-		t.servers = serversFromSystemDNS
-		t.updatedAt = time.Now()
-		t.logger.InfoContext(t.ctx, "dhcp: updated DNS servers from system dns", ": [", strings.Join(common.Map(t.servers, M.Socksaddr.String), ","), "]")
-		return nil
+	if GetServersFromSystemDNS != nil { //karing
+		serversFromSystemDNS := GetServersFromSystemDNS(t.ctx)
+		if len(serversFromSystemDNS) > 0 {
+			t.servers = serversFromSystemDNS
+			t.updatedAt = time.Now()
+			t.logger.InfoContext(t.ctx, "dhcp: updated DNS servers from system dns", ": [", strings.Join(common.Map(t.servers, M.Socksaddr.String), ","), "]")
+			return nil
+		}
 	}
-
 	t.fetching.Store(true)        //karing
 	defer t.fetching.Store(false) //karing
 	iface, err := t.fetchInterface()

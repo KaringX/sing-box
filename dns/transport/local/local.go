@@ -8,6 +8,7 @@ import (
 	"github.com/sagernet/sing-box/adapter"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/dns"
+	"github.com/sagernet/sing-box/dns/transport/dhcp"
 	"github.com/sagernet/sing-box/dns/transport/hosts"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
@@ -20,6 +21,7 @@ import (
 
 func RegisterTransport(registry *dns.TransportRegistry) {
 	dns.RegisterTransport[option.LocalDNSServerOptions](registry, C.DNSTypeLocal, NewTransport)
+	dhcp.GetServersFromSystemDNS = getServersFromSystemDNS
 }
 
 var _ adapter.DNSTransport = (*Transport)(nil)
