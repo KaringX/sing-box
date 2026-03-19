@@ -96,7 +96,7 @@ replace github.com/sagernet/sing-quic => github.com/KaringX/sing-quic v0.2.0-bet
 
 //replace github.com/sagernet/sing-quic => ../../KaringX/sing-quic
 
-replace github.com/sagernet/quic-go => github.com/KaringX/quic-go v0.49.0-beta.1.0.20260317040402-5ea144f8de33 //karing_v0.59.0-sing-box-mod.4
+replace github.com/sagernet/quic-go => github.com/KaringX/quic-go v0.49.0-beta.1.0.20260319073656-e535214ac88c //karing_v0.59.0-sing-box-mod.4
 
 //replace github.com/sagernet/quic-go => ../../KaringX/quic-go
 
