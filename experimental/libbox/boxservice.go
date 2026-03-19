@@ -17,7 +17,7 @@ import (
 
 // CommandServer
 type BoxService struct {
-	*daemon.StartedService
+	instance          *daemon.StartedService
 	handler           CommandServerHandler
 	platformInterface PlatformInterface
 	platformWrapper   *platformInterfaceWrapper
@@ -58,7 +58,7 @@ func NewService(handler BoxServiceHandler, platformInterface PlatformInterface) 
 		platformInterface: platformInterface,
 		platformWrapper:   platformWrapper,
 	}
-	server.StartedService = daemon.NewStartedService(daemon.ServiceOptions{
+	server.instance = daemon.NewStartedService(daemon.ServiceOptions{
 		Context: ctx,
 		// Platform:         platformWrapper,
 		Handler:     (*boxServiceplatformHandler)(server),
@@ -84,8 +84,8 @@ func (s *BoxService) Start(configContent string) (err error) {
 		}
 	}()
 	//daemon.RegisterStartedServiceServer(nil, s.StartedService)
-	err = s.StartOrReloadService(configContent)
-	if err != nil { //karing
+	err = s.instance.StartOrReloadService(configContent, nil)
+	if err != nil {
 		SentryCaptureError(err, "start service")
 		return err
 	}
@@ -97,28 +97,32 @@ func (s *BoxService) Start(configContent string) (err error) {
 }
 
 func (s *BoxService) Close() error {
-	s.StartedService.Close()
-	return nil
-}
-
-func (s *BoxService) StartOrReloadService(configContent string) error {
-	return s.StartedService.StartOrReloadService(configContent, nil)
-}
-
-func (s *BoxService) CloseService() error {
-	return s.StartedService.CloseService()
+	if s.instance == nil {
+		return nil
+	}
+	s.instance.Close()
+	return s.instance.CloseService()
 }
 
 func (s *BoxService) WriteMessage(level int32, message string) {
-	s.StartedService.WriteMessage(log.Level(level), message)
+	if s.instance == nil {
+		return
+	}
+	s.instance.WriteMessage(log.Level(level), message)
 }
 
 func (s *BoxService) SetError(message string) {
-	s.StartedService.SetError(E.New(message))
+	if s.instance == nil {
+		return
+	}
+	s.instance.SetError(E.New(message))
 }
 
 func (s *BoxService) NeedWIFIState() bool {
-	instance := s.StartedService.Instance()
+	if s.instance == nil {
+		return false
+	}
+	instance := s.instance.Instance()
 	if instance == nil || instance.Box() == nil {
 		return false
 	}
@@ -126,7 +130,10 @@ func (s *BoxService) NeedWIFIState() bool {
 }
 
 func (s *BoxService) NeedFindProcess() bool {
-	instance := s.StartedService.Instance()
+	if s.instance == nil {
+		return false
+	}
+	instance := s.instance.Instance()
 	if instance == nil || instance.Box() == nil {
 		return false
 	}
@@ -134,7 +141,10 @@ func (s *BoxService) NeedFindProcess() bool {
 }
 
 func (s *BoxService) Pause() {
-	instance := s.StartedService.Instance()
+	if s.instance == nil {
+		return
+	}
+	instance := s.instance.Instance()
 	if instance == nil || instance.PauseManager() == nil {
 		return
 	}
@@ -146,7 +156,10 @@ func (s *BoxService) Pause() {
 }
 
 func (s *BoxService) Wake() {
-	instance := s.StartedService.Instance()
+	if s.instance == nil {
+		return
+	}
+	instance := s.instance.Instance()
 	if instance == nil || instance.PauseManager() == nil {
 		return
 	}
@@ -160,7 +173,10 @@ func (s *BoxService) Wake() {
 }
 
 func (s *BoxService) ResetNetwork() {
-	instance := s.StartedService.Instance()
+	if s.instance == nil {
+		return
+	}
+	instance := s.instance.Instance()
 	if instance == nil || instance.Box() == nil {
 		return
 	}
@@ -168,7 +184,10 @@ func (s *BoxService) ResetNetwork() {
 }
 
 func (s *BoxService) UpdateWIFIState() {
-	instance := s.StartedService.Instance()
+	if s.instance == nil {
+		return
+	}
+	instance := s.instance.Instance()
 	if instance == nil || instance.Box() == nil {
 		return
 	}

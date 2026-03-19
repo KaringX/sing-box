@@ -16,14 +16,20 @@ func GetRestart() bool {
 }
 
 func (s *BoxService) ScreenOn() {
-	instance := s.StartedService.Instance()
+	if s.instance == nil {
+		return
+	}
+	instance := s.instance.Instance()
 	if instance != nil && instance.Box() == nil && instance.Box().Logger() != nil {
 		instance.Box().Logger().Info("BoxService:ScreenOn")
 	}
 }
 
 func (s *BoxService) ScreenOff() {
-	instance := s.StartedService.Instance()
+	if s.instance == nil {
+		return
+	}
+	instance := s.instance.Instance()
 	if instance != nil && instance.Box() == nil && instance.Box().Logger() != nil {
 		instance.Box().Logger().Info("BoxService:ScreenOff")
 	}
@@ -31,7 +37,10 @@ func (s *BoxService) ScreenOff() {
 }
 
 func (s *BoxService) UserPresent() {
-	instance := s.StartedService.Instance()
+	if s.instance == nil {
+		return
+	}
+	instance := s.instance.Instance()
 	if instance != nil && instance.Box() == nil && instance.Box().Logger() != nil {
 		instance.Box().Logger().Info("BoxService:UserPresent")
 	}
@@ -50,9 +59,12 @@ func (s *BoxService) stopResetTimer() {
 }
 
 func (s *BoxService) tryResetNetwork() {
+	if s.instance == nil {
+		return
+	}
+	instance := s.instance.Instance()
 	tags := s.getOutboundIfHasIssue()
 	if len(tags) > 0 {
-		instance := s.StartedService.Instance()
 		if instance != nil && instance.Box() == nil && instance.Box().Logger() != nil {
 			instance.Box().Logger().Info("BoxService:tryResetNetwork")
 		}
@@ -62,9 +74,12 @@ func (s *BoxService) tryResetNetwork() {
 }
 
 func (s *BoxService) tryResetOutboundNetwork() {
+	if s.instance == nil {
+		return
+	}
+	instance := s.instance.Instance()
 	tags := s.getOutboundIfHasIssue()
 	if len(tags) > 0 {
-		instance := s.StartedService.Instance()
 		if instance != nil && instance.Box() == nil && instance.Box().Logger() != nil {
 			instance.Box().Logger().Info("BoxService:tryResetOutboundNetwork")
 		}
@@ -75,7 +90,10 @@ func (s *BoxService) tryResetOutboundNetwork() {
 }
 
 func (s *BoxService) GetConnections(includeConnections bool) string {
-	instance := s.StartedService.Instance()
+	if s.instance == nil {
+		return "{}"
+	}
+	instance := s.instance.Instance()
 	if instance != nil {
 		return instance.GetConnections(includeConnections)
 	}
@@ -83,7 +101,10 @@ func (s *BoxService) GetConnections(includeConnections bool) string {
 }
 
 func (s *BoxService) getOutboundIfHasIssue() []string {
-	instance := s.StartedService.Instance()
+	if s.instance == nil {
+		return []string{}
+	}
+	instance := s.instance.Instance()
 	if instance != nil {
 		return instance.GetOutboundIfHasIssue()
 	}
