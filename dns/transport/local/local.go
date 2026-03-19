@@ -21,7 +21,7 @@ import (
 
 func RegisterTransport(registry *dns.TransportRegistry) {
 	dns.RegisterTransport[option.LocalDNSServerOptions](registry, C.DNSTypeLocal, NewTransport)
-	dhcp.GetServersFromSystemDNS = getServersFromSystemDNS
+	dhcp.GetServersFromSystemDNS = getServersFromSystemDNS //karing
 }
 
 var _ adapter.DNSTransport = (*Transport)(nil)
