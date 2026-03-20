@@ -83,6 +83,7 @@ func (m *ConnectionManager) TrackConn(ctx context.Context, conn net.Conn, destin
 		Outbound = inbound.Outbound
 	}
 	outbound := adapter.OutboundContext{ //karing
+		Closer:      conn,
 		CreatedAt:   time.Now(),
 		Network:     "tcp",
 		Source:      Source,
