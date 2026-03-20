@@ -159,7 +159,7 @@ func createService() (err error) {
 		break
 	}
 
-	boxService, err = libbox.NewService(nil, nil)
+	boxService, err = libbox.NewService(nil, nil) // &platformInterfaceWrapperImpl{}
 	if err != nil {
 		return err
 	}
@@ -198,4 +198,69 @@ func destroyAll() {
 	}()
 	destoryServer()
 	destroyService()
+}
+
+type platformInterfaceWrapperImpl struct {
+}
+
+func (w *platformInterfaceWrapperImpl) LocalDNSTransport() libbox.LocalDNSTransport {
+	return nil
+}
+
+func (w *platformInterfaceWrapperImpl) UsePlatformAutoDetectInterfaceControl() bool {
+	return false
+}
+
+func (w *platformInterfaceWrapperImpl) AutoDetectInterfaceControl(fd int32) error {
+	return nil
+}
+
+func (w *platformInterfaceWrapperImpl) OpenTun(options libbox.TunOptions) (int32, error) {
+	return 0, nil
+}
+
+func (w *platformInterfaceWrapperImpl) UseProcFS() bool {
+	return false
+}
+
+func (w *platformInterfaceWrapperImpl) FindConnectionOwner(ipProtocol int32, sourceAddress string, sourcePort int32, destinationAddress string, destinationPort int32) (*libbox.ConnectionOwner, error) {
+	return nil, nil
+}
+
+func (w *platformInterfaceWrapperImpl) StartDefaultInterfaceMonitor(listener libbox.InterfaceUpdateListener) error {
+	return nil
+}
+
+func (w *platformInterfaceWrapperImpl) CloseDefaultInterfaceMonitor(listener libbox.InterfaceUpdateListener) error {
+	return nil
+}
+
+func (w *platformInterfaceWrapperImpl) GetInterfaces() (libbox.NetworkInterfaceIterator, error) {
+	return nil, nil
+}
+
+func (w *platformInterfaceWrapperImpl) UnderNetworkExtension() bool {
+	return false
+}
+
+func (w *platformInterfaceWrapperImpl) IncludeAllNetworks() bool {
+	return false
+}
+
+func (w *platformInterfaceWrapperImpl) ReadWIFIState() *libbox.WIFIState {
+	return nil
+}
+
+func (w *platformInterfaceWrapperImpl) SystemCertificates() libbox.StringIterator {
+	return nil
+}
+
+func (w *platformInterfaceWrapperImpl) ClearDNSCache() {}
+
+func (w *platformInterfaceWrapperImpl) SendNotification(notification *libbox.Notification) error {
+	return nil
+}
+
+func (w *platformInterfaceWrapperImpl) GetAssetContent(path string) ([]byte, error) {
+	return nil, nil
 }

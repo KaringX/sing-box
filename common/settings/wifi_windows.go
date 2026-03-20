@@ -29,7 +29,7 @@ func NewWIFIMonitor(callback func(adapter.WIFIState)) (WIFIMonitor, error) {
 		return nil, err
 	}
 
-	interfaces, err := winwlanapi.EnumInterfaces(handle)
+	/*interfaces, err := winwlanapi.EnumInterfaces(handle)//karing
 	if err != nil {
 		winwlanapi.CloseHandle(handle)
 		return nil, err
@@ -37,7 +37,7 @@ func NewWIFIMonitor(callback func(adapter.WIFIState)) (WIFIMonitor, error) {
 	if len(interfaces) == 0 {
 		winwlanapi.CloseHandle(handle)
 		return nil, fmt.Errorf("no wireless interfaces found")
-	}
+	}*/
 
 	return &windowsWIFIMonitor{
 		handle:   handle,
