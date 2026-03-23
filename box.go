@@ -181,7 +181,6 @@ func New(options Options) (box *Box, err error) { //karing
 	if err != nil {          //karing
 		return nil, E.Cause(err, "start logger")
 	}
-	logFactory.Logger().InfoContext(ctx, "box new") //karing
 	logFactory.Logger().Info("box new") //karing
 
 	var internalServices []adapter.LifecycleService
