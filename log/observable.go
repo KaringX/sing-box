@@ -143,32 +143,34 @@ func (l *observableLogger) log(ctx context.Context, level Level, deep int, args 
 	_, file, line, _ := runtime.Caller(deep)                              // karing
 	tag := " " + path.Base(file) + ":" + strconv.Itoa(line) + " " + l.tag // karing
 	nowTime := time.Now()
-	if l.needObservable {
-		message, messageSimple := l.formatter.FormatWithSimple(ctx, contextId, level, tag, F.ToString(args...), nowTime) //karing
-		if level == LevelPanic {
-			panic(message)
-		}
-		l.writer.Write([]byte(message))
-		if level == LevelFatal {
-			index := strings.Index(message, "FATAL")          //karing
-			if index >= 0 && CaptureFatalMessageFunc != nil { //karing
-				CaptureFatalMessageFunc(message[index:])
+	if level <= l.level {
+		if l.needObservable {
+			message, messageSimple := l.formatter.FormatWithSimple(ctx, contextId, level, tag, F.ToString(args...), nowTime) //karing
+			if level == LevelPanic {
+				panic(message)
 			}
-			log.Fatal(message)
-		}
-		l.subscriber.Emit(Entry{level, messageSimple})
-	} else {
-		message := l.formatter.Format(ctx, contextId, level, tag, F.ToString(args...), nowTime) //karing
-		if level == LevelPanic {
-			panic(message)
-		}
-		l.writer.Write([]byte(message))
-		if level == LevelFatal {
-			index := strings.Index(message, "FATAL")          //karing
-			if index >= 0 && CaptureFatalMessageFunc != nil { //karing
-				CaptureFatalMessageFunc(message[index:])
+			l.writer.Write([]byte(message))
+			if level == LevelFatal {
+				index := strings.Index(message, "FATAL")          //karing
+				if index >= 0 && CaptureFatalMessageFunc != nil { //karing
+					CaptureFatalMessageFunc(message[index:])
+				}
+				log.Fatal(message)
 			}
-			log.Fatal(message)
+			l.subscriber.Emit(Entry{level, messageSimple})
+		} else {
+			message := l.formatter.Format(ctx, contextId, level, tag, F.ToString(args...), nowTime) //karing
+			if level == LevelPanic {
+				panic(message)
+			}
+			l.writer.Write([]byte(message))
+			if level == LevelFatal {
+				index := strings.Index(message, "FATAL")          //karing
+				if index >= 0 && CaptureFatalMessageFunc != nil { //karing
+					CaptureFatalMessageFunc(message[index:])
+				}
+				log.Fatal(message)
+			}
 		}
 	}
 	if len(C.Version) == 0 { //karing
