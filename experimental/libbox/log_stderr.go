@@ -66,7 +66,7 @@ func StderrCheckAndCapture() {
 					}
 				}
 				if len(stack) > 0 {
-					SentryCaptureErrorMessage(panicErrMessage, "panic: stderrLog", strings.Join(stack, "\n"))
+					SentryCaptureErrorMessage(panicErrMessage, "stderrLog", strings.Join(stack, "\n"))
 				}
 			}
 		}()
