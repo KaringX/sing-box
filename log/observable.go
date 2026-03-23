@@ -136,8 +136,8 @@ func (l *observableLogger) log(ctx context.Context, level Level, deep int, args 
 	if l.writer == nil { //karing
 		return
 	}
-	contextId, ok := ctx.Value(CtxKeyLogContextIdName).(string) // karing
-	if !ok {                                                    // karing
+	contextId, ok := l.ctx.Value(CtxKeyLogContextIdName).(string) // karing
+	if !ok {                                                      //karing
 		contextId = ""
 	}
 	_, file, line, _ := runtime.Caller(deep)                              // karing
