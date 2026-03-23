@@ -210,10 +210,10 @@ func NewEndpoint(ctx context.Context, router adapter.Router, logger log.ContextL
 		Dir:      stateDirectory,
 		Hostname: hostname,
 		Logf: func(format string, args ...any) {
-			logger.TraceContext(ctx, fmt.Sprintf(format, args...)) //karing
+			logger.Trace(fmt.Sprintf(format, args...))
 		},
 		UserLogf: func(format string, args ...any) {
-			logger.DebugContext(ctx, fmt.Sprintf(format, args...)) //karing
+			logger.Debug(fmt.Sprintf(format, args...))
 		},
 		Ephemeral:     options.Ephemeral,
 		AuthKey:       options.AuthKey,
@@ -420,7 +420,7 @@ func (t *Endpoint) watchState() {
 		}
 		authURL := localBackend.StatusWithoutPeers().AuthURL
 		if authURL != "" {
-			t.logger.InfoContext(t.ctx, "Waiting for authentication: ", authURL) //karing
+			t.logger.Info("Waiting for authentication: ", authURL)
 			if t.platformInterface != nil {
 				err := t.platformInterface.SendNotification(&adapter.Notification{
 					Identifier: "tailscale-authentication",
@@ -431,7 +431,7 @@ func (t *Endpoint) watchState() {
 					OpenURL:    authURL,
 				})
 				if err != nil {
-					t.logger.ErrorContext(t.ctx, "send authentication notification: ", err) //karing
+					t.logger.Error("send authentication notification: ", err)
 				}
 			}
 			return false
@@ -445,7 +445,7 @@ func (t *Endpoint) watchState() {
 			}
 			status, err := common.Must1(t.server.LocalClient()).Status(t.ctx)
 			if err != nil {
-				t.logger.ErrorContext(t.ctx, "set exit node: ", err) //karing
+				t.logger.Error("set exit node: ", err)
 				return
 			}
 			perfs := &ipn.MaskedPrefs{
@@ -457,12 +457,12 @@ func (t *Endpoint) watchState() {
 			}
 			err = perfs.SetExitNodeIP(t.exitNode, status)
 			if err != nil {
-				t.logger.ErrorContext(t.ctx, "set exit node: ", err) //karing
+				t.logger.Error("set exit node: ", err)
 				return true
 			}
 			_, err = localBackend.EditPrefs(perfs)
 			if err != nil {
-				t.logger.ErrorContext(t.ctx, "set exit node: ", err) //karing
+				t.logger.Error("set exit node: ", err)
 				return true
 			}
 			return false

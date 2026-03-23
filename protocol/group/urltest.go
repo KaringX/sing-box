@@ -523,7 +523,7 @@ func (g *URLTestGroup) urlTest(ctx context.Context, force bool) (map[string]adap
 				return
 			}
 			if err != nil {
-				g.logger.DebugContext(g.ctx, "outbound ", tag, " unavailable: ", err) //karing
+				g.logger.Debug("outbound ", tag, " unavailable: ", err)
 				//g.history.DeleteURLTestHistory(realTag)
 				g.history.StoreURLTestHistory(realTag, &adapter.URLTestHistory{ //karing
 					Time:  time.Now(),
@@ -531,7 +531,7 @@ func (g *URLTestGroup) urlTest(ctx context.Context, force bool) (map[string]adap
 					Err:   err.Error(),
 				})
 			} else {
-				g.logger.DebugContext(g.ctx, "outbound ", tag, " available: ", t, "ms") //karing
+				g.logger.Debug("outbound ", tag, " available: ", t, "ms")
 				g.history.StoreURLTestHistory(realTag, &adapter.URLTestHistory{
 					Time:  time.Now(),
 					Delay: t,

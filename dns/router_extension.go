@@ -121,7 +121,7 @@ response:
 		lateString := F.MakeLaterString(func() string { //karing
 			return strings.Join(F.MapToString(responseAddrs), " ")
 		})
-		r.logger.InfoContext(ctx, "lookup succeed for ", domain, ": ", lateString) //karing
+		r.logger.Info("lookup succeed for ", domain, ": ", lateString) //karing
 	}
 	return responseAddrs, transportTag, err //karing
 }

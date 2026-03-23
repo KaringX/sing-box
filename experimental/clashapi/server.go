@@ -179,11 +179,11 @@ func (s *Server) Start(stage adapter.StartStage) error {
 			if err != nil {
 				return E.Cause(err, "external controller listen error")
 			}
-			s.logger.InfoContext(s.ctx, "restful api listening at ", listener.Addr()) //karing
+			s.logger.Info("restful api listening at ", listener.Addr())
 			go func() {
 				err = s.httpServer.Serve(listener)
 				if err != nil && !errors.Is(err, http.ErrServerClosed) {
-					s.logger.ErrorContext(s.ctx, "external controller serve error: ", err) //karing
+					s.logger.Error("external controller serve error: ", err)
 				}
 			}()
 		}
@@ -245,7 +245,7 @@ func (s *Server) SetMode(newMode string) {
 			s.logger.Error(E.Cause(err, "save mode"))
 		}
 	}
-	s.logger.InfoContext(s.ctx, "updated mode: ", newMode) //karing
+	s.logger.Info("updated mode: ", newMode)
 }
 
 func (s *Server) HistoryStorage() adapter.URLTestHistoryStorage {

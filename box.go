@@ -182,6 +182,7 @@ func New(options Options) (box *Box, err error) { //karing
 		return nil, E.Cause(err, "start logger")
 	}
 	logFactory.Logger().InfoContext(ctx, "box new") //karing
+	logFactory.Logger().Info("box new") //karing
 
 	var internalServices []adapter.LifecycleService
 	if needCacheFile { //karing
@@ -486,12 +487,12 @@ func (s *Box) PreStart() error {
 		s.Close()
 		return err
 	}
-	s.logger.InfoContext(s.ctx, "box pre-started (", F.Seconds(time.Since(s.createdAt).Seconds()), "s)") //karing
+	s.logger.Info("sing-box pre-started (", F.Seconds(time.Since(s.createdAt).Seconds()), "s)")
 	return nil
 }
 
 func (s *Box) Start() error {
-	s.logger.InfoContext(s.ctx, "box start") //karing
+	s.logger.Info("box start") //karing
 	err := s.start()
 	if err != nil {
 		// TODO: remove catch error
@@ -506,12 +507,12 @@ func (s *Box) Start() error {
 		s.Close()
 		return err
 	}
-	s.logger.InfoContext(s.ctx, "box started (", F.Seconds(time.Since(s.createdAt).Seconds()), "s) since ", s.createdAt) //karing
+	s.logger.Info("box started (", F.Seconds(time.Since(s.createdAt).Seconds()), "s) since ", s.createdAt) //karing
 	return nil
 }
 
 func (s *Box) preStart() error {
-	s.logger.InfoContext(s.ctx, "box prestart") //karing
+	s.logger.Info("box prestart") //karing
 	/*//karing
 	monitor := taskmonitor.New(s.logger, C.StartTimeout)
 	monitor.Start("start logger")
@@ -582,7 +583,7 @@ func (s *Box) start() error {
 }
 
 func (s *Box) Close() error {
-	s.logger.InfoContext(s.ctx, "box close") //karing
+	s.logger.Info("box close") //karing
 	select {
 	case <-s.done:
 		return nil //karing
@@ -625,7 +626,7 @@ func (s *Box) Close() error {
 		})
 		s.logger.Trace("close ", lifecycleService.Name(), " completed (", F.Seconds(time.Since(startTime).Seconds()), "s)")
 	}
-	s.logger.InfoContext(s.ctx, "box closed") //karing
+	s.logger.Info("box closed") //karing
 	//err = E.Append(err, s.logFactory.Close(), func(err error) error {
 	//	return E.Cause(err, "close logger")
 	//})

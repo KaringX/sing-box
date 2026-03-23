@@ -54,7 +54,7 @@ func (s *Server) downloadExternalUI() error {
 		outbound := s.outbound.Default()
 		detour = outbound
 	}
-	s.logger.InfoContext(s.ctx, "downloading external ui using outbound/", detour.Type(), "[", detour.Tag(), "]") //karing
+	s.logger.Info("downloading external ui using outbound/", detour.Type(), "[", detour.Tag(), "]")
 	httpClient := &http.Client{
 		Transport: &http.Transport{
 			ForceAttemptHTTP2:   true,

@@ -215,7 +215,7 @@ func (t *Transport) updateServers() error {
 		return E.Cause(err, "dhcp: prepare interface")
 	}
 
-	t.logger.InfoContext(t.ctx, "dhcp: query DNS servers on ", iface.Name) //karing
+	t.logger.Info("dhcp: query DNS servers on ", iface.Name)
 	fetchCtx, cancel := context.WithTimeout(t.ctx, C.DHCPTimeout)
 	err = t.fetchServers0(fetchCtx, iface)
 	cancel()
@@ -239,7 +239,7 @@ func (t *Transport) interfaceUpdated(defaultInterface *control.Interface, flags 
 	t.fetchFailTimes.Store(0)  //karing
 	err := t.updateServers()
 	if err != nil {
-		t.logger.ErrorContext(t.ctx, "update servers: ", err) //karing
+		t.logger.Error("update servers: ", err)
 	}
 }
 
@@ -305,7 +305,6 @@ func (t *Transport) fetchServersResponse(ctx context.Context, iface *control.Int
 		buffer.Reset()
 		_, _, err := buffer.ReadPacketFrom(packetConn)
 		if err != nil {
-			t.logger.TraceContext(t.ctx, "dhcp: readPacketFrom: ", err) //karing
 			if errors.Is(err, io.ErrShortBuffer) {
 				continue
 			}
@@ -314,17 +313,17 @@ func (t *Transport) fetchServersResponse(ctx context.Context, iface *control.Int
 
 		dhcpPacket, err := dhcpv4.FromBytes(buffer.Bytes())
 		if err != nil {
-			t.logger.TraceContext(t.ctx, "dhcp: parse DHCP response: ", err) //karing
+			t.logger.Trace("dhcp: parse DHCP response: ", err)
 			return err
 		}
 
 		if dhcpPacket.MessageType() != dhcpv4.MessageTypeOffer {
-			t.logger.TraceContext(t.ctx, "dhcp: expected OFFER response, but got ", dhcpPacket.MessageType()) //karing
+			t.logger.Trace("dhcp: expected OFFER response, but got ", dhcpPacket.MessageType())
 			continue
 		}
 
 		if dhcpPacket.TransactionID != transactionID {
-			t.logger.TraceContext(t.ctx, "dhcp: expected transaction ID ", transactionID, ", but got ", dhcpPacket.TransactionID) //karing
+			t.logger.Trace("dhcp: expected transaction ID ", transactionID, ", but got ", dhcpPacket.TransactionID)
 			continue
 		}
 

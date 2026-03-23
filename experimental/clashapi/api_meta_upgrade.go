@@ -22,7 +22,7 @@ func updateExternalUI(server *Server) func(w http.ResponseWriter, r *http.Reques
 			render.JSON(w, r, newError("external UI not enabled"))
 			return
 		}
-		server.logger.InfoContext(server.ctx, "upgrading external UI") //karing
+		server.logger.Info("upgrading external UI")
 		err := server.downloadExternalUI()
 		if err != nil {
 			server.logger.Error(E.Cause(err, "upgrade external ui"))
@@ -30,7 +30,7 @@ func updateExternalUI(server *Server) func(w http.ResponseWriter, r *http.Reques
 			render.JSON(w, r, newError(err.Error()))
 			return
 		}
-		server.logger.InfoContext(server.ctx, "updated external UI") //karing
+		server.logger.Info("updated external UI")
 		render.JSON(w, r, render.M{"status": "ok"})
 	}
 }

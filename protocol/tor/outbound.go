@@ -131,9 +131,9 @@ func (t *Outbound) start() error {
 	proxyPort := "127.0.0.1:" + F.ToString(t.proxy.Port())
 	proxyUsername := t.proxy.Username()
 	proxyPassword := t.proxy.Password()
-	t.logger.TraceContext(t.ctx, "created upstream proxy at ", proxyPort)   //karing
-	t.logger.TraceContext(t.ctx, "upstream proxy username ", proxyUsername) //karing
-	t.logger.TraceContext(t.ctx, "upstream proxy password ", proxyPassword) //karing
+	t.logger.Trace("created upstream proxy at ", proxyPort)
+	t.logger.Trace("upstream proxy username ", proxyUsername)
+	t.logger.Trace("upstream proxy password ", proxyPassword)
 	confOptions := []*control.KeyVal{
 		control.NewKeyVal("Socks5Proxy", proxyPort),
 		control.NewKeyVal("Socks5ProxyUsername", proxyUsername),
@@ -168,7 +168,7 @@ func (t *Outbound) start() error {
 	if len(info) != 1 || info[0].Key != "net/listeners/socks" {
 		return E.New("get socks proxy address")
 	}
-	t.logger.TraceContext(t.ctx, "obtained tor socks5 address ", info[0].Val) //karing
+	t.logger.Trace("obtained tor socks5 address ", info[0].Val)
 	// TODO: set password for tor socks5 server if supported
 	t.socksClient = socks.NewClient(N.SystemDialer, M.ParseSocksaddr(info[0].Val), socks.Version5, "", "")
 	return nil
@@ -181,17 +181,17 @@ func (t *Outbound) recvLoop() {
 			event.Raw = strings.ToLower(event.Raw)
 			switch event.Severity {
 			case control.EventCodeLogDebug, control.EventCodeLogInfo:
-				t.logger.TraceContext(t.ctx, event.Raw) //karing
+				t.logger.Trace(event.Raw)
 			case control.EventCodeLogNotice:
 				if strings.Contains(event.Raw, "disablenetwork") || strings.Contains(event.Raw, "socks listener") {
-					t.logger.TraceContext(t.ctx, event.Raw) //karing
+					t.logger.Trace(event.Raw)
 					continue
 				}
-				t.logger.InfoContext(t.ctx, event.Raw) //karing
+				t.logger.Info(event.Raw)
 			case control.EventCodeLogWarn:
-				t.logger.WarnContext(t.ctx, event.Raw) //karing
+				t.logger.Warn(event.Raw)
 			case control.EventCodeLogErr:
-				t.logger.ErrorContext(t.ctx, event.Raw) //karing
+				t.logger.Error(event.Raw)
 			}
 		}
 	}

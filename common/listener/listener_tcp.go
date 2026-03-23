@@ -80,7 +80,7 @@ func (l *Listener) ListenTCP() (net.Listener, error) {
 		}
 		return nil, err
 	}
-	l.logger.InfoContext(l.ctx, "tcp server started at ", tcpListener.Addr()) //karing
+	l.logger.Info("tcp server started at ", tcpListener.Addr())
 	l.tcpListener = tcpListener
 	return tcpListener, err
 }
@@ -93,14 +93,14 @@ func (l *Listener) loopTCPIn() {
 		if err != nil {
 			//nolint:staticcheck
 			if netError, isNetError := err.(net.Error); isNetError && netError.Temporary() {
-				l.logger.ErrorContext(l.ctx, err) //karing
+				l.logger.Error(err)
 				continue
 			}
 			if l.shutdown.Load() && E.IsClosed(err) {
 				return
 			}
 			l.tcpListener.Close()
-			l.logger.ErrorContext(l.ctx, "tcp listener closed: ", err) //karing
+			l.logger.Error("tcp listener closed: ", err)
 			continue
 		}
 		//nolint:staticcheck

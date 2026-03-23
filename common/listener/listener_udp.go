@@ -60,7 +60,7 @@ func (l *Listener) ListenUDP() (net.PacketConn, error) {
 	}
 	l.udpConn = udpConn.(*net.UDPConn)
 	l.udpAddr = bindAddr
-	l.logger.InfoContext(l.ctx, "udp server started at ", udpConn.LocalAddr()) //karing
+	l.logger.Info("udp server started at ", udpConn.LocalAddr())
 	return udpConn, err
 }
 
