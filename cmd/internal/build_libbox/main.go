@@ -210,7 +210,7 @@ func buildApple() {
 	} else if debugEnabled {
 		bindTarget = "ios"
 	} else {
-		bindTarget = "ios,tvos,macos" //with_naive_outbound:iossimulator,tvossimulator  //karing
+		bindTarget = "ios,iossimulator,tvos,tvossimulator,macos,iossimulator,tvossimulator"
 	}
 
 	args := []string{
