@@ -67,11 +67,9 @@ require ( //hiddify
 	github.com/pires/go-proxyproto v0.8.1
 )
 
-require github.com/quic-go/quic-go v0.59.0
-
 require ( //karing
 	github.com/alitto/pond v1.9.2
-	github.com/enfein/mieru/v3 v3.24.1
+	github.com/enfein/mieru/v3 v3.29.0
 	github.com/getsentry/sentry-go v0.33.0
 	github.com/klauspost/compress v1.18.0
 	github.com/mattn/go-sqlite3 v1.14.32
@@ -149,6 +147,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jsimonetti/rtnetlink v1.4.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
+	github.com/kr/pretty v0.3.1 // indirect
 	github.com/libdns/libdns v1.1.1 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mdlayher/netlink v1.9.0 // indirect
