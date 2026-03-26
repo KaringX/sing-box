@@ -22,11 +22,11 @@ import (
 var _ adapter.V2RayClientTransport = (*Client)(nil)
 
 type Client struct {
-	ctx        context.Context
-	dialer     N.Dialer
+	ctx       context.Context
+	dialer    N.Dialer
 	serverAddr M.Socksaddr
-	config     *Config
-	tlsConfig  tls.Config
+	config    *Config
+	tlsConfig tls.Config
 }
 
 func NewClient(
@@ -139,7 +139,7 @@ func (c *Client) readLoop(ctx context.Context, conn N.PacketConn, reader *kcpPac
 
 		segments := reader.Read(buffer.Bytes())
 		buffer.Release()
-
+		
 		if len(segments) > 0 {
 			kcpConn.Input(segments)
 		}

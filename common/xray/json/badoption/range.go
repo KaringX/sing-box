@@ -32,16 +32,13 @@ func (c *Range) UnmarshalJSON(content []byte) error {
 	err := json.Unmarshal(content, &stringValue)
 	if err == nil {
 		parts := strings.Split(stringValue, "-")
-		if len(parts) == 1 { //karing
+		if len(parts) != 2 {
 			from, err := strconv.ParseInt(parts[0], 10, 32)
 			if err != nil {
 				return err
 			}
 			rangeValue.From, rangeValue.To = int32(from), int32(from)
-		} else { //karing
-			if len(parts) != 2 {
-				return E.New("invalid length of range parts")
-			}
+		} else {
 			from, err := strconv.ParseInt(parts[0], 10, 32)
 			if err != nil {
 				return err
