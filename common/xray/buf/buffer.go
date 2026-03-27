@@ -2,7 +2,6 @@ package buf
 
 import (
 	"io"
-	"sync/atomic"
 
 	"github.com/sagernet/sing-box/common/xray/bytespool"
 	"github.com/sagernet/sing-box/common/xray/net"
@@ -15,8 +14,6 @@ const (
 )
 
 var ErrBufferFull = E.New("buffer is full")
-
-var zero = [Size * 10]byte{0}
 
 var pool = bytespool.GetPool(Size)
 
@@ -34,8 +31,8 @@ const (
 // quickly.
 type Buffer struct {
 	v         []byte
-	start     atomic.Int32 //karing
-	end       atomic.Int32 //karing
+	start     int32
+	end       int32
 	ownership ownership
 	UDP       *net.Destination
 }
@@ -65,21 +62,19 @@ func NewExisted(b []byte) *Buffer {
 		b = b[:Size]
 	}
 
-	buf := &Buffer{
-		v: b,
+	return &Buffer{
+		v:   b,
+		end: int32(oLen),
 	}
-	buf.end.Store(int32(oLen))
-	return buf
 }
 
 // FromBytes creates a Buffer with an existed bytearray, unmanaged.
 func FromBytes(b []byte) *Buffer {
-	buf := &Buffer{
+	return &Buffer{
 		v:         b,
+		end:       int32(len(b)),
 		ownership: unmanaged,
 	}
-	buf.end.Store(int32(len(b)))
-	return buf
 }
 
 // StackNew creates a new Buffer object on stack, managed.
@@ -129,36 +124,35 @@ func (b *Buffer) Release() {
 // Clear clears the content of the buffer, results an empty buffer with
 // Len() = 0.
 func (b *Buffer) Clear() {
-	b.start.Store(0)
-	b.end.Store(0)
+	b.start = 0
+	b.end = 0
 }
 
 // Byte returns the bytes at index.
 func (b *Buffer) Byte(index int32) byte {
-	return b.v[b.start.Load()+index]
+	return b.v[b.start+index]
 }
 
 // SetByte sets the byte value at index.
 func (b *Buffer) SetByte(index int32, value byte) {
-	b.v[b.start.Load()+index] = value
+	b.v[b.start+index] = value
 }
 
 // Bytes returns the content bytes of this Buffer.
 func (b *Buffer) Bytes() []byte {
-	return b.v[b.start.Load():b.end.Load()]
+	return b.v[b.start:b.end]
 }
 
 // Extend increases the buffer size by n bytes, and returns the extended part.
-// It panics if result size is larger than buf.Size.
+// It panics if result size is larger than size of this buffer.
 func (b *Buffer) Extend(n int32) []byte {
-	currentEnd := b.end.Load()
-	newEnd := currentEnd + n
-	if newEnd > int32(len(b.v)) {
+	end := b.end + n
+	if end > int32(len(b.v)) {
 		panic("extending out of bound")
 	}
-	ext := b.v[currentEnd:newEnd]
-	b.end.Store(newEnd)
-	copy(ext, zero[:])
+	ext := b.v[b.end:end]
+	b.end = end
+	clear(ext)
 	return ext
 }
 
@@ -170,8 +164,7 @@ func (b *Buffer) BytesRange(from, to int32) []byte {
 	if to < 0 {
 		to += b.Len()
 	}
-	start := b.start.Load()
-	return b.v[start+from : start+to]
+	return b.v[b.start+from : b.start+to]
 }
 
 // BytesFrom returns a slice of this Buffer starting from the given position.
@@ -179,7 +172,7 @@ func (b *Buffer) BytesFrom(from int32) []byte {
 	if from < 0 {
 		from += b.Len()
 	}
-	return b.v[b.start.Load()+from : b.end.Load()]
+	return b.v[b.start+from : b.end]
 }
 
 // BytesTo returns a slice of this Buffer from start to the given position.
@@ -190,31 +183,25 @@ func (b *Buffer) BytesTo(to int32) []byte {
 	if to < 0 {
 		to = 0
 	}
-	start := b.start.Load()
-	return b.v[start : start+to]
+	return b.v[b.start : b.start+to]
 }
 
 // Check makes sure that 0 <= b.start <= b.end.
 func (b *Buffer) Check() {
-	start := b.start.Load()
-	end := b.end.Load()
-	if start < 0 {
-		start = 0
+	if b.start < 0 {
+		b.start = 0
 	}
-	if end < 0 {
-		end = 0
+	if b.end < 0 {
+		b.end = 0
 	}
-	if start > end {
-		start = end
+	if b.start > b.end {
+		b.start = b.end
 	}
-	b.start.Store(start)
-	b.end.Store(end)
 }
 
 // Resize cuts the buffer at the given position.
 func (b *Buffer) Resize(from, to int32) {
-	oldEnd := b.end.Load()
-	start := b.start.Load()
+	oldEnd := b.end
 	if from < 0 {
 		from += b.Len()
 	}
@@ -224,13 +211,11 @@ func (b *Buffer) Resize(from, to int32) {
 	if to < from {
 		panic("Invalid slice")
 	}
-	newEnd := start + to
-	newStart := start + from
-	b.end.Store(newEnd)
-	b.start.Store(newStart)
+	b.end = b.start + to
+	b.start += from
 	b.Check()
-	if newEnd > oldEnd {
-		copy(b.v[oldEnd:newEnd], zero[:])
+	if b.end > oldEnd {
+		clear(b.v[oldEnd:b.end])
 	}
 }
 
@@ -239,7 +224,7 @@ func (b *Buffer) Advance(from int32) {
 	if from < 0 {
 		from += b.Len()
 	}
-	b.start.Add(from)
+	b.start += from
 	b.Check()
 }
 
@@ -248,7 +233,7 @@ func (b *Buffer) Len() int32 {
 	if b == nil {
 		return 0
 	}
-	return b.end.Load() - b.start.Load()
+	return b.end - b.start
 }
 
 // Cap returns the capacity of the buffer content.
@@ -264,7 +249,7 @@ func (b *Buffer) Available() int32 {
 	if b == nil {
 		return 0
 	}
-	return int32(len(b.v)) - b.end.Load()
+	return int32(len(b.v)) - b.end
 }
 
 // IsEmpty returns true if the buffer is empty.
@@ -274,28 +259,26 @@ func (b *Buffer) IsEmpty() bool {
 
 // IsFull returns true if the buffer has no more room to grow.
 func (b *Buffer) IsFull() bool {
-	return b != nil && b.end.Load() == int32(len(b.v))
+	return b != nil && b.end == int32(len(b.v))
 }
 
 // Write implements Write method in io.Writer.
 func (b *Buffer) Write(data []byte) (int, error) {
-	currentEnd := b.end.Load()
-	nBytes := copy(b.v[currentEnd:], data)
+	nBytes := copy(b.v[b.end:], data)
+	b.end += int32(nBytes)
 	if nBytes < len(data) {
 		return nBytes, ErrBufferFull
 	}
-	b.end.Store(currentEnd + int32(nBytes))
 	return nBytes, nil
 }
 
 // WriteByte writes a single byte into the buffer.
 func (b *Buffer) WriteByte(v byte) error {
 	if b.IsFull() {
-		return E.New("buffer full")
+		return ErrBufferFull
 	}
-	currentEnd := b.end.Load()
-	b.v[currentEnd] = v
-	b.end.Store(currentEnd + 1)
+	b.v[b.end] = v
+	b.end++
 	return nil
 }
 
@@ -306,64 +289,56 @@ func (b *Buffer) WriteString(s string) (int, error) {
 
 // ReadByte implements io.ByteReader
 func (b *Buffer) ReadByte() (byte, error) {
-	start := b.start.Load()
-	end := b.end.Load()
-	if start == end {
+	if b.start == b.end {
 		return 0, io.EOF
 	}
 
-	nb := b.v[start]
-	b.start.Store(start + 1)
+	nb := b.v[b.start]
+	b.start++
 	return nb, nil
 }
 
 // ReadBytes implements bufio.Reader.ReadBytes
 func (b *Buffer) ReadBytes(length int32) ([]byte, error) {
-	start := b.start.Load()
-	end := b.end.Load()
-	if end-start < length {
+	if b.end-b.start < length {
 		return nil, io.EOF
 	}
 
-	nb := b.v[start : start+length]
-	b.start.Store(start + length)
+	nb := b.v[b.start : b.start+length]
+	b.start += length
 	return nb, nil
 }
 
 // Read implements io.Reader.Read().
 func (b *Buffer) Read(data []byte) (int, error) {
-	start := b.start.Load()
-	end := b.end.Load()
-	length := end - start
-	if length == 0 {
+	if b.Len() == 0 {
 		return 0, io.EOF
 	}
-	nBytes := copy(data, b.v[start:end])
-	if int32(nBytes) == length {
+	nBytes := copy(data, b.v[b.start:b.end])
+	if int32(nBytes) == b.Len() {
 		b.Clear()
 	} else {
-		b.start.Store(start + int32(nBytes))
+		b.start += int32(nBytes)
 	}
 	return nBytes, nil
 }
 
 // ReadFrom implements io.ReaderFrom.
 func (b *Buffer) ReadFrom(reader io.Reader) (int64, error) {
-	currentEnd := b.end.Load()
-	n, err := reader.Read(b.v[currentEnd:])
-	b.end.Store(currentEnd + int32(n))
+	n, err := reader.Read(b.v[b.end:])
+	b.end += int32(n)
 	return int64(n), err
 }
 
 // ReadFullFrom reads exact size of bytes from given reader, or until error occurs.
 func (b *Buffer) ReadFullFrom(reader io.Reader, size int32) (int64, error) {
-	currentEnd := b.end.Load()
-	newEnd := currentEnd + size
-	if newEnd > int32(len(b.v)) {
-		return 0, E.New("out of bound: ", newEnd)
+	end := b.end + size
+	if end > int32(len(b.v)) {
+		v := end
+		return 0, E.New("out of bound: ", v)
 	}
-	n, err := io.ReadFull(reader, b.v[currentEnd:newEnd])
-	b.end.Store(currentEnd + int32(n))
+	n, err := io.ReadFull(reader, b.v[b.end:end])
+	b.end += int32(n)
 	return int64(n), err
 }
 
