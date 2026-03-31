@@ -43,7 +43,7 @@ type Outbound struct {
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.NaiveOutboundOptions) (adapter.Outbound, error) {
 	empty := &Outbound{ //karing
-		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeNaive, tag, networks, options.DialerOptions),
+		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeNaive, tag, nil, options.DialerOptions),
 		ctx:     ctx,
 		logger:  logger,
 	}

@@ -17,7 +17,7 @@ import (
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing-box/route/rule"
-	"github.com/sagernet/sing-tun"
+	tun "github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/json/badoption"
@@ -40,6 +40,7 @@ type Inbound struct {
 	router                      adapter.Router
 	networkManager              adapter.NetworkManager
 	logger                      log.ContextLogger
+	interfaceNameExplicit       bool //karing
 	tunOptions                  tun.Options
 	udpTimeout                  time.Duration
 	stack                       string
@@ -160,11 +161,12 @@ func NewInbound(ctx context.Context, router adapter.Router, logger log.ContextLo
 	multiPendingPackets := C.IsDarwin && ((options.Stack == "gvisor" && tunMTU < 32768) || (options.Stack != "gvisor" && options.MTU <= 9000))
 	SetTunnelType(options.InterfaceName) //karing
 	inbound := &Inbound{
-		tag:            tag,
-		ctx:            ctx,
-		router:         router,
-		networkManager: networkManager,
-		logger:         logger,
+		tag:                   tag,
+		ctx:                   ctx,
+		router:                router,
+		networkManager:        networkManager,
+		logger:                logger,
+		interfaceNameExplicit: options.InterfaceName != "", //karing
 		tunOptions: tun.Options{
 			Name:                                  options.InterfaceName,
 			MTU:                                   tunMTU,
@@ -356,7 +358,7 @@ func (t *Inbound) Start(stage adapter.StartStage) error {
 			if HookBeforeCreatePlatformInterface != nil {
 				HookBeforeCreatePlatformInterface()
 			}
-			tunInterface, err = tun.New(tunOptions)
+			tunInterface, err = newTunWithFallback(t.logger, &tunOptions, !t.interfaceNameExplicit) //karing
 		}
 		monitor.Finish()
 		t.tunOptions.Name = tunOptions.Name
