@@ -42,47 +42,52 @@ type Outbound struct {
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.NaiveOutboundOptions) (adapter.Outbound, error) {
+	empty := &Outbound{ //karing
+		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeNaive, tag, networks, options.DialerOptions),
+		ctx:     ctx,
+		logger:  logger,
+	}
 	if options.TLS == nil || !options.TLS.Enabled {
-		return nil, C.ErrTLSRequired
+		return empty, C.ErrTLSRequired //karing
 	}
 	if options.TLS.DisableSNI {
-		return nil, E.New("disable_sni is not supported on naive outbound")
+		return empty, E.New("disable_sni is not supported on naive outbound") //karing
 	}
 	if options.TLS.Insecure {
-		return nil, E.New("insecure is not supported on naive outbound")
+		return empty, E.New("insecure is not supported on naive outbound") //karing
 	}
 	if len(options.TLS.ALPN) > 0 {
-		return nil, E.New("alpn is not supported on naive outbound")
+		return empty, E.New("alpn is not supported on naive outbound") //karing
 	}
 	if options.TLS.MinVersion != "" {
-		return nil, E.New("min_version is not supported on naive outbound")
+		return empty, E.New("min_version is not supported on naive outbound") //karing
 	}
 	if options.TLS.MaxVersion != "" {
-		return nil, E.New("max_version is not supported on naive outbound")
+		return empty, E.New("max_version is not supported on naive outbound") //karing
 	}
 	if len(options.TLS.CipherSuites) > 0 {
-		return nil, E.New("cipher_suites is not supported on naive outbound")
+		return empty, E.New("cipher_suites is not supported on naive outbound") //karing
 	}
 	if len(options.TLS.CurvePreferences) > 0 {
-		return nil, E.New("curve_preferences is not supported on naive outbound")
+		return empty, E.New("curve_preferences is not supported on naive outbound") //karing
 	}
 	if len(options.TLS.ClientCertificate) > 0 || options.TLS.ClientCertificatePath != "" {
-		return nil, E.New("client_certificate is not supported on naive outbound")
+		return empty, E.New("client_certificate is not supported on naive outbound") //karing
 	}
 	if len(options.TLS.ClientKey) > 0 || options.TLS.ClientKeyPath != "" {
-		return nil, E.New("client_key is not supported on naive outbound")
+		return empty, E.New("client_key is not supported on naive outbound") //karing
 	}
 	if options.TLS.Fragment || options.TLS.RecordFragment {
-		return nil, E.New("fragment is not supported on naive outbound")
+		return empty, E.New("fragment is not supported on naive outbound") //karing
 	}
 	if options.TLS.KernelTx || options.TLS.KernelRx {
-		return nil, E.New("kernel TLS is not supported on naive outbound")
+		return empty, E.New("kernel TLS is not supported on naive outbound") //karing
 	}
 	if options.TLS.UTLS != nil && options.TLS.UTLS.Enabled {
-		return nil, E.New("uTLS is not supported on naive outbound")
+		return empty, E.New("uTLS is not supported on naive outbound") //karing
 	}
 	if options.TLS.Reality != nil && options.TLS.Reality.Enabled {
-		return nil, E.New("reality is not supported on naive outbound")
+		return empty, E.New("reality is not supported on naive outbound") //karing
 	}
 
 	serverAddress := options.ServerOptions.Build()
@@ -102,7 +107,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		NewDialer:        true,
 	})
 	if err != nil {
-		return nil, err
+		return empty, err //karing
 	}
 
 	var trustedRootCertificates string
@@ -111,7 +116,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 	} else if options.TLS.CertificatePath != "" {
 		content, err := os.ReadFile(options.TLS.CertificatePath)
 		if err != nil {
-			return nil, E.Cause(err, "read certificate")
+			return empty, E.Cause(err, "read certificate") //karing
 		}
 		trustedRootCertificates = string(content)
 	}
@@ -148,14 +153,14 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		} else if options.TLS.ECH.ConfigPath != "" {
 			content, err := os.ReadFile(options.TLS.ECH.ConfigPath)
 			if err != nil {
-				return nil, E.Cause(err, "read ECH config")
+				return empty, E.Cause(err, "read ECH config") //karing
 			}
 			echConfig = content
 		}
 		if len(echConfig) > 0 {
 			block, rest := pem.Decode(echConfig)
 			if block == nil || block.Type != "ECH CONFIGS" || len(rest) > 0 {
-				return nil, E.New("invalid ECH configs pem")
+				return empty, E.New("invalid ECH configs pem") //karing
 			}
 			echConfigList = block.Bytes
 		}
@@ -173,7 +178,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 	case "reno":
 		quicCongestionControl = cronet.QUICCongestionControlReno
 	default:
-		return nil, E.New("unknown quic congestion control: ", options.QUICCongestionControl)
+		return empty, E.New("unknown quic congestion control: ", options.QUICCongestionControl) //karing
 	}
 	client, err := cronet.NewNaiveClient(cronet.NaiveClientOptions{
 		Context:                 ctx,
@@ -194,7 +199,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		QUICCongestionControl:   quicCongestionControl,
 	})
 	if err != nil {
-		return nil, err
+		return empty, err //karing
 	}
 	var uotClient *uot.Client
 	uotOptions := common.PtrValueOrDefault(options.UDPOverTCP)
@@ -232,6 +237,9 @@ func (h *Outbound) Start(stage adapter.StartStage) error {
 }
 
 func (h *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
+	if h.GetParseErr() != nil { //karing
+		return nil, h.GetParseErr()
+	}
 	switch N.NetworkName(network) {
 	case N.NetworkTCP:
 		h.logger.InfoContext(ctx, "outbound connection to ", destination)
@@ -248,6 +256,9 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 }
 
 func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
+	if h.GetParseErr() != nil { //karing
+		return nil, h.GetParseErr()
+	}
 	if h.uotClient == nil {
 		return nil, E.New("UDP is not supported unless UDP over TCP is enabled")
 	}
@@ -255,10 +266,16 @@ func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
 }
 
 func (h *Outbound) InterfaceUpdated() {
+	if h.client == nil { //karing
+		return
+	}
 	h.client.Engine().CloseAllConnections()
 }
 
 func (h *Outbound) Close() error {
+	if h.client == nil { //karing
+		return nil
+	}
 	return h.client.Close()
 }
 
