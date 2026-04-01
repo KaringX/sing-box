@@ -269,7 +269,7 @@ func setMarkWrapper(networkManager adapter.NetworkManager, mark uint32, isDefaul
 func (d *DefaultDialer) DialContext(ctx context.Context, network string, address M.Socksaddr) (net.Conn, error) {
 	if !address.IsValid() {
 		return nil, E.New("invalid address")
-	} else if address.IsFqdn() {
+	} else if address.IsDomain() {
 		return nil, E.New("domain not resolved")
 	}
 	if d.networkStrategy == nil {
@@ -361,9 +361,9 @@ func (d *DefaultDialer) ListenPacket(ctx context.Context, destination M.Socksadd
 
 func (d *DefaultDialer) DialerForICMPDestination(destination netip.Addr) net.Dialer {
 	if !destination.Is6() {
-		return d.dialer6.Dialer
-	} else {
 		return d.dialer4.Dialer
+	} else {
+		return d.dialer6.Dialer
 	}
 }
 

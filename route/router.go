@@ -5,6 +5,7 @@ import (
 
 	"os"
 	"runtime"
+	"time"
 
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/common/process"
@@ -13,8 +14,11 @@ import (
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
 	R "github.com/sagernet/sing-box/route/rule"
+	"github.com/sagernet/sing/common"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/task"
+	"github.com/sagernet/sing/contrab/freelru"
+	"github.com/sagernet/sing/contrab/maphash"
 	"github.com/sagernet/sing/service"
 	"github.com/sagernet/sing/service/pause"
 )
@@ -36,6 +40,7 @@ type Router struct {
 	ruleSetsRemoteWithLocal []adapter.RuleSet //karing
 	ruleSetMap              map[string]adapter.RuleSet
 	processSearcher         process.Searcher
+	processCache            freelru.Cache[processCacheKey, processCacheEntry]
 	pauseManager            pause.Manager
 	trackers                []adapter.ConnectionTracker
 	platformInterface       adapter.PlatformInterface
@@ -177,6 +182,11 @@ func (r *Router) Start(stage adapter.StartStage) error {
 				}
 			}
 		}
+		if r.processSearcher != nil {
+			processCache := common.Must1(freelru.NewSharded[processCacheKey, processCacheEntry](256, maphash.NewHasher[processCacheKey]().Hash32))
+			processCache.SetLifetime(200 * time.Millisecond)
+			r.processCache = processCache
+		}
 	case adapter.StartStatePostStart:
 		for _, rule := range r.rules { //karing
 			monitor.Start("initialize rule[", rule.Name(), "]") //karing
@@ -230,17 +240,6 @@ func (r *Router) Close() error {
 		})
 		monitor.Finish()
 	}
-	r.inbound = nil                                        //karing
-	r.outbound = nil                                       //karing
-	r.connection = nil                                     //karing
-	r.network = nil                                        //karing
-	r.rules = make([]adapter.Rule, 0)                      //karing
-	r.ruleSetsRemoteWithLocal = make([]adapter.RuleSet, 0) //karing
-	r.ruleSets = make([]adapter.RuleSet, 0)                //karing
-	r.ruleSetMap = make(map[string]adapter.RuleSet)        //karing
-	r.processSearcher = nil                                //karing
-	r.pauseManager = nil                                   //karing
-	r.platformInterface = nil                              //karing
 	return err
 }
 

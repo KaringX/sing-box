@@ -361,10 +361,19 @@ func (s *RemoteRuleSet) Close() error {
 }
 
 func (s *RemoteRuleSet) Match(metadata *adapter.InboundContext) bool {
+	return !s.matchStates(metadata).isEmpty()
+}
+
+func (s *RemoteRuleSet) matchStates(metadata *adapter.InboundContext) ruleMatchStateSet {
+	return s.matchStatesWithBase(metadata, 0)
+}
+
+func (s *RemoteRuleSet) matchStatesWithBase(metadata *adapter.InboundContext, base ruleMatchState) ruleMatchStateSet {
+	var stateSet ruleMatchStateSet
 	for _, rule := range s.rules {
-		if rule.Match(metadata) {
-			return true
-		}
+		nestedMetadata := *metadata
+		nestedMetadata.ResetRuleMatchCache()
+		stateSet = stateSet.merge(matchHeadlessRuleStatesWithBase(rule, &nestedMetadata, base))
 	}
-	return false
+	return stateSet
 }

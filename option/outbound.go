@@ -161,7 +161,7 @@ func (o ServerOptions) Build() M.Socksaddr {
 }
 
 func (o ServerOptions) ServerIsDomain() bool {
-	return M.IsDomainName(o.Server)
+	return o.Build().IsDomain()
 }
 
 func (o *ServerOptions) TakeServerOptions() ServerOptions {

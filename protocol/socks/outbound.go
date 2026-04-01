@@ -90,7 +90,7 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 	default:
 		return nil, E.Extend(N.ErrUnknownNetwork, network)
 	}
-	if h.resolve && destination.IsFqdn() {
+	if h.resolve && destination.IsDomain() {
 		destinationAddresses, err := h.dnsRouter.Lookup(ctx, destination.Fqdn, adapter.DNSQueryOptions{})
 		if err != nil {
 			return nil, err
@@ -111,7 +111,7 @@ func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
 		h.logger.InfoContext(ctx, "outbound UoT packet connection to ", destination)
 		return h.uotClient.ListenPacket(ctx, destination)
 	}
-	if h.resolve && destination.IsFqdn() {
+	if h.resolve && destination.IsDomain() {
 		destinationAddresses, err := h.dnsRouter.Lookup(ctx, destination.Fqdn, adapter.DNSQueryOptions{})
 		if err != nil {
 			return nil, err
