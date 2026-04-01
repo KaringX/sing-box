@@ -631,8 +631,8 @@ match:
 		if len(metadata.ProcessInfo.ProcessPath) > 0 {
 			meta += ",processPath:" + metadata.ProcessInfo.ProcessPath
 		}
-		if len(metadata.ProcessInfo.AndroidPackageName) > 0 {
-			meta += ",packageName:" + metadata.ProcessInfo.AndroidPackageName
+		if len(metadata.ProcessInfo.AndroidPackageNames) > 0 {
+			meta += ",packageNames:" + strings.Join(metadata.ProcessInfo.AndroidPackageNames, ", ")
 		}
 	}
 	meta += ",destination domain:" + metadata.Domain + ",destination ip:" + metadata.Destination.String() + "] "

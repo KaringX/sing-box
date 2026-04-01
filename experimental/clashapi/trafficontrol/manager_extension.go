@@ -340,8 +340,8 @@ func (m *Manager) persistConnectionsToDB(connections []TrackerMetadata, persistT
 				if t.Metadata.ProcessInfo != nil {
 					if t.Metadata.ProcessInfo.ProcessPath != "" {
 						processPath = t.Metadata.ProcessInfo.ProcessPath
-					} else if t.Metadata.ProcessInfo.AndroidPackageName != "" {
-						packageName = t.Metadata.ProcessInfo.AndroidPackageName
+					} else if len(t.Metadata.ProcessInfo.AndroidPackageNames) > 0 {
+						packageName = t.Metadata.ProcessInfo.AndroidPackageNames[0]
 					}
 					if processPath == "" {
 						if t.Metadata.ProcessInfo.UserId != -1 {

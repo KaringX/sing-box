@@ -82,7 +82,7 @@ require ( //karing
 //replace github.com/metacubex/mihomo => github.com/KaringX/clash v0.0.0-20241101044429-f71df89d4091
 
 //go get github.com/KaringX/sing@50a9c2efd67210376bb718ef766d53710768d5ae
-replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20260317040733-353fa7c7b521 //karing_v0.8.2
+replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20260401105748-a275a605f36a //karing_v0.8.3
 
 //replace github.com/sagernet/sing => ../../KaringX/sing
 
@@ -90,7 +90,7 @@ replace github.com/sagernet/sing-dns => github.com/KaringX/sing-dns v0.3.0-beta.
 
 //replace github.com/sagernet/sing-dns => ../../KaringX/sing-dns
 
-replace github.com/sagernet/sing-quic => github.com/KaringX/sing-quic v0.2.0-beta.12.0.20260317041508-4e1c112f0290 //karing_v0.6.0
+replace github.com/sagernet/sing-quic => github.com/KaringX/sing-quic v0.2.0-beta.12.0.20260401112009-ee52f61e10ae //karing_v0.6.1
 
 //replace github.com/sagernet/sing-quic => ../../KaringX/sing-quic
 
@@ -98,7 +98,7 @@ replace github.com/sagernet/quic-go => github.com/KaringX/quic-go v0.49.0-beta.1
 
 //replace github.com/sagernet/quic-go => ../../KaringX/quic-go
 
-replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.20260318025910-f8920b732f13 //karing_v0.8.3
+replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.20260401110826-441831b87232 //karing_v0.8.6
 
 //replace github.com/sagernet/sing-tun => ../../KaringX/sing-tun
 
@@ -110,7 +110,7 @@ replace github.com/sagernet/wireguard-go => github.com/KaringX/wireguard-go v0.0
 
 //replace github.com/sagernet/wireguard-go => ../../KaringX/wireguard-go
 
-replace github.com/sagernet/tailscale => github.com/KaringX/tailscale v1.80.3-mod.5.0.20260318025337-07070f0f0010 //karing_v1.92.4-sing-box-1.13-mod.6
+replace github.com/sagernet/tailscale => github.com/KaringX/tailscale v1.80.3-mod.5.0.20260401111223-6aae45c67733 //v1.92.4-sing-box-1.13-mod.7
 
 //replace github.com/sagernet/tailscale => ../../KaringX/tailscale
 

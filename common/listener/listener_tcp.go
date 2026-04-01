@@ -75,7 +75,7 @@ func (l *Listener) ListenTCP() (net.Listener, error) {
 		if l.router != nil { //karing
 			info, err1 := l.router.FindProcessInfo(l.ctx, N.NetworkTCP, bindAddr.AddrPort())
 			if err1 == nil {
-				err = E.Cause(err, "port[", bindAddr.AddrPort().Port(), "] is occupied by[", info.ProcessPath, info.AndroidPackageName, "] ")
+				err = E.Cause(err, "port[", bindAddr.AddrPort().Port(), "] is occupied by[", info.ProcessPath, strings.Join(info.AndroidPackageNames, ", "), "] ")
 			}
 		}
 		return nil, err
