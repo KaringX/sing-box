@@ -62,7 +62,7 @@ type Server struct {
 	externalUI               string
 	externalUIDownloadURL    string
 	externalUIDownloadDetour string
-	ticks compatible.Map[*time.Ticker, func()] //karing
+	ticks                    compatible.Map[*time.Ticker, func()] //karing
 }
 
 func NewServer(ctx context.Context, logFactory log.ObservableFactory, options option.ClashAPIOptions) (adapter.ClashServer, error) {
@@ -257,10 +257,16 @@ func (s *Server) TrafficManager() *trafficontrol.Manager {
 }
 
 func (s *Server) RoutedConnection(ctx context.Context, conn net.Conn, metadata adapter.InboundContext, matchedRule adapter.Rule, matchOutbound adapter.Outbound) net.Conn {
+	if s.trafficManager == nil { //karing
+		return conn
+	}
 	return trafficontrol.NewTCPTracker(ctx, conn, s.trafficManager, metadata, s.outbound, matchedRule, matchOutbound) //karing
 }
 
 func (s *Server) RoutedPacketConnection(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext, matchedRule adapter.Rule, matchOutbound adapter.Outbound) N.PacketConn {
+	if s.trafficManager == nil { //karing
+		return conn
+	}
 	return trafficontrol.NewUDPTracker(ctx, conn, s.trafficManager, metadata, s.outbound, matchedRule, matchOutbound) //karing
 }
 
