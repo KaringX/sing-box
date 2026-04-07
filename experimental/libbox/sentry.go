@@ -12,13 +12,13 @@ type SentryCaptureMessageCallbackFunc func(panicErr error, attachMessage string)
 type SentryCaptureExceptionCallbackFunc func(panicErrMessage string, attachMessage string, stack string) bool
 
 var (
-	SentryBoxServiceLaunchCallback         SentryBoxServiceLaunchCallbackFunc
-	SentryInitCallback                     SentryInitCallbackFunc
-	SentryCapturePanicErrorCallback        SentryCaptureMessageCallbackFunc
-	SentryCapturePanicErrorMessageCallback SentryCaptureExceptionCallbackFunc
-	SentryDsn                              string
-	SentryDid                              string
-	SentryRelease                          string
+	SentryBoxServiceLaunchCallback    SentryBoxServiceLaunchCallbackFunc
+	SentryInitCallback                SentryInitCallbackFunc
+	SentryCaptureMessageCallback      SentryCaptureMessageCallbackFunc
+	SentryCapturePanicMessageCallback SentryCaptureExceptionCallbackFunc
+	SentryDsn                         string
+	SentryDid                         string
+	SentryRelease                     string
 )
 
 func SentryGetDsn() string {
@@ -46,18 +46,18 @@ func SentryInit(configPath string) ([]byte, error) {
 	return SentryInitCallback(configPath)
 }
 
-func SentryCaptureError(panicErr error, attachMessage string) {
-	if SentryCapturePanicErrorCallback == nil {
+func SentryCaptureMessage(panicErr error, attachMessage string) {
+	if SentryCaptureMessageCallback == nil {
 		return
 	}
-	SentryCapturePanicErrorCallback(panicErr, attachMessage)
+	SentryCaptureMessageCallback(panicErr, attachMessage)
 }
 
-func SentryCaptureErrorMessage(panicErrMessage string, attachMessage string, stack string) {
-	if SentryCapturePanicErrorMessageCallback == nil {
+func SentryCapturePanicMessage(panicErrMessage string, attachMessage string, stack string) {
+	if SentryCapturePanicMessageCallback == nil {
 		return
 	}
-	SentryCapturePanicErrorMessageCallback(panicErrMessage, attachMessage, stack)
+	SentryCapturePanicMessageCallback(panicErrMessage, attachMessage, stack)
 }
 
 func SentryTrim(stack string) string {

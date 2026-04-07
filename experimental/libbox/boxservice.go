@@ -39,7 +39,7 @@ func NewService(handler BoxServiceHandler, platformInterface PlatformInterface) 
 			panicErrMessage := fmt.Sprintf("%v", e)
 			stack := SentryTrim(string(debug.Stack()))
 			err = E.New(panicErrMessage, "\n", "panic: create service", "\n", stack)
-			SentryCaptureErrorMessage(panicErrMessage, "panic: create service", stack)
+			SentryCapturePanicMessage(panicErrMessage, "panic: create service", stack)
 		}
 	}()
 	ctx := baseContext(platformInterface)
@@ -80,13 +80,13 @@ func (s *BoxService) Start(configContent string) (err error) {
 			panicErrMessage := fmt.Sprintf("%v", e)
 			stack := SentryTrim(string(debug.Stack()))
 			err = E.New(panicErrMessage, "\n", "panic: start service", "\n", stack)
-			SentryCaptureErrorMessage(panicErrMessage, "panic: start service", stack)
+			SentryCapturePanicMessage(panicErrMessage, "panic: start service", stack)
 		}
 	}()
 	//daemon.RegisterStartedServiceServer(nil, s.StartedService)
 	err = s.instance.StartOrReloadService(configContent, nil)
 	if err != nil {
-		SentryCaptureError(err, "start service")
+		SentryCaptureMessage(err, "start service")
 		return err
 	}
 	go func() {

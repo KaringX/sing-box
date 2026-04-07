@@ -140,7 +140,7 @@ func createService() (err error) {
 			panicErrMessage := fmt.Sprintf("%v", e)
 			stack := libbox.SentryTrim(string(debug.Stack()))
 			err = E.New(panicErrMessage, "\n", "panic: create createService", "\n", stack)
-			libbox.SentryCaptureErrorMessage(panicErrMessage, "panic: createService", stack)
+			libbox.SentryCapturePanicMessage(panicErrMessage, "panic: createService", stack)
 		}
 	}()
 
