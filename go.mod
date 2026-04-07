@@ -33,7 +33,7 @@ require (
 	github.com/sagernet/gomobile v0.1.12
 	github.com/sagernet/gvisor v0.0.0-20250811.0-sing-box-mod.1
 	github.com/sagernet/quic-go v0.59.0-sing-box-mod.4
-	github.com/sagernet/sing v0.8.3
+	github.com/sagernet/sing v0.8.4
 	github.com/sagernet/sing-mux v0.3.4
 	github.com/sagernet/sing-quic v0.6.1
 	github.com/sagernet/sing-shadowsocks v0.2.8
@@ -69,7 +69,7 @@ require ( //hiddify
 
 require ( //karing
 	github.com/alitto/pond v1.9.2
-	github.com/enfein/mieru/v3 v3.29.0
+	github.com/enfein/mieru/v3 v3.30.0
 	github.com/getsentry/sentry-go v0.33.0
 	github.com/klauspost/compress v1.18.0
 	github.com/mattn/go-sqlite3 v1.14.32
@@ -82,7 +82,7 @@ require ( //karing
 //replace github.com/metacubex/mihomo => github.com/KaringX/clash v0.0.0-20241101044429-f71df89d4091
 
 //go get github.com/KaringX/sing@50a9c2efd67210376bb718ef766d53710768d5ae
-replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20260401105748-a275a605f36a //karing_v0.8.3
+replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20260407020425-24174231384c //karing_v0.8.4
 
 //replace github.com/sagernet/sing => ../../KaringX/sing
 
