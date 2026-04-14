@@ -598,13 +598,16 @@ func (s *Box) Close() error {
 		name    string
 		service adapter.Lifecycle
 	}{
+		{"inbound", s.inbound},       //karing
+		{"connection", s.connection}, //karing
+		{"dns-router", s.dnsRouter},  //karing
 		{"service", s.service},
 		{"endpoint", s.endpoint},
-		{"inbound", s.inbound},
+		//{"inbound", s.inbound},//karing
 		{"outbound", s.outbound},
 		{"router", s.router},
-		{"connection", s.connection},
-		{"dns-router", s.dnsRouter},
+		//{"connection", s.connection},//karing
+		//{"dns-router", s.dnsRouter},//karing
 		{"dns-transport", s.dnsTransport},
 		{"network", s.network},
 	} {
