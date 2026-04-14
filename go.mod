@@ -62,20 +62,20 @@ require (
 )
 
 require ( //hiddify
-	github.com/pion/logging v0.2.2
+	github.com/pion/logging v0.2.4
 	github.com/pion/turn/v3 v3.0.3
-	github.com/pires/go-proxyproto v0.8.1
+	github.com/pires/go-proxyproto v0.11.0
 )
 
 require ( //karing
 	github.com/alitto/pond v1.9.2
-	github.com/enfein/mieru/v3 v3.30.0
-	github.com/getsentry/sentry-go v0.33.0
-	github.com/klauspost/compress v1.18.0
-	github.com/mattn/go-sqlite3 v1.14.32
-	github.com/metacubex/mihomo v1.19.16
+	github.com/enfein/mieru/v3 v3.30.1
+	github.com/getsentry/sentry-go v0.45.1
+	github.com/klauspost/compress v1.18.5
+	github.com/mattn/go-sqlite3 v1.14.42
+	github.com/metacubex/mihomo v1.19.23
 	github.com/shirou/gopsutil/v3 v3.24.5
-	github.com/valyala/fastjson v1.6.4
+	github.com/valyala/fastjson v1.6.10
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
 
@@ -154,7 +154,7 @@ require (
 	github.com/mdlayher/socket v0.5.1 // indirect
 	github.com/metacubex/chacha v0.1.5 // indirect
 	github.com/metacubex/randv2 v0.2.0 // indirect
-	github.com/metacubex/sing v0.5.6 // indirect
+	github.com/metacubex/sing v0.5.7 // indirect
 	github.com/mitchellh/go-ps v1.0.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.21 // indirect
 	github.com/pion/dtls/v2 v2.2.7 // indirect
@@ -199,7 +199,7 @@ require (
 	github.com/sagernet/netlink v0.0.0-20240612041022-b9a21c07ac6a // indirect
 	github.com/sagernet/nftables v0.3.0-beta.4 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
-	github.com/sirupsen/logrus v1.9.3 // indirect
+	github.com/sirupsen/logrus v1.9.4 // indirect
 	github.com/spf13/pflag v1.0.9 // indirect
 	github.com/tailscale/certstore v0.1.1-0.20231202035212-d3fa0460f47e // indirect
 	github.com/tailscale/go-winio v0.0.0-20231025203758-c4f33415bf55 // indirect
