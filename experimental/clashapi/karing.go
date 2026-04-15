@@ -213,7 +213,7 @@ func outboundQuery(ctx context.Context, router adapter.Router) func(w http.Respo
 	return func(w http.ResponseWriter, r *http.Request) {
 		domain := r.URL.Query().Get("domain")
 		ip := r.URL.Query().Get("ip")
-		meta := adapter.InboundContext{Domain: domain, Source: M.ParseSocksaddr(r.RemoteAddr), Destination: M.ParseSocksaddr(ip)}
+		meta := adapter.InboundContext{Domain: domain, Destination: M.ParseSocksaddr(ip)}
 		rule, err := router.GetMatchRule(ctx, &meta)
 		if err != nil {
 			render.JSON(w, r, render.M{
