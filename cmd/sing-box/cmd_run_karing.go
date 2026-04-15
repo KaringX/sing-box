@@ -26,10 +26,8 @@ var commandRun2 = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		err := runService()
 		if err != nil {
-			log.Error(err)
-			return
+			log.Fatal(err)
 		}
-
 	},
 }
 var httpServer *http.Server
