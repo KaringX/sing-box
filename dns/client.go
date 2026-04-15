@@ -288,6 +288,9 @@ func (c *Client) Exchange(ctx context.Context, transport adapter.DNSTransport, m
 	if timeToLive == 0 {
 		for _, recordList := range [][]dns.RR{response.Answer, response.Ns, response.Extra} {
 			for _, record := range recordList {
+				if record.Header().Rrtype == dns.TypeOPT {
+					continue
+				}
 				if timeToLive == 0 || record.Header().Ttl > 0 && record.Header().Ttl < timeToLive {
 					timeToLive = record.Header().Ttl
 				}
@@ -299,6 +302,9 @@ func (c *Client) Exchange(ctx context.Context, transport adapter.DNSTransport, m
 	}
 	for _, recordList := range [][]dns.RR{response.Answer, response.Ns, response.Extra} {
 		for _, record := range recordList {
+			if record.Header().Rrtype == dns.TypeOPT {
+				continue
+			}
 			record.Header().Ttl = timeToLive
 		}
 	}
@@ -396,7 +402,7 @@ func (c *Client) storeCache(transport adapter.DNSTransport, question dns.Questio
 			if c.cache == nil { //karing
 				return
 			}
-			c.cache.Add(question, message)
+			c.cache.Add(question, message.Copy())
 		} else {
 			if c.transportCache == nil { //karing
 				return
@@ -404,14 +410,14 @@ func (c *Client) storeCache(transport adapter.DNSTransport, question dns.Questio
 			c.transportCache.Add(transportCacheKey{
 				Question:     question,
 				transportTag: transport.Tag(),
-			}, message)
+			}, message.Copy())
 		}
 	} else {
 		if !c.independentCache {
 			if c.cache == nil { //karing
 				return
 			}
-			c.cache.AddWithLifetime(question, message, time.Second*time.Duration(timeToLive))
+			c.cache.AddWithLifetime(question, message.Copy(), time.Second*time.Duration(timeToLive))
 		} else {
 			if c.transportCache == nil { //karing
 				return
@@ -419,7 +425,7 @@ func (c *Client) storeCache(transport adapter.DNSTransport, question dns.Questio
 			c.transportCache.AddWithLifetime(transportCacheKey{
 				Question:     question,
 				transportTag: transport.Tag(),
-			}, message, time.Second*time.Duration(timeToLive))
+			}, message.Copy(), time.Second*time.Duration(timeToLive))
 		}
 	}
 }
@@ -528,6 +534,9 @@ func (c *Client) loadResponse(question dns.Question, transport adapter.DNSTransp
 		var originTTL int
 		for _, recordList := range [][]dns.RR{response.Answer, response.Ns, response.Extra} {
 			for _, record := range recordList {
+				if record.Header().Rrtype == dns.TypeOPT {
+					continue
+				}
 				if originTTL == 0 || record.Header().Ttl > 0 && int(record.Header().Ttl) < originTTL {
 					originTTL = int(record.Header().Ttl)
 				}
@@ -542,12 +551,18 @@ func (c *Client) loadResponse(question dns.Question, transport adapter.DNSTransp
 			duration := uint32(originTTL - nowTTL)
 			for _, recordList := range [][]dns.RR{response.Answer, response.Ns, response.Extra} {
 				for _, record := range recordList {
+					if record.Header().Rrtype == dns.TypeOPT {
+						continue
+					}
 					record.Header().Ttl = record.Header().Ttl - duration
 				}
 			}
 		} else {
 			for _, recordList := range [][]dns.RR{response.Answer, response.Ns, response.Extra} {
 				for _, record := range recordList {
+					if record.Header().Rrtype == dns.TypeOPT {
+						continue
+					}
 					record.Header().Ttl = uint32(nowTTL)
 				}
 			}
