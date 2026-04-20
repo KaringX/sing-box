@@ -225,6 +225,9 @@ func (b *Buffer) Advance(from int32) {
 		from += b.Len()
 	}
 	b.start += from
+	if b.start > b.end { //karing
+		b.start = b.end
+	}
 	b.Check()
 }
 
@@ -311,7 +314,7 @@ func (b *Buffer) ReadBytes(length int32) ([]byte, error) {
 
 // Read implements io.Reader.Read().
 func (b *Buffer) Read(data []byte) (int, error) {
-	if b.Len() == 0 {
+	if b.Len() <= 0 { //karing
 		return 0, io.EOF
 	}
 	nBytes := copy(data, b.v[b.start:b.end])
