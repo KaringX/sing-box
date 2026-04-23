@@ -29,6 +29,7 @@ type platformInterfaceWrapper struct {
 	useProcFS              bool
 	networkManager         adapter.NetworkManager
 	myTunName              string
+	myTunAddress           []netip.Addr
 	defaultInterfaceAccess sync.Mutex
 	defaultInterface       *control.Interface
 	isExpensive            bool
@@ -78,11 +79,27 @@ func (w *platformInterfaceWrapper) OpenInterface(options *tun.Options, platformO
 	}
 	options.FileDescriptor = dupFd
 	w.myTunName = options.Name
+	w.myTunAddress = myTunAddress(options)
 	tun, err := tun.New(*options) //karing
 	if err != nil {               //karing
 		return nil, E.Cause(err, "tun.new")
 	}
-	return tun, err //karing
+	return tun, nil //karing
+}
+
+func myTunAddress(options *tun.Options) []netip.Addr {
+	addresses := make([]netip.Addr, 0, len(options.Inet4Address)+len(options.Inet6Address))
+	for _, prefix := range options.Inet4Address {
+		addresses = append(addresses, prefix.Addr())
+	}
+	for _, prefix := range options.Inet6Address {
+		addresses = append(addresses, prefix.Addr())
+	}
+	return addresses
+}
+
+func (w *platformInterfaceWrapper) MyInterfaceAddress() []netip.Addr {
+	return w.myTunAddress
 }
 
 func (w *platformInterfaceWrapper) UsePlatformDefaultInterfaceMonitor() bool {
@@ -107,14 +124,11 @@ func (w *platformInterfaceWrapper) NetworkInterfaces() ([]adapter.NetworkInterfa
 	}
 	var interfaces []adapter.NetworkInterface
 	for _, netInterface := range iteratorToArray[*NetworkInterface](interfaceIterator) {
-		if netInterface.Name == w.myTunName {
-			continue
-		}
 		w.defaultInterfaceAccess.Lock()
 		// (GOOS=windows) SA4006: this value of `isDefault` is never used
 		// Why not used?
 		//nolint:staticcheck
-		isDefault := w.defaultInterface != nil && int(netInterface.Index) == w.defaultInterface.Index
+		isDefault := netInterface.Name != w.myTunName && w.defaultInterface != nil && int(netInterface.Index) == w.defaultInterface.Index
 		w.defaultInterfaceAccess.Unlock()
 		interfaces = append(interfaces, adapter.NetworkInterface{
 			Interface: control.Interface{

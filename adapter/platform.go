@@ -1,8 +1,10 @@
 package adapter
 
 import (
+	"net/netip"
+
 	"github.com/sagernet/sing-box/option"
-	"github.com/sagernet/sing-tun"
+	tun "github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common/logger"
 )
 
@@ -36,6 +38,8 @@ type PlatformInterface interface {
 
 	UsePlatformNotification() bool
 	SendNotification(notification *Notification) error
+
+	MyInterfaceAddress() []netip.Addr
 	GetAssetContent(path string) ([]byte, error) //karing
 }
 

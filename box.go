@@ -611,43 +611,38 @@ func (s *Box) Close() error {
 		{"dns-transport", s.dnsTransport},
 		{"network", s.network},
 	} {
-		s.logger.Trace("close ", closeItem.name)
-		startTime := time.Now()
+		done := adapter.LogElapsed(s.logger, "close ", closeItem.name)
 		err = E.Append(err, closeItem.service.Close(), func(err error) error {
 			return E.Cause(err, "close ", closeItem.name)
 		})
-		s.logger.Trace("close ", closeItem.name, " completed (", F.Seconds(time.Since(startTime).Seconds()), "s)")
+		done()
 	}
 	for i := len(s.internalService) - 1; i >= 0; i-- { //karing
 		lifecycleService := s.internalService[i] //karing
-		//for _, lifecycleService := range s.internalService { //karing
-		s.logger.Trace("close ", lifecycleService.Name())
-		startTime := time.Now()
+		done := adapter.LogElapsed(s.logger, "close ", lifecycleService.Name())
 		err = E.Append(err, lifecycleService.Close(), func(err error) error {
 			return E.Cause(err, "close ", lifecycleService.Name())
 		})
-		s.logger.Trace("close ", lifecycleService.Name(), " completed (", F.Seconds(time.Since(startTime).Seconds()), "s)")
+		done()
 	}
-	s.logger.Info("box closed") //karing
-	//err = E.Append(err, s.logFactory.Close(), func(err error) error {
-	//	return E.Cause(err, "close logger")
-	//})
-	s.network = nil         //karing
-	s.endpoint = nil        //karing
-	s.inbound = nil         //karing
-	s.outbound = nil        //karing
-	s.service = nil         //karing
-	s.dnsTransport = nil    //karing
-	s.dnsRouter = nil       //karing
-	s.connection = nil      //karing
-	s.router = nil          //karing
-	s.internalService = nil //karing
-	s.logger.Trace("close logger")
-	startTime := time.Now()
+	//karing begin
+	s.logger.Info("box closed")
+	s.network = nil
+	s.endpoint = nil
+	s.inbound = nil
+	s.outbound = nil
+	s.service = nil
+	s.dnsTransport = nil
+	s.dnsRouter = nil
+	s.connection = nil
+	s.router = nil
+	s.internalService = nil
+	//karing end
+	done := adapter.LogElapsed(s.logger, "close logger")
 	err = E.Append(err, s.logFactory.Close(), func(err error) error {
 		return E.Cause(err, "close logger")
 	})
-	s.logger.Trace("close logger completed (", F.Seconds(time.Since(startTime).Seconds()), "s)")
+	done()
 	return err
 }
 
