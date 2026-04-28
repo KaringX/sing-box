@@ -65,6 +65,7 @@ func InboundRegistry() *inbound.Registry {
 	//shadowtls.RegisterInbound(registry)//karing
 	//vless.RegisterInbound(registry)//karing
 	//anytls.RegisterInbound(registry)//karing
+	//mieru.RegisterInbound(registry)
 
 	//registerQUICInbounds(registry)//karing
 	//registerStubForRemovedInbounds(registry) //karing

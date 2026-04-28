@@ -21,6 +21,7 @@ import (
 	mieruclient "github.com/enfein/mieru/v3/apis/client"
 	mierucommon "github.com/enfein/mieru/v3/apis/common"
 	mierumodel "github.com/enfein/mieru/v3/apis/model"
+	mierutp "github.com/enfein/mieru/v3/apis/trafficpattern"
 	mierupb "github.com/enfein/mieru/v3/pkg/appctl/appctlpb"
 	"google.golang.org/protobuf/proto"
 )
@@ -38,10 +39,10 @@ func RegisterOutbound(registry *outbound.Registry) {
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.MieruOutboundOptions) (adapter.Outbound, error) {
 	empty := &Outbound{ //karing
-		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeShadowsocks, tag, []string{}, options.DialerOptions),
+		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeMieru, tag, []string{}, options.DialerOptions),
 		logger:  logger,
 	}
-	outboundDialer, err := dialer.New(ctx, options.DialerOptions, options.ServerIsDomain())
+	outboundDialer, err := dialer.New(ctx, options.DialerOptions, M.IsDomainName(options.Server))
 	if err != nil {
 		return empty, err //karing
 	}
@@ -134,7 +135,15 @@ func (md mieruDialer) DialContext(ctx context.Context, network, address string) 
 	return md.dialer.DialContext(ctx, network, addr)
 }
 
-var _ mierucommon.Dialer = (*mieruDialer)(nil)
+func (md mieruDialer) ListenPacket(ctx context.Context, network, laddr, raddr string) (net.PacketConn, error) {
+	addr := M.ParseSocksaddr(raddr)
+	return md.dialer.ListenPacket(ctx, addr)
+}
+
+var (
+	_ mierucommon.Dialer       = (*mieruDialer)(nil)
+	_ mierucommon.PacketDialer = (*mieruDialer)(nil)
+)
 
 // streamer converts a net.PacketConn to a net.Conn.
 type streamer struct {
@@ -172,7 +181,13 @@ func buildMieruClientConfig(options option.MieruOutboundOptions, dialer mieruDia
 		return nil, fmt.Errorf("failed to validate mieru options: %w", err)
 	}
 
-	transportProtocol := mierupb.TransportProtocol_TCP.Enum()
+	var transportProtocol *mierupb.TransportProtocol
+	switch options.Transport {
+	case "TCP":
+		transportProtocol = mierupb.TransportProtocol_TCP.Enum()
+	case "UDP":
+		transportProtocol = mierupb.TransportProtocol_UDP.Enum()
+	}
 	server := &mierupb.ServerEndpoint{}
 	if options.ServerPort != 0 {
 		server.PortBindings = append(server.PortBindings, &mierupb.PortBinding{
@@ -200,12 +215,20 @@ func buildMieruClientConfig(options option.MieruOutboundOptions, dialer mieruDia
 			},
 			Servers: []*mierupb.ServerEndpoint{server},
 		},
-		Dialer: dialer,
+		Dialer:       dialer,
+		PacketDialer: dialer,
+		DNSConfig: &mierucommon.ClientDNSConfig{
+			BypassDialerDNS: true,
+		},
 	}
 	if multiplexing, ok := mierupb.MultiplexingLevel_value[options.Multiplexing]; ok {
 		config.Profile.Multiplexing = &mierupb.MultiplexingConfig{
 			Level: mierupb.MultiplexingLevel(multiplexing).Enum(),
 		}
+	}
+	if options.TrafficPattern != "" {
+		trafficPattern, _ := mierutp.Decode(options.TrafficPattern)
+		config.Profile.TrafficPattern = trafficPattern
 	}
 	return config, nil
 }
@@ -232,8 +255,8 @@ func validateMieruOptions(options option.MieruOutboundOptions) error {
 			return fmt.Errorf("begin port must be less than or equal to end port")
 		}
 	}
-	if options.Transport != "TCP" {
-		return fmt.Errorf("transport must be TCP")
+	if options.Transport != "TCP" && options.Transport != "UDP" {
+		return fmt.Errorf("transport must be TCP or UDP")
 	}
 	if options.UserName == "" {
 		return fmt.Errorf("username is empty")
@@ -244,6 +267,15 @@ func validateMieruOptions(options option.MieruOutboundOptions) error {
 	if options.Multiplexing != "" {
 		if _, ok := mierupb.MultiplexingLevel_value[options.Multiplexing]; !ok {
 			return fmt.Errorf("invalid multiplexing level: %s", options.Multiplexing)
+		}
+	}
+	if options.TrafficPattern != "" {
+		trafficPattern, err := mierutp.Decode(options.TrafficPattern)
+		if err != nil {
+			return fmt.Errorf("failed to decode traffic pattern %q: %w", options.TrafficPattern, err)
+		}
+		if err := mierutp.Validate(trafficPattern); err != nil {
+			return fmt.Errorf("invalid traffic pattern %q: %w", options.TrafficPattern, err)
 		}
 	}
 	return nil

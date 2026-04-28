@@ -69,7 +69,7 @@ require ( //hiddify
 
 require ( //karing
 	github.com/alitto/pond v1.9.2
-	github.com/enfein/mieru/v3 v3.30.1
+	github.com/enfein/mieru/v3 v3.31.0
 	github.com/getsentry/sentry-go v0.45.1
 	github.com/klauspost/compress v1.18.5
 	github.com/mattn/go-sqlite3 v1.14.42
