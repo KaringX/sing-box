@@ -88,11 +88,23 @@ func dnsReadConfig(ctx context.Context, _ string) *dnsConfig {
 	if networkManager := service.FromContext[adapter.NetworkManager](ctx); networkManager != nil {
 		myInterface = networkManager.InterfaceMonitor().MyInterface()
 	}
+	serverSet := make(map[string]struct{}, len(conf.servers)+len(dnsAddresses)) //karing
+	for _, server := range conf.servers {                                       //karing
+		serverSet[server] = struct{}{}
+	}
 	for _, address := range dnsAddresses {
 		if address.ifName == myInterface {
 			continue
 		}
-		conf.servers = append(conf.servers, net.JoinHostPort(address.String(), "53"))
+		//conf.servers = append(conf.servers, net.JoinHostPort(address.String(), "53")) //karing
+		//karing begin
+		server := net.JoinHostPort(address.String(), "53")
+		if _, exists := serverSet[server]; exists {
+			continue
+		}
+		conf.servers = append(conf.servers, server)
+		serverSet[server] = struct{}{}
+		//karing end
 	}
 	return conf
 }
