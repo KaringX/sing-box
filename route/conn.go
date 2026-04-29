@@ -80,6 +80,9 @@ func (m *ConnectionManager) TrackConn(ctx context.Context, conn net.Conn, destin
 	if inbound != nil { //karing
 		Source = inbound.Source
 		Fqdn = inbound.Destination.Fqdn
+		if Fqdn == "" {
+			Fqdn = inbound.Domain
+		}
 		Outbound = inbound.Outbound
 	}
 	outbound := adapter.OutboundContext{ //karing
@@ -111,6 +114,9 @@ func (m *ConnectionManager) TrackPacketConn(ctx context.Context, conn net.Packet
 	if inbound != nil { //karing
 		Source = inbound.Source
 		Fqdn = inbound.Destination.Fqdn
+		if Fqdn == "" {
+			Fqdn = inbound.Domain
+		}
 		Outbound = inbound.Outbound
 	}
 	outbound := adapter.OutboundContext{ //karing
