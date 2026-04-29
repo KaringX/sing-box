@@ -49,8 +49,8 @@ func (m *ConnectionManager) Count() int {
 }
 
 func (m *ConnectionManager) CloseAll() {
-	m.access.Lock()
 	var closers []io.Closer
+	m.access.Lock()
 	for element := m.connections.Front(); element != nil; {
 		nextElement := element.Next()
 		if element.Value.Closer != nil { //karing
@@ -437,10 +437,7 @@ type trackedConn struct {
 
 func (c *trackedConn) Close() error {
 	c.manager.access.Lock()
-	if c.element.Value.Closer != nil { //karing
-		c.manager.connections.Remove(c.element)
-		c.element.Value.Closer = nil //karing
-	}
+	c.manager.connections.Remove(c.element)
 	c.manager.access.Unlock()
 	return c.Conn.Close()
 }
@@ -465,10 +462,7 @@ type trackedPacketConn struct {
 
 func (c *trackedPacketConn) Close() error {
 	c.manager.access.Lock()
-	if c.element.Value.Closer != nil { //karing
-		c.manager.connections.Remove(c.element)
-		c.element.Value.Closer = nil //karing
-	}
+	c.manager.connections.Remove(c.element)
 	c.manager.access.Unlock()
 	return c.PacketConn.Close()
 }

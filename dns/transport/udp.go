@@ -217,7 +217,7 @@ func (t *UDPTransport) exchange(ctx context.Context, message *mDNS.Msg) (*mDNS.M
 	case <-connCtx.Done():
 		return nil, context.Cause(connCtx)
 	case <-ctx.Done():
-		t.connection.Release(conn, true)
+		t.connection.Release(conn, false) //karing
 		return nil, ctx.Err()
 	}
 }

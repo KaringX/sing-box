@@ -125,7 +125,7 @@ func karingRouter(ctx context.Context, router adapter.Router, logFactory log.Fac
 	r.Get("/outboundQuery", outboundQuery(ctx, router))
 	r.Get("/remoteRuleSetRulesCount", remoteRuleSetRulesCount(router))
 	r.Get("/remoteRuleSetStates", remoteRuleSetRulesStates(ctx))
-	r.Get("/resetOutboundConnections", resetOutboundConnections())
+	r.Get("/resetOutboundConnections", resetOutboundConnections(ctx))
 	r.Get("/mainStack", mainStack())
 	return r
 }
@@ -274,10 +274,12 @@ func remoteRuleSetRulesStates(ctx context.Context) func(w http.ResponseWriter, r
 	}
 }
 
-func resetOutboundConnections() func(w http.ResponseWriter, r *http.Request) {
+func resetOutboundConnections(ctx context.Context) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		connectionManager := service.FromContext[adapter.ConnectionManager](r.Context())
-		connectionManager.Close()
+		connectionManager := service.FromContext[adapter.ConnectionManager](ctx)
+		if connectionManager != nil {
+			connectionManager.Close()
+		}
 		go func() {
 			runtime.GC()
 			runtimeDebug.FreeOSMemory()
