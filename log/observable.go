@@ -210,29 +210,57 @@ func (l *observableLogger) Panic(args ...any) {
 }
 
 func (l *observableLogger) TraceContext(ctx context.Context, args ...any) {
-	l.log(ctx, LevelTrace, 2, args) // karing
+	deep, ok := ctx.Value(CtxKeyLogContextStackDeepName).(int) // karing
+	if !ok {                                                   //karing
+		deep = 2
+	}
+	l.log(ctx, LevelTrace, deep, args) // karing
 }
 
 func (l *observableLogger) DebugContext(ctx context.Context, args ...any) {
-	l.log(ctx, LevelDebug, 2, args) // karing
+	deep, ok := ctx.Value(CtxKeyLogContextStackDeepName).(int) // karing
+	if !ok {                                                   //karing
+		deep = 2
+	}
+	l.log(ctx, LevelDebug, deep, args) // karing
 }
 
 func (l *observableLogger) InfoContext(ctx context.Context, args ...any) {
-	l.log(ctx, LevelInfo, 2, args) // karing
+	deep, ok := ctx.Value(CtxKeyLogContextStackDeepName).(int) // karing
+	if !ok {                                                   //karing
+		deep = 2
+	}
+	l.log(ctx, LevelInfo, deep, args) // karing
 }
 
 func (l *observableLogger) WarnContext(ctx context.Context, args ...any) {
-	l.log(ctx, LevelWarn, 2, args) // karing
+	deep, ok := ctx.Value(CtxKeyLogContextStackDeepName).(int) // karing
+	if !ok {                                                   //karing
+		deep = 2
+	}
+	l.log(ctx, LevelWarn, deep, args) // karing
 }
 
 func (l *observableLogger) ErrorContext(ctx context.Context, args ...any) {
-	l.log(ctx, LevelError, 2, args) // karing
+	deep, ok := ctx.Value(CtxKeyLogContextStackDeepName).(int) // karing
+	if !ok {                                                   //karing
+		deep = 2
+	}
+	l.log(ctx, LevelError, deep, args) // karing
 }
 
 func (l *observableLogger) FatalContext(ctx context.Context, args ...any) {
-	l.log(ctx, LevelFatal, 2, args) // karing
+	deep, ok := ctx.Value(CtxKeyLogContextStackDeepName).(int) // karing
+	if !ok {                                                   //karing
+		deep = 2
+	}
+	l.log(ctx, LevelFatal, deep, args) // karing
 }
 
 func (l *observableLogger) PanicContext(ctx context.Context, args ...any) {
-	l.log(ctx, LevelPanic, 2, args) // karing
+	deep, ok := ctx.Value(CtxKeyLogContextStackDeepName).(int) // karing
+	if !ok {                                                   //karing
+		deep = 2
+	}
+	l.log(ctx, LevelPanic, deep, args) // karing
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing/common/logger"
 
 	"github.com/miekg/dns"
@@ -13,6 +14,7 @@ func logCachedResponse(logger logger.ContextLogger, ctx context.Context, respons
 	if logger == nil || len(response.Question) == 0 {
 		return
 	}
+	ctx = context.WithValue(ctx, log.CtxKeyLogContextStackDeepName, 3) //karing
 	domain := FqdnToDomain(response.Question[0].Name)
 	logger.DebugContext(ctx, "cached ", domain, " ", dns.RcodeToString[response.Rcode], " ", ttl)
 	for _, recordList := range [][]dns.RR{response.Answer, response.Ns, response.Extra} {
@@ -26,6 +28,7 @@ func logExchangedResponse(logger logger.ContextLogger, ctx context.Context, resp
 	if logger == nil || len(response.Question) == 0 {
 		return
 	}
+	ctx = context.WithValue(ctx, log.CtxKeyLogContextStackDeepName, 3) //karing
 	domain := FqdnToDomain(response.Question[0].Name)
 	logger.DebugContext(ctx, "exchanged ", domain, " ", dns.RcodeToString[response.Rcode], " ", ttl)
 	for _, recordList := range [][]dns.RR{response.Answer, response.Ns, response.Extra} {
@@ -39,6 +42,7 @@ func logRejectedResponse(logger logger.ContextLogger, ctx context.Context, respo
 	if logger == nil || len(response.Question) == 0 {
 		return
 	}
+	ctx = context.WithValue(ctx, log.CtxKeyLogContextStackDeepName, 3) //karing
 	for _, recordList := range [][]dns.RR{response.Answer, response.Ns, response.Extra} {
 		for _, record := range recordList {
 			logger.InfoContext(ctx, "rejected ", dns.Type(record.Header().Rrtype).String(), " ", FormatQuestion(record.String()))

@@ -21,7 +21,8 @@ type Options struct {
 }
 
 var ( // karing
-	CtxKeyLogContextIdName = "log contextId name"
+	CtxKeyLogContextIdName        = "log context id name"
+	CtxKeyLogContextStackDeepName = "log context stack deep name"
 )
 
 func New(options Options) (Factory, error) {
