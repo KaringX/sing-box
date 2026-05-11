@@ -8,11 +8,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/metacubex/sing/common/task"
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/common/compatible"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing/common"
 	E "github.com/sagernet/sing/common/exceptions"
+	F "github.com/sagernet/sing/common/format"
 	"github.com/sagernet/sing/common/logger"
 	M "github.com/sagernet/sing/common/metadata"
 	"github.com/sagernet/sing/contrab/freelru"
@@ -310,6 +312,12 @@ func (c *Client) Exchange(ctx context.Context, transport adapter.DNSTransport, m
 	}
 	if !disableCache {
 		c.storeCache(transport, question, response, timeToLive)
+		if timeToLive != 0 { //karing
+			laterString := F.MakeLaterString(func() string {
+				return strings.Join(F.MapToString(response.Answer), " ")
+			})
+			c.logger.InfoContext(ctx, "storeCache for ", question.Name, ": ", laterString) //karing
+		}
 	}
 	response.Id = messageId
 	requestEDNSOpt := message.IsEdns0()
@@ -330,6 +338,12 @@ func (c *Client) Lookup(ctx context.Context, transport adapter.DNSTransport, dom
 	if transport == nil { //karing
 		return nil, E.New("transport closed")
 	}
+	/*var cancel context.CancelFunc  //karing
+	deadline, ok := ctx.Deadline() //karing
+	if !ok || deadline.IsZero() {  //karing
+		ctx, cancel = context.WithTimeout(ctx, c.timeout)
+		defer cancel()
+	}*/
 	domain = FqdnToDomain(domain)
 	dnsName := dns.Fqdn(domain)
 	var strategy C.DomainStrategy
@@ -347,7 +361,13 @@ func (c *Client) Lookup(ctx context.Context, transport adapter.DNSTransport, dom
 	} else if strategy == C.DomainStrategyIPv6Only {
 		return c.lookupToExchange(ctx, transport, dnsName, dns.TypeAAAA, lookupOptions, responseChecker)
 	}
-	/*//karing
+	if strategy == C.DomainStrategyPreferIPv4 || strategy == C.DomainStrategyPreferIPv6 { //karing
+		response4, response6, err := c.lookupToExchange_A_AAAA(ctx, transport, dnsName, strategy, options, responseChecker) //karing
+		if len(response4) == 0 && len(response6) == 0 {
+			return nil, err
+		}
+		return sortAddresses(response4, response6, strategy), nil
+	}
 	var response4 []netip.Addr
 	var response6 []netip.Addr
 	var group task.Group
@@ -368,9 +388,6 @@ func (c *Client) Lookup(ctx context.Context, transport adapter.DNSTransport, dom
 		return nil
 	})
 	err := group.Run(ctx)
-	*/
-
-	response4, response6, err := c.lookupToExchange_A_AAAA(ctx, transport, dnsName, strategy, options, responseChecker) //karing
 	if len(response4) == 0 && len(response6) == 0 {
 		return nil, err
 	}
@@ -440,6 +457,10 @@ func (c *Client) lookupToExchange(ctx context.Context, transport adapter.DNSTran
 	if !disableCache {
 		cachedAddresses, err := c.questionCache(question, transport)
 		if err != ErrNotCached {
+			laterString := F.MakeLaterString(func() string { //karing
+				return strings.Join(F.MapToString(cachedAddresses), " ")
+			})
+			c.logger.InfoContext(ctx, "questionCache for ", name, ": ", laterString) //karing
 			return cachedAddresses, err
 		}
 	}
