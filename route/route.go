@@ -834,10 +834,10 @@ func (r *Router) actionResolve(ctx context.Context, metadata *adapter.InboundCon
 			return err
 		}
 		metadata.DestinationAddresses = addresses
-		lateString := F.MakeLaterString(func() string { //karing
+		laterString := F.MakeLaterString(func() string { //karing
 			return strings.Join(F.MapToString(metadata.DestinationAddresses), " ")
 		})
-		r.logger.DebugContext(ctx, "resolved [", lateString, "]") //karing
+		r.logger.DebugContext(ctx, "resolved [", laterString, "]") //karing
 	}
 	return nil
 }
