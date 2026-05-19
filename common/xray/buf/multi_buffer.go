@@ -3,7 +3,7 @@ package buf
 import (
 	"io"
 
-	"github.com/sagernet/sing-box/common/xray"
+	common "github.com/sagernet/sing-box/common/xray"
 	"github.com/sagernet/sing-box/common/xray/errors"
 	"github.com/sagernet/sing-box/common/xray/serial"
 )
@@ -102,6 +102,9 @@ func SplitBytes(mb MultiBuffer, b []byte) (MultiBuffer, int) {
 	endIndex := -1
 	for i := range mb {
 		pBuffer := mb[i]
+		if pBuffer == nil { //karing
+			continue
+		}
 		nBytes, _ := pBuffer.Read(b)
 		totalBytes += nBytes
 		b = b[nBytes:]

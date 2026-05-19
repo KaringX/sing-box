@@ -107,8 +107,9 @@ func (b *Buffer) Release() {
 	}
 
 	p := b.v
+	b.Clear() //karing
 	b.v = nil
-	b.Clear()
+	//b.Clear() //karing
 
 	switch b.ownership {
 	case managed:
@@ -315,6 +316,10 @@ func (b *Buffer) ReadBytes(length int32) ([]byte, error) {
 // Read implements io.Reader.Read().
 func (b *Buffer) Read(data []byte) (int, error) {
 	if b.Len() <= 0 { //karing
+		return 0, io.EOF
+	}
+	if b.v == nil || b.start < 0 || b.end < 0 || b.start > b.end || b.end > int32(len(b.v)) { //karing
+		b.Clear()
 		return 0, io.EOF
 	}
 	nBytes := copy(data, b.v[b.start:b.end])
