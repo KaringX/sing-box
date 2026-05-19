@@ -205,7 +205,7 @@ func RealTag(detour adapter.Outbound) (tag string) { //karing
 	if detour == nil { //karing
 		return ""
 	}
-	if group, isGroup := detour.(adapter.OutboundGroup); isGroup {
+	if group, isGroup := detour.(adapter.OutboundGroup); isGroup && group != nil { //karing
 		return group.Now()
 	}
 	return detour.Tag()

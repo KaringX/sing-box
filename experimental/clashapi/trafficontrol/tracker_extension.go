@@ -29,7 +29,7 @@ func GetMatchRuleChain(outboundManager adapter.OutboundManager, matchOutboundTag
 		outbound = detour.Tag()
 		outboundType = detour.Type()
 		group, isGroup := detour.(adapter.OutboundGroup)
-		if !isGroup {
+		if !isGroup || group == nil {
 			break
 		}
 		next = group.Now()
