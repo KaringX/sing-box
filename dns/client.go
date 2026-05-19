@@ -71,10 +71,7 @@ func NewClient(options ClientOptions) *Client {
 	if client.timeout == 0 {
 		client.timeout = C.DNSTimeout
 	}
-	cacheCapacity := options.CacheCapacity
-	if cacheCapacity < 1024 {
-		cacheCapacity = 1024
-	}
+	cacheCapacity := max(options.CacheCapacity, 1024)
 	if !client.disableCache {
 		if !client.independentCache {
 			client.cache = common.Must1(freelru.NewSharded[dns.Question, *dns.Msg](cacheCapacity, maphash.NewHasher[dns.Question]().Hash32))
@@ -356,9 +353,10 @@ func (c *Client) Lookup(ctx context.Context, transport adapter.DNSTransport, dom
 	if options.LookupStrategy != C.DomainStrategyAsIS {
 		lookupOptions.Strategy = strategy
 	}
-	if strategy == C.DomainStrategyIPv4Only {
+	switch strategy {
+	case C.DomainStrategyIPv4Only:
 		return c.lookupToExchange(ctx, transport, dnsName, dns.TypeA, lookupOptions, responseChecker)
-	} else if strategy == C.DomainStrategyIPv6Only {
+	case C.DomainStrategyIPv6Only:
 		return c.lookupToExchange(ctx, transport, dnsName, dns.TypeAAAA, lookupOptions, responseChecker)
 	}
 	if strategy == C.DomainStrategyPreferIPv4 || strategy == C.DomainStrategyPreferIPv6 { //karing
@@ -563,10 +561,7 @@ func (c *Client) loadResponse(question dns.Question, transport adapter.DNSTransp
 				}
 			}
 		}
-		nowTTL := int(expireAt.Sub(timeNow).Seconds())
-		if nowTTL < 0 {
-			nowTTL = 0
-		}
+		nowTTL := max(int(expireAt.Sub(timeNow).Seconds()), 0)
 		response = response.Copy()
 		if originTTL > 0 {
 			duration := uint32(originTTL - nowTTL)
@@ -612,18 +607,6 @@ func MessageToAddresses(response *dns.Msg) []netip.Addr {
 		}
 	}
 	return addresses
-}
-
-func wrapError(err error) error {
-	switch dnsErr := err.(type) {
-	case *net.DNSError:
-		if dnsErr.IsNotFound {
-			return RcodeNameError
-		}
-	case *net.AddrError:
-		return RcodeNameError
-	}
-	return err
 }
 
 type transportKey struct{}

@@ -7,9 +7,8 @@ import (
 	"net"
 	"net/netip"
 	"os"
-
+	"sync"
 	"sync/atomic"
-
 	"time"
 
 	"github.com/sagernet/gvisor/pkg/buffer"
@@ -45,6 +44,7 @@ type stackDevice struct {
 	outbound       chan *stack.PacketBuffer
 	packetOutbound chan *buf.Buffer
 	done           chan struct{}
+	closeOnce      sync.Once
 	dispatcher     stack.NetworkDispatcher
 	inet4Address   netip.Addr
 	inet6Address   netip.Addr
@@ -150,11 +150,17 @@ func (w *stackDevice) ListenPacket(ctx context.Context, destination M.Socksaddr)
 	}
 	var networkProtocol tcpip.NetworkProtocolNumber
 	if destination.IsIPv4() {
+		if !w.inet4Address.IsValid() {
+			return nil, E.New("missing IPv4 local address")
+		}
 		networkProtocol = header.IPv4ProtocolNumber
 		bind.Addr = tun.AddressFromAddr(w.inet4Address)
 	} else {
+		if !w.inet6Address.IsValid() {
+			return nil, E.New("missing IPv6 local address")
+		}
 		networkProtocol = header.IPv6ProtocolNumber
-		bind.Addr = tun.AddressFromAddr(w.inet4Address)
+		bind.Addr = tun.AddressFromAddr(w.inet6Address)
 	}
 	udpConn, err := gonet.DialUDP(w.stack, &bind, nil, networkProtocol)
 	if err != nil {
@@ -258,14 +264,16 @@ func (w *stackDevice) Close() error {
 		return os.ErrClosed
 	default:
 	}
-	w.closed.Store(true) //karing
-	close(w.done)
-	close(w.events)
-	w.stack.Close()
-	for _, endpoint := range w.stack.CleanupEndpoints() {
-		endpoint.Abort()
-	}
-	w.stack.Wait()
+	w.closeOnce.Do(func() {
+		w.closed.Store(true) //karing
+		close(w.done)
+		close(w.events)
+		w.stack.Close()
+		for _, endpoint := range w.stack.CleanupEndpoints() {
+			endpoint.Abort()
+		}
+		w.stack.Wait()
+	})
 	return nil
 }
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 	"net/netip"
+	"sync/atomic"
 	"time"
 
 	"github.com/sagernet/sing-box/adapter"
@@ -41,6 +42,7 @@ type Endpoint struct {
 	logger         logger.ContextLogger
 	localAddresses []netip.Prefix
 	endpoint       *wireguard.Endpoint
+	started        atomic.Bool
 }
 
 func NewEndpoint(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.WireGuardEndpointOptions) (adapter.Endpoint, error) {
@@ -127,7 +129,11 @@ func (w *Endpoint) Start(stage adapter.StartStage) error {
 	case adapter.StartStateStart:
 		return w.endpoint.Start(false)
 	case adapter.StartStatePostStart:
-		return w.endpoint.Start(true)
+		err := w.endpoint.Start(true)
+		if err != nil {
+			return err
+		}
+		w.started.Store(true)
 	}
 	return nil
 }
@@ -136,10 +142,14 @@ func (w *Endpoint) Close() error {
 	if w.endpoint == nil { //karing
 		return nil
 	}
+	w.started.Store(false)
 	return w.endpoint.Close()
 }
 
 func (w *Endpoint) PrepareConnection(network string, source M.Socksaddr, destination M.Socksaddr, routeContext tun.DirectRouteContext, timeout time.Duration) (tun.DirectRouteDestination, error) {
+	if !w.started.Load() {
+		return nil, E.New("WireGuard is not ready yet")
+	}
 	var ipVersion uint8
 	if !destination.IsIPv6() {
 		ipVersion = 4
@@ -223,6 +233,9 @@ func (w *Endpoint) DialContext(ctx context.Context, network string, destination 
 	case N.NetworkUDP:
 		w.logger.InfoContext(ctx, "outbound packet connection to ", destination)
 	}
+	if !w.started.Load() {
+		return nil, E.New("WireGuard is not ready yet")
+	}
 	if destination.IsDomain() {
 		destinationAddresses, err := w.dnsRouter.Lookup(ctx, destination.Fqdn, adapter.DNSQueryOptions{})
 		if err != nil {
@@ -240,6 +253,9 @@ func (w *Endpoint) ListenPacketWithDestination(ctx context.Context, destination 
 		return nil, netip.Addr{}, w.GetParseErr()
 	}
 	w.logger.InfoContext(ctx, "outbound packet connection to ", destination)
+	if !w.started.Load() {
+		return nil, netip.Addr{}, E.New("WireGuard is not ready yet")
+	}
 	if destination.IsDomain() {
 		destinationAddresses, err := w.dnsRouter.Lookup(ctx, destination.Fqdn, adapter.DNSQueryOptions{})
 		if err != nil {
@@ -273,9 +289,15 @@ func (w *Endpoint) PreferredDomain(domain string) bool {
 }
 
 func (w *Endpoint) PreferredAddress(address netip.Addr) bool {
+	if !w.started.Load() {
+		return false
+	}
 	return w.endpoint.Lookup(address) != nil
 }
 
 func (w *Endpoint) NewDirectRouteConnection(metadata adapter.InboundContext, routeContext tun.DirectRouteContext, timeout time.Duration) (tun.DirectRouteDestination, error) {
+	if !w.started.Load() {
+		return nil, E.New("WireGuard is not ready yet")
+	}
 	return w.endpoint.NewDirectRouteConnection(metadata, routeContext, timeout)
 }
