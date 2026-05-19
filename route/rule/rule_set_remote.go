@@ -119,6 +119,9 @@ func (s *RemoteRuleSet) StartContext(ctx context.Context, startContext *adapter.
 }
 
 func (s *RemoteRuleSet) PostStart() error {
+	if s.updateTicker == nil { //karing
+		return nil
+	}
 	go s.loopUpdate()
 	return nil
 }
