@@ -19,6 +19,8 @@ import (
 
 var _ adapter.DNSTransport = (*BatchTransport)(nil)
 
+var batchTransportExchangingByTag sync.Map
+
 func RegisterBatch(registry *dns.TransportRegistry) {
 	dns.RegisterTransport[option.BatchDNSServerOptions](registry, C.DNSTypeBatch, NewBatch)
 }
@@ -51,11 +53,22 @@ func (t *BatchTransport) Start(stage adapter.StartStage) error {
 }
 
 func (t *BatchTransport) Close() error {
+	for _, server := range t.servers {
+		transport, _ := t.transport.Transport(server)
+		if transport != nil {
+			batchTransportExchangingByTag.Delete(transport.Tag())
+		}
+	}
 	return nil
 }
 
 func (t *BatchTransport) Reset() {
-
+	for _, server := range t.servers {
+		transport, _ := t.transport.Transport(server)
+		if transport != nil {
+			batchTransportExchangingByTag.Delete(transport.Tag())
+		}
+	}
 }
 
 func (t *BatchTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS.Msg, error) {
@@ -81,13 +94,45 @@ func (t *BatchTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS
 	var errOnce sync.Once
 	var emptyOnce sync.Once
 	var count atomic.Int64
+	var overloaded atomic.Int64
 	var onceFlag atomic.Bool
 	done := make(chan struct{})
 	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	var cancelTimeout context.CancelFunc
+	deadline, ok := ctx.Deadline()
+	if !ok || deadline.IsZero() {
+		ctx, cancelTimeout = context.WithTimeout(ctx, C.DNSTimeout)
+		defer cancelTimeout()
+	}
 
 	count.Add(int64(len(transports)))
+	overloaded.Add(int64(len(transports)))
 	for _, transport := range transports {
-		go func(trans adapter.DNSTransport) {
+		tag := transport.Tag()
+		counter := t.transportCounter(tag)
+		if counter.Add(1) > 1000 {
+			counter.Add(-1)
+			overloaded.Add(-1)
+
+			t.logger.WarnContext(ctx, "skip overloaded dns transport [", tag, "] for [", domain, "] pending: ", counter.Load(), " queryType: ", question.Qtype)
+			if count.Add(-1) == 0 {
+				if onceFlag.CompareAndSwap(false, true) {
+					once.Do(func() {
+						select {
+						case done <- struct{}{}:
+						default:
+						}
+						close(done)
+					})
+				}
+				break
+			}
+			continue
+		}
+		go func(trans adapter.DNSTransport, counter *atomic.Int64) {
+			defer counter.Add(-1)
 			copydMessage := message.Copy()
 			ret, err := trans.Exchange(ctx, copydMessage)
 			if err == nil {
@@ -126,7 +171,7 @@ func (t *BatchTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS
 					})
 				}
 			}
-		}(transport)
+		}(transport, counter)
 	}
 	select {
 	case <-ctx.Done():
@@ -140,7 +185,6 @@ func (t *BatchTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS
 		})
 	case <-done:
 	}
-	cancel()
 	if result != nil {
 		return result, nil
 	}
@@ -150,6 +194,19 @@ func (t *BatchTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS
 	if errResult != nil {
 		return nil, errResult
 	}
+	if overloaded.Load() == 0 {
+		return nil, E.New("batch exchange: overloaded")
+	}
 
 	return nil, E.New("batch exchange: unknown error")
+}
+
+func (t *BatchTransport) transportCounter(tag string) *atomic.Int64 {
+	counter, loaded := batchTransportExchangingByTag.Load(tag)
+	if loaded {
+		return counter.(*atomic.Int64)
+	}
+	created := new(atomic.Int64)
+	actual, _ := batchTransportExchangingByTag.LoadOrStore(tag, created)
+	return actual.(*atomic.Int64)
 }
