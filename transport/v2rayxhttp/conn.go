@@ -11,6 +11,8 @@ import (
 	"github.com/sagernet/sing-box/common/xray/signal/done"
 )
 
+var _ net.Conn = (*splitConn)(nil) //karing
+
 type splitConn struct {
 	writer     io.WriteCloser
 	reader     io.ReadCloser

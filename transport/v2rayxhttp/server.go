@@ -1,13 +1,13 @@
-// https://github.com/starifly/sing-box
 package xhttp
 
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
-	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -23,7 +23,6 @@ import (
 	"github.com/sagernet/sing-box/option"
 	qtls "github.com/sagernet/sing-quic"
 
-	// qtls "github.com/sagernet/sing-quic"
 	"github.com/sagernet/sing-box/common/xray/signal/done"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/logger"
@@ -78,7 +77,6 @@ func NewServer(ctx context.Context, logger logger.ContextLogger, options option.
 				hasNonH3 = true
 			}
 		}
-		// If ALPN list is empty we still expose HTTP/1.1 or HTTP/2 over TCP.
 		if len(tlsConfig.NextProtos()) == 0 {
 			hasNonH3 = true
 		}
@@ -126,29 +124,31 @@ func (s *Server) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 	writer.Header().Set("Access-Control-Allow-Origin", "*")
-	writer.Header().Set("Access-Control-Allow-Methods", "GET, POST")
-	writer.Header().Set("X-Padding", strings.Repeat("X", int(s.options.GetNormalizedXPaddingBytes().Rand())))
-	validRange := s.options.GetNormalizedXPaddingBytes()
-	paddingLength := 0
-	referrer := request.Header.Get("Referer")
-	if referrer != "" {
-		if referrerURL, err := url.Parse(referrer); err == nil {
-			// Browser dialer cannot control the host part of referrer header, so only check the query
-			paddingLength = len(referrerURL.Query().Get("x_padding"))
+	writer.Header().Set("Access-Control-Allow-Methods", "*")
+	length := int(s.options.GetNormalizedXPaddingBytes().Rand())
+	config := XPaddingConfig{Length: length}
+	if s.options.XPaddingObfsMode {
+		config.Placement = XPaddingPlacement{
+			Placement: s.options.XPaddingPlacement,
+			Key:       s.options.XPaddingKey,
+			Header:    s.options.XPaddingHeader,
 		}
+		config.Method = PaddingMethod(s.options.XPaddingMethod)
 	} else {
-		paddingLength = len(request.URL.Query().Get("x_padding"))
+		config.Placement = XPaddingPlacement{
+			Placement: option.PlacementHeader,
+			Header:    "X-Padding",
+		}
 	}
-	if int32(paddingLength) < validRange.From || int32(paddingLength) > validRange.To {
-		s.logger.ErrorContext(request.Context(), "invalid x_padding length:", int32(paddingLength))
+	ApplyXPaddingToHeader(writer.Header(), config)
+	validRange := s.options.GetNormalizedXPaddingBytes()
+	paddingValue, paddingPlacement := ExtractXPaddingFromRequest(&s.options.V2RayXHTTPBaseOptions, request, s.options.XPaddingObfsMode)
+	if !IsPaddingValid(&s.options.V2RayXHTTPBaseOptions, paddingValue, validRange.From, validRange.To, PaddingMethod(s.options.XPaddingMethod)) {
+		s.logger.ErrorContext(request.Context(), "invalid padding ("+paddingPlacement+") length:", int32(len(paddingValue)))
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	sessionId := ""
-	subpath := strings.Split(request.URL.Path[len(s.path):], "/")
-	if len(subpath) > 0 {
-		sessionId = subpath[0]
-	}
+	sessionId, seqStr := ExtractMetaFromRequest(s.options, request, s.path)
 	if sessionId == "" && s.options.Mode != "" && s.options.Mode != "auto" && s.options.Mode != "stream-one" && s.options.Mode != "stream-up" {
 		s.logger.ErrorContext(request.Context(), "stream-one mode is not allowed")
 		writer.WriteHeader(http.StatusBadRequest)
@@ -181,12 +181,25 @@ func (s *Server) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		currentSession = s.upsertSession(sessionId)
 	}
 	scMaxEachPostBytes := int(s.options.GetNormalizedScMaxEachPostBytes().To)
-	if request.Method == "POST" && sessionId != "" { // stream-up, packet-up
-		seq := ""
-		if len(subpath) > 1 {
-			seq = subpath[1]
+	uplinkHTTPMethod := s.options.GetNormalizedUplinkHTTPMethod()
+	isUplinkRequest := false
+	if uplinkHTTPMethod != "GET" && request.Method == uplinkHTTPMethod {
+		isUplinkRequest = true
+	}
+	uplinkDataPlacement := s.options.GetNormalizedUplinkDataPlacement()
+	uplinkDataKey := s.options.UplinkDataKey
+	switch uplinkDataPlacement {
+	case option.PlacementHeader:
+		if request.Header.Get(uplinkDataKey+"-Upstream") == "1" {
+			isUplinkRequest = true
 		}
-		if seq == "" {
+	case option.PlacementCookie:
+		if c, _ := request.Cookie(uplinkDataKey + "_upstream"); c != nil && c.Value == "1" {
+			isUplinkRequest = true
+		}
+	}
+	if isUplinkRequest && sessionId != "" {
+		if seqStr == "" {
 			if s.options.Mode != "" && s.options.Mode != "auto" && s.options.Mode != "stream-up" {
 				s.logger.ErrorContext(request.Context(), "stream-up mode is not allowed")
 				writer.WriteHeader(http.StatusBadRequest)
@@ -208,6 +221,7 @@ func (s *Server) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 				writer.Header().Set("Cache-Control", "no-store")
 				writer.WriteHeader(http.StatusOK)
 				scStreamUpServerSecs := s.options.GetNormalizedScStreamUpServerSecs()
+				referrer := request.Header.Get("Referer")
 				if referrer != "" && scStreamUpServerSecs.To > 0 {
 					go func() {
 						for {
@@ -232,7 +246,55 @@ func (s *Server) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 			writer.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		payload, err := io.ReadAll(io.LimitReader(request.Body, int64(scMaxEachPostBytes)+1))
+		var payload []byte
+		if uplinkDataPlacement != option.PlacementBody {
+			var encodedStr string
+			switch uplinkDataPlacement {
+			case option.PlacementHeader:
+				dataLenStr := request.Header.Get(uplinkDataKey + "-Length")
+				if dataLenStr != "" {
+					dataLen, _ := strconv.Atoi(dataLenStr)
+					var chunks []string
+					i := 0
+					for {
+						chunk := request.Header.Get(fmt.Sprintf("%s-%d", uplinkDataKey, i))
+						if chunk == "" {
+							break
+						}
+						chunks = append(chunks, chunk)
+						i++
+					}
+					encodedStr = strings.Join(chunks, "")
+					if len(encodedStr) != dataLen {
+						encodedStr = ""
+					}
+				}
+			case option.PlacementCookie:
+				var chunks []string
+				i := 0
+				for {
+					cookieName := fmt.Sprintf("%s_%d", uplinkDataKey, i)
+					if c, _ := request.Cookie(cookieName); c != nil {
+						chunks = append(chunks, c.Value)
+						i++
+					} else {
+						break
+					}
+				}
+				if len(chunks) > 0 {
+					encodedStr = strings.Join(chunks, "")
+				}
+			}
+			if encodedStr != "" {
+				payload, err = base64.RawURLEncoding.DecodeString(encodedStr)
+			} else {
+				s.logger.ErrorContext(request.Context(), err, "failed to extract data from key "+uplinkDataKey+" placed in "+uplinkDataPlacement)
+				writer.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+		} else {
+			payload, err = io.ReadAll(io.LimitReader(request.Body, int64(scMaxEachPostBytes)+1))
+		}
 		if len(payload) > scMaxEachPostBytes {
 			s.logger.ErrorContext(request.Context(), "Too large upload. scMaxEachPostBytes is set to ", scMaxEachPostBytes, "but request size exceed it. Adjust scMaxEachPostBytes on the server to be at least as large as client.")
 			writer.WriteHeader(http.StatusRequestEntityTooLarge)
@@ -243,7 +305,7 @@ func (s *Server) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 			writer.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		seqInt, err := strconv.ParseUint(seq, 10, 64)
+		seq, err := strconv.ParseUint(seqStr, 10, 64)
 		if err != nil {
 			s.logger.InfoContext(request.Context(), err, "failed to upload (ParseUint)")
 			writer.WriteHeader(http.StatusInternalServerError)
@@ -251,7 +313,7 @@ func (s *Server) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		}
 		err = currentSession.uploadQueue.Push(Packet{
 			Payload: payload,
-			Seq:     seqInt,
+			Seq:     seq,
 		})
 		if err != nil {
 			s.logger.InfoContext(request.Context(), err, "failed to upload (PushPayload)")
@@ -259,21 +321,14 @@ func (s *Server) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 			return
 		}
 		writer.WriteHeader(http.StatusOK)
-	} else if request.Method == "GET" || sessionId == "" { // stream-down, stream-one
+	} else if request.Method == "GET" || sessionId == "" {
 		if sessionId != "" {
-			// after GET is done, the connection is finished. disable automatic
-			// session reaping, and handle it in defer
 			currentSession.isFullyConnected.Close()
 			defer s.sessions.Delete(sessionId)
 		}
-		// magic header instructs nginx + apache to not buffer response body
 		writer.Header().Set("X-Accel-Buffering", "no")
-		// A web-compliant header telling all middleboxes to disable caching.
-		// Should be able to prevent overloading the cache, or stop CDNs from
-		// teeing the response stream into their cache, causing slowdowns.
 		writer.Header().Set("Cache-Control", "no-store")
 		if !s.options.NoSSEHeader {
-			// magic header to make the HTTP middle box consider this as SSE to disable buffer
 			writer.Header().Set("Content-Type", "text/event-stream")
 		}
 		writer.WriteHeader(http.StatusOK)
@@ -289,11 +344,10 @@ func (s *Server) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 			remoteAddr: remoteAddr,
 			localAddr:  s.localAddr,
 		}
-		if sessionId != "" { // if not stream-one
+		if sessionId != "" {
 			conn.reader = currentSession.uploadQueue
 		}
 		s.handler.NewConnectionEx(request.Context(), &conn, sHttp.SourceAddress(request), M.Socksaddr{}, func(it error) {})
-		// "A ResponseWriter may not be used after [Handler.ServeHTTP] has returned."
 		select {
 		case <-request.Context().Done():
 		case <-httpSC.Wait():
@@ -351,12 +405,10 @@ func (s *Server) Close() error {
 }
 
 func (s *Server) upsertSession(sessionId string) *httpSession {
-	// fast path
 	currentSessionAny, ok := s.sessions.Load(sessionId)
 	if ok {
 		return currentSessionAny.(*httpSession)
 	}
-	// slow path
 	s.sessionMu.Lock()
 	defer s.sessionMu.Unlock()
 	currentSessionAny, ok = s.sessions.Load(sessionId)
@@ -382,4 +434,42 @@ func (s *Server) upsertSession(sessionId string) *httpSession {
 		}
 	}()
 	return session
+}
+
+func ExtractMetaFromRequest(options *option.V2RayXHTTPOptions, req *http.Request, path string) (sessionId string, seqStr string) {
+	sessionPlacement := options.GetNormalizedSessionPlacement()
+	seqPlacement := options.GetNormalizedSeqPlacement()
+	sessionKey := options.GetNormalizedSessionKey()
+	seqKey := options.GetNormalizedSeqKey()
+	if sessionPlacement == option.PlacementPath && seqPlacement == option.PlacementPath {
+		subpath := strings.Split(req.URL.Path[len(path):], "/")
+		if len(subpath) > 0 {
+			sessionId = subpath[0]
+		}
+		if len(subpath) > 1 {
+			seqStr = subpath[1]
+		}
+		return sessionId, seqStr
+	}
+	switch sessionPlacement {
+	case option.PlacementQuery:
+		sessionId = req.URL.Query().Get(sessionKey)
+	case option.PlacementHeader:
+		sessionId = req.Header.Get(sessionKey)
+	case option.PlacementCookie:
+		if cookie, e := req.Cookie(sessionKey); e == nil {
+			sessionId = cookie.Value
+		}
+	}
+	switch seqPlacement {
+	case option.PlacementQuery:
+		seqStr = req.URL.Query().Get(seqKey)
+	case option.PlacementHeader:
+		seqStr = req.Header.Get(seqKey)
+	case option.PlacementCookie:
+		if cookie, e := req.Cookie(seqKey); e == nil {
+			seqStr = cookie.Value
+		}
+	}
+	return sessionId, seqStr
 }

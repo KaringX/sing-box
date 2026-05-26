@@ -20,6 +20,9 @@ func (c *Range) Build() *Range {
 }
 
 func (c *Range) MarshalJSON() ([]byte, error) {
+	if c.From == c.To {
+		return json.Marshal(c.From)
+	}
 	return json.Marshal(fmt.Sprintf("%d-%d", c.From, c.To))
 }
 
@@ -50,9 +53,15 @@ func (c *Range) UnmarshalJSON(content []byte) error {
 			rangeValue.From, rangeValue.To = int32(from), int32(to)
 		}
 	} else {
-		err := json.Unmarshal(content, &rangeValue)
-		if err != nil {
-			return err
+		var int32Value int32
+		err := json.Unmarshal(content, &int32Value)
+		if err == nil {
+			rangeValue.From, rangeValue.To = int32Value, int32Value
+		} else {
+			err := json.Unmarshal(content, &rangeValue)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	if rangeValue.From > rangeValue.To {

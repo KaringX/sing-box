@@ -1,4 +1,3 @@
-// https://github.com/starifly/sing-box
 package v2raykcp
 
 import (

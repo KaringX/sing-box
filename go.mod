@@ -73,12 +73,14 @@ require ( //karing
 	github.com/enfein/mieru/v3 v3.32.0
 	github.com/getsentry/sentry-go v0.46.2
 	github.com/klauspost/compress v1.18.6
+	github.com/klauspost/cpuid/v2 v2.3.0
 	github.com/mattn/go-sqlite3 v1.14.44
 	github.com/metacubex/mihomo v1.19.25
 	github.com/metacubex/sing v0.5.7
 	github.com/shirou/gopsutil/v3 v3.24.5
 	github.com/valyala/fastjson v1.6.10
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
+	lukechampine.com/blake3 v1.3.0
 )
 
 //replace github.com/metacubex/mihomo => github.com/KaringX/clash v0.0.0-20241101044429-f71df89d4091
@@ -100,7 +102,7 @@ replace github.com/sagernet/quic-go => github.com/KaringX/quic-go v0.49.0-beta.1
 
 //replace github.com/sagernet/quic-go => ../../KaringX/quic-go
 
-replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.20260423042345-483848b1e3d4 //karing_v0.8.9
+replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.20260522110650-641082d585f7 //karing_v0.8.9
 
 //replace github.com/sagernet/sing-tun => ../../KaringX/sing-tun
 
@@ -115,6 +117,12 @@ replace github.com/sagernet/wireguard-go => github.com/KaringX/wireguard-go v0.0
 replace github.com/sagernet/tailscale => github.com/KaringX/tailscale v1.80.3-mod.5.0.20260401111223-6aae45c67733 //v1.92.4-sing-box-1.13-mod.7
 
 //replace github.com/sagernet/tailscale => ../../KaringX/tailscale
+
+replace github.com/sagernet/sing-vmess => github.com/KaringX/sing-vmess v0.2.8-0.20260526023644-9a9b48357eaf //v0.2.8-0
+
+//replace github.com/sagernet/sing-vmess => ../../KaringX/sing-vmess
+
+replace github.com/metacubex/sing-shadowsocks2 => github.com/Restia-Ashbell/sing-shadowsocks2 v0.0.0-20250606153500-31ef7b14aaa6
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
@@ -148,7 +156,6 @@ require (
 	github.com/hdevalence/ed25519consensus v0.2.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jsimonetti/rtnetlink v1.4.0 // indirect
-	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/libdns/libdns v1.1.1 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
@@ -232,5 +239,4 @@ require (
 	golang.zx2c4.com/wireguard/windows v0.5.3 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	lukechampine.com/blake3 v1.3.0 // indirect
 )

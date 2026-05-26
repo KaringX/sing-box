@@ -3,7 +3,6 @@ package pipe
 import (
 	"errors"
 	"io"
-	"runtime"
 	"sync"
 	"time"
 
@@ -136,11 +135,10 @@ func (p *pipe) writeMultiBufferInternal(mb buf.MultiBuffer) error {
 
 	if p.data == nil {
 		p.data = mb
-		return nil
+	} else {
+		p.data, _ = buf.MergeMulti(p.data, mb)
 	}
-
-	p.data, _ = buf.MergeMulti(p.data, mb)
-	return errSlowDown
+	return nil
 }
 
 func (p *pipe) WriteMultiBuffer(mb buf.MultiBuffer) error {
@@ -152,14 +150,6 @@ func (p *pipe) WriteMultiBuffer(mb buf.MultiBuffer) error {
 		err := p.writeMultiBufferInternal(mb)
 		if err == nil {
 			p.readSignal.Signal()
-			return nil
-		}
-
-		if err == errSlowDown {
-			p.readSignal.Signal()
-
-			// Yield current goroutine. Hopefully the reading counterpart can pick up the payload.
-			runtime.Gosched()
 			return nil
 		}
 
