@@ -184,7 +184,11 @@ func (r *Router) Start(stage adapter.StartStage) error {
 		}
 		if r.processSearcher != nil {
 			processCache := common.Must1(freelru.NewSharded[processCacheKey, processCacheEntry](256, maphash.NewHasher[processCacheKey]().Hash32))
-			processCache.SetLifetime(200 * time.Millisecond)
+			cacheLifetime := 200 * time.Millisecond //karing
+			if C.IsWindows {                        //karing
+				cacheLifetime = 1 * time.Second
+			}
+			processCache.SetLifetime(cacheLifetime)
 			r.processCache = processCache
 		}
 	case adapter.StartStatePostStart:

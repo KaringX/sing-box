@@ -8,6 +8,8 @@ import (
 
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/common/process"
+	C "github.com/sagernet/sing-box/constant"
+	N "github.com/sagernet/sing/common/network"
 )
 
 type processCacheKey struct {
@@ -22,6 +24,10 @@ type processCacheEntry struct {
 }
 
 func (r *Router) findProcessInfoCached(ctx context.Context, network string, source netip.AddrPort, destination netip.AddrPort) (*adapter.ConnectionOwner, error) {
+	// Windows PID lookup for TCP is source-socket based; collapsing destination improves hit rate on busy TUN traffic. //karing
+	if C.IsWindows && N.NetworkName(network) == N.NetworkTCP { //karing
+		destination = netip.AddrPort{}
+	}
 	key := processCacheKey{
 		Network:     network,
 		Source:      source,
