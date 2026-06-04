@@ -10,6 +10,8 @@ github.com/KaringX/sing-quic v0.2.0-beta.12.0.20260401112009-ee52f61e10ae h1:TN+
 github.com/KaringX/sing-quic v0.2.0-beta.12.0.20260401112009-ee52f61e10ae/go.mod h1:K5bWvITOm4vE10fwLfrWpw27bCoVJ+tfQ79tOWg+Ko8=
 github.com/KaringX/sing-tun v0.6.2-0.20260522110650-641082d585f7 h1:CuZs8jlE0t1FOANk4RpVaahtP1gaFxmfdLfNOM/ecWQ=
 github.com/KaringX/sing-tun v0.6.2-0.20260522110650-641082d585f7/go.mod h1:QvarqUtHfj1ULaRR+6kZOS/OoCE+pYGq67A5tyIy+dQ=
+github.com/KaringX/sing-tun v0.6.2-0.20260604010856-950b6786b823 h1:J/6z+j6h69fmsarCQjBVoVlfk5Y/TawsHpqAtmtZnD8=
+github.com/KaringX/sing-tun v0.6.2-0.20260604010856-950b6786b823/go.mod h1:QvarqUtHfj1ULaRR+6kZOS/OoCE+pYGq67A5tyIy+dQ=
 github.com/KaringX/sing-vmess v0.2.8-0.20260526023644-9a9b48357eaf h1:GwYvApY+7k6wgbOkgyVQVOqFPTP+xrUbYj8eAdZM5ew=
 github.com/KaringX/sing-vmess v0.2.8-0.20260526023644-9a9b48357eaf/go.mod h1:P11scgTxMxVVQ8dlM27yNm3Cro40mD0+gHbnqrNGDuY=
 github.com/KaringX/tailscale v1.80.3-mod.5.0.20260401111223-6aae45c67733 h1:2O2G2LREBbZkSQ6ZjmWG3uTnOvRsdQk/lw4NEZQpEX8=

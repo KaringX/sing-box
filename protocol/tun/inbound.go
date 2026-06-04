@@ -384,6 +384,7 @@ func (t *Inbound) Start(stage adapter.StartStage) error {
 			Tun:                    tunInterface,
 			TunOptions:             t.tunOptions,
 			UDPTimeout:             t.udpTimeout,
+			ICMPTimeout:            C.ICMPTimeout,
 			Handler:                t,
 			Logger:                 t.logger,
 			ForwarderBindInterface: forwarderBindInterface,

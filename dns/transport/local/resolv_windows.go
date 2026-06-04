@@ -11,6 +11,7 @@ import (
 	"unsafe"
 
 	"github.com/sagernet/sing-box/adapter"
+	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/service"
 
 	"golang.org/x/sys/windows"
@@ -84,16 +85,16 @@ func dnsReadConfig(ctx context.Context, _ string) *dnsConfig {
 			}{ifName: windows.UTF16PtrToString(address.FriendlyName), Addr: dnsServerAddr})
 		}
 	}
-	var myInterface string
+	var myInterfaces []string
 	if networkManager := service.FromContext[adapter.NetworkManager](ctx); networkManager != nil {
-		myInterface = networkManager.InterfaceMonitor().MyInterface()
+		myInterfaces = networkManager.InterfaceMonitor().MyInterfaces()
 	}
 	serverSet := make(map[string]struct{}, len(conf.servers)+len(dnsAddresses)) //karing
 	for _, server := range conf.servers {                                       //karing
 		serverSet[server] = struct{}{}
 	}
 	for _, address := range dnsAddresses {
-		if address.ifName == myInterface {
+		if common.Contains(myInterfaces, address.ifName) {
 			continue
 		}
 		//conf.servers = append(conf.servers, net.JoinHostPort(address.String(), "53")) //karing
