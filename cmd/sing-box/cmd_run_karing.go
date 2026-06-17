@@ -72,6 +72,15 @@ func createHttpServer() error {
 				})
 			})
 		})
+		r.Route("/clashiApiConnections", func(r chi.Router) {
+			r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+				includeConnections := r.URL.Query().Get("includeConnections") == "true"
+				content := boxService.GetConnections(includeConnections)
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(content))
+			})
+		})
 		httpServer = &http.Server{
 			Addr:    fmt.Sprintf("127.0.0.1:%d", serviceHttpPort),
 			Handler: r,
