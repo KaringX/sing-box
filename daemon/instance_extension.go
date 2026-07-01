@@ -90,6 +90,9 @@ func (s *Instance) GetConnections(includeConnections bool) string {
 			if err != nil {
 				return fmt.Sprintf("{err:%s}", err.Error())
 			}
+			if len(data) == 0 {
+				return fmt.Sprintf("{}")
+			}
 			return string(data)
 		}
 	}
