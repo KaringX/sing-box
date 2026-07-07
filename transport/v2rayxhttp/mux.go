@@ -13,15 +13,43 @@ import (
 )
 
 type XmuxConn interface {
+	Close()
 	IsClosed() bool
 }
 
 type XmuxClient struct {
 	XmuxConn     XmuxConn
-	OpenUsage    atomic.Int32
+	openUsage    int32
 	leftUsage    int32
 	LeftRequests atomic.Int32
 	UnreusableAt time.Time
+
+	closed bool
+	mtx    sync.Mutex
+}
+
+func (c *XmuxClient) Close() {
+	c.mtx.Lock()
+	defer c.mtx.Unlock()
+	c.closed = true
+	if c.openUsage <= 0 {
+		c.XmuxConn.Close()
+	}
+}
+
+func (c *XmuxClient) AddOpenUsage(delta int32) {
+	c.mtx.Lock()
+	defer c.mtx.Unlock()
+	c.openUsage += delta
+	if c.closed && c.openUsage <= 0 {
+		c.XmuxConn.Close()
+	}
+}
+
+func (c *XmuxClient) GetOpenUsage() int32 {
+	c.mtx.Lock()
+	defer c.mtx.Unlock()
+	return c.openUsage
 }
 
 type XmuxManager struct {
@@ -65,6 +93,7 @@ func (m *XmuxManager) newXmuxClient() *XmuxClient {
 func (m *XmuxManager) GetXmuxClient(ctx context.Context) *XmuxClient {
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
+	var evicted []*XmuxClient
 	for i := 0; i < len(m.xmuxClients); {
 		xmuxClient := m.xmuxClients[i]
 		if xmuxClient.XmuxConn.IsClosed() ||
@@ -72,9 +101,13 @@ func (m *XmuxManager) GetXmuxClient(ctx context.Context) *XmuxClient {
 			xmuxClient.LeftRequests.Load() <= 0 ||
 			(xmuxClient.UnreusableAt != time.Time{} && time.Now().After(xmuxClient.UnreusableAt)) {
 			m.xmuxClients = append(m.xmuxClients[:i], m.xmuxClients[i+1:]...)
+			evicted = append(evicted, xmuxClient)
 		} else {
 			i++
 		}
+	}
+	for _, c := range evicted {
+		c.Close()
 	}
 	if len(m.xmuxClients) == 0 {
 		return m.newXmuxClient()
@@ -85,7 +118,7 @@ func (m *XmuxManager) GetXmuxClient(ctx context.Context) *XmuxClient {
 	xmuxClients := make([]*XmuxClient, 0)
 	if m.concurrency > 0 {
 		for _, xmuxClient := range m.xmuxClients {
-			if xmuxClient.OpenUsage.Load() < m.concurrency {
+			if xmuxClient.GetOpenUsage() < m.concurrency {
 				xmuxClients = append(xmuxClients, xmuxClient)
 			}
 		}

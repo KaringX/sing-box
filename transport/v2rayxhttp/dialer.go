@@ -3,27 +3,33 @@ package xhttp
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"net/http/httptrace"
+	"reflect"
 	"strings"
 	"sync"
+	"unsafe"
 
+	"github.com/sagernet/quic-go/http3"
 	"github.com/sagernet/sing-box/common/vision"
 	common "github.com/sagernet/sing-box/common/xray"
+	"github.com/sagernet/sing-box/common/xray/buf"
 	"github.com/sagernet/sing-box/common/xray/signal/done"
 	"github.com/sagernet/sing-box/option"
+	E "github.com/sagernet/sing/common/exceptions"
+	"golang.org/x/net/http2"
 )
 
 // interface to abstract between use of browser dialer, vs net/http
 type DialerClient interface {
 	IsClosed() bool
+	Close()
 
 	OpenStream(context.Context, string, string, io.Reader, bool) (io.ReadCloser, net.Addr, net.Addr, error)
-	PostPacket(context.Context, string, string, string, io.Reader, int64) error
+	PostPacket(context.Context, string, string, string, buf.MultiBuffer) error
 }
 
 // implements xhttp.DialerClient in terms of direct network connections
@@ -35,9 +41,54 @@ type DefaultDialerClient struct {
 	// pool of net.Conn, created using dialUploadConn
 	uploadRawPool  *sync.Pool
 	dialUploadConn func(ctxInner context.Context) (net.Conn, error)
+
+	mtx sync.RWMutex
+}
+
+type clientConnPool struct {
+	t     *http2.Transport
+	mu    sync.Mutex
+	conns map[string][]*http2.ClientConn
+}
+
+type efaceWords struct {
+	typ  unsafe.Pointer
+	data unsafe.Pointer
+}
+
+//go:linkname transportConnPool golang.org/x/net/http2.(*Transport).connPool
+func transportConnPool(t *http2.Transport) http2.ClientConnPool
+
+func (c *DefaultDialerClient) Close() {
+	c.mtx.Lock()
+	defer c.mtx.Unlock()
+	if c.closed {
+		return
+	}
+	c.closed = true
+	switch transport := c.client.Transport.(type) {
+	case *http.Transport:
+		transport.CloseIdleConnections()
+	case *http2.Transport:
+		connPool := transportConnPool(transport)
+		p := (*clientConnPool)((*efaceWords)(unsafe.Pointer(&connPool)).data)
+		p.mu.Lock()
+		defer p.mu.Unlock()
+		for _, vv := range p.conns {
+			for _, cc := range vv {
+				cc.Close()
+			}
+		}
+	case *http3.Transport:
+		transport.Close()
+	default:
+		panic(E.New("unknown transport type: ", reflect.TypeOf(transport)))
+	}
 }
 
 func (c *DefaultDialerClient) IsClosed() bool {
+	c.mtx.RLock()
+	defer c.mtx.RUnlock()
 	return c.closed
 }
 
@@ -61,48 +112,26 @@ func (c *DefaultDialerClient) OpenStream(ctx context.Context, url string, sessio
 	if err != nil {                                                                       //karing
 		return
 	}
-	req.Header = c.options.GetRequestHeader()
-	length := int(c.options.GetNormalizedXPaddingBytes().Rand())
-	config := XPaddingConfig{Length: length}
-	if c.options.XPaddingObfsMode {
-		config.Placement = XPaddingPlacement{
-			Placement: c.options.XPaddingPlacement,
-			Key:       c.options.XPaddingKey,
-			Header:    c.options.XPaddingHeader,
-			RawURL:    url,
-		}
-		config.Method = PaddingMethod(c.options.XPaddingMethod)
-	} else {
-		config.Placement = XPaddingPlacement{
-			Placement: option.PlacementQueryInHeader,
-			Key:       "x_padding",
-			Header:    "Referer",
-			RawURL:    url,
-		}
-		config.Method = PaddingMethodRepeatX
-	}
-	ApplyXPaddingToRequest(req, config)
-	ApplyMetaToRequest(c.options, req, sessionId, "")
-	if method == c.options.GetNormalizedUplinkHTTPMethod() && !c.options.NoGRPCHeader {
-		req.Header.Set("Content-Type", "application/grpc")
-	}
+	FillStreamRequest(req, sessionId, "", c.options)
 	wrc = &WaitReadCloser{Wait: make(chan struct{})}
 	go func() {
 		resp, err := c.client.Do(req)
 		if err != nil {
 			if !uploadOnly {
-				c.closed = true
+				c.Close()
 			}
 			gotConn.Close()
+			common.Close(body)
 			wrc.Close()
 			return
 		}
 		if resp.StatusCode != 200 || uploadOnly {
 			if resp.StatusCode != 200 {
-				c.closed = true
+				c.Close()
 			}
 			io.Copy(io.Discard, resp.Body)
 			resp.Body.Close()
+			common.Close(body)
 			wrc.Close()
 			return
 		}
@@ -112,92 +141,30 @@ func (c *DefaultDialerClient) OpenStream(ctx context.Context, url string, sessio
 	return
 }
 
-func (c *DefaultDialerClient) PostPacket(ctx context.Context, url string, sessionId string, seqStr string, body io.Reader, contentLength int64) error {
-	var encodedData string
-	dataPlacement := c.options.GetNormalizedUplinkDataPlacement()
-	if dataPlacement != option.PlacementBody {
-		data, err := io.ReadAll(body)
-		if err != nil {
-			return err
-		}
-		encodedData = base64.RawURLEncoding.EncodeToString(data)
-		body = nil
-		contentLength = 0
-	}
+func (c *DefaultDialerClient) PostPacket(ctx context.Context, url string, sessionId string, seqStr string, payload buf.MultiBuffer) error {
 	method := c.options.GetNormalizedUplinkHTTPMethod()
-	req, err := http.NewRequestWithContext(context.WithoutCancel(ctx), method, url, body)
+	req, err := http.NewRequestWithContext(context.WithoutCancel(ctx), method, url, nil)
 	if err != nil {
 		return err
 	}
-	req.ContentLength = contentLength
-	req.Header = c.options.GetRequestHeader()
-	if dataPlacement != option.PlacementBody {
-		key := c.options.UplinkDataKey
-		chunkSize := int(c.options.UplinkChunkSize)
-		switch dataPlacement {
-		case option.PlacementHeader:
-			for i := 0; i < len(encodedData); i += chunkSize {
-				end := i + chunkSize
-				if end > len(encodedData) {
-					end = len(encodedData)
-				}
-				chunk := encodedData[i:end]
-				headerKey := fmt.Sprintf("%s-%d", key, i/chunkSize)
-				req.Header.Set(headerKey, chunk)
-			}
-			req.Header.Set(key+"-Length", fmt.Sprintf("%d", len(encodedData)))
-			req.Header.Set(key+"-Upstream", "1")
-		case option.PlacementCookie:
-			for i := 0; i < len(encodedData); i += chunkSize {
-				end := i + chunkSize
-				if end > len(encodedData) {
-					end = len(encodedData)
-				}
-				chunk := encodedData[i:end]
-				cookieName := fmt.Sprintf("%s_%d", key, i/chunkSize)
-				req.AddCookie(&http.Cookie{Name: cookieName, Value: chunk})
-			}
-			req.AddCookie(&http.Cookie{Name: key + "_upstream", Value: "1"})
-		}
-	}
-	length := int(c.options.GetNormalizedXPaddingBytes().Rand())
-	config := XPaddingConfig{Length: length}
-	if c.options.XPaddingObfsMode {
-		config.Placement = XPaddingPlacement{
-			Placement: c.options.XPaddingPlacement,
-			Key:       c.options.XPaddingKey,
-			Header:    c.options.XPaddingHeader,
-			RawURL:    url,
-		}
-		config.Method = PaddingMethod(c.options.XPaddingMethod)
-	} else {
-		config.Placement = XPaddingPlacement{
-			Placement: option.PlacementQueryInHeader,
-			Key:       "x_padding",
-			Header:    "Referer",
-			RawURL:    url,
-		}
-		config.Method = PaddingMethodRepeatX
-	}
-	ApplyXPaddingToRequest(req, config)
-	ApplyMetaToRequest(c.options, req, sessionId, seqStr)
+	FillPacketRequest(req, sessionId, seqStr, payload, c.options)
 	if c.httpVersion != "1.1" {
 		resp, err := c.client.Do(req)
 		if err != nil {
-			c.closed = true
+			c.Close()
 			return err
 		}
 		_, copyErr := io.Copy(io.Discard, resp.Body)
 		closeErr := resp.Body.Close()
 		if resp.StatusCode != 200 {
-			c.closed = true
+			c.Close()
 			if copyErr != nil {
 				return copyErr
 			}
 			if closeErr != nil {
 				return closeErr
 			}
-			return fmt.Errorf("bad status code: %s", resp.Status)
+			return E.New("bad status code: ", resp.Status)
 		}
 		if copyErr != nil {
 			return copyErr
@@ -207,6 +174,7 @@ func (c *DefaultDialerClient) PostPacket(ctx context.Context, url string, sessio
 		}
 	} else {
 		requestBuff := new(bytes.Buffer)
+		requestBuff.Grow(512 + int(req.ContentLength))
 		common.Must(req.Write(requestBuff))
 		var uploadConn any
 		var h1UploadConn *H1Conn
@@ -225,13 +193,13 @@ func (c *DefaultDialerClient) PostPacket(ctx context.Context, url string, sessio
 				if h1UploadConn.UnreadedResponsesCount > 0 {
 					resp, err := http.ReadResponse(h1UploadConn.RespBufReader, req)
 					if err != nil {
-						c.closed = true
+						c.Close()
 						return fmt.Errorf("error while reading response: %s", err.Error())
 					}
 					_, copyErr := io.Copy(io.Discard, resp.Body)
 					closeErr := resp.Body.Close()
 					if resp.StatusCode != 200 {
-						c.closed = true
+						c.Close()
 						return fmt.Errorf("got non-200 error response code: %d", resp.StatusCode)
 					}
 					if copyErr != nil {

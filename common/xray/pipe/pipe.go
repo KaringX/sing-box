@@ -42,7 +42,7 @@ func New(opts ...Option) (*Reader, *Writer) {
 	}
 
 	for _, opt := range opts {
-		opt(&(p.option))
+		opt(&p.option)
 	}
 
 	return &Reader{

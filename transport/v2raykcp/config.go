@@ -17,6 +17,8 @@ type Config struct {
 	WriteBufferSize  uint32
 	HeaderType       string
 	Seed             string
+	CwndMultiplier   uint32
+	MaxSendingWindow uint32
 }
 
 // NewConfig creates a new Config from options
@@ -31,6 +33,8 @@ func NewConfig(options option.V2RayKCPOptions) *Config {
 		WriteBufferSize:  options.GetWriteBufferSize(),
 		HeaderType:       options.GetHeaderType(),
 		Seed:             options.Seed,
+		CwndMultiplier:   options.GetCwndMultiplier(),
+		MaxSendingWindow: options.GetMaxSendingWindow(),
 	}
 }
 
@@ -125,4 +129,18 @@ func (c *Config) GetReceivingInFlightSize() uint32 {
 
 func (c *Config) GetReceivingBufferSize() uint32 {
 	return c.GetReadBufferSize() / c.GetMTUValue()
+}
+
+func (c *Config) GetCwndMultiplier() uint32 {
+	if c == nil || c.CwndMultiplier == 0 {
+		return 20
+	}
+	return c.CwndMultiplier
+}
+
+func (c *Config) GetMaxSendingWindow() uint32 {
+	if c == nil || c.MaxSendingWindow == 0 {
+		return c.GetSendingInFlightSize()
+	}
+	return c.MaxSendingWindow
 }

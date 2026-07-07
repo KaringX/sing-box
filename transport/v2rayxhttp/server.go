@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -18,6 +19,8 @@ import (
 	"github.com/sagernet/quic-go/http3"
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/common/tls"
+	"github.com/sagernet/sing-box/common/xray/buf"
+	xnet "github.com/sagernet/sing-box/common/xray/net"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
@@ -91,7 +94,7 @@ func NewServer(ctx context.Context, logger logger.ContextLogger, options option.
 		server.httpServer = &http.Server{
 			Handler:           server,
 			ReadHeaderTimeout: time.Second * 4,
-			MaxHeaderBytes:    8192,
+			MaxHeaderBytes:    options.GetNormalizedServerMaxHeaderBytes(),
 			Protocols:         protocols,
 			BaseContext: func(net.Listener) context.Context {
 				return ctx
@@ -123,8 +126,7 @@ func (s *Server) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		writer.WriteHeader(http.StatusNotFound)
 		return
 	}
-	writer.Header().Set("Access-Control-Allow-Origin", "*")
-	writer.Header().Set("Access-Control-Allow-Methods", "*")
+	WriteResponseHeader(writer, request.Method, request.Header, s.options)
 	length := int(s.options.GetNormalizedXPaddingBytes().Rand())
 	config := XPaddingConfig{Length: length}
 	if s.options.XPaddingObfsMode {
@@ -140,7 +142,11 @@ func (s *Server) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 			Header:    "X-Padding",
 		}
 	}
-	ApplyXPaddingToHeader(writer.Header(), config)
+	ApplyXPaddingToResponse(writer, config)
+	if request.Method == "OPTIONS" {
+		writer.WriteHeader(http.StatusOK)
+		return
+	}
 	validRange := s.options.GetNormalizedXPaddingBytes()
 	paddingValue, paddingPlacement := ExtractXPaddingFromRequest(&s.options.V2RayXHTTPBaseOptions, request, s.options.XPaddingObfsMode)
 	if !IsPaddingValid(&s.options.V2RayXHTTPBaseOptions, paddingValue, validRange.From, validRange.To, PaddingMethod(s.options.XPaddingMethod)) {
@@ -154,7 +160,17 @@ func (s *Server) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	forwardedAddrs := parseXForwardedFor(request.Header)
+	var forwardedAddrs []xnet.Address
+	if len(s.options.TrustedXForwardedFor) > 0 {
+		for _, key := range s.options.TrustedXForwardedFor {
+			if len(request.Header.Values(key)) > 0 {
+				forwardedAddrs = parseXForwardedFor(request.Header)
+				break
+			}
+		}
+	} else {
+		forwardedAddrs = parseXForwardedFor(request.Header)
+	}
 	var remoteAddr net.Addr
 	var err error
 	remoteAddr, err = net.ResolveTCPAddr("tcp", request.RemoteAddr)
@@ -181,22 +197,14 @@ func (s *Server) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		currentSession = s.upsertSession(sessionId)
 	}
 	scMaxEachPostBytes := int(s.options.GetNormalizedScMaxEachPostBytes().To)
-	uplinkHTTPMethod := s.options.GetNormalizedUplinkHTTPMethod()
-	isUplinkRequest := false
-	if uplinkHTTPMethod != "GET" && request.Method == uplinkHTTPMethod {
-		isUplinkRequest = true
-	}
 	uplinkDataPlacement := s.options.GetNormalizedUplinkDataPlacement()
 	uplinkDataKey := s.options.UplinkDataKey
-	switch uplinkDataPlacement {
-	case option.PlacementHeader:
-		if request.Header.Get(uplinkDataKey+"-Upstream") == "1" {
-			isUplinkRequest = true
-		}
-	case option.PlacementCookie:
-		if c, _ := request.Cookie(uplinkDataKey + "_upstream"); c != nil && c.Value == "1" {
-			isUplinkRequest = true
-		}
+	isUplinkRequest := false
+	switch request.Method {
+	case "GET":
+		isUplinkRequest = seqStr != ""
+	default:
+		isUplinkRequest = true
 	}
 	if isUplinkRequest && sessionId != "" {
 		if seqStr == "" {
@@ -246,63 +254,77 @@ func (s *Server) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 			writer.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		var payload []byte
-		if uplinkDataPlacement != option.PlacementBody {
-			var encodedStr string
-			switch uplinkDataPlacement {
-			case option.PlacementHeader:
-				dataLenStr := request.Header.Get(uplinkDataKey + "-Length")
-				if dataLenStr != "" {
-					dataLen, _ := strconv.Atoi(dataLenStr)
-					var chunks []string
-					i := 0
-					for {
-						chunk := request.Header.Get(fmt.Sprintf("%s-%d", uplinkDataKey, i))
-						if chunk == "" {
-							break
-						}
-						chunks = append(chunks, chunk)
-						i++
-					}
-					encodedStr = strings.Join(chunks, "")
-					if len(encodedStr) != dataLen {
-						encodedStr = ""
-					}
+		var headerPayload []byte
+		if uplinkDataPlacement == option.PlacementAuto || uplinkDataPlacement == option.PlacementHeader {
+			var headerPayloadChunks []string
+			for i := 0; true; i++ {
+				chunk := request.Header.Get(fmt.Sprintf("%s-%d", uplinkDataKey, i))
+				if chunk == "" {
+					break
 				}
-			case option.PlacementCookie:
-				var chunks []string
-				i := 0
-				for {
-					cookieName := fmt.Sprintf("%s_%d", uplinkDataKey, i)
-					if c, _ := request.Cookie(cookieName); c != nil {
-						chunks = append(chunks, c.Value)
-						i++
-					} else {
-						break
-					}
-				}
-				if len(chunks) > 0 {
-					encodedStr = strings.Join(chunks, "")
-				}
+				headerPayloadChunks = append(headerPayloadChunks, chunk)
 			}
-			if encodedStr != "" {
-				payload, err = base64.RawURLEncoding.DecodeString(encodedStr)
-			} else {
-				s.logger.ErrorContext(request.Context(), err, "failed to extract data from key "+uplinkDataKey+" placed in "+uplinkDataPlacement)
-				writer.WriteHeader(http.StatusInternalServerError)
+			headerPayloadEncoded := strings.Join(headerPayloadChunks, "")
+			headerPayload, err = base64.RawURLEncoding.DecodeString(headerPayloadEncoded)
+			if err != nil {
+				s.logger.InfoContext(request.Context(), err, "Invalid base64 in header's payload")
+				writer.WriteHeader(http.StatusBadRequest)
 				return
 			}
-		} else {
-			payload, err = io.ReadAll(io.LimitReader(request.Body, int64(scMaxEachPostBytes)+1))
+		}
+		var cookiePayload []byte
+		if uplinkDataPlacement == option.PlacementAuto || uplinkDataPlacement == option.PlacementCookie {
+			var cookiePayloadChunks []string
+			for i := 0; true; i++ {
+				cookieName := fmt.Sprintf("%s_%d", uplinkDataKey, i)
+				if c, _ := request.Cookie(cookieName); c != nil {
+					cookiePayloadChunks = append(cookiePayloadChunks, c.Value)
+				} else {
+					break
+				}
+			}
+			cookiePayloadEncoded := strings.Join(cookiePayloadChunks, "")
+			cookiePayload, err = base64.RawURLEncoding.DecodeString(cookiePayloadEncoded)
+			if err != nil {
+				s.logger.InfoContext(request.Context(), err, "Invalid base64 in cookies' payload")
+				writer.WriteHeader(http.StatusBadRequest)
+				return
+			}
+		}
+		var bodyPayload []byte
+		if uplinkDataPlacement == option.PlacementAuto || uplinkDataPlacement == option.PlacementBody {
+			var readErr error
+			if request.ContentLength > int64(scMaxEachPostBytes) {
+				s.logger.ErrorContext(request.Context(), "Too large upload. scMaxEachPostBytes is set to ", scMaxEachPostBytes, "but request size exceed it. Adjust scMaxEachPostBytes on the server to be at least as large as client.")
+				writer.WriteHeader(http.StatusRequestEntityTooLarge)
+				return
+			}
+			if request.ContentLength > 0 {
+				bodyPayload = make([]byte, request.ContentLength)
+				_, readErr = io.ReadFull(request.Body, bodyPayload)
+			} else {
+				bodyPayload, readErr = buf.ReadAllToBytes(io.LimitReader(request.Body, int64(scMaxEachPostBytes)+1))
+			}
+			if readErr != nil {
+				s.logger.InfoContext(request.Context(), readErr, "failed to read body payload")
+				writer.WriteHeader(http.StatusBadRequest)
+				return
+			}
+		}
+		var payload []byte
+		switch uplinkDataPlacement {
+		case option.PlacementHeader:
+			payload = headerPayload
+		case option.PlacementCookie:
+			payload = cookiePayload
+		case option.PlacementBody:
+			payload = bodyPayload
+		case option.PlacementAuto:
+			payload = slices.Concat(headerPayload, cookiePayload, bodyPayload)
 		}
 		if len(payload) > scMaxEachPostBytes {
 			s.logger.ErrorContext(request.Context(), "Too large upload. scMaxEachPostBytes is set to ", scMaxEachPostBytes, "but request size exceed it. Adjust scMaxEachPostBytes on the server to be at least as large as client.")
 			writer.WriteHeader(http.StatusRequestEntityTooLarge)
-			return
-		}
-		if err != nil {
-			s.logger.InfoContext(request.Context(), err, "failed to upload (ReadAll)")
-			writer.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 		seq, err := strconv.ParseUint(seqStr, 10, 64)
@@ -319,6 +341,9 @@ func (s *Server) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 			s.logger.InfoContext(request.Context(), err, "failed to upload (PushPayload)")
 			writer.WriteHeader(http.StatusInternalServerError)
 			return
+		}
+		if len(bodyPayload) == 0 {
+			writer.Header().Set("Cache-Control", "no-store")
 		}
 		writer.WriteHeader(http.StatusOK)
 	} else if request.Method == "GET" || sessionId == "" {
@@ -441,17 +466,17 @@ func ExtractMetaFromRequest(options *option.V2RayXHTTPOptions, req *http.Request
 	seqPlacement := options.GetNormalizedSeqPlacement()
 	sessionKey := options.GetNormalizedSessionKey()
 	seqKey := options.GetNormalizedSeqKey()
-	if sessionPlacement == option.PlacementPath && seqPlacement == option.PlacementPath {
-		subpath := strings.Split(req.URL.Path[len(path):], "/")
-		if len(subpath) > 0 {
-			sessionId = subpath[0]
-		}
-		if len(subpath) > 1 {
-			seqStr = subpath[1]
-		}
-		return sessionId, seqStr
+	var subpath []string
+	pathPart := 0
+	if sessionPlacement == option.PlacementPath || seqPlacement == option.PlacementPath {
+		subpath = strings.Split(req.URL.Path[len(path):], "/")
 	}
 	switch sessionPlacement {
+	case option.PlacementPath:
+		if len(subpath) > pathPart {
+			sessionId = subpath[pathPart]
+			pathPart += 1
+		}
 	case option.PlacementQuery:
 		sessionId = req.URL.Query().Get(sessionKey)
 	case option.PlacementHeader:
@@ -462,6 +487,11 @@ func ExtractMetaFromRequest(options *option.V2RayXHTTPOptions, req *http.Request
 		}
 	}
 	switch seqPlacement {
+	case option.PlacementPath:
+		if len(subpath) > pathPart {
+			seqStr = subpath[pathPart]
+			pathPart += 1
+		}
 	case option.PlacementQuery:
 		seqStr = req.URL.Query().Get(seqKey)
 	case option.PlacementHeader:

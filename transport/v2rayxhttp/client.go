@@ -184,10 +184,10 @@ func (c *Client) DialContext(ctx context.Context) (net.Conn, error) {
 		logger.DebugContext(ctx, fmt.Sprintf("XHTTP is downloading from %s, mode %s, HTTP version %s, host %s", destLabel2, "stream-down", httpVersion2, requestURL2.Host))
 	}
 	if xmuxClient != nil {
-		xmuxClient.OpenUsage.Add(1)
+		xmuxClient.AddOpenUsage(1)
 	}
 	if xmuxClient2 != nil && xmuxClient2 != xmuxClient {
-		xmuxClient2.OpenUsage.Add(1)
+		xmuxClient2.AddOpenUsage(1)
 	}
 	var closed atomic.Int32
 	uploadBaseCtx := context.WithoutCancel(ctx)
@@ -201,10 +201,10 @@ func (c *Client) DialContext(ctx context.Context) (net.Conn, error) {
 			}
 			cancelUpload()
 			if xmuxClient != nil {
-				xmuxClient.OpenUsage.Add(-1)
+				xmuxClient.AddOpenUsage(-1)
 			}
 			if xmuxClient2 != nil && xmuxClient2 != xmuxClient {
-				xmuxClient2.OpenUsage.Add(-1)
+				xmuxClient2.AddOpenUsage(-1)
 			}
 		},
 	}
@@ -240,11 +240,11 @@ func (c *Client) DialContext(ctx context.Context) (net.Conn, error) {
 	}
 	scMaxEachPostBytes := options.GetNormalizedScMaxEachPostBytes()
 	scMinPostsIntervalMs := options.GetNormalizedScMinPostsIntervalMs()
-	if scMaxEachPostBytes.From <= buf.Size {
-		panic("`scMaxEachPostBytes` should be bigger than " + strconv.Itoa(buf.Size))
+	if scMaxEachPostBytes.From <= 0 {
+		panic("`scMaxEachPostBytes` should be bigger than 0")
 	}
 	maxUploadSize := scMaxEachPostBytes.Rand()
-	uploadPipeReader, uploadPipeWriter := pipe.New(pipe.WithSizeLimit(maxUploadSize - buf.Size))
+	uploadPipeReader, uploadPipeWriter := pipe.New(pipe.WithSizeLimit(max(0, maxUploadSize-buf.Size)))
 	conn.writer = uploadWriter{
 		uploadPipeWriter,
 		maxUploadSize,
@@ -253,59 +253,69 @@ func (c *Client) DialContext(ctx context.Context) (net.Conn, error) {
 		defer uploadPipeReader.Interrupt()
 		var seq int64
 		var lastWrite time.Time
+		dynamicHTTPClient := httpClient
+		dynamicXmuxClient := xmuxClient
 		for {
 			select {
 			case <-uploadCtx.Done():
 				return
 			default:
 			}
-			wroteRequest := done.New()
-			reqCtx := httptrace.WithClientTrace(uploadCtx, &httptrace.ClientTrace{
-				WroteRequest: func(httptrace.WroteRequestInfo) {
-					wroteRequest.Close()
-				},
-			})
-			url := requestURL
-			seqStr := strconv.FormatInt(seq, 10)
-			seq += 1
-			if scMinPostsIntervalMs.From > 0 {
-				time.Sleep(time.Duration(scMinPostsIntervalMs.Rand())*time.Millisecond - time.Since(lastWrite))
-			}
-			chunk, err := uploadPipeReader.ReadMultiBuffer()
+			remainder, err := uploadPipeReader.ReadMultiBuffer()
 			if err != nil {
 				return
 			}
-			select {
-			case <-uploadCtx.Done():
-				return
-			default:
-			}
-			lastWrite = time.Now()
-			if xmuxClient != nil && (xmuxClient.LeftRequests.Add(-1) <= 0 ||
-				(xmuxClient.UnreusableAt != time.Time{} && lastWrite.After(xmuxClient.UnreusableAt))) {
-				httpClient, xmuxClient = c.getHTTPClient()
-			}
-			go func(chunk buf.MultiBuffer, baseCtx context.Context, seqStr string) {
-				postCtx, cancelPost := context.WithCancel(baseCtx)
-				defer cancelPost()
-				defer wroteRequest.Close()
-				err := httpClient.PostPacket(
-					postCtx,
-					url.String(),
-					sessionId,
-					seqStr,
-					&buf.MultiBufferContainer{MultiBuffer: chunk},
-					int64(chunk.Len()),
-				)
-				if err != nil {
-					uploadPipeReader.Interrupt()
+			doSplit := atomic.Bool{}
+			for doSplit.Store(true); doSplit.Load(); {
+				var chunk buf.MultiBuffer
+				remainder, chunk = buf.SplitSize(remainder, maxUploadSize)
+				if chunk.IsEmpty() {
+					break
 				}
-			}(chunk, reqCtx, seqStr)
-			if _, ok := httpClient.(*DefaultDialerClient); ok {
+				wroteRequest := done.New()
+				reqCtx := httptrace.WithClientTrace(uploadCtx, &httptrace.ClientTrace{
+					WroteRequest: func(httptrace.WroteRequestInfo) {
+						wroteRequest.Close()
+					},
+				})
+				url := requestURL
+				seqStr := strconv.FormatInt(seq, 10)
+				seq += 1
+				if scMinPostsIntervalMs.From > 0 {
+					time.Sleep(time.Duration(scMinPostsIntervalMs.Rand())*time.Millisecond - time.Since(lastWrite))
+				}
 				select {
-				case <-wroteRequest.Wait():
 				case <-uploadCtx.Done():
 					return
+				default:
+				}
+				lastWrite = time.Now()
+				if dynamicXmuxClient != nil && (dynamicXmuxClient.LeftRequests.Add(-1) <= 0 ||
+					(dynamicXmuxClient.UnreusableAt != time.Time{} && lastWrite.After(dynamicXmuxClient.UnreusableAt))) {
+					dynamicHTTPClient, dynamicXmuxClient = c.getHTTPClient()
+				}
+				go func(chunk buf.MultiBuffer, baseCtx context.Context, seqStr string, hClient DialerClient) {
+					postCtx, cancelPost := context.WithCancel(baseCtx)
+					defer cancelPost()
+					defer wroteRequest.Close()
+					err := hClient.PostPacket(
+						postCtx,
+						url.String(),
+						sessionId,
+						seqStr,
+						chunk,
+					)
+					if err != nil {
+						uploadPipeReader.Interrupt()
+						doSplit.Store(false)
+					}
+				}(chunk, reqCtx, seqStr, dynamicHTTPClient)
+				if _, ok := dynamicHTTPClient.(*DefaultDialerClient); ok {
+					select {
+					case <-wroteRequest.Wait():
+					case <-uploadCtx.Done():
+						return
+					}
 				}
 			}
 		}

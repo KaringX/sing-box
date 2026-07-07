@@ -153,22 +153,23 @@ func (p *pipe) WriteMultiBuffer(mb buf.MultiBuffer) error {
 			return nil
 		}
 
-		if err == errBufferFull && p.option.discardOverflow {
-			buf.ReleaseMulti(mb)
-			return nil
+		if err == errBufferFull {
+			if p.option.discardOverflow {
+				buf.ReleaseMulti(mb)
+				return nil
+			}
+			select {
+			case <-p.writeSignal.Wait():
+				continue
+			case <-p.done.Wait():
+				buf.ReleaseMulti(mb)
+				return io.ErrClosedPipe
+			}
 		}
 
-		if err != errBufferFull {
-			buf.ReleaseMulti(mb)
-			p.readSignal.Signal()
-			return err
-		}
-
-		select {
-		case <-p.writeSignal.Wait():
-		case <-p.done.Wait():
-			return io.ErrClosedPipe
-		}
+		buf.ReleaseMulti(mb)
+		p.readSignal.Signal()
+		return err
 	}
 }
 

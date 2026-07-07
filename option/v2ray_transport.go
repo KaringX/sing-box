@@ -61,7 +61,7 @@ func (o V2RayTransportOptions) MarshalJSON() ([]byte, error) {
 	default:
 		return nil, E.New("unknown transport type: " + o.Type)
 	}
-	return badjson.MarshallObjects((_V2RayTransportOptions)(o), v)
+	return badjson.MarshallObjects(_V2RayTransportOptions(o), v)
 }
 
 func (o *V2RayTransportOptions) UnmarshalJSON(bytes []byte) error {
@@ -134,32 +134,34 @@ type V2RayHTTPUpgradeOptions struct {
 // github.com/sagernet/sing-box/transport/v2rayxhttp
 // github.com/sagernet/sing-box/protocol/vless/encryption
 type V2RayXHTTPBaseOptions struct {
-	Mode                 string                 `json:"mode"`
-	Host                 string                 `json:"host,omitempty"`
-	Path                 string                 `json:"path,omitempty"`
-	Headers              map[string]string      `json:"headers,omitempty"`
-	DomainStrategy       DomainStrategy         `json:"domain_strategy,omitempty"`
-	XPaddingBytes        Xbadoption.Range       `json:"x_padding_bytes"`
-	NoGRPCHeader         bool                   `json:"no_grpc_header,omitempty"`
-	NoSSEHeader          bool                   `json:"no_sse_header,omitempty"`
-	ScMaxEachPostBytes   Xbadoption.Range       `json:"sc_max_each_post_bytes"`
-	ScMinPostsIntervalMs Xbadoption.Range       `json:"sc_min_posts_interval_ms"`
-	ScMaxBufferedPosts   int64                  `json:"sc_max_buffered_posts,omitempty"`
-	ScStreamUpServerSecs Xbadoption.Range       `json:"sc_stream_up_server_secs"`
-	Xmux                 *V2RayXHTTPXmuxOptions `json:"xmux"`
-	XPaddingObfsMode     bool                   `json:"x_padding_obfs_mode,omitempty"`
-	XPaddingKey          string                 `json:"x_padding_key,omitempty"`
-	XPaddingHeader       string                 `json:"x_padding_header,omitempty"`
-	XPaddingPlacement    string                 `json:"x_padding_placement,omitempty"`
-	XPaddingMethod       string                 `json:"x_padding_method,omitempty"`
-	UplinkHTTPMethod     string                 `json:"uplink_http_method,omitempty"`
-	SessionPlacement     string                 `json:"session_placement,omitempty"`
-	SessionKey           string                 `json:"session_key,omitempty"`
-	SeqPlacement         string                 `json:"seq_placement,omitempty"`
-	SeqKey               string                 `json:"seq_key,omitempty"`
-	UplinkDataPlacement  string                 `json:"uplink_data_placement,omitempty"`
-	UplinkDataKey        string                 `json:"uplink_data_key,omitempty"`
-	UplinkChunkSize      uint32                 `json:"uplink_chunk_size,omitempty"`
+	Mode                 string                     `json:"mode"`
+	Host                 string                     `json:"host,omitempty"`
+	Path                 string                     `json:"path,omitempty"`
+	Headers              map[string]string          `json:"headers,omitempty"`
+	DomainStrategy       DomainStrategy             `json:"domain_strategy,omitempty"`
+	XPaddingBytes        Xbadoption.Range           `json:"x_padding_bytes"`
+	NoGRPCHeader         bool                       `json:"no_grpc_header,omitempty"`
+	NoSSEHeader          bool                       `json:"no_sse_header,omitempty"`
+	ScMaxEachPostBytes   *Xbadoption.Range          `json:"sc_max_each_post_bytes"`
+	ScMinPostsIntervalMs *Xbadoption.Range          `json:"sc_min_posts_interval_ms"`
+	ScMaxBufferedPosts   int64                      `json:"sc_max_buffered_posts,omitempty"`
+	ScStreamUpServerSecs *Xbadoption.Range          `json:"sc_stream_up_server_secs"`
+	ServerMaxHeaderBytes int                        `json:"server_max_header_bytes"`
+	TrustedXForwardedFor badoption.Listable[string] `json:"trusted_x_forwarded_for,omitempty"`
+	Xmux                 *V2RayXHTTPXmuxOptions     `json:"xmux"`
+	XPaddingObfsMode     bool                       `json:"x_padding_obfs_mode,omitempty"`
+	XPaddingKey          string                     `json:"x_padding_key,omitempty"`
+	XPaddingHeader       string                     `json:"x_padding_header,omitempty"`
+	XPaddingPlacement    string                     `json:"x_padding_placement,omitempty"`
+	XPaddingMethod       string                     `json:"x_padding_method,omitempty"`
+	UplinkHTTPMethod     string                     `json:"uplink_http_method,omitempty"`
+	SessionPlacement     string                     `json:"session_placement,omitempty"`
+	SessionKey           string                     `json:"session_key,omitempty"`
+	SeqPlacement         string                     `json:"seq_placement,omitempty"`
+	SeqKey               string                     `json:"seq_key,omitempty"`
+	UplinkDataPlacement  string                     `json:"uplink_data_placement,omitempty"`
+	UplinkDataKey        string                     `json:"uplink_data_key,omitempty"`
+	UplinkChunkSize      *Xbadoption.Range          `json:"uplink_chunk_size,omitempty"`
 }
 
 type _V2RayXHTTPOptions struct {
@@ -184,6 +186,7 @@ const (
 	PlacementQuery         = "query"
 	PlacementPath          = "path"
 	PlacementBody          = "body"
+	PlacementAuto          = "auto"
 )
 
 func (c V2RayXHTTPOptions) MarshalJSON() ([]byte, error) {
@@ -249,11 +252,11 @@ func checkV2RayXHTTPBaseOptions(mode string, options *V2RayXHTTPBaseOptions) err
 	}
 	switch options.UplinkDataPlacement {
 	case "":
-		options.UplinkDataPlacement = "body"
-	case "body":
-	case "cookie", "header":
+		options.UplinkDataPlacement = PlacementAuto
+	case PlacementAuto, PlacementBody:
+	case PlacementCookie, PlacementHeader:
 		if mode != "packet-up" {
-			return E.New("uplink_data_placement can be " + options.UplinkDataPlacement + " only in packet-up mode")
+			return E.New("UplinkDataPlacement can be " + options.UplinkDataPlacement + " only in packet-up mode")
 		}
 	default:
 		return E.New("unsupported uplink data placement: " + options.UplinkDataPlacement)
@@ -275,11 +278,7 @@ func checkV2RayXHTTPBaseOptions(mode string, options *V2RayXHTTPBaseOptions) err
 	switch options.SeqPlacement {
 	case "":
 		options.SeqPlacement = "path"
-	case "path":
-	case "cookie", "header", "query":
-		if options.SessionPlacement == "path" {
-			return E.New("seq_placement must be path when session_placement is path")
-		}
+	case "path", "cookie", "header", "query":
 	default:
 		return E.New("unsupported seq placement: " + options.SeqPlacement)
 	}
@@ -299,23 +298,16 @@ func checkV2RayXHTTPBaseOptions(mode string, options *V2RayXHTTPBaseOptions) err
 			options.SeqKey = "X-Seq"
 		}
 	}
-	if options.UplinkDataPlacement != "body" && options.UplinkDataKey == "" {
+	if options.UplinkDataPlacement != PlacementBody && options.UplinkDataKey == "" {
 		switch options.UplinkDataPlacement {
-		case "cookie":
+		case PlacementCookie:
 			options.UplinkDataKey = "x_data"
-		case "header":
+		case PlacementAuto, PlacementHeader:
 			options.UplinkDataKey = "X-Data"
 		}
 	}
-	if options.UplinkChunkSize == 0 {
-		switch options.UplinkDataPlacement {
-		case "cookie":
-			options.UplinkChunkSize = 3 * 1024
-		case "header":
-			options.UplinkChunkSize = 4 * 1024
-		}
-	} else if options.UplinkChunkSize < 64 {
-		options.UplinkChunkSize = 64
+	if options.ServerMaxHeaderBytes < 0 {
+		return E.New("invalid negative value of maxHeaderBytes")
 	}
 	if options.Xmux != nil && options.Xmux.MaxConnections.To > 0 && options.Xmux.MaxConcurrency.To > 0 {
 		return E.New("max_connections cannot be specified together with max_concurrency")
@@ -349,9 +341,7 @@ func (c *V2RayXHTTPBaseOptions) GetRequestHeader() http.Header {
 	for k, v := range c.Headers {
 		header.Add(k, v)
 	}
-	if header.Get("User-Agent") == "" {
-		header.Set("User-Agent", utils.ChromeUA)
-	}
+	utils.TryDefaultHeadersWith(header, "fetch")
 	return header
 }
 
@@ -373,23 +363,23 @@ func (c *V2RayXHTTPBaseOptions) GetNormalizedUplinkHTTPMethod() string {
 }
 
 func (c *V2RayXHTTPBaseOptions) GetNormalizedScMaxEachPostBytes() Xbadoption.Range {
-	if c.ScMaxEachPostBytes.To == 0 {
+	if c.ScMaxEachPostBytes == nil {
 		return Xbadoption.Range{
 			From: 1000000,
 			To:   1000000,
 		}
 	}
-	return c.ScMaxEachPostBytes
+	return *c.ScMaxEachPostBytes
 }
 
 func (c *V2RayXHTTPBaseOptions) GetNormalizedScMinPostsIntervalMs() Xbadoption.Range {
-	if c.ScMinPostsIntervalMs.To == 0 {
+	if c.ScMinPostsIntervalMs == nil {
 		return Xbadoption.Range{
 			From: 30,
 			To:   30,
 		}
 	}
-	return c.ScMinPostsIntervalMs
+	return *c.ScMinPostsIntervalMs
 }
 
 func (c *V2RayXHTTPBaseOptions) GetNormalizedScMaxBufferedPosts() int {
@@ -401,13 +391,45 @@ func (c *V2RayXHTTPBaseOptions) GetNormalizedScMaxBufferedPosts() int {
 }
 
 func (c *V2RayXHTTPBaseOptions) GetNormalizedScStreamUpServerSecs() Xbadoption.Range {
-	if c.ScStreamUpServerSecs.To == 0 {
+	if c.ScStreamUpServerSecs == nil {
 		return Xbadoption.Range{
 			From: 20,
 			To:   80,
 		}
 	}
-	return c.ScStreamUpServerSecs
+	return *c.ScStreamUpServerSecs
+}
+
+func (c *V2RayXHTTPBaseOptions) GetNormalizedUplinkChunkSize() Xbadoption.Range {
+	if c.UplinkChunkSize == nil || c.UplinkChunkSize.To == 0 {
+		switch c.UplinkDataPlacement {
+		case PlacementCookie:
+			return Xbadoption.Range{
+				From: 2 * 1024, // 2 KiB
+				To:   3 * 1024, // 3 KiB
+			}
+		case PlacementHeader:
+			return Xbadoption.Range{
+				From: 3 * 1000, // 3 KB
+				To:   4 * 1000, // 4 KB
+			}
+		default:
+			return c.GetNormalizedScMaxEachPostBytes()
+		}
+	} else if c.UplinkChunkSize.From < 64 {
+		return Xbadoption.Range{
+			From: 64,
+			To:   max(64, c.UplinkChunkSize.To),
+		}
+	}
+	return *c.UplinkChunkSize
+}
+
+func (c *V2RayXHTTPBaseOptions) GetNormalizedServerMaxHeaderBytes() int {
+	if c.ServerMaxHeaderBytes <= 0 {
+		return 8192
+	}
+	return c.ServerMaxHeaderBytes
 }
 
 func (c *V2RayXHTTPBaseOptions) GetNormalizedSessionPlacement() string {
@@ -518,6 +540,8 @@ type V2RayKCPOptions struct {
 	WriteBufferSize  uint32 `json:"write_buffer_size,omitempty"`
 	HeaderType       string `json:"header_type,omitempty"`
 	Seed             string `json:"seed,omitempty"`
+	CwndMultiplier   uint32 `json:"cwnd_multiplier,omitempty"`
+	MaxSendingWindow uint32 `json:"max_sending_window,omitempty"`
 }
 
 func (k *V2RayKCPOptions) GetMTU() uint32 {
@@ -531,6 +555,7 @@ func (k *V2RayKCPOptions) GetTTI() uint32 {
 	if k.TTI == 0 {
 		return 50
 	}
+	// Valid range: 10-5000 (extended from 10-100 to support high-latency networks)
 	return k.TTI
 }
 
@@ -567,6 +592,17 @@ func (k *V2RayKCPOptions) GetHeaderType() string {
 		return "none"
 	}
 	return k.HeaderType
+}
+
+func (k *V2RayKCPOptions) GetCwndMultiplier() uint32 {
+	if k.CwndMultiplier == 0 {
+		return 20
+	}
+	return k.CwndMultiplier
+}
+
+func (k *V2RayKCPOptions) GetMaxSendingWindow() uint32 {
+	return k.MaxSendingWindow
 }
 
 // https://github.com/starifly/sing-box end

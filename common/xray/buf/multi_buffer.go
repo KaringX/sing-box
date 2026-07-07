@@ -3,7 +3,7 @@ package buf
 import (
 	"io"
 
-	common "github.com/sagernet/sing-box/common/xray"
+	"github.com/sagernet/sing-box/common/xray"
 	"github.com/sagernet/sing-box/common/xray/errors"
 	"github.com/sagernet/sing-box/common/xray/serial"
 )
@@ -38,8 +38,8 @@ func MergeMulti(dest MultiBuffer, src MultiBuffer) (MultiBuffer, MultiBuffer) {
 // MergeBytes merges the given bytes into MultiBuffer and return the new address of the merged MultiBuffer.
 func MergeBytes(dest MultiBuffer, src []byte) MultiBuffer {
 	n := len(dest)
-	if n > 0 && !(dest)[n-1].IsFull() {
-		nBytes, _ := (dest)[n-1].Write(src)
+	if n > 0 && !dest[n-1].IsFull() {
+		nBytes, _ := dest[n-1].Write(src)
 		src = src[nBytes:]
 	}
 

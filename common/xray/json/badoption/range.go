@@ -71,6 +71,12 @@ func (c *Range) UnmarshalJSON(content []byte) error {
 	return nil
 }
 
+func (c *Range) String() string {
+	if c.From == c.To {
+		return strconv.FormatInt(int64(c.From), 10)
+	}
+	return fmt.Sprintf("%d-%d", c.From, c.To)
+}
 func (c Range) Rand() int32 {
 	return int32(crypto.RandBetween(int64(c.From), int64(c.To)))
 }
