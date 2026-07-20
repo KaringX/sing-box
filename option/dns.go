@@ -151,6 +151,7 @@ func (o *DNSServerOptions) UnmarshalJSONContext(ctx context.Context, content []b
 		o.Type = C.DNSTypeLegacy
 		options = new(LegacyDNSServerOptions)
 		deprecated.Report(ctx, deprecated.OptionLegacyDNSTransport)
+		return E.New("type can not be legacy or empty") //karing
 	default:
 		var loaded bool
 		options, loaded = registry.CreateOptions(o.Type)
@@ -224,7 +225,7 @@ func (o *DNSServerOptions) Upgrade(ctx context.Context) error {
 			serverAddr = M.ParseSocksaddr(serverURL.Host)
 		}
 		if !serverAddr.IsValid() {
-			return E.New("invalid server address:", options.Address) //karing
+			return E.New("invalid server address")
 		}
 		remoteOptions.Server = serverAddr.AddrString()
 		if serverAddr.Port != 0 && serverAddr.Port != 53 {
@@ -234,11 +235,11 @@ func (o *DNSServerOptions) Upgrade(ctx context.Context) error {
 		o.Type = C.DNSTypeTCP
 		o.Options = &remoteOptions
 		if serverURL == nil {
-			return E.New("invalid server address: serverURL == nil") //karing
+			return E.New("invalid server address")
 		}
 		serverAddr := M.ParseSocksaddr(serverURL.Host)
 		if !serverAddr.IsValid() {
-			return E.New("invalid server address:", options.Address) //karing
+			return E.New("invalid server address")
 		}
 		remoteOptions.Server = serverAddr.AddrString()
 		if serverAddr.Port != 0 && serverAddr.Port != 53 {
@@ -247,11 +248,11 @@ func (o *DNSServerOptions) Upgrade(ctx context.Context) error {
 	case C.DNSTypeTLS, C.DNSTypeQUIC:
 		o.Type = serverType
 		if serverURL == nil {
-			return E.New("invalid server address: serverURL == nil") //karing
+			return E.New("invalid server address")
 		}
 		serverAddr := M.ParseSocksaddr(serverURL.Host)
 		if !serverAddr.IsValid() {
-			return E.New("invalid server address:", options.Address) //karing
+			return E.New("invalid server address")
 		}
 		remoteOptions.Server = serverAddr.AddrString()
 		if serverAddr.Port != 0 && serverAddr.Port != 853 {
@@ -269,11 +270,11 @@ func (o *DNSServerOptions) Upgrade(ctx context.Context) error {
 		}
 		o.Options = &httpsOptions
 		if serverURL == nil {
-			return E.New("invalid server address: serverURL == nil") //karing
+			return E.New("invalid server address")
 		}
 		serverAddr := M.ParseSocksaddr(serverURL.Host)
 		if !serverAddr.IsValid() {
-			return E.New("invalid server address:", options.Address) //karing
+			return E.New("invalid server address")
 		}
 		httpsOptions.Server = serverAddr.AddrString()
 		if serverAddr.Port != 0 && serverAddr.Port != 443 {
@@ -285,7 +286,7 @@ func (o *DNSServerOptions) Upgrade(ctx context.Context) error {
 	case "rcode":
 		var rcode int
 		if serverURL == nil {
-			return E.New("invalid server address: serverURL == nil") //karing
+			return E.New("invalid server address")
 		}
 		switch serverURL.Host {
 		case "success":
@@ -309,7 +310,7 @@ func (o *DNSServerOptions) Upgrade(ctx context.Context) error {
 		o.Type = C.DNSTypeDHCP
 		dhcpOptions := DHCPDNSServerOptions{}
 		if serverURL == nil {
-			return E.New("invalid server address: serverURL == nil") //karing
+			return E.New("invalid server address")
 		}
 		if serverURL.Host != "" && serverURL.Host != "auto" {
 			dhcpOptions.Interface = serverURL.Host

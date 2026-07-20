@@ -98,7 +98,7 @@ func NewHTTPS(ctx context.Context, logger log.ContextLogger, tag string, options
 		serverAddr.Port = 443
 	}
 	if !serverAddr.IsValid() {
-		return nil, E.New("invalid server address: ", options.DNSServerAddressOptions.Server, ":", options.DNSServerAddressOptions.ServerPort) //karing
+		return nil, E.New("invalid server address: ", serverAddr)
 	}
 	return NewHTTPSRaw(
 		dns.NewTransportAdapterWithRemoteOptions(C.DNSTypeHTTPS, tag, options.RemoteDNSServerOptions),

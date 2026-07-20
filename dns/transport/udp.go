@@ -59,7 +59,7 @@ func NewUDP(ctx context.Context, logger log.ContextLogger, tag string, options o
 		serverAddr.Port = 53
 	}
 	if !serverAddr.IsValid() {
-		return nil, E.New("invalid server address: ", options.DNSServerAddressOptions.Server, ":", options.DNSServerAddressOptions.ServerPort) //karing
+		return nil, E.New("invalid server address: ", serverAddr)
 	}
 	return NewUDPRaw(logger, dns.NewTransportAdapterWithRemoteOptions(C.DNSTypeUDP, tag, options), transportDialer, serverAddr), nil
 }

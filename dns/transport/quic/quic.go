@@ -59,7 +59,7 @@ func NewQUIC(ctx context.Context, logger log.ContextLogger, tag string, options 
 		serverAddr.Port = 853
 	}
 	if !serverAddr.IsValid() {
-		return nil, E.New("invalid server address: ", options.DNSServerAddressOptions.Server, ":", options.DNSServerAddressOptions.ServerPort) //karing
+		return nil, E.New("invalid server address: ", serverAddr)
 	}
 
 	return &Transport{
