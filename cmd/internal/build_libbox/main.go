@@ -86,6 +86,37 @@ func getGoMobilePath() string { // karing
 	return "/gomobile"
 }
 
+func commandEnv() []string { // karing
+	env := os.Environ()
+	if !C.IsWindows {
+		return env
+	}
+
+	filtered := env[:0]
+	for _, entry := range env {
+		if entry == "" {
+			continue
+		}
+		if strings.HasPrefix(entry, "=") {
+			continue
+		}
+		filtered = append(filtered, entry)
+	}
+	return filtered
+}
+
+func cleanGoMobileGenerated() { // karing
+	matches, err := filepath.Glob(filepath.Join("build", "*", "libbox"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, match := range matches {
+		if err = os.RemoveAll(match); err != nil {
+			log.Fatal(err)
+		}
+	}
+}
+
 type AndroidBuildConfig struct {
 	AndroidAPI int
 	OutputName string
@@ -134,6 +165,8 @@ func getAndroidBindTarget() string {
 }
 
 func buildAndroidVariant(config AndroidBuildConfig, bindTarget string) {
+	cleanGoMobileGenerated() // karing
+
 	args := []string{
 		"bind",
 		"-v",
@@ -154,6 +187,7 @@ func buildAndroidVariant(config AndroidBuildConfig, bindTarget string) {
 	args = append(args, "./experimental/libbox")
 
 	command := exec.Command(build_shared.GoBinPath+getGoMobilePath(), args...) //karing
+	command.Env = commandEnv()                                                 // karing
 	command.Stdout = os.Stdout
 	command.Stderr = os.Stderr
 	err := command.Run()
@@ -205,6 +239,8 @@ func buildAndroid() {
 }
 
 func buildApple() {
+	cleanGoMobileGenerated() // karing
+
 	var bindTarget string
 	if platform != "" {
 		bindTarget = platform
@@ -243,6 +279,7 @@ func buildApple() {
 	args = append(args, "./experimental/libbox")
 
 	command := exec.Command(build_shared.GoBinPath+getGoMobilePath(), args...) //karing
+	command.Env = commandEnv()                                                 // karing
 	command.Stdout = os.Stdout
 	command.Stderr = os.Stderr
 	err := command.Run()
