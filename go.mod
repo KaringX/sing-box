@@ -70,7 +70,7 @@ require ( //hiddify
 
 require ( //karing
 	github.com/alitto/pond v1.9.2
-	github.com/enfein/mieru/v3 v3.32.0
+	github.com/enfein/mieru/v3 v3.34.1
 	github.com/getsentry/sentry-go v0.46.2
 	github.com/klauspost/compress v1.18.6
 	github.com/klauspost/cpuid/v2 v2.3.0
