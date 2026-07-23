@@ -63,7 +63,8 @@ func (r *Router) routeConnection(ctx context.Context, conn net.Conn, metadata ad
 		return E.New("TCP: route.pauseManager closed")
 	}
 	if r.pauseManager.IsNetworkPaused() { //karing
-		return E.New("reject connection to ", metadata.Destination, " while network paused")
+		r.logger.DebugContext(ctx, "connection to ", metadata.Destination, " while network paused")
+		//return E.New("reject connection to ", metadata.Destination, " while network paused")
 	}
 	//nolint:staticcheck
 	if metadata.InboundDetour != "" {
@@ -216,7 +217,8 @@ func (r *Router) routePacketConnection(ctx context.Context, conn N.PacketConn, m
 		return E.New("UDP: route.pauseManager closed")
 	}
 	if r.pauseManager.IsNetworkPaused() { //karing
-		return E.New("reject packet connection to ", metadata.Destination, " while network paused")
+		r.logger.DebugContext(ctx, "connection to ", metadata.Destination, " while network paused")
+		//return E.New("reject packet connection to ", metadata.Destination, " while network paused")
 	}
 	//nolint:staticcheck
 	if metadata.InboundDetour != "" {
