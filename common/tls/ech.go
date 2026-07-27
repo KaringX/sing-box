@@ -47,10 +47,23 @@ func parseECHClientConfig(ctx context.Context, clientConfig ECHCapableConfig, op
 		clientConfig.SetECHConfigList(block.Bytes)
 		return clientConfig, nil
 	} else {
+		queryOptions := adapter.DNSQueryOptions{}                                    //karing
+		networkManager := service.FromContext[adapter.NetworkManager](ctx)           //karing
+		dnsTransportManager := service.FromContext[adapter.DNSTransportManager](ctx) //karing
+		if networkManager != nil {                                                   //karing
+			defaultOptions := networkManager.DefaultOptions()
+			queryOptions = defaultOptions.DomainResolveOptions
+			if defaultOptions.DomainResolver != "" && dnsTransportManager != nil {
+				if transport, loaded := dnsTransportManager.Transport(defaultOptions.DomainResolver); loaded {
+					queryOptions.Transport = transport
+				}
+			}
+		}
 		return &ECHClientConfig{
 			ECHCapableConfig: clientConfig,
 			dnsRouter:        service.FromContext[adapter.DNSRouter](ctx),
 			queryServerName:  options.ECH.QueryServerName,
+			queryOptions:     queryOptions, //karing
 		}, nil
 	}
 }
@@ -111,6 +124,7 @@ type ECHClientConfig struct {
 	access          sync.Mutex
 	dnsRouter       adapter.DNSRouter
 	queryServerName string
+	queryOptions    adapter.DNSQueryOptions //karing
 	lastTTL         time.Duration
 	lastUpdate      time.Time
 }
@@ -147,7 +161,7 @@ func (s *ECHClientConfig) fetchAndHandshake(ctx context.Context, conn net.Conn) 
 				},
 			},
 		}
-		response, err := s.dnsRouter.Exchange(ctx, message, adapter.DNSQueryOptions{})
+		response, err := s.dnsRouter.Exchange(ctx, message, s.queryOptions) //karing
 		if err != nil {
 			return nil, E.Cause(err, "fetch ECH config list")
 		}
@@ -184,6 +198,7 @@ func (s *ECHClientConfig) Clone() Config {
 		ECHCapableConfig: s.ECHCapableConfig.Clone().(ECHCapableConfig),
 		dnsRouter:        s.dnsRouter,
 		queryServerName:  s.queryServerName,
+		queryOptions:     s.queryOptions, //karing
 		lastUpdate:       s.lastUpdate,
 	}
 }
