@@ -1,6 +1,4 @@
-//go:build darwin
-
-//karing
+//go:build with_karing && darwin
 
 package libbox
 

@@ -1,6 +1,7 @@
+//go:build with_karing
+
 package libbox
 
-//karing
 import (
 	"fmt"
 	"runtime"

@@ -20,7 +20,7 @@ require (
 	github.com/libdns/alidns v1.0.6
 	github.com/libdns/cloudflare v0.2.2
 	github.com/logrusorgru/aurora v2.0.3+incompatible
-	github.com/metacubex/utls v1.8.4
+	github.com/metacubex/utls v1.8.7
 	github.com/mholt/acmez/v3 v3.1.6
 	github.com/miekg/dns v1.1.72
 	github.com/openai/openai-go/v3 v3.26.0
@@ -33,7 +33,7 @@ require (
 	github.com/sagernet/fswatch v0.1.2
 	github.com/sagernet/gomobile v0.1.12
 	github.com/sagernet/gvisor v0.0.0-20250811.0-sing-box-mod.1
-	github.com/sagernet/quic-go v0.59.0-sing-box-mod.4
+	github.com/sagernet/quic-go v0.61.0-sing-box-mod.1
 	github.com/sagernet/sing v0.8.12-0.20260726145744-ef2df370afca
 	github.com/sagernet/sing-mux v0.3.5
 	github.com/sagernet/sing-quic v0.6.4-0.20260803041914-d83826c306d7
@@ -51,12 +51,12 @@ require (
 	github.com/vishvananda/netns v0.0.5
 	go.uber.org/zap v1.27.1
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba
-	golang.org/x/crypto v0.48.0
+	golang.org/x/crypto v0.54.0
 	golang.org/x/exp v0.0.0-20251219203646-944ab1f22d93
-	golang.org/x/mod v0.33.0
-	golang.org/x/net v0.50.0
-	golang.org/x/sync v0.19.0
-	golang.org/x/sys v0.41.0
+	golang.org/x/mod v0.37.0
+	golang.org/x/net v0.56.0
+	golang.org/x/sync v0.22.0
+	golang.org/x/sys v0.47.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20241231184526-a9ab2273dd10
 	google.golang.org/grpc v1.79.1
 	google.golang.org/protobuf v1.36.11
@@ -71,12 +71,12 @@ require ( //hiddify
 
 require ( //karing
 	github.com/alitto/pond v1.9.2
-	github.com/enfein/mieru/v3 v3.34.1
-	github.com/getsentry/sentry-go v0.46.2
+	github.com/enfein/mieru/v3 v3.35.0
+	github.com/getsentry/sentry-go v0.48.0
 	github.com/klauspost/compress v1.18.6
 	github.com/klauspost/cpuid/v2 v2.3.0
-	github.com/mattn/go-sqlite3 v1.14.44
-	github.com/metacubex/mihomo v1.19.25
+	github.com/mattn/go-sqlite3 v1.14.49
+	github.com/metacubex/mihomo v1.19.29
 	github.com/metacubex/sing v0.5.7
 	github.com/shirou/gopsutil/v3 v3.24.5
 	github.com/valyala/fastjson v1.6.10
@@ -87,7 +87,7 @@ require ( //karing
 //replace github.com/metacubex/mihomo => github.com/KaringX/clash v0.0.0-20241101044429-f71df89d4091
 
 //go get github.com/KaringX/sing@a5ccca51fe8a39390591cf9480ffebb9f0c3fc61
-replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20260720045832-a5ccca51fe8a //karing_v0.8.11
+replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20260805040637-3da61a4516d4 //karing_v0.8.12
 
 //replace github.com/sagernet/sing => ../../KaringX/sing
 
@@ -95,7 +95,7 @@ replace github.com/sagernet/sing-dns => github.com/KaringX/sing-dns v0.3.0-beta.
 
 //replace github.com/sagernet/sing-dns => ../../KaringX/sing-dns
 
-replace github.com/sagernet/sing-quic => github.com/KaringX/sing-quic v0.2.0-beta.12.0.20260401112009-ee52f61e10ae //karing_v0.6.1
+replace github.com/sagernet/sing-quic => github.com/KaringX/sing-quic v0.2.0-beta.12.0.20260805050642-0122883b056b //karing_v0.6.4
 
 //replace github.com/sagernet/sing-quic => ../../KaringX/sing-quic
 
@@ -103,7 +103,7 @@ replace github.com/sagernet/quic-go => github.com/KaringX/quic-go v0.49.0-beta.1
 
 //replace github.com/sagernet/quic-go => ../../KaringX/quic-go
 
-replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.20260720041302-a54c62e90408 //karing_v0.8.11
+replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.20260805051156-c3892c29b2e1 //karing_v0.8.12
 
 //replace github.com/sagernet/sing-tun => ../../KaringX/sing-tun
 
@@ -115,7 +115,7 @@ replace github.com/sagernet/wireguard-go => github.com/KaringX/wireguard-go v0.0
 
 //replace github.com/sagernet/wireguard-go => ../../KaringX/wireguard-go
 
-replace github.com/sagernet/tailscale => github.com/KaringX/tailscale v1.80.3-mod.5.0.20260401111223-6aae45c67733 //v1.92.4-sing-box-1.13-mod.7
+replace github.com/sagernet/tailscale => github.com/KaringX/tailscale v1.80.3-mod.5.0.20260805043156-03d2be39bf7b //v1.92.4-sing-box-1.13-mod.8
 
 //replace github.com/sagernet/tailscale => ../../KaringX/tailscale
 
@@ -127,10 +127,10 @@ replace github.com/metacubex/sing-shadowsocks2 => github.com/Restia-Ashbell/sing
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
-	github.com/ajg/form v1.5.1 // indirect
+	github.com/ajg/form v1.7.1 // indirect
 	github.com/akutz/memconn v0.1.0 // indirect
 	github.com/alexbrainman/sspi v0.0.0-20231016080023-1a75b4708caa // indirect
-	github.com/andybalholm/brotli v1.1.0 // indirect
+	github.com/andybalholm/brotli v1.1.1 // indirect
 	github.com/caddyserver/zerossl v0.1.5 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/coreos/go-iptables v0.8.0 // indirect
@@ -156,7 +156,6 @@ require (
 	github.com/hdevalence/ed25519consensus v0.2.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jsimonetti/rtnetlink v1.4.0 // indirect
-	github.com/kr/pretty v0.3.1 // indirect
 	github.com/libdns/libdns v1.1.1 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mdlayher/netlink v1.9.0 // indirect
@@ -164,7 +163,7 @@ require (
 	github.com/metacubex/chacha v0.1.5 // indirect
 	github.com/metacubex/randv2 v0.2.0 // indirect
 	github.com/mitchellh/go-ps v1.0.0 // indirect
-	github.com/pierrec/lz4/v4 v4.1.21 // indirect
+	github.com/pierrec/lz4/v4 v4.1.27 // indirect
 	github.com/pion/dtls/v2 v2.2.7 // indirect
 	github.com/pion/randutil v0.1.0 // indirect
 	github.com/pion/stun/v2 v2.0.0 // indirect
@@ -231,10 +230,10 @@ require (
 	go.uber.org/zap/exp v0.3.0 // indirect
 	go4.org/mem v0.0.0-20240501181205-ae6ca9944745 // indirect
 	golang.org/x/oauth2 v0.34.0 // indirect
-	golang.org/x/term v0.40.0 // indirect
-	golang.org/x/text v0.34.0 // indirect
+	golang.org/x/term v0.45.0 // indirect
+	golang.org/x/text v0.40.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
-	golang.org/x/tools v0.42.0 // indirect
+	golang.org/x/tools v0.47.0 // indirect
 	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2 // indirect
 	golang.zx2c4.com/wireguard/windows v0.5.3 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect

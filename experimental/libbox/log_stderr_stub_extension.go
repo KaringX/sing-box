@@ -1,6 +1,5 @@
-//go:build !linux && !windows && !darwin && !android
+//go:build with_karing && !linux && !windows && !darwin && !android
 
-// karing
 package libbox
 
 import (

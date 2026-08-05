@@ -1,6 +1,7 @@
-package db
+//go:build with_karing
 
-// karing
+package statistics
+
 import (
 	"context"
 	"database/sql"

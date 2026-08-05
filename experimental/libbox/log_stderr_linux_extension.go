@@ -1,6 +1,5 @@
-//go:build linux
+//go:build with_karing && linux
 
-// karing
 package libbox
 
 import (

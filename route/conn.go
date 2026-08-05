@@ -50,8 +50,8 @@ func (m *ConnectionManager) Count() int {
 }
 
 func (m *ConnectionManager) CloseAll() {
-	var closers []io.Closer
 	m.access.Lock()
+	var closers []io.Closer
 	for element := m.connections.Front(); element != nil; {
 		nextElement := element.Next()
 		if element.Value.Closer != nil { //karing

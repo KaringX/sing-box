@@ -339,7 +339,6 @@ Such traffic is usually created by Apple systems.
 
 When enabled, MPTCP connections will bypass sing-box and connect directly, otherwise, will be rejected to avoid errors by default.
 
->>>>>>> v1.13.3
 #### loopback_address
 
 !!! question "Since sing-box 1.12.0"

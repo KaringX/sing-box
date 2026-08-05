@@ -203,7 +203,6 @@ func NewInbound(ctx context.Context, router adapter.Router, logger log.ContextLo
 			InterfaceMonitor:                      networkManager.InterfaceMonitor(),
 			Logger:                                logger,
 			EXP_MultiPendingPackets:               multiPendingPackets,
-			Logger:                                logger, //karing
 		},
 		udpTimeout:        udpTimeout,
 		stack:             options.Stack,

@@ -229,7 +229,6 @@ waiting for a fixed time specified by `tls_fragment_fallback_delay`.
 In addition, if the actual wait time is less than 20ms, it will also fall back to waiting for a fixed time,
 because the target is considered to be local or behind a transparent proxy.
 
-
 #### tls_fragment_fallback_delay
 
 !!! question "Since sing-box 1.12.0"

@@ -1,6 +1,7 @@
+//go:build with_karing
+
 package clashapi
 
-//karing
 import (
 	"context"
 	"io"

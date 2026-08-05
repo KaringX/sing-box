@@ -1,4 +1,5 @@
-// karing
+//go:build with_karing
+
 package rule
 
 func (r *RuleActionRoute) Target() string {
