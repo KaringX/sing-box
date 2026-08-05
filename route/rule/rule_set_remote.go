@@ -101,8 +101,8 @@ func (s *RemoteRuleSet) StartContext(ctx context.Context, startContext *adapter.
 			err := s.loadBytes(savedSet.Content)
 			if err != nil {
 				cacheFile.DeleteRuleSet(s.options.RemoteOptions.URL) //karing
-				//return E.Cause(err, "restore cached rule-set")
-			} else { //karing
+				s.logger.Warn(E.Cause(err, "restore cached rule-set, will refetch"))
+			} else {
 				s.lastUpdated = savedSet.LastUpdated
 				s.lastEtag = savedSet.LastEtag
 			}

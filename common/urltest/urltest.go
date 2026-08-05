@@ -11,6 +11,7 @@ import (
 
 	"github.com/sagernet/sing-box/adapter"
 	C "github.com/sagernet/sing-box/constant"
+	"github.com/sagernet/sing/common"
 	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
 	"github.com/sagernet/sing/common/ntp"
@@ -76,6 +77,17 @@ func (s *HistoryStorage) Close() error {
 }
 
 func URLTest(ctx context.Context, link string, detour N.Dialer) (t uint16, t2 uint16, err error) { //karing
+	multiplexOutbound, isMultiplexOutbound := common.Cast[adapter.OutboundWithMultiplex](detour)
+	if isMultiplexOutbound && multiplexOutbound.MultiplexEnabled() {
+		_, _, err := urlTest(ctx, link, detour)
+		if err != nil {
+			return 0, 0, err
+		}
+	}
+	return urlTest(ctx, link, detour)
+}
+
+func urlTest(ctx context.Context, link string, detour N.Dialer) (t uint16, t2 uint16, err error) { //karing
 	if link == "" {
 		link = "https://www.gstatic.com/generate_204"
 	}
