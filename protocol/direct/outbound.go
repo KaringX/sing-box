@@ -72,7 +72,9 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		domainStrategy: C.DomainStrategy(options.DomainStrategy),
 		fallbackDelay:  time.Duration(options.FallbackDelay),
 		dialer:         outboundDialer.(dialer.ParallelInterfaceDialer),
-		isEmpty:        reflect.DeepEqual(options.DialerOptions, option.DialerOptions{UDPFragmentDefault: true}),
+		isEmpty: reflect.DeepEqual(options.DialerOptions, option.DialerOptions{
+			AbstractDialerOptions: option.AbstractDialerOptions{UDPFragmentDefault: true},
+		}),
 	}
 	//nolint:staticcheck
 	if options.ProxyProtocol != 0 {
@@ -129,7 +131,10 @@ func (h *Outbound) InterfaceUpdated() {
 func (h *Outbound) isMyLoopbackAddress(addresses ...netip.Addr) bool {
 	for _, prefix := range h.myAddresses.Load() {
 		for _, address := range addresses {
-			if prefix.Addr() != address && prefix.Contains(address) {
+			if !C.IsDarwin && prefix.Addr() == address {
+				continue
+			}
+			if prefix.Contains(address) {
 				return true
 			}
 		}

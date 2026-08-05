@@ -2,6 +2,152 @@
 icon: material/alert-decagram
 ---
 
+#### 1.14.0-beta.7
+
+* Add Hysteria2 Chrome QUIC fingerprint parroting **1**
+* Update quic-go to v0.61.0
+* Update tailscale to v1.102.1
+* Update gvisor to 20260727.0
+* Fixes and improvements
+
+**1**:
+
+Hysteria2 client connections now parrot Chrome's QUIC handshake by default,
+making the traffic harder to identify by handshake fingerprinting. Since
+Chrome does not declare support for Ed25519, servers using Ed25519
+certificates will fail the handshake; see
+[disable_chrome_parrot](/configuration/outbound/hysteria2/#disable_chrome_parrot).
+
+#### 1.14.0-beta.5
+
+* Remove client metadata from AnyTLS requests by default **1**
+* Update naiveproxy to v150.0.7871.63-1
+* Fixes and improvements
+
+**1**:
+
+We found that the AnyTLS client implementation uploads metadata that is
+**not used by the open-source server**, and there are reports of vendors using
+it to profile and discriminate against users. We now leave it empty by default
+and allow you to customize it, see
+[AnyTLS client metadata](/manual/misc/anytls-client-metadata/).
+
+#### 1.13.16
+
+* Remove client metadata from AnyTLS requests by default **1**
+* Fixes and improvements
+
+**1**:
+
+We found that the AnyTLS client implementation uploads metadata that is
+**not used by the open-source server**, and there are reports of vendors using
+it to profile and discriminate against users. We now leave it empty by default
+and allow you to customize it, see
+[AnyTLS client metadata](/manual/misc/anytls-client-metadata/).
+
+#### 1.14.0-beta.4
+
+* Fixes and improvements
+
+#### 1.13.15
+
+* Fixes and improvements
+
+#### 1.14.0-beta.2
+
+* Add [JSON Schema](/configuration/schema/) support **1**
+* Fixes and improvements
+
+**1**:
+
+sing-box now provides a JSON Schema for its configuration, enabling completion
+and validation in compatible editors. The schema published with the
+documentation can be selected with the new top-level `$schema` field, while
+the new `sing-box schema` command generates a schema matching the current
+binary and its build tags.
+
+We have also improved the JSON editor experience in the graphical clients on
+macOS, Android, Windows, and Linux, and added schema-based completion support.
+
+#### 1.14.0-beta.1
+
+* Correct undefined rule-set matching semantics **1**
+* Add search domain rule items **2**
+* Add parallel DNS response evaluation support **3**
+* Fixes and improvements
+
+**1**:
+
+Rule-set matching has always been described as merged matching: fields of
+rule-set rules are considered merged into the referencing rule. However, this
+description is only intuitive when a rule-set contains only a single `default`
+rule without `invert`. Merged matching is now limited to exactly this case;
+any other referenced rule-set is matched as an `other field`, which matches
+when any of its rules matches on its own.
+Since the previous behavior in the corrected cases was effectively undefined,
+counterintuitive, and hard to understand, we do not consider this a breaking
+change — except for configurations that worked without their author
+understanding why.
+
+**2**:
+
+The new DNS rule items
+[`domain_label_count`](/configuration/dns/rule/#domain_label_count) and
+[`search_domain_available`](/configuration/dns/rule/#search_domain_available)
+match the number of labels in the query name and whether a DNS server
+currently holds search domains; combined with `racing`, they allow unqualified
+name queries to race a server that can expand them against a public resolver.
+Additionally, [`preferred_by`](/configuration/dns/rule/#preferred_by) now
+matches search domain suffixes and supports `local` and `dhcp` servers.
+
+**3**:
+
+The [`evaluate`](/configuration/dns/rule_action/#evaluate) action can now assign
+a `tag` to each response, allowing multiple evaluated responses to coexist and
+be selected through tagged
+[`match_response`](/configuration/dns/rule/#match_response) rules. The new
+[`race`](/configuration/dns/rule_action/#race) field allows response-dependent
+rules to compete in parallel, with the first matching rule taking effect and
+the remaining queries canceled. The new `speculative` option can start
+`evaluate` and `route` queries while race rules are still pending, reducing
+latency at the cost of potentially unused queries.
+
+#### 1.14.0-alpha.50
+
+* Improve OpenVPN interoperability **1**
+* Improve OpenConnect interoperability **2**
+* Add Fortinet host check support **3**
+* Fixes and improvements
+
+**1**:
+
+The OpenVPN client and server now interoperate with more existing deployments
+through static-key mode, additional legacy ciphers and digests, and
+OpenVPN-compatible certificate purpose, key usage, extended key usage, and
+certificate profile checks. They also support more OpenVPN options for tunnel
+addressing, MSS calculation, replay windows, timers, and TLS renegotiation. The
+new [OpenVPN DNS server](/configuration/dns/server/openvpn/) can use both modern
+and legacy DNS options pushed by OpenVPN servers, while the sing-box server can
+push both forms.
+
+**2**:
+
+The OpenConnect client now supports existing authentication sessions, OIDC
+Bearer authentication, additional platform and AnyConnect mobile identity
+fields, AnyConnect compression, and controls for MTU, DPD and reconnect timing,
+TCP keep alive, and TLS trust and certificate pinning. The new
+[OpenConnect DNS server](/configuration/dns/server/openconnect/) can use pushed
+split-DNS resolvers and, when enabled, general pushed resolvers.
+
+**3**:
+
+The [OpenConnect Client](/configuration/endpoint/openconnect/) endpoint can now
+submit Fortinet host check results using the new
+[`fortinet_host_check`](/configuration/endpoint/openconnect/#fortinet_host_check)
+option. This behavior is modeled after openfortivpn and is not an OpenConnect
+feature. sing-box only submits explicitly configured values when requested by
+the Fortinet server and does not collect system information automatically.
+
 #### 1.14.0-alpha.48
 
 * Add SSO support for AnyConnect **1**

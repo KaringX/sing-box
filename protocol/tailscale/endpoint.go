@@ -9,7 +9,6 @@ import (
 	"net"
 	"net/http"
 	"net/netip"
-	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -101,8 +100,10 @@ type Endpoint struct {
 	sshReconfigHook   wgengine.ReconfigListener
 
 	cfg           *wgcfg.Config
+	routerCfg     *router.Config
 	dnsCfg        *tsDNS.Config
 	routeDomains  common.TypedValue[map[string]bool]
+	searchDomains atomic.Bool
 	routePrefixes atomic.Pointer[netipx.IPSet]
 
 	acceptRoutes               bool
@@ -171,21 +172,10 @@ func NewEndpoint(ctx context.Context, router adapter.Router, logger log.ContextL
 	} else {
 		udpTimeout = C.UDPTimeout
 	}
-	var remoteIsDomain bool
-	if options.ControlURL != "" {
-		controlURL, err := url.Parse(options.ControlURL)
-		if err != nil {
-			return nil, E.Cause(err, "parse control URL")
-		}
-		remoteIsDomain = M.ParseSocksaddr(controlURL.Hostname()).IsDomain()
-	} else {
-		// controlplane.tailscale.com
-		remoteIsDomain = true
-	}
 	outboundDialer, err := dialer.NewWithOptions(dialer.Options{
 		Context:          ctx,
 		Options:          options.DialerOptions,
-		RemoteIsDomain:   remoteIsDomain,
+		RemoteIsDomain:   true,
 		ResolverOnDetour: true,
 		NewDialer:        true,
 	})
@@ -329,7 +319,9 @@ func (t *Endpoint) start() error {
 			return err
 		}
 		systemDialer, err := dialer.NewDefault(t.ctx, option.DialerOptions{
-			BindInterface: tunName,
+			AbstractDialerOptions: option.AbstractDialerOptions{
+				BindInterface: tunName,
+			},
 		})
 		if err != nil {
 			_ = systemTun.Close()
@@ -337,7 +329,7 @@ func (t *Endpoint) start() error {
 		}
 		t.systemTun = systemTun
 		t.systemDialer = systemDialer
-		t.server.TunDevice = wgTunDevice
+		t.server.Tun = wgTunDevice
 	}
 	if t.network.AutoRedirectOutputMark() != 0 {
 		netns.SetControlFunc(t.network.AutoRedirectOutputMarkFunc())
@@ -499,9 +491,29 @@ func (t *Endpoint) postStart() error {
 
 func (t *Endpoint) watchState() {
 	localBackend := t.server.ExportLocalBackend()
+	updateRoutePrefixes := func() {
+		netMap := localBackend.NetMapWithPeers()
+		if netMap == nil {
+			return
+		}
+		var builder netipx.IPSetBuilder
+		for _, peer := range netMap.Peers {
+			for _, allowedIP := range peer.AllowedIPs().All() {
+				if allowedIP.Bits() == 0 {
+					continue
+				}
+				builder.AddPrefix(allowedIP)
+			}
+		}
+		t.routePrefixes.Store(common.Must1(builder.IPSet()))
+	}
+	updateRoutePrefixes()
 	var reportedAuthURL string
 	exitNodePending := t.exitNode != ""
-	localBackend.WatchNotifications(t.ctx, ipn.NotifyInitialState, nil, func(roNotify *ipn.Notify) (keepGoing bool) {
+	localBackend.WatchNotifications(t.ctx, ipn.NotifyInitialState|ipn.NotifyPeerChanges, nil, func(roNotify *ipn.Notify) (keepGoing bool) {
+		if len(roNotify.PeersChanged) > 0 || len(roNotify.PeersRemoved) > 0 {
+			updateRoutePrefixes()
+		}
 		if roNotify.State == nil && roNotify.BrowseToURL == nil {
 			return true
 		}
@@ -847,12 +859,17 @@ func (t *Endpoint) NewConnectionEx(ctx context.Context, conn net.Conn, source M.
 	metadata.Inbound = t.Tag()
 	metadata.InboundType = t.Type()
 	metadata.Source = source
-	addr4, addr6 := t.server.TailscaleIPs()
-	switch destination.Addr {
-	case addr4:
-		destination.Addr = netip.AddrFrom4([4]uint8{127, 0, 0, 1})
-	case addr6:
-		destination.Addr = netip.IPv6Loopback()
+	destinationAddress := tsaddr.UnmapVia(destination.Addr)
+	if destinationAddress != destination.Addr {
+		destination.Addr = destinationAddress
+	} else {
+		addr4, addr6 := t.server.TailscaleIPs()
+		switch destination.Addr {
+		case addr4:
+			destination.Addr = netip.AddrFrom4([4]uint8{127, 0, 0, 1})
+		case addr6:
+			destination.Addr = netip.IPv6Loopback()
+		}
 	}
 	metadata.Destination = destination
 	t.logger.InfoContext(ctx, "inbound connection from ", source)
@@ -865,16 +882,22 @@ func (t *Endpoint) NewPacketConnectionEx(ctx context.Context, conn N.PacketConn,
 	metadata.Inbound = t.Tag()
 	metadata.InboundType = t.Type()
 	metadata.Source = source
-	addr4, addr6 := t.server.TailscaleIPs()
-	switch destination.Addr {
-	case addr4:
-		metadata.OriginDestination = destination
-		destination.Addr = netip.AddrFrom4([4]uint8{127, 0, 0, 1})
-		conn = bufio.NewNATPacketConn(bufio.NewNetPacketConn(conn), metadata.OriginDestination, destination)
-	case addr6:
-		metadata.OriginDestination = destination
-		destination.Addr = netip.IPv6Loopback()
-		conn = bufio.NewNATPacketConn(bufio.NewNetPacketConn(conn), metadata.OriginDestination, destination)
+	originDestination := destination
+	destinationAddress := tsaddr.UnmapVia(destination.Addr)
+	if destinationAddress != destination.Addr {
+		destination.Addr = destinationAddress
+	} else {
+		addr4, addr6 := t.server.TailscaleIPs()
+		switch destination.Addr {
+		case addr4:
+			destination.Addr = netip.AddrFrom4([4]uint8{127, 0, 0, 1})
+		case addr6:
+			destination.Addr = netip.IPv6Loopback()
+		}
+	}
+	if destination != originDestination {
+		metadata.OriginDestination = originDestination
+		conn = bufio.NewNATPacketConn(bufio.NewNetPacketConn(conn), originDestination, destination)
 	}
 	metadata.Destination = destination
 	t.logger.InfoContext(ctx, "inbound packet connection from ", source)
@@ -887,7 +910,11 @@ func (t *Endpoint) PreferredDomain(metadata *adapter.InboundContext, domain stri
 	if routeDomains == nil {
 		return false
 	}
-	return routeDomains[strings.ToLower(domain)]
+	domain = strings.ToLower(domain)
+	if routeDomains[domain] {
+		return true
+	}
+	return !strings.Contains(domain, ".") && t.searchDomains.Load()
 }
 
 func (t *Endpoint) PreferredAddress(metadata *adapter.InboundContext, address netip.Addr) bool {
@@ -906,10 +933,13 @@ func (t *Endpoint) onReconfig(cfg *wgcfg.Config, routerCfg *router.Config, dnsCf
 	if cfg == nil || dnsCfg == nil {
 		return
 	}
-	if (t.cfg != nil && reflect.DeepEqual(t.cfg, cfg)) && (t.dnsCfg != nil && reflect.DeepEqual(t.dnsCfg, dnsCfg)) {
+	if t.cfg != nil && reflect.DeepEqual(t.cfg, cfg) &&
+		t.routerCfg != nil && reflect.DeepEqual(t.routerCfg, routerCfg) &&
+		t.dnsCfg != nil && reflect.DeepEqual(t.dnsCfg, dnsCfg) {
 		return
 	}
 	t.cfg = cfg
+	t.routerCfg = routerCfg
 	t.dnsCfg = dnsCfg
 
 	routeDomains := make(map[string]bool)
@@ -920,14 +950,7 @@ func (t *Endpoint) onReconfig(cfg *wgcfg.Config, routerCfg *router.Config, dnsCf
 		routeDomains[fqdn.WithoutTrailingDot()] = true
 	}
 	t.routeDomains.Store(routeDomains)
-
-	var builder netipx.IPSetBuilder
-	for _, peer := range cfg.Peers {
-		for _, allowedIP := range peer.AllowedIPs {
-			builder.AddPrefix(allowedIP)
-		}
-	}
-	t.routePrefixes.Store(common.Must1(builder.IPSet()))
+	t.searchDomains.Store(len(dnsCfg.SearchDomains) > 0)
 
 	if t.onReconfigHook != nil {
 		t.onReconfigHook(cfg, routerCfg, dnsCfg)
