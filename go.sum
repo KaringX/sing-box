@@ -12,10 +12,10 @@ github.com/KaringX/sing-tun v0.6.2-0.20260805051156-c3892c29b2e1 h1:chTNe4gzo2GU
 github.com/KaringX/sing-tun v0.6.2-0.20260805051156-c3892c29b2e1/go.mod h1:QvarqUtHfj1ULaRR+6kZOS/OoCE+pYGq67A5tyIy+dQ=
 github.com/KaringX/sing-vmess v0.2.8-0.20260526023644-9a9b48357eaf h1:GwYvApY+7k6wgbOkgyVQVOqFPTP+xrUbYj8eAdZM5ew=
 github.com/KaringX/sing-vmess v0.2.8-0.20260526023644-9a9b48357eaf/go.mod h1:P11scgTxMxVVQ8dlM27yNm3Cro40mD0+gHbnqrNGDuY=
-github.com/KaringX/tailscale v1.80.3-mod.5.0.20260805043156-03d2be39bf7b h1:/uO7ztGpEMXEU+q/hjdY5/kioThTq67BwJpU5ZwWcbE=
-github.com/KaringX/tailscale v1.80.3-mod.5.0.20260805043156-03d2be39bf7b/go.mod h1:m87GAn4UcesHQF3leaPFEINZETO5za1LGn1GJdNDgNc=
-github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20260318024955-40f226cd344e h1:u+lE+U2yMXwa0BjEWgsp7mes7Hx06K9c1cZB2/kAezI=
-github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20260318024955-40f226cd344e/go.mod h1:WUxgxUDZoCF2sxVmW+STSxatP02Qn3FcafTiI2BLtE0=
+github.com/KaringX/tailscale v1.80.3-mod.5.0.20260812023457-7007033a39f9 h1:gGbWa+jELASvkht8iNpKC+ZDaiYLmtDZJ1n/+OuTSaQ=
+github.com/KaringX/tailscale v1.80.3-mod.5.0.20260812023457-7007033a39f9/go.mod h1:p8Ms8FbGlwQJyHb862XmdShTS50fFJ8C71VdO6xvWyk=
+github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20260812025805-7d2d140c5113 h1:tHfFXeZunp7i+QWQfuAud25G8v3ddtIhlBTmAsDLqEw=
+github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20260812025805-7d2d140c5113/go.mod h1:hEqi4y5czEg6LYtX2Bpjg+lV0b/J1n+5rA885Z66Mx0=
 github.com/KaringX/ws v0.0.0-20250301004503-082f57b5c845 h1:WQC0VxbvsoQlocfnRKDgNfZ9nnp29tqHOeWxxN0PUs0=
 github.com/KaringX/ws v0.0.0-20250301004503-082f57b5c845/go.mod h1:LtfoSK3+NG57tvnVEHgcuBW9ujgE8enPSgzgwStwCAA=
 github.com/ajg/form v1.5.1/go.mod h1:uL1WgH+h2mgNtvBq0339dVnzXdBETtL2LeUXaIv25UY=

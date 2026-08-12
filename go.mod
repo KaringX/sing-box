@@ -111,11 +111,11 @@ replace github.com/sagernet/ws => github.com/KaringX/ws v0.0.0-20250301004503-08
 
 //replace github.com/sagernet/ws => ../../KaringX/ws
 
-replace github.com/sagernet/wireguard-go => github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20260318024955-40f226cd344e //karing_v0.2.1-beta.1
+replace github.com/sagernet/wireguard-go => github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20260812025805-7d2d140c5113 //karing_v0.0.4
 
 //replace github.com/sagernet/wireguard-go => ../../KaringX/wireguard-go
 
-replace github.com/sagernet/tailscale => github.com/KaringX/tailscale v1.80.3-mod.5.0.20260805043156-03d2be39bf7b //v1.92.4-sing-box-1.13-mod.8
+replace github.com/sagernet/tailscale => github.com/KaringX/tailscale v1.80.3-mod.5.0.20260812023457-7007033a39f9 //v1.92.4-sing-box-1.13-mod.9
 
 //replace github.com/sagernet/tailscale => ../../KaringX/tailscale
 
