@@ -2,6 +2,19 @@
 icon: material/alert-decagram
 ---
 
+#### 1.14.0-beta.14
+
+* Fixes and improvements
+
+#### 1.13.18
+
+* Update naiveproxy to v150.0.7871.63-1
+* Fixes and improvements
+
+#### 1.14.0-beta.10
+
+* Fixes and improvements
+
 #### 1.14.0-beta.7
 
 * Add Hysteria2 Chrome QUIC fingerprint parroting **1**
