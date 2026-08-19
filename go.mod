@@ -34,13 +34,13 @@ require (
 	github.com/sagernet/gomobile v0.1.12
 	github.com/sagernet/gvisor v0.0.0-20250811.0-sing-box-mod.1
 	github.com/sagernet/quic-go v0.59.0-sing-box-mod.4
-	github.com/sagernet/sing v0.8.12
+	github.com/sagernet/sing v0.8.13
 	github.com/sagernet/sing-mux v0.3.5
 	github.com/sagernet/sing-quic v0.6.4-0.20260803041914-d83826c306d7
 	github.com/sagernet/sing-shadowsocks v0.2.8
 	github.com/sagernet/sing-shadowsocks2 v0.2.1
 	github.com/sagernet/sing-shadowtls v0.2.1
-	github.com/sagernet/sing-tun v0.8.12-0.20260727151122-3a09076491df
+	github.com/sagernet/sing-tun v0.8.12-0.20260810140523-7c73233bd0fb
 	github.com/sagernet/sing-vmess v0.2.8-0.20250909125414-3aed155119a1
 	github.com/sagernet/smux v1.5.50-sing-box-mod.1
 	github.com/sagernet/tailscale v1.92.4-sing-box-1.13-mod.9
@@ -87,7 +87,7 @@ require ( //karing
 //replace github.com/metacubex/mihomo => github.com/KaringX/clash v0.0.0-20241101044429-f71df89d4091
 
 //go get github.com/KaringX/sing@a5ccca51fe8a39390591cf9480ffebb9f0c3fc61
-replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20260805040637-3da61a4516d4 //karing_v0.8.12
+replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20260819025303-12e7cea73174 //karing_v0.8.13
 
 //replace github.com/sagernet/sing => ../../KaringX/sing
 
@@ -103,7 +103,7 @@ replace github.com/sagernet/quic-go => github.com/KaringX/quic-go v0.49.0-beta.1
 
 //replace github.com/sagernet/quic-go => ../../KaringX/quic-go
 
-replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.20260805051156-c3892c29b2e1 //karing_v0.8.12
+replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.20260819025838-60cad1147202 //karing_v0.8.12
 
 //replace github.com/sagernet/sing-tun => ../../KaringX/sing-tun
 
