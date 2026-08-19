@@ -25,6 +25,7 @@ type TailscaleEndpointOptions struct {
 	AdvertiseRoutes            []netip.Prefix             `json:"advertise_routes,omitempty"`
 	AdvertiseExitNode          bool                       `json:"advertise_exit_node,omitempty"`
 	AdvertiseTags              badoption.Listable[string] `json:"advertise_tags,omitempty"`
+	ListenPort                 uint16                     `json:"listen_port,omitempty"`
 	RelayServerPort            *uint16                    `json:"relay_server_port,omitempty"`
 	RelayServerStaticEndpoints []netip.AddrPort           `json:"relay_server_static_endpoints,omitempty"`
 	SystemInterface            bool                       `json:"system_interface,omitempty"`
@@ -32,6 +33,7 @@ type TailscaleEndpointOptions struct {
 	SystemInterfaceMTU         uint32                     `json:"system_interface_mtu,omitempty"`
 	UDPTimeout                 UDPTimeoutCompat           `json:"udp_timeout,omitempty"`
 	SSHServer                  *TailscaleSSHServerOptions `json:"ssh_server,omitempty"`
+	TaildropDirectory          string                     `json:"taildrop_directory,omitempty"`
 }
 
 type _TailscaleSSHServerOptions struct {
