@@ -181,7 +181,7 @@ func goMemoryPressureCallback(status C.ulong) {
 				if s.network != nil { //karing
 					s.network.ResetNetwork()
 				}
-				freeOSMemory = true
+				freeOSMemory = false //karing
 			} else if isWarning {
 				s.logger.Warn("memory pressure: ", level, ", usage: ", usage/(1024*1024), " MiB")
 			} else {
