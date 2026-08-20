@@ -16,6 +16,7 @@ import (
 	"github.com/sagernet/sing-box/common/gofree"
 	"github.com/sagernet/sing-box/log"
 	F "github.com/sagernet/sing/common/format"
+	"github.com/sagernet/sing/common/memory"
 	"github.com/sagernet/sing/common/x/list"
 	"github.com/sagernet/sing/service"
 	"github.com/sagernet/sing/service/pause"
@@ -320,7 +321,7 @@ func (m *Manager) persistConnectionsToDB(connections []TrackerMetadata, persistT
 		var memStats runtime.MemStats
 		runtime.ReadMemStats(&memStats)
 		m.memory = memStats.StackInuse + memStats.HeapInuse + memStats.HeapIdle - memStats.HeapReleased
-
+		m.memoryTotal = memory.Total()
 		for _, t := range connections {
 			var inbound string
 			if t.Metadata.Inbound != "" {
@@ -421,7 +422,7 @@ func (m *Manager) persistConnectionsToDB(connections []TrackerMetadata, persistT
 				int32(connectionManager.Count()),
 				int32(runtime.NumGoroutine()),
 				int32(gofree.ThreadNum()),
-				m.memory,
+				m.memoryTotal,
 				t.ID.String(),
 				t.CreatedAt,
 				connectionCloseAt,
@@ -481,7 +482,7 @@ func (m *Manager) persistDeviceEventsToDB(events []DeviceEventTracker, persistTi
 		var memStats runtime.MemStats
 		runtime.ReadMemStats(&memStats)
 		m.memory = memStats.StackInuse + memStats.HeapInuse + memStats.HeapIdle - memStats.HeapReleased
-
+		m.memoryTotal = memory.Total()
 		for _, t := range events {
 			_, err = stmt.Exec(
 				coreStartTime,
@@ -497,7 +498,7 @@ func (m *Manager) persistDeviceEventsToDB(events []DeviceEventTracker, persistTi
 				int32(connectionManager.Count()),
 				int32(runtime.NumGoroutine()),
 				int32(gofree.ThreadNum()),
-				m.memory,
+				m.memoryTotal,
 				t.ID,
 				t.CreatedAt,
 				nil,
