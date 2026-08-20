@@ -50,14 +50,14 @@ type ManagerExtension struct {
 	closedConnectionsForPersist list.List[TrackerMetadata]
 	ticker                      *time.Ticker
 	done                        chan struct{}
-
-	startTime           time.Time
-	uploadTemp          atomic.Int64
-	downloadTemp        atomic.Int64
-	uploadBlip          atomic.Int64
-	downloadBlip        atomic.Int64
-	uploadTotalDirect   atomic.Int64
-	downloadTotalDirect atomic.Int64
+	memoryTotal                 uint64
+	startTime                   time.Time
+	uploadTemp                  atomic.Int64
+	downloadTemp                atomic.Int64
+	uploadBlip                  atomic.Int64
+	downloadBlip                atomic.Int64
+	uploadTotalDirect           atomic.Int64
+	downloadTotalDirect         atomic.Int64
 }
 
 type SnapshotExtension struct {

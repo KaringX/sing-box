@@ -187,12 +187,13 @@ func (m *Manager) Snapshot(includeConnections bool) *Snapshot { //karing
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
 	m.memory = memStats.StackInuse + memStats.HeapInuse + memStats.HeapIdle - memStats.HeapReleased
-
+	m.memoryTotal = memory.Total() //karing
 	return &Snapshot{
 		Upload:      m.uploadTotal.Load(),
 		Download:    m.downloadTotal.Load(),
 		Connections: connections,
 		Memory:      m.memory,
+		MemoryTotal: m.memoryTotal, //karing
 		SnapshotExtension: SnapshotExtension{ //karing
 			StartTime:           m.startTime,
 			DownloadDirect:      m.downloadTotalDirect.Load(),
@@ -221,6 +222,7 @@ type Snapshot struct {
 	Upload            int64
 	Connections       []Tracker
 	Memory            uint64
+	MemoryTotal       uint64 //karing
 }
 
 func (s *Snapshot) MarshalJSON() ([]byte, error) {
@@ -229,7 +231,7 @@ func (s *Snapshot) MarshalJSON() ([]byte, error) {
 		"uploadTotal":         s.Upload,
 		"connections":         common.Map(s.Connections, func(t Tracker) TrackerMetadata { return *t.Metadata() }),
 		"memory":              s.Memory,
-		"memoryTotal":         memory.Total(),        //karing
+		"memoryTotal":         s.MemoryTotal,         //karing
 		"startTime":           s.StartTime,           //karing
 		"downloadTotalDirect": s.DownloadDirect,      //karing
 		"uploadTotalDirect":   s.UploadDirect,        //karing
