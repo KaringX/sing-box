@@ -7,6 +7,7 @@ import (
 	"net/netip"
 	"os"
 	"runtime"
+	"runtime/debug"
 	runtimeDebug "runtime/debug"
 	"strings"
 	"sync"
@@ -464,7 +465,8 @@ func (r *NetworkManager) UpdateWIFIState() {
 func (r *NetworkManager) ResetNetwork() {
 	r.logger.Info("NetworkManager:ResetNetwork")      //karing
 	if r.resetNetworkGc.CompareAndSwap(false, true) { //karing
-		r.logger.Warn("NetworkManager:ResetNetwork canceled because another reset is in progress") //karing
+		stack := debug.Stack()
+		r.logger.Warn("NetworkManager:ResetNetwork canceled because another reset is in progress, stack:\n" + string(stack)) //karing
 		return
 	}
 	if r.connectionManager != nil {
