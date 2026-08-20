@@ -15,6 +15,7 @@ import (
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/json"
+	"github.com/sagernet/sing/common/memory"
 	"github.com/sagernet/sing/common/observable"
 	"github.com/sagernet/sing/common/x/list"
 	"github.com/sagernet/sing/service"
@@ -228,6 +229,7 @@ func (s *Snapshot) MarshalJSON() ([]byte, error) {
 		"uploadTotal":         s.Upload,
 		"connections":         common.Map(s.Connections, func(t Tracker) TrackerMetadata { return *t.Metadata() }),
 		"memory":              s.Memory,
+		"memoryTotal":         memory.Total(),        //karing
 		"startTime":           s.StartTime,           //karing
 		"downloadTotalDirect": s.DownloadDirect,      //karing
 		"uploadTotalDirect":   s.UploadDirect,        //karing

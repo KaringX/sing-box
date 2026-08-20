@@ -191,7 +191,7 @@ func (s *CommandServer) SetError(message string) {
 
 func (s *CommandServer) NeedWIFIState() bool {
 	instance := s.StartedService.Instance()
-	if instance == nil || instance.Box() == nil {
+	if instance == nil || instance.Box() == nil || instance.Box().Network() == nil { //karing
 		return false
 	}
 	return instance.Box().Network().NeedWIFIState()
@@ -232,7 +232,7 @@ func (s *CommandServer) Wake() {
 
 func (s *CommandServer) ResetNetwork() {
 	instance := s.StartedService.Instance()
-	if instance == nil || instance.Box() == nil {
+	if instance == nil || instance.Box() == nil || instance.Box().Network() == nil { //karing
 		return
 	}
 	instance.Box().Network().ResetNetwork()
@@ -240,7 +240,7 @@ func (s *CommandServer) ResetNetwork() {
 
 func (s *CommandServer) UpdateWIFIState() {
 	instance := s.StartedService.Instance()
-	if instance == nil || instance.Box() == nil {
+	if instance == nil || instance.Box() == nil || instance.Box().Network() == nil { //karing
 		return
 	}
 	instance.Box().Network().UpdateWIFIState()

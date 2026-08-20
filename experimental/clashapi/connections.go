@@ -115,7 +115,9 @@ func closeAllConnections(network adapter.NetworkManager, trafficManager *traffic
 		for _, c := range snapshot.Connections {
 			c.Close()
 		}
-		network.ResetNetwork()
+		if network != nil { //karing
+			network.ResetNetwork()
+		}
 		render.NoContent(w, r)
 	}
 }
