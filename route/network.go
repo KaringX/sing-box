@@ -462,7 +462,11 @@ func (r *NetworkManager) UpdateWIFIState() {
 }
 
 func (r *NetworkManager) ResetNetwork() {
-	r.logger.Info("NetworkManager:ResetNetwork") //karing
+	r.logger.Info("NetworkManager:ResetNetwork")      //karing
+	if r.resetNetworkGc.CompareAndSwap(false, true) { //karing
+		r.logger.Warn("NetworkManager:ResetNetwork canceled because another reset is in progress") //karing
+		return
+	}
 	if r.connectionManager != nil {
 		r.connectionManager.CloseAll()
 	}
@@ -492,12 +496,11 @@ func (r *NetworkManager) ResetNetwork() {
 	}
 
 	r.router.ResetNetwork()
-	if !r.resetNetworkGc.CompareAndSwap(false, true) { //karing
-		go func() {
-			runtime.GC()
-			runtimeDebug.FreeOSMemory()
-		}()
-	}
+	go func() { //karing
+		runtime.GC()
+		runtimeDebug.FreeOSMemory()
+	}()
+	r.resetNetworkGc.Store(false) //karing
 }
 
 func (r *NetworkManager) notifyInterfaceUpdate(defaultInterface *control.Interface, flags int) {
