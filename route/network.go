@@ -7,11 +7,9 @@ import (
 	"net/netip"
 	"os"
 	"runtime"
-	"runtime/debug"
 	runtimeDebug "runtime/debug"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -60,7 +58,6 @@ type NetworkManager struct {
 	wifiState              adapter.WIFIState
 	wifiStateMutex         sync.RWMutex
 	started                bool
-	resetNetworkGc         atomic.Bool
 }
 
 func NewNetworkManager(ctx context.Context, logger logger.ContextLogger, options option.RouteOptions, dnsOptions option.DNSOptions) (*NetworkManager, error) {
@@ -463,12 +460,7 @@ func (r *NetworkManager) UpdateWIFIState() {
 }
 
 func (r *NetworkManager) ResetNetwork() {
-	r.logger.Info("NetworkManager:ResetNetwork")      //karing
-	if r.resetNetworkGc.CompareAndSwap(false, true) { //karing
-		stack := debug.Stack()
-		r.logger.Warn("NetworkManager:ResetNetwork canceled because another reset is in progress, stack:\n" + string(stack)) //karing
-		return
-	}
+	r.logger.Info("NetworkManager:ResetNetwork") //karing
 	if r.connectionManager != nil {
 		r.connectionManager.CloseAll()
 	}
@@ -502,7 +494,6 @@ func (r *NetworkManager) ResetNetwork() {
 		runtime.GC()
 		runtimeDebug.FreeOSMemory()
 	}()
-	r.resetNetworkGc.Store(false) //karing
 }
 
 func (r *NetworkManager) notifyInterfaceUpdate(defaultInterface *control.Interface, flags int) {
