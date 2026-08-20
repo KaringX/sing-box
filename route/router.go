@@ -272,12 +272,7 @@ func (r *Router) NeedFindProcess() bool {
 }
 
 func (r *Router) ResetNetwork() {
-	//r.network.ResetNetwork() //karing
 	//r.dns.ResetNetwork() //karing
-
-	if r.network != nil { //karing
-		r.network.ResetNetwork()
-	}
 	if r.dns != nil { //karing
 		r.dns.ResetNetwork()
 	}
