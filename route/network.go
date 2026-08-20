@@ -10,6 +10,7 @@ import (
 	runtimeDebug "runtime/debug"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -58,6 +59,7 @@ type NetworkManager struct {
 	wifiState              adapter.WIFIState
 	wifiStateMutex         sync.RWMutex
 	started                bool
+	resetNetworkGc         atomic.Bool
 }
 
 func NewNetworkManager(ctx context.Context, logger logger.ContextLogger, options option.RouteOptions, dnsOptions option.DNSOptions) (*NetworkManager, error) {
@@ -488,12 +490,14 @@ func (r *NetworkManager) ResetNetwork() {
 			}
 		}
 	}
-	go func() { //karing
-		runtime.GC()
-		runtimeDebug.FreeOSMemory()
-	}()
 
 	r.router.ResetNetwork()
+	if !r.resetNetworkGc.CompareAndSwap(false, true) { //karing
+		go func() {
+			runtime.GC()
+			runtimeDebug.FreeOSMemory()
+		}()
+	}
 }
 
 func (r *NetworkManager) notifyInterfaceUpdate(defaultInterface *control.Interface, flags int) {
