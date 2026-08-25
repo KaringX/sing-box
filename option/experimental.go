@@ -14,6 +14,7 @@ type StatisticsOptions struct { //karing
 	Enabled         bool   `json:"enabled,omitempty"`
 	DataDesensitize bool   `json:"data_desensitize,omitempty"`
 	CacheDays       int    `json:"cache_days,omitempty"`
+	CacheSizeLimit  int64  `json:"cache_size_limit,omitempty"`
 	Path            string `json:"path,omitempty"`
 }
 

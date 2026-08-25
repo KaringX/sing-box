@@ -5,6 +5,7 @@ package statistics
 import (
 	"context"
 	"database/sql"
+	"os"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/sagernet/sing-box/adapter"
@@ -15,8 +16,10 @@ import (
 type Statistics struct {
 	ctx             context.Context
 	db              *sql.DB
+	dbPath          string
 	dataDesensitize bool
 	cacheDays       int
+	cacheSizeLimit  int64
 }
 
 // dbbackup go-sqlite3\_example\hook\hook.go
@@ -26,7 +29,7 @@ func New(ctx context.Context, options *option.StatisticsOptions) (*Statistics, e
 	if err != nil {
 		return nil, err
 	}
-	return &Statistics{ctx: ctx, db: db, dataDesensitize: options.DataDesensitize, cacheDays: options.CacheDays}, nil
+	return &Statistics{ctx: ctx, db: db, dbPath: dbPath, dataDesensitize: options.DataDesensitize, cacheDays: options.CacheDays, cacheSizeLimit: options.CacheSizeLimit}, nil
 }
 
 func (c *Statistics) Name() string {
@@ -93,4 +96,19 @@ func (d *Statistics) DataDesensitize() bool {
 
 func (d *Statistics) CacheDays() int {
 	return d.cacheDays
+}
+
+func (d *Statistics) CacheSizeLimit() int64 {
+	return d.cacheSizeLimit
+}
+
+func (d *Statistics) DBSize() int64 {
+	if d.db == nil || d.dbPath == "" {
+		return 0
+	}
+	info, err := os.Stat(d.dbPath)
+	if err != nil {
+		return -1
+	}
+	return info.Size()
 }

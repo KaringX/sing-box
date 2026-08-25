@@ -49,6 +49,8 @@ type ManagerExtension struct {
 	eventsForPersist            list.List[DeviceEventTracker]
 	closedConnectionsForPersist list.List[TrackerMetadata]
 	ticker                      *time.Ticker
+	dbSizeTicker                *time.Ticker
+	dbCacheSizeLimited          atomic.Bool
 	done                        chan struct{}
 	memoryTotal                 uint64
 	startTime                   time.Time
@@ -80,10 +82,11 @@ func IsCoreRestart() bool {
 func newManagerWithExtension(ctx context.Context, logFactory log.ObservableFactory) *Manager {
 	manager := &Manager{
 		ManagerExtension: ManagerExtension{ctx: ctx,
-			logger:    logFactory.NewLogger("trafficontrolmanager"),
-			startTime: time.Now(),
-			ticker:    time.NewTicker(time.Second),
-			done:      make(chan struct{}),
+			logger:       logFactory.NewLogger("trafficontrolmanager"),
+			startTime:    time.Now(),
+			ticker:       time.NewTicker(time.Second),
+			dbSizeTicker: time.NewTicker(time.Minute * 1),
+			done:         make(chan struct{}),
 		},
 	}
 
@@ -114,6 +117,8 @@ func newManagerWithExtension(ctx context.Context, logFactory log.ObservableFacto
 		}
 	}
 	go manager.handle()
+	go manager.handleDBSizeCheck()
+
 	return manager
 }
 
@@ -151,6 +156,9 @@ func (m *Manager) GetLatestDownloadTime(tag string) (bool, time.Time) {
 
 func (m *Manager) getConnectionsForPersist() []TrackerMetadata {
 	var connections []TrackerMetadata
+	if m.dbCacheSizeLimited.Load() {
+		return connections
+	}
 	m.connections.Range(func(_ uuid.UUID, value Tracker) bool {
 		md := value.Metadata()
 		if !md.Dirty.Load() {
@@ -238,6 +246,38 @@ func (m *Manager) handle() {
 	}
 }
 
+func (m *Manager) handleDBSizeCheck() {
+	m.dBSizeCheck()
+	for {
+		select {
+		case <-m.done:
+			return
+		case <-m.dbSizeTicker.C:
+			m.dBSizeCheck()
+		}
+	}
+}
+
+func (m *Manager) dBSizeCheck() {
+	statistics := service.FromContext[adapter.Statistics](m.ctx)
+	if statistics != nil {
+		limit := statistics.CacheSizeLimit()
+		if limit > 0 {
+			dbSize := statistics.DBSize()
+			if dbSize == -1 || dbSize > limit {
+				if !m.dbCacheSizeLimited.Load() {
+					m.logger.WarnContext(m.ctx, "statistics database size exceeds limit: ", dbSize, " bytes")
+				}
+				m.dbCacheSizeLimited.Store(true)
+			} else {
+				m.dbCacheSizeLimited.Store(false)
+			}
+		} else {
+			m.dbCacheSizeLimited.Store(false)
+		}
+	}
+}
+
 func (m *Manager) resetStatistic() {
 	m.uploadTemp.Store(0)
 	m.uploadBlip.Store(0)
@@ -249,6 +289,7 @@ func (m *Manager) resetStatistic() {
 
 func (m *Manager) Close() error {
 	m.ticker.Stop()
+	m.dbSizeTicker.Stop()
 	close(m.done)
 
 	if m.pauseCallback != nil {
@@ -293,6 +334,9 @@ func (m *Manager) Close() error {
 }
 
 func (m *Manager) addNewEvent(name string) {
+	if m.dbCacheSizeLimited.Load() {
+		return
+	}
 	id, _ := uuid.NewV4()
 	m.persistAccess.Lock()
 	defer m.persistAccess.Unlock()

@@ -89,9 +89,11 @@ func (m *Manager) Leave(c Tracker) {
 		m.closedConnections.PushBack(metadataCopy)
 		statistics := service.FromContext[adapter.Statistics](m.ctx) //karing
 		if statistics != nil {                                       //karing
-			m.persistAccess.Lock()
-			defer m.persistAccess.Unlock()
-			m.closedConnectionsForPersist.PushBack(*metadata)
+			if !m.dbCacheSizeLimited.Load() {
+				m.persistAccess.Lock()
+				defer m.persistAccess.Unlock()
+				m.closedConnectionsForPersist.PushBack(*metadata)
+			}
 		}
 
 		m.closedConnectionsAccess.Unlock()

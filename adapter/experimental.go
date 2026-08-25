@@ -82,6 +82,8 @@ type Statistics interface { //karing
 	Commit(tx *sql.Tx) error
 	DataDesensitize() bool
 	CacheDays() int
+	CacheSizeLimit() int64
+	DBSize() int64
 }
 
 type SavedBinary struct {
