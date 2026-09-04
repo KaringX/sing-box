@@ -26,6 +26,7 @@ import (
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/adapter/endpoint"
 	"github.com/sagernet/sing-box/common/dialer"
+	"github.com/sagernet/sing-box/common/iponly"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/dns"
 	"github.com/sagernet/sing-box/log"
@@ -67,6 +68,7 @@ import (
 var (
 	_ adapter.OutboundWithPreferredRoutes = (*Endpoint)(nil)
 	_ adapter.InterfaceUpdateListener     = (*Endpoint)(nil)
+	_ adapter.Referrer                    = (*Endpoint)(nil)
 	_ dialer.PacketDialerWithDestination  = (*Endpoint)(nil)
 	_ tun.Port                            = (*Endpoint)(nil)
 )
@@ -88,6 +90,7 @@ type Endpoint struct {
 	dnsRouter         adapter.DNSRouter
 	network           adapter.NetworkManager
 	platformInterface adapter.PlatformInterface
+	detour            string
 	server            *tsnet.Server
 	stack             *stack.Stack
 	icmpForwarder     *tun.ICMPForwarder
@@ -199,6 +202,7 @@ func NewEndpoint(ctx context.Context, router adapter.Router, logger log.ContextL
 		queryOptions:      dialerQueryOptions,
 		network:           service.FromContext[adapter.NetworkManager](ctx),
 		platformInterface: platformInterface,
+		detour:            options.Detour,
 		server: &tsnet.Server{
 			Dir:      stateDirectory,
 			Hostname: hostname,
@@ -248,6 +252,13 @@ func NewEndpoint(ctx context.Context, router adapter.Router, logger log.ContextL
 		systemInterfaceMTU:         options.SystemInterfaceMTU,
 		keyAuth:                    options.AuthKey != "",
 	}, nil
+}
+
+func (t *Endpoint) References() []string {
+	if t.detour == "" {
+		return nil
+	}
+	return []string{t.detour}
 }
 
 func (t *Endpoint) Start(stage adapter.StartStage) error {
@@ -740,7 +751,7 @@ func (t *Endpoint) Close() error {
 	return err
 }
 
-func (t *Endpoint) InterfaceUpdated() {
+func (t *Endpoint) InterfaceUpdated(ctx context.Context) {
 	if !t.started.Load() {
 		return
 	}
@@ -858,7 +869,7 @@ func (t *Endpoint) ListenPacketWithDestination(ctx context.Context, destination 
 		for _, address := range destinationAddresses {
 			packetConn, packetErr := t.listenPacketWithAddress(ctx, M.SocksaddrFrom(address, destination.Port))
 			if packetErr == nil {
-				return packetConn, address, nil
+				return iponly.NewPacketConn(t.logger, packetConn), address, nil
 			}
 			errors = append(errors, packetErr)
 		}
@@ -869,9 +880,9 @@ func (t *Endpoint) ListenPacketWithDestination(ctx context.Context, destination 
 		return nil, netip.Addr{}, err
 	}
 	if destination.IsIP() {
-		return packetConn, destination.Addr, nil
+		return iponly.NewPacketConn(t.logger, packetConn), destination.Addr, nil
 	}
-	return packetConn, netip.Addr{}, nil
+	return iponly.NewPacketConn(t.logger, packetConn), netip.Addr{}, nil
 }
 
 func (t *Endpoint) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
@@ -952,7 +963,7 @@ func (t *Endpoint) PreferredDomain(metadata *adapter.InboundContext, domain stri
 		}
 	}
 	for _, suffix := range t.routeSuffixes.Load() {
-		if mDNS.IsSubDomain(suffix, domain) {
+		if matchDomainSuffix(domain, suffix) {
 			return true
 		}
 	}
@@ -999,7 +1010,7 @@ func (t *Endpoint) onReconfig(cfg *wgcfg.Config, routerCfg *router.Config, dnsCf
 	}
 	routeSuffixes := make([]string, 0, len(dnsCfg.Routes))
 	for fqdn := range dnsCfg.Routes {
-		routeSuffixes = append(routeSuffixes, fqdn.WithoutTrailingDot())
+		routeSuffixes = append(routeSuffixes, strings.ToLower(fqdn.WithoutTrailingDot()))
 	}
 	t.routeDomains.Store(routeDomains)
 	t.routeSuffixes.Store(routeSuffixes)

@@ -1,6 +1,7 @@
 package oomkiller
 
 import (
+	"context"
 	runtimeDebug "runtime/debug"
 	"sync"
 	"time"
@@ -101,7 +102,9 @@ type adaptiveTimer struct {
 	timerConfig
 	logger          log.ContextLogger
 	network         adapter.NetworkManager
-	onTriggered     func(uint64)
+	connections     adapter.ConnectionManager
+	cacheFile       adapter.CacheFile
+	recorder        *Recorder
 	limitThresholds pressureThresholds
 
 	access                  sync.Mutex
@@ -114,12 +117,14 @@ type adaptiveTimer struct {
 	pressureBaselineTime    time.Time
 }
 
-func newAdaptiveTimer(logger log.ContextLogger, network adapter.NetworkManager, config timerConfig, onTriggered func(uint64)) *adaptiveTimer {
+func newAdaptiveTimer(logger log.ContextLogger, network adapter.NetworkManager, connections adapter.ConnectionManager, cacheFile adapter.CacheFile, recorder *Recorder, config timerConfig) *adaptiveTimer {
 	t := &adaptiveTimer{
 		timerConfig: config,
 		logger:      logger,
 		network:     network,
-		onTriggered: onTriggered,
+		connections: connections,
+		cacheFile:   cacheFile,
+		recorder:    recorder,
 	}
 	if config.policyMode == policyModeMemoryLimit || config.policyMode == policyModeNetworkExtension {
 		t.limitThresholds = computeLimitThresholds(config.memoryLimit, config.safetyMargin)
@@ -191,27 +196,49 @@ func (t *adaptiveTimer) poll() {
 			}
 		}
 	}
+	state := t.state
 	t.access.Unlock()
+	var connections int
+	if t.connections != nil {
+		connections = t.connections.Count()
+	}
+	if t.recorder != nil {
+		t.recorder.sample(sample, state, connections)
+		if state != previousState {
+			t.recorder.recordStateChange(state, sample)
+		}
+	}
 	if !triggered {
 		return
 	}
-	if t.onTriggered != nil {
-		t.onTriggered(sample.usage)
-	}
+	var reason string
 	if rateTriggered {
+		reason = resetReasonRate
 		if t.killerDisabled {
 			t.logger.Warn("memory growth rate critical (report only), usage: ", byteformats.FormatMemoryBytes(sample.usage), t.logDetails(sample))
 		} else {
 			t.logger.Error("memory growth rate critical, usage: ", byteformats.FormatMemoryBytes(sample.usage), t.logDetails(sample), ", resetting network")
-			t.network.ResetNetwork()
+			t.network.ResetNetwork(context.Background())
 		}
 	} else {
+		reason = resetReasonThreshold
 		if t.killerDisabled {
 			t.logger.Warn("memory threshold reached (report only), usage: ", byteformats.FormatMemoryBytes(sample.usage), t.logDetails(sample))
 		} else {
 			t.logger.Error("memory threshold reached, usage: ", byteformats.FormatMemoryBytes(sample.usage), t.logDetails(sample), ", resetting network")
-			t.network.ResetNetwork()
+			t.network.ResetNetwork(context.Background())
 		}
+	}
+	t.releaseMemory()
+	if t.recorder != nil {
+		t.recorder.recordReset(reason, sample, readMemorySample(t.policyMode), connections, t.killerDisabled)
+		t.recorder.snapshot(SnapshotReasonReset, sample, false)
+	}
+}
+
+func (t *adaptiveTimer) releaseMemory() {
+	if t.cacheFile != nil {
+		t.cacheFile.Flush()
 	}
 	badCleanup()
 	runtimeDebug.FreeOSMemory()
@@ -319,9 +346,20 @@ func readMemorySample(mode policyMode) memorySample {
 	sample := memorySample{
 		usage: memory.Total(),
 	}
-	if mode == policyModeAvailable {
+	if mode == policyModeAvailable || mode == policyModeNetworkExtension {
 		sample.availableKnown = true
 		sample.available = memory.Available()
 	}
 	return sample
+}
+
+func (s pressureState) String() string {
+	switch s {
+	case pressureStateArmed:
+		return "armed"
+	case pressureStateTriggered:
+		return "triggered"
+	default:
+		return "normal"
+	}
 }

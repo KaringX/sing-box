@@ -1,6 +1,7 @@
 package adapter
 
 import (
+	"context"
 	"net/netip"
 
 	"github.com/sagernet/sing-box/option"
@@ -29,7 +30,7 @@ type PlatformInterface interface {
 
 	ClearDNSCache()
 	RequestPermissionForWIFIState() error
-	ReadWIFIState() WIFIState
+	ReadWIFIState(ctx context.Context) WIFIState
 
 	UsePlatformConnectionOwnerFinder() bool
 	FindConnectionOwner(request *FindConnectionOwnerRequest) (*ConnectionOwner, error)
@@ -56,6 +57,23 @@ type PlatformInterface interface {
 
 	UsePlatformBridge() bool
 	CreateBridge(options BridgeOptions) (BridgeSession, error)
+
+	UsePlatformAutoRedirect() bool
+	CreateAutoRedirect(options AutoRedirectOptions) (AutoRedirectSession, error)
+}
+
+type AutoRedirectOptions struct {
+	TunOptions                     *tun.Options
+	TableName                      string
+	RedirectPort                   uint16
+	RedirectListenerFileDescriptor func() (int, error)
+	RouteAddressSetFileDescriptor  func() (int, error)
+	Handler                        tun.AutoRedirectHandler
+}
+
+type AutoRedirectSession interface {
+	Close() error
+	UpdateRouteAddressSet() error
 }
 
 type BridgeOptions struct {

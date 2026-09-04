@@ -135,7 +135,7 @@ func (p *windowsPlatformInterface) RequestPermissionForWIFIState() error {
 	return nil
 }
 
-func (p *windowsPlatformInterface) ReadWIFIState() adapter.WIFIState {
+func (p *windowsPlatformInterface) ReadWIFIState(ctx context.Context) adapter.WIFIState {
 	return adapter.WIFIState{}
 }
 
@@ -238,6 +238,14 @@ func (p *windowsPlatformInterface) UsePlatformBridge() bool {
 }
 
 func (p *windowsPlatformInterface) CreateBridge(options adapter.BridgeOptions) (adapter.BridgeSession, error) {
+	return nil, os.ErrInvalid
+}
+
+func (p *windowsPlatformInterface) UsePlatformAutoRedirect() bool {
+	return false
+}
+
+func (p *windowsPlatformInterface) CreateAutoRedirect(options adapter.AutoRedirectOptions) (adapter.AutoRedirectSession, error) {
 	return nil, os.ErrInvalid
 }
 

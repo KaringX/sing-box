@@ -127,7 +127,7 @@ func (s *platformInterfaceStub) UsePlatformWIFIMonitor() bool {
 	return false
 }
 
-func (s *platformInterfaceStub) ReadWIFIState() adapter.WIFIState {
+func (s *platformInterfaceStub) ReadWIFIState(ctx context.Context) adapter.WIFIState {
 	return adapter.WIFIState{}
 }
 
@@ -196,6 +196,14 @@ func (s *platformInterfaceStub) UsePlatformBridge() bool {
 }
 
 func (s *platformInterfaceStub) CreateBridge(options adapter.BridgeOptions) (adapter.BridgeSession, error) {
+	return nil, os.ErrInvalid
+}
+
+func (s *platformInterfaceStub) UsePlatformAutoRedirect() bool {
+	return false
+}
+
+func (s *platformInterfaceStub) CreateAutoRedirect(options adapter.AutoRedirectOptions) (adapter.AutoRedirectSession, error) {
 	return nil, os.ErrInvalid
 }
 

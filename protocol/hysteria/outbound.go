@@ -30,6 +30,7 @@ func RegisterOutbound(registry *outbound.Registry) {
 var (
 	_ adapter.Outbound                = (*tuic.Outbound)(nil)
 	_ adapter.InterfaceUpdateListener = (*tuic.Outbound)(nil)
+	_ adapter.IdleConnectionCloser    = (*Outbound)(nil)
 )
 
 type Outbound struct {
@@ -115,8 +116,12 @@ func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
 	return h.client.ListenPacket(ctx, destination)
 }
 
-func (h *Outbound) InterfaceUpdated() {
+func (h *Outbound) InterfaceUpdated(ctx context.Context) {
 	h.client.CloseWithError(E.New("network changed"))
+}
+
+func (h *Outbound) CloseIdleConnections() {
+	h.client.CloseIdleConnections()
 }
 
 func (h *Outbound) Close() error {

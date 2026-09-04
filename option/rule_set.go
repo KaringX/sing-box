@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/sagernet/sing-box/common/ipset"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/schema"
 	"github.com/sagernet/sing/common"
@@ -15,8 +16,6 @@ import (
 	"github.com/sagernet/sing/common/json"
 	"github.com/sagernet/sing/common/json/badjson"
 	"github.com/sagernet/sing/common/json/badoption"
-
-	"go4.org/netipx"
 )
 
 type _RuleSet struct {
@@ -55,7 +54,7 @@ func (r RuleSet) MarshalJSON() ([]byte, error) {
 	default:
 		return nil, E.New("unknown rule-set type: " + r.Type)
 	}
-	return badjson.MarshallObjects((_RuleSet)(r), v)
+	return badjson.MarshallObjects(_RuleSet(r), v)
 }
 
 func (r *RuleSet) UnmarshalJSON(bytes []byte) error {
@@ -206,7 +205,7 @@ func (r HeadlessRule) MarshalJSON() ([]byte, error) {
 	default:
 		return nil, E.New("unknown rule type: " + r.Type)
 	}
-	return badjson.MarshallObjects((_HeadlessRule)(r), v)
+	return badjson.MarshallObjects(_HeadlessRule(r), v)
 }
 
 func (r *HeadlessRule) UnmarshalJSON(bytes []byte) error {
@@ -277,8 +276,8 @@ type DefaultHeadlessRule struct {
 	Invert bool `json:"invert,omitempty"`
 
 	DomainMatcher *domain.Matcher `json:"-"`
-	SourceIPSet   *netipx.IPSet   `json:"-"`
-	IPSet         *netipx.IPSet   `json:"-"`
+	SourceIPSet   *ipset.Set      `json:"-"`
+	IPSet         *ipset.Set      `json:"-"`
 
 	AdGuardDomain        badoption.Listable[string] `json:"-"`
 	AdGuardDomainMatcher *domain.AdGuardMatcher     `json:"-"`
@@ -316,7 +315,7 @@ func (r PlainRuleSetCompat) MarshalJSON() ([]byte, error) {
 	default:
 		return nil, E.New("unknown rule-set version: ", r.Version)
 	}
-	return badjson.MarshallObjects((_PlainRuleSetCompat)(r), v)
+	return badjson.MarshallObjects(_PlainRuleSetCompat(r), v)
 }
 
 func (r *PlainRuleSetCompat) UnmarshalJSON(bytes []byte) error {

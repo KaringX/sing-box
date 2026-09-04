@@ -1,6 +1,7 @@
 package libbox
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
@@ -14,7 +15,9 @@ import (
 	"github.com/sagernet/sing-box/adapter"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/experimental/libbox/internal/procfs"
+	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
+	"github.com/sagernet/sing-box/service/powerreport"
 	tun "github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/control"
@@ -28,6 +31,7 @@ type platformInterfaceWrapper struct {
 	iif                    PlatformInterface
 	useProcFS              bool
 	networkManager         adapter.NetworkManager
+	powerManager           *powerreport.Manager
 	myTunName              string
 	myTunAddress           []netip.Addr
 	defaultInterfaceAccess sync.Mutex
@@ -175,12 +179,12 @@ func (w *platformInterfaceWrapper) UsePlatformWIFIMonitor() bool {
 	return true
 }
 
-func (w *platformInterfaceWrapper) ReadWIFIState() adapter.WIFIState {
+func (w *platformInterfaceWrapper) ReadWIFIState(ctx context.Context) adapter.WIFIState {
 	wifiState := w.iif.ReadWIFIState()
 	if wifiState == nil {
 		return adapter.WIFIState{}
 	}
-	return (adapter.WIFIState)(*wifiState)
+	return adapter.WIFIState(*wifiState)
 }
 
 func (w *platformInterfaceWrapper) UsePlatformConnectionOwnerFinder() bool {
@@ -344,6 +348,79 @@ func (w *bridgeSessionWrapper) SetEgress(interfaceName string) error {
 
 func (w *bridgeSessionWrapper) Close() error {
 	return w.session.Close()
+}
+
+func (w *platformInterfaceWrapper) UsePlatformAutoRedirect() bool {
+	return w.iif.UsePlatformAutoRedirect()
+}
+
+func (w *platformInterfaceWrapper) CreateAutoRedirect(options adapter.AutoRedirectOptions) (adapter.AutoRedirectSession, error) {
+	encodedOptions, err := encodeAutoRedirectOptions(options)
+	if err != nil {
+		return nil, err
+	}
+	return w.iif.CreateAutoRedirect(encodedOptions, &autoRedirectHandlerWrapper{
+		handler:                   options.Handler,
+		listenerFileDescriptor:    options.RedirectListenerFileDescriptor,
+		routeAddressSetDescriptor: options.RouteAddressSetFileDescriptor,
+		logger:                    options.TunOptions.Logger,
+	})
+}
+
+type autoRedirectHandlerWrapper struct {
+	handler                   tun.AutoRedirectHandler
+	listenerFileDescriptor    func() (int, error)
+	routeAddressSetDescriptor func() (int, error)
+	logger                    logger.Logger
+}
+
+func (w *autoRedirectHandlerWrapper) RedirectListenerFileDescriptor() (int32, error) {
+	fd, err := w.listenerFileDescriptor()
+	if err != nil {
+		return 0, err
+	}
+	return int32(fd), nil
+}
+
+func (w *autoRedirectHandlerWrapper) RouteAddressSetFileDescriptor() (int32, error) {
+	fd, err := w.routeAddressSetDescriptor()
+	if err != nil {
+		return 0, err
+	}
+	return int32(fd), nil
+}
+
+func (w *autoRedirectHandlerWrapper) JudgeFlow(ipProtocol int32, sourceAddress string, sourcePort int32, destinationAddress string, destinationPort int32, firstPacket []byte) (int32, error) {
+	source, err := netip.ParseAddr(sourceAddress)
+	if err != nil {
+		return 0, E.Cause(err, "parse source address")
+	}
+	destination, err := netip.ParseAddr(destinationAddress)
+	if err != nil {
+		return 0, E.Cause(err, "parse destination address")
+	}
+	verdict := w.handler.JudgeFlow(
+		uint8(ipProtocol),
+		netip.AddrPortFrom(source, uint16(sourcePort)),
+		netip.AddrPortFrom(destination, uint16(destinationPort)),
+		firstPacket,
+	)
+	return int32(verdict.Action), nil
+}
+
+func (w *autoRedirectHandlerWrapper) WriteLog(level int32, message string) {
+	switch log.Level(level) {
+	case log.LevelTrace:
+		w.logger.Trace(message)
+	case log.LevelDebug:
+		w.logger.Debug(message)
+	case log.LevelInfo:
+		w.logger.Info(message)
+	case log.LevelWarn:
+		w.logger.Warn(message)
+	default:
+		w.logger.Error(message)
+	}
 }
 
 func (w *platformInterfaceWrapper) LookupUser(username string) (*adapter.PlatformUser, error) {

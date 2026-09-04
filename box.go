@@ -27,6 +27,7 @@ import (
 	"github.com/sagernet/sing-box/dns"
 	"github.com/sagernet/sing-box/experimental"
 	"github.com/sagernet/sing-box/experimental/cachefile"
+	"github.com/sagernet/sing-box/experimental/clashmode"
 	"github.com/sagernet/sing-box/experimental/deprecated"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
@@ -43,6 +44,7 @@ import (
 var _ adapter.SimpleLifecycle = (*Box)(nil)
 
 type Box struct {
+	ctx                 context.Context
 	createdAt           time.Time
 	debugOptions        option.DebugOptions
 	debugHTTPServer     *http.Server
@@ -156,7 +158,7 @@ func New(options Options) (*Box, error) {
 	if experimentalOptions.CacheFile != nil && experimentalOptions.CacheFile.Enabled || options.PlatformLogWriter != nil {
 		needCacheFile = true
 	}
-	if experimentalOptions.ClashAPI != nil || options.PlatformLogWriter != nil {
+	if experimentalOptions.ClashAPI != nil {
 		needClashAPI = true
 	}
 	if experimentalOptions.V2RayAPI != nil && experimentalOptions.V2RayAPI.Listen != "" {
@@ -176,7 +178,7 @@ func New(options Options) (*Box, error) {
 	logFactory, err := log.New(log.Options{
 		Context:        ctx,
 		Options:        common.PtrValueOrDefault(options.Log),
-		Observable:     needClashAPI || needAPIService,
+		Observable:     needClashAPI && experimentalOptions.ClashAPI.ExternalController != "",
 		DefaultWriter:  defaultLogWriter,
 		BaseTime:       createdAt,
 		PlatformWriter: options.PlatformLogWriter,
@@ -242,12 +244,20 @@ func New(options Options) (*Box, error) {
 	if err != nil {
 		return nil, E.Cause(err, "initialize router")
 	}
-	if needClashAPI || needAPIService {
+	if needClashAPI || needAPIService || options.PlatformLogWriter != nil {
 		trafficManager := trafficcontrol.NewManager(outboundManager)
 		service.MustRegisterPtr(ctx, trafficManager)
 		router.AppendTracker(trafficManager)
 		internalServices = append(internalServices, trafficManager)
+		var clashDefaultMode string
+		if experimentalOptions.ClashAPI != nil {
+			clashDefaultMode = experimentalOptions.ClashAPI.DefaultMode
+		}
+		clashMode := clashmode.NewManager(ctx, logFactory.NewLogger("clash-mode"), clashDefaultMode, clashmode.CalculateModeList(options.Options))
+		service.MustRegisterPtr(ctx, clashMode)
+		internalServices = append(internalServices, clashMode)
 	}
+	internalServices = append(internalServices, route.NewReferenceManager(ctx, logFactory.NewLogger("reference"), options.Options))
 	ntpOptions := common.PtrValueOrDefault(options.NTP)
 	var timeService *tls.TimeServiceWrapper
 	if ntpOptions.Enabled {
@@ -419,13 +429,10 @@ func New(options Options) (*Box, error) {
 		internalServices = append(internalServices, cacheFile)
 	}
 	if needClashAPI {
-		clashAPIOptions := common.PtrValueOrDefault(experimentalOptions.ClashAPI)
-		clashAPIOptions.ModeList = experimental.CalculateClashModeList(options.Options)
-		clashServer, err := experimental.NewClashServer(ctx, logFactory.(log.ObservableFactory), clashAPIOptions)
+		clashServer, err := experimental.NewClashServer(ctx, logFactory.(log.ObservableFactory), common.PtrValueOrDefault(experimentalOptions.ClashAPI))
 		if err != nil {
 			return nil, E.Cause(err, "create clash-server")
 		}
-		service.MustRegister[adapter.ClashServer](ctx, clashServer)
 		internalServices = append(internalServices, clashServer)
 	}
 	if needV2RayAPI {
@@ -462,6 +469,7 @@ func New(options Options) (*Box, error) {
 		internalServices = append(internalServices, adapter.NewLifecycleService(ntpService, "ntp service"))
 	}
 	return &Box{
+		ctx:                 ctx,
 		network:             networkManager,
 		endpoint:            endpointManager,
 		inbound:             inboundManager,
@@ -533,23 +541,23 @@ func (s *Box) preStart() error {
 	if err != nil {
 		return err
 	}
-	err = adapter.StartNamed(s.logger, adapter.StartStateInitialize, s.internalService) // cache-file clash-api v2ray-api
+	err = adapter.StartNamed(s.ctx, s.logger, adapter.StartStateInitialize, s.internalService) // cache-file clash-api v2ray-api
 	if err != nil {
 		return err
 	}
-	err = adapter.Start(s.logger, adapter.StartStateInitialize, s.network, s.dnsTransport, s.dnsRouter, s.connection, s.router, s.outbound, s.inbound, s.endpoint, s.service, s.certificateProvider)
+	err = adapter.Start(s.ctx, s.logger, adapter.StartStateInitialize, s.network, s.dnsTransport, s.dnsRouter, s.connection, s.router, s.outbound, s.inbound, s.endpoint, s.service, s.certificateProvider)
 	if err != nil {
 		return err
 	}
-	err = adapter.Start(s.logger, adapter.StartStateStart, s.outbound, s.dnsTransport, s.network, s.connection)
+	err = adapter.Start(s.ctx, s.logger, adapter.StartStateStart, s.outbound, s.dnsTransport, s.network, s.connection)
 	if err != nil {
 		return err
 	}
-	err = adapter.StartNamed(s.logger, adapter.StartStateStart, []adapter.LifecycleService{s.httpClientService})
+	err = adapter.StartNamed(s.ctx, s.logger, adapter.StartStateStart, []adapter.LifecycleService{s.httpClientService})
 	if err != nil {
 		return err
 	}
-	err = adapter.Start(s.logger, adapter.StartStateStart, s.router, s.dnsRouter)
+	err = adapter.Start(s.ctx, s.logger, adapter.StartStateStart, s.router, s.dnsRouter)
 	if err != nil {
 		return err
 	}
@@ -561,35 +569,35 @@ func (s *Box) start() error {
 	if err != nil {
 		return err
 	}
-	err = adapter.StartNamed(s.logger, adapter.StartStateStart, s.internalService)
+	err = adapter.StartNamed(s.ctx, s.logger, adapter.StartStateStart, s.internalService)
 	if err != nil {
 		return err
 	}
-	err = adapter.Start(s.logger, adapter.StartStateStart, s.endpoint)
+	err = adapter.Start(s.ctx, s.logger, adapter.StartStateStart, s.endpoint)
 	if err != nil {
 		return err
 	}
-	err = adapter.Start(s.logger, adapter.StartStateStart, s.certificateProvider)
+	err = adapter.Start(s.ctx, s.logger, adapter.StartStateStart, s.certificateProvider)
 	if err != nil {
 		return err
 	}
-	err = adapter.Start(s.logger, adapter.StartStateStart, s.inbound, s.service)
+	err = adapter.Start(s.ctx, s.logger, adapter.StartStateStart, s.inbound, s.service)
 	if err != nil {
 		return err
 	}
-	err = adapter.Start(s.logger, adapter.StartStatePostStart, s.outbound, s.network, s.dnsTransport, s.dnsRouter, s.connection, s.router, s.endpoint, s.certificateProvider, s.inbound, s.service)
+	err = adapter.Start(s.ctx, s.logger, adapter.StartStatePostStart, s.outbound, s.network, s.dnsTransport, s.dnsRouter, s.connection, s.router, s.endpoint, s.certificateProvider, s.inbound, s.service)
 	if err != nil {
 		return err
 	}
-	err = adapter.StartNamed(s.logger, adapter.StartStatePostStart, s.internalService)
+	err = adapter.StartNamed(s.ctx, s.logger, adapter.StartStatePostStart, s.internalService)
 	if err != nil {
 		return err
 	}
-	err = adapter.Start(s.logger, adapter.StartStateStarted, s.network, s.dnsTransport, s.dnsRouter, s.connection, s.router, s.outbound, s.endpoint, s.certificateProvider, s.inbound, s.service)
+	err = adapter.Start(s.ctx, s.logger, adapter.StartStateStarted, s.network, s.dnsTransport, s.dnsRouter, s.connection, s.router, s.outbound, s.endpoint, s.certificateProvider, s.inbound, s.service)
 	if err != nil {
 		return err
 	}
-	err = adapter.StartNamed(s.logger, adapter.StartStateStarted, s.internalService)
+	err = adapter.StartNamed(s.ctx, s.logger, adapter.StartStateStarted, s.internalService)
 	if err != nil {
 		return err
 	}

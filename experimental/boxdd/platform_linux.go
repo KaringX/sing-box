@@ -3,6 +3,7 @@
 package main
 
 import (
+	"context"
 	"net/netip"
 	"os"
 	"os/exec"
@@ -120,7 +121,7 @@ func (p *linuxPlatformInterface) RequestPermissionForWIFIState() error {
 	return nil
 }
 
-func (p *linuxPlatformInterface) ReadWIFIState() adapter.WIFIState {
+func (p *linuxPlatformInterface) ReadWIFIState(ctx context.Context) adapter.WIFIState {
 	return adapter.WIFIState{}
 }
 
@@ -197,6 +198,14 @@ func (p *linuxPlatformInterface) UsePlatformBridge() bool {
 }
 
 func (p *linuxPlatformInterface) CreateBridge(options adapter.BridgeOptions) (adapter.BridgeSession, error) {
+	return nil, os.ErrInvalid
+}
+
+func (p *linuxPlatformInterface) UsePlatformAutoRedirect() bool {
+	return false
+}
+
+func (p *linuxPlatformInterface) CreateAutoRedirect(options adapter.AutoRedirectOptions) (adapter.AutoRedirectSession, error) {
 	return nil, os.ErrInvalid
 }
 

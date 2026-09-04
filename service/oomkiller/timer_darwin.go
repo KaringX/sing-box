@@ -2,10 +2,8 @@
 
 package oomkiller
 
-import runtimeDebug "runtime/debug"
-
 func (t *adaptiveTimer) notifyPressure() {
-	runtimeDebug.FreeOSMemory()
+	t.releaseMemory()
 	t.access.Lock()
 	t.startLocked()
 	t.forceMinInterval = true

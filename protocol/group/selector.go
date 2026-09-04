@@ -25,6 +25,7 @@ func RegisterSelector(registry *outbound.Registry) {
 
 var (
 	_ adapter.OutboundGroup           = (*Selector)(nil)
+	_ adapter.Referrer                = (*Selector)(nil)
 	_ adapter.ConnectionHandler       = (*Selector)(nil)
 	_ adapter.PacketConnectionHandler = (*Selector)(nil)
 )
@@ -120,6 +121,10 @@ func (s *Selector) All() []string {
 	return s.tags
 }
 
+func (s *Selector) References() []string {
+	return []string{s.Now()}
+}
+
 func (s *Selector) SelectOutbound(tag string) bool {
 	detour, loaded := s.outbounds[tag]
 	if !loaded {
@@ -180,9 +185,18 @@ func (s *Selector) NewPacketConnection(ctx context.Context, conn N.PacketConn, m
 	}
 }
 
-func RealTag(detour adapter.Outbound) string {
-	if group, isGroup := detour.(adapter.OutboundGroup); isGroup {
-		return group.Now()
+func RealTag(outboundManager adapter.OutboundManager, detour adapter.Outbound) string {
+	tag := detour.Tag()
+	for {
+		group, isGroup := detour.(adapter.OutboundGroup)
+		if !isGroup {
+			return tag
+		}
+		tag = group.Now()
+		var loaded bool
+		detour, loaded = outboundManager.Outbound(tag)
+		if !loaded {
+			return tag
+		}
 	}
-	return detour.Tag()
 }
