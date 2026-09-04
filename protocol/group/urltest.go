@@ -484,7 +484,9 @@ func (g *URLTestGroup) urlTest(ctx context.Context, force bool) (map[string]adap
 	}
 	g.testTimes++
 	defer g.checking.Store(false)
-	result := URLTestOutbounds(ctx, g.outbound, g.history, g.logger, g.outbounds, g.link, g.interval, force)
+	result := URLTestOutbounds(ctx, g.outbound, g.history, g.logger, g.outbounds, g.link, g.interval, force, func(bool) {
+		g.performUpdateCheck(false)
+	}) //karing
 	gofree.FreeIdleThread()     //karing
 	g.performUpdateCheck(false) //karing
 	return result, nil
@@ -508,7 +510,7 @@ type urlTestBatch struct {
 	result    map[string]adapter.URLTestResult //karing
 }
 
-func URLTestOutbounds(ctx context.Context, outboundManager adapter.OutboundManager, history *urltest.HistoryStorage, logger log.Logger, outbounds []adapter.Outbound, link string, interval time.Duration, force bool) map[string]adapter.URLTestResult { //karing
+func URLTestOutbounds(ctx context.Context, outboundManager adapter.OutboundManager, history *urltest.HistoryStorage, logger log.Logger, outbounds []adapter.Outbound, link string, interval time.Duration, force bool, callback func(bool)) map[string]adapter.URLTestResult { //karing
 	//b, _ := batch.New(ctx, batch.WithConcurrencyNum[any](10))//karing
 	batchPool := pond.New(10, 20) //karing
 	testBatch := &urlTestBatch{
@@ -521,7 +523,7 @@ func URLTestOutbounds(ctx context.Context, outboundManager adapter.OutboundManag
 		checked:   make(map[string]bool),
 		result:    make(map[string]adapter.URLTestResult), //karing
 	}
-	testBatch.batchTest(outbounds, link, interval, force) //karing
+	testBatch.batchTest(outbounds, link, interval, force, callback) //karing
 
 	//testBatch.test(outbounds, link, interval, force)  //karing
 	//b.Wait() //karing

@@ -203,7 +203,7 @@ func (g *URLTestGroup) loopHealthCheckSelected() {
 	}
 }
 
-func (b *urlTestBatch) batchTest(outbounds []adapter.Outbound, link string, interval time.Duration, force bool) { //karing
+func (b *urlTestBatch) batchTest(outbounds []adapter.Outbound, link string, interval time.Duration, force bool, callback func(bool)) { //karing
 	pool := b.batchPool
 	group := pool.Group()
 	count := 0
@@ -269,7 +269,10 @@ func (b *urlTestBatch) batchTest(outbounds []adapter.Outbound, link string, inte
 		}
 		if count%10 == 0 || count == len(outbounds) {
 			group.Wait()
-			b.performUpdateCheck(false)
+
+			if callback != nil {
+				callback(true)
+			}
 		}
 	}
 	pool.StopAndWait()
