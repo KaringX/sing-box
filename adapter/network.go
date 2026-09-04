@@ -1,13 +1,15 @@
 package adapter
 
 import (
+	"context"
 	"encoding/hex"
 	"net"
+	"net/netip"
 	"strings"
 	"time"
 
 	C "github.com/sagernet/sing-box/constant"
-	"github.com/sagernet/sing-tun"
+	tun "github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common/control"
 )
 
@@ -18,6 +20,7 @@ type NetworkManager interface {
 	UpdateInterfaces() error
 	DefaultNetworkInterface() *NetworkInterface
 	NetworkInterfaces() []NetworkInterface
+	NetworkEnvironment() uint64
 	AutoDetectInterface() bool
 	AutoDetectInterfaceFunc() control.Func
 	ProtectFunc() control.Func
@@ -30,8 +33,8 @@ type NetworkManager interface {
 	PackageManager() tun.PackageManager
 	NeedWIFIState() bool
 	WIFIState() WIFIState
-	UpdateWIFIState()
-	ResetNetwork()
+	UpdateWIFIState(ctx context.Context)
+	ResetNetwork(ctx context.Context)
 	ResetOutboundNetwork(tags []string) //karing
 }
 
@@ -47,7 +50,7 @@ type NetworkOptions struct {
 }
 
 type InterfaceUpdateListener interface {
-	InterfaceUpdated()
+	InterfaceUpdated(ctx context.Context)
 }
 
 type WIFIState struct {
@@ -77,6 +80,7 @@ type NetworkInterface struct {
 	control.Interface
 	Type        C.InterfaceType
 	DNSServers  []string
+	Gateways    []netip.Addr
 	Expensive   bool
 	Constrained bool
 }

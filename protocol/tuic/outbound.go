@@ -13,6 +13,7 @@ import (
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
+	qtls "github.com/sagernet/sing-quic"
 	"github.com/sagernet/sing-quic/tuic"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/bufio"
@@ -75,10 +76,19 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		return empty, err //karing
 	}
 	client, err := tuic.NewClient(tuic.ClientOptions{
-		Context:           ctx,
-		Dialer:            outboundDialer,
-		ServerAddress:     options.ServerOptions.Build(),
-		TLSConfig:         tlsConfig,
+		Context:       ctx,
+		Dialer:        outboundDialer,
+		ServerAddress: options.ServerOptions.Build(),
+		TLSConfig:     tlsConfig,
+		QUICOptions: qtls.QUICOptions{
+			IdleTimeout:             options.IdleTimeout.Build(),
+			KeepAlivePeriod:         options.KeepAlivePeriod.Build(),
+			StreamReceiveWindow:     options.StreamReceiveWindow.Value(),
+			ConnectionReceiveWindow: options.ConnectionReceiveWindow.Value(),
+			MaxConcurrentStreams:    options.MaxConcurrentStreams,
+			InitialPacketSize:       options.InitialPacketSize,
+			DisablePathMTUDiscovery: options.DisablePathMTUDiscovery,
+		},
 		UUID:              userUUID,
 		Password:          options.Password,
 		CongestionControl: options.CongestionControl,
@@ -163,7 +173,7 @@ func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (c
 	}
 }
 
-func (h *Outbound) InterfaceUpdated() {
+func (h *Outbound) InterfaceUpdated(ctx context.Context) {
 	if h.client == nil { //karing
 		return
 	}

@@ -8,7 +8,8 @@ import (
 	"time"
 
 	"github.com/sagernet/sing-box/adapter"
-	"github.com/sagernet/sing-box/experimental/clashapi/trafficontrol"
+	"github.com/sagernet/sing-box/common/trafficcontrol"
+	F "github.com/sagernet/sing/common/format"
 	"github.com/sagernet/sing/common/json"
 	"github.com/sagernet/sing/service"
 	"github.com/sagernet/sing/service/pause"
@@ -23,17 +24,96 @@ import (
 func connectionRouter(ctx context.Context, server *Server, network adapter.NetworkManager, trafficManager *trafficontrol.Manager) http.Handler { //karing
 	r := chi.NewRouter()
 	r.Get("/", getConnections(ctx, server, trafficManager)) //karing
-	r.Delete("/", closeAllConnections(network, trafficManager))
+	r.Delete("/", closeAllConnections(ctx, network, trafficManager))
+
 	r.Delete("/{id}", closeConnection(trafficManager))
 	return r
+}
+
+func connectionsSnapshot(trafficManager *trafficcontrol.Manager, noConnections bool) render.M { //karing
+	snapshot := trafficManager.Snapshot(noConnections) //karing
+	return render.JSON(w, r, snapshot)                 //karing
+	/*karing
+	uplinkTotal, downlinkTotal := trafficManager.Total()
+	connections := common.Filter(trafficManager.Connections(), func(metadata *trafficcontrol.TrackerMetadata) bool {
+		return metadata.OutboundType != C.TypeDNS
+	})
+	return render.M{
+		"downloadTotal": downlinkTotal,
+		"uploadTotal":   uplinkTotal,
+		"connections": common.Map(connections, func(metadata *trafficcontrol.TrackerMetadata) connectionObject {
+			return connectionObject(*metadata)
+		}),
+		"memory": inuseMemory(),
+	}
+	*/
+}
+
+type connectionObject trafficcontrol.TrackerMetadata
+
+func (c connectionObject) MarshalJSON() ([]byte, error) {
+	var inbound string
+	if c.Metadata.Inbound != "" {
+		inbound = c.Metadata.InboundType + "/" + c.Metadata.Inbound
+	} else {
+		inbound = c.Metadata.InboundType
+	}
+	var domain string
+	if c.Metadata.Domain != "" {
+		domain = c.Metadata.Domain
+	} else {
+		domain = c.Metadata.Destination.Fqdn
+	}
+	var processPath string
+	if c.Metadata.ProcessInfo != nil {
+		if c.Metadata.ProcessInfo.ProcessPath != "" {
+			processPath = c.Metadata.ProcessInfo.ProcessPath
+		} else if len(c.Metadata.ProcessInfo.AndroidPackageNames) > 0 {
+			processPath = c.Metadata.ProcessInfo.AndroidPackageNames[0]
+		}
+		if processPath == "" {
+			if c.Metadata.ProcessInfo.UserId != -1 {
+				processPath = F.ToString(c.Metadata.ProcessInfo.UserId)
+			}
+		} else if c.Metadata.ProcessInfo.UserName != "" {
+			processPath = F.ToString(processPath, " (", c.Metadata.ProcessInfo.UserName, ")")
+		} else if c.Metadata.ProcessInfo.UserId != -1 {
+			processPath = F.ToString(processPath, " (", c.Metadata.ProcessInfo.UserId, ")")
+		}
+	}
+	var rule string
+	if c.Rule != nil {
+		rule = F.ToString(c.Rule, " => ", c.Rule.Action())
+	} else {
+		rule = "final"
+	}
+	return json.Marshal(map[string]any{
+		"id": c.ID,
+		"metadata": map[string]any{
+			"network":         c.Metadata.Network,
+			"type":            inbound,
+			"sourceIP":        c.Metadata.Source.Addr,
+			"destinationIP":   c.Metadata.Destination.Addr,
+			"sourcePort":      F.ToString(c.Metadata.Source.Port),
+			"destinationPort": F.ToString(c.Metadata.Destination.Port),
+			"host":            domain,
+			"dnsMode":         "normal",
+			"processPath":     processPath,
+		},
+		"upload":      c.Upload.Load(),
+		"download":    c.Download.Load(),
+		"start":       c.CreatedAt,
+		"chains":      c.Chain,
+		"rule":        rule,
+		"rulePayload": "",
+	})
 }
 
 func getConnections(ctx context.Context, server *Server, trafficManager *trafficontrol.Manager) func(w http.ResponseWriter, r *http.Request) { //karing
 	return func(w http.ResponseWriter, r *http.Request) {
 		noConnections := r.URL.Query().Get("noConnections") //karing
 		if r.Header.Get("Upgrade") != "websocket" {
-			snapshot := trafficManager.Snapshot(noConnections != "true") //karing
-			render.JSON(w, r, snapshot)
+			render.JSON(w, r, connectionsSnapshot(trafficManager, noConnections != "true"))
 			return
 		}
 
@@ -59,9 +139,9 @@ func getConnections(ctx context.Context, server *Server, trafficManager *traffic
 		buf := &bytes.Buffer{}
 		sendSnapshot := func() error {
 			buf.Reset()
-			snapshot := trafficManager.Snapshot(noConnections != "true") //karing
-			if err := json.NewEncoder(buf).Encode(snapshot); err != nil {
-				return err
+			encodeErr := json.NewEncoder(buf).Encode(connectionsSnapshot(trafficManager, noConnections != "true"))
+			if encodeErr != nil {
+				return encodeErr
 			}
 			return wsutil.WriteServerText(conn, buf.Bytes())
 		}
@@ -95,28 +175,22 @@ func getConnections(ctx context.Context, server *Server, trafficManager *traffic
 	}
 }
 
-func closeConnection(trafficManager *trafficontrol.Manager) func(w http.ResponseWriter, r *http.Request) {
+func closeConnection(trafficManager *trafficcontrol.Manager) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := uuid.FromStringOrNil(chi.URLParam(r, "id"))
-		snapshot := trafficManager.Snapshot(true) //karing
-		for _, c := range snapshot.Connections {
-			if id == c.Metadata().ID {
-				c.Close()
-				break
-			}
+		targetConnection := trafficManager.Connection(id)
+		if targetConnection != nil {
+			targetConnection.Close()
 		}
 		render.NoContent(w, r)
 	}
 }
 
-func closeAllConnections(network adapter.NetworkManager, trafficManager *trafficontrol.Manager) func(w http.ResponseWriter, r *http.Request) {
+func closeAllConnections(ctx context.Context, network adapter.NetworkManager, trafficManager *trafficcontrol.Manager) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		snapshot := trafficManager.Snapshot(true) //karing
-		for _, c := range snapshot.Connections {
-			c.Close()
-		}
+		trafficManager.CloseAllConnections()
 		if network != nil { //karing
-			network.ResetNetwork()
+			network.ResetNetwork(ctx)
 		}
 		render.NoContent(w, r)
 	}

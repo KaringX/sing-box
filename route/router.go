@@ -26,25 +26,29 @@ import (
 var _ adapter.Router = (*Router)(nil)
 
 type Router struct {
-	ctx                     context.Context
-	logger                  log.ContextLogger
-	inbound                 adapter.InboundManager
-	outbound                adapter.OutboundManager
-	dns                     adapter.DNSRouter
-	dnsTransport            adapter.DNSTransportManager
-	connection              adapter.ConnectionManager
-	network                 adapter.NetworkManager
-	rules                   []adapter.Rule
-	needFindProcess         bool
-	ruleSets                []adapter.RuleSet
-	ruleSetsRemoteWithLocal []adapter.RuleSet //karing
-	ruleSetMap              map[string]adapter.RuleSet
-	processSearcher         process.Searcher
-	processCache            freelru.Cache[processCacheKey, processCacheEntry]
-	pauseManager            pause.Manager
-	trackers                []adapter.ConnectionTracker
-	platformInterface       adapter.PlatformInterface
-	started                 bool
+	ctx               context.Context
+	logger            log.ContextLogger
+	inbound           adapter.InboundManager
+	outbound          adapter.OutboundManager
+	dns               adapter.DNSRouter
+	dnsTransport      adapter.DNSTransportManager
+	connection        adapter.ConnectionManager
+	network           adapter.NetworkManager
+	httpClientManager adapter.HTTPClientManager
+	rules             []adapter.Rule
+	needFindProcess   bool
+	needFindNeighbor  bool
+	leaseFiles        []string
+	ruleSets          []adapter.RuleSet
+	ruleSetMap        map[string]adapter.RuleSet
+	ruleSetUpdater    *R.RuleSetUpdater
+	processSearcher   process.Searcher
+	processCache      *freelru.Cache[processCacheKey, processCacheEntry]
+	neighborResolver  adapter.NeighborResolver
+	pauseManager      pause.Manager
+	trackers          []adapter.ConnectionTracker
+	platformInterface adapter.PlatformInterface
+	started           bool
 }
 
 func NewRouter(ctx context.Context, logFactory log.Factory, options option.RouteOptions, dnsOptions option.DNSOptions) *Router {
@@ -57,9 +61,12 @@ func NewRouter(ctx context.Context, logFactory log.Factory, options option.Route
 		dnsTransport:      service.FromContext[adapter.DNSTransportManager](ctx),
 		connection:        service.FromContext[adapter.ConnectionManager](ctx),
 		network:           service.FromContext[adapter.NetworkManager](ctx),
+		httpClientManager: service.FromContext[adapter.HTTPClientManager](ctx),
 		rules:             make([]adapter.Rule, 0, len(options.Rules)),
 		ruleSetMap:        make(map[string]adapter.RuleSet),
 		needFindProcess:   hasRule(options.Rules, isProcessRule) || hasDNSRule(dnsOptions.Rules, isProcessDNSRule) || options.FindProcess,
+		needFindNeighbor:  hasRule(options.Rules, isNeighborRule) || hasDNSRule(dnsOptions.Rules, isNeighborDNSRule) || hasLocalNeighborDNSServer(dnsOptions.Servers) || options.FindNeighbor,
+		leaseFiles:        options.DHCPLeaseFiles,
 		pauseManager:      service.FromContext[pause.Manager](ctx),
 		platformInterface: service.FromContext[adapter.PlatformInterface](ctx),
 	}
@@ -67,6 +74,10 @@ func NewRouter(ctx context.Context, logFactory log.Factory, options option.Route
 
 func (r *Router) Initialize(rules []option.Rule, ruleSets []option.RuleSet) error {
 	for i, options := range rules {
+		err := R.ValidateNoNestedRuleActions(options)
+		if err != nil {
+			return E.Cause(err, "parse rule[", i, "]")
+		}
 		rule, err := R.NewRule(r.ctx, r.logger, options, false)
 		if err != nil {
 			return E.Cause(err, "parse rule[", i, "]")
@@ -74,30 +85,17 @@ func (r *Router) Initialize(rules []option.Rule, ruleSets []option.RuleSet) erro
 		r.rules = append(r.rules, rule)
 	}
 	for i, options := range ruleSets {
-		if _, exists := r.ruleSetMap[options.Tag]; exists {
-			return E.New("duplicate rule-set tag: ", options.Tag)
-		}
-		if options.Type == C.RuleSetTypeRemote { //karing
-			if len(options.RemoteOptions.Path) != 0 {
-				cacheFile := service.FromContext[adapter.CacheFile](r.ctx)
-				if cacheFile != nil {
-					if !cacheFile.HasRuleSet(options.RemoteOptions.URL) {
-						ruleSet := R.NewRemoteRuleSet(r.ctx, r.logger, options)
-						r.ruleSetsRemoteWithLocal = append(r.ruleSetsRemoteWithLocal, ruleSet)
-
-						options.Type = C.RuleSetTypeLocal
-						options.LocalOptions.Path = options.RemoteOptions.Path
-						options.LocalOptions.IsAsset = options.RemoteOptions.IsAsset
-					}
-				}
+		for _, tag := range options.Tag {
+			if _, exists := r.ruleSetMap[tag]; exists {
+				return E.New("duplicate rule-set tag: ", tag)
 			}
+			ruleSet, err := R.NewRuleSet(r.ctx, r.logger, tag, options)
+			if err != nil {
+				return E.Cause(err, "parse rule-set[", i, "]")
+			}
+			r.ruleSets = append(r.ruleSets, ruleSet)
+			r.ruleSetMap[tag] = ruleSet
 		}
-		ruleSet, err := R.NewRuleSet(r.ctx, r.logger, options)
-		if err != nil {
-			return E.Cause(err, "parse rule-set[", i, "]")
-		}
-		r.ruleSets = append(r.ruleSets, ruleSet)
-		r.ruleSetMap[options.Tag] = ruleSet
 	}
 	return nil
 }
@@ -105,16 +103,46 @@ func (r *Router) Initialize(rules []option.Rule, ruleSets []option.RuleSet) erro
 func (r *Router) Start(stage adapter.StartStage) error {
 	monitor := taskmonitor.New(r.logger, C.StartTimeout)
 	switch stage {
+	case adapter.StartStateInitialize:
+		if r.needFindNeighbor {
+			if r.platformInterface != nil && r.platformInterface.UsePlatformNeighborResolver() {
+				monitor.Start("initialize neighbor resolver")
+				resolver := newPlatformNeighborResolver(r.logger, r.platformInterface)
+				err := resolver.Start()
+				monitor.Finish()
+				if err != nil {
+					r.logger.Error(E.Cause(err, "start neighbor resolver"))
+				} else {
+					r.neighborResolver = resolver
+				}
+			} else {
+				monitor.Start("initialize neighbor resolver")
+				resolver, err := newNeighborResolver(r.logger, r.leaseFiles)
+				monitor.Finish()
+				if err != nil {
+					if err != os.ErrInvalid {
+						r.logger.Error(E.Cause(err, "create neighbor resolver"))
+					}
+				} else {
+					err = resolver.Start()
+					if err != nil {
+						r.logger.Error(E.Cause(err, "start neighbor resolver"))
+					} else {
+						r.neighborResolver = resolver
+					}
+				}
+			}
+		}
 	case adapter.StartStateStart:
-		var cacheContext *adapter.HTTPStartContext
+		var startContext *adapter.HTTPStartContext
 		if len(r.ruleSets) > 0 {
 			monitor.Start("initialize rule-set")
-			cacheContext = adapter.NewHTTPStartContext(r.ctx)
+			startContext = adapter.NewHTTPStartContext()
 			var ruleSetStartGroup task.Group
 			for _, ruleSet := range r.ruleSets { //karing
 				ruleSetInPlace := ruleSet
 				ruleSetStartGroup.Append0(func(ctx context.Context) error {
-					err := ruleSetInPlace.StartContext(ctx, cacheContext)
+					err := ruleSetInPlace.StartContext(ctx, startContext)
 					if err != nil {
 						return E.Cause(err, "initialize rule-set[", ruleSet.Name(), "]") //karing
 					}
@@ -129,28 +157,10 @@ func (r *Router) Start(stage adapter.StartStage) error {
 				return err
 			}
 		}
-		if cacheContext != nil {
-			cacheContext.Close()
+		if startContext != nil {
+			startContext.Close()
 		}
-		if len(r.ruleSetsRemoteWithLocal) > 0 { //karing
-			cacheRemoteContext := adapter.NewHTTPStartContext(r.ctx)
-			var ruleSetStartGroup task.Group
-			for _, ruleSet := range r.ruleSetsRemoteWithLocal { //karing
-				ruleSetInPlace := ruleSet
-				ruleSetStartGroup.Append0(func(ctx context.Context) error {
-					err := ruleSetInPlace.StartContext(ctx, cacheRemoteContext)
-					if err != nil {
-						return E.Cause(err, "initialize rule-set-remote[", ruleSet.Name(), "]") //karing
-					}
-					return nil
-				})
-			}
-			ruleSetStartGroup.Concurrency(5)
-			ruleSetStartGroup.FastFail()
-			ruleSetStartGroup.Run(r.ctx)
-
-			cacheRemoteContext.Close()
-		}
+		r.ruleSetUpdater = R.NewRuleSetUpdater(r.ctx, r.ruleSets)
 		r.network.Initialize(r.ruleSets)
 		needFindProcess := r.needFindProcess
 		for _, ruleSet := range r.ruleSets {
@@ -183,12 +193,8 @@ func (r *Router) Start(stage adapter.StartStage) error {
 			}
 		}
 		if r.processSearcher != nil {
-			processCache := common.Must1(freelru.NewSharded[processCacheKey, processCacheEntry](256, maphash.NewHasher[processCacheKey]().Hash32))
-			cacheLifetime := 200 * time.Millisecond //karing
-			if C.IsWindows {                        //karing
-				cacheLifetime = 1 * time.Second
-			}
-			processCache.SetLifetime(cacheLifetime)
+			processCache := common.Must1(freelru.New[processCacheKey, processCacheEntry](256, maphash.NewHasher[processCacheKey]().Hash32, true))
+			processCache.SetLifetime(200 * time.Millisecond)
 			r.processCache = processCache
 		}
 	case adapter.StartStatePostStart:
@@ -200,21 +206,8 @@ func (r *Router) Start(stage adapter.StartStage) error {
 				return E.Cause(err, "initialize rule[", rule.Name(), "]") //karing
 			}
 		}
-		for _, ruleSet := range r.ruleSets {
-			monitor.Start("post start rule_set[", ruleSet.Name(), "]")
-			err := ruleSet.PostStart()
-			monitor.Finish()
-			if err != nil {
-				return E.Cause(err, "post start rule_set[", ruleSet.Name(), "]")
-			}
-		}
-		for _, ruleSet := range r.ruleSetsRemoteWithLocal { //karing
-			monitor.Start("post start rule_set_remote_with_local[", ruleSet.Name(), "]")
-			err := ruleSet.PostStart()
-			monitor.Finish()
-			if err != nil {
-				return E.Cause(err, "post start rule_set_remote_with_local[", ruleSet.Name(), "]")
-			}
+		if r.ruleSetUpdater != nil {
+			r.ruleSetUpdater.Start()
 		}
 		r.started = true
 		return nil
@@ -230,10 +223,24 @@ func (r *Router) Start(stage adapter.StartStage) error {
 func (r *Router) Close() error {
 	monitor := taskmonitor.New(r.logger, C.StopTimeout)
 	var err error
+	if r.neighborResolver != nil {
+		monitor.Start("close neighbor resolver")
+		err = E.Append(err, r.neighborResolver.Close(), func(closeErr error) error {
+			return E.Cause(closeErr, "close neighbor resolver")
+		})
+		monitor.Finish()
+	}
 	for i, rule := range r.rules {
 		monitor.Start("close rule[", i, "]")
 		err = E.Append(err, rule.Close(), func(err error) error {
 			return E.Cause(err, "close rule[", i, "]")
+		})
+		monitor.Finish()
+	}
+	if r.ruleSetUpdater != nil {
+		monitor.Start("close rule-set updater")
+		err = E.Append(err, r.ruleSetUpdater.Close(), func(err error) error {
+			return E.Cause(err, "close rule-set updater")
 		})
 		monitor.Finish()
 	}
@@ -271,9 +278,23 @@ func (r *Router) NeedFindProcess() bool {
 	return r.needFindProcess
 }
 
+func (r *Router) NeedFindNeighbor() bool {
+	return r.needFindNeighbor
+}
+
+func (r *Router) NeighborResolver() adapter.NeighborResolver {
+	return r.neighborResolver
+}
+
 func (r *Router) ResetNetwork() {
-	//r.dns.ResetNetwork() //karing
+	r.httpClientManager.ResetNetwork()
 	if r.dns != nil { //karing
 		r.dns.ResetNetwork()
+	}
+	if r.processCache != nil {
+		r.processCache.Purge()
+	}
+	if r.processSearcher != nil {
+		r.processSearcher.ResetCache()
 	}
 }

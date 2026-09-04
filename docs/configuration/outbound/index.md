@@ -18,6 +18,7 @@
 | Type           | Format                         |
 |----------------|--------------------------------|
 | `direct`       | [Direct](./direct/)             |
+| `bridge`       | [Bridge](./bridge/)             |
 | `block`        | [Block](./block/)               |
 | `socks`        | [SOCKS](./socks/)               |
 | `http`         | [HTTP](./http/)                 |
@@ -32,6 +33,7 @@
 | `hysteria2`    | [Hysteria2](./hysteria2/)       |
 | `mieru`        | [Mieru](./mieru/)               |
 | `anytls`       | [AnyTLS](./anytls/)             |
+| `snell`        | [Snell](./snell/)               |
 | `tor`          | [Tor](./tor/)                   |
 | `ssh`          | [SSH](./ssh/)                   |
 | `dns`          | [DNS](./dns/)                   |

@@ -1,7 +1,8 @@
 package box
 
 import (
-	"errors"
+	"net"
+
 	"net/http"
 	"net/http/pprof"
 	"runtime"
@@ -18,18 +19,9 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-var debugHTTPServer *http.Server
-
-func applyDebugListenOption(options option.DebugOptions) {
-	if debugHTTPServer != nil {
-		if options.Listen == debugHTTPServer.Addr { //karing
-			return
-		}
-		debugHTTPServer.Close()
-		debugHTTPServer = nil
-	}
+func startDebugHTTPServer(options option.DebugOptions) (*http.Server, error) {
 	if options.Listen == "" {
-		return
+		return nil, nil
 	}
 	r := chi.NewMux()
 	r.Route("/debug", func(r chi.Router) {
@@ -67,14 +59,19 @@ func applyDebugListenOption(options option.DebugOptions) {
 			r.HandleFunc("/trace", pprof.Trace)
 		})
 	})
-	debugHTTPServer = &http.Server{
+	server := &http.Server{
 		Addr:    options.Listen,
 		Handler: r,
 	}
+	listener, err := net.Listen("tcp", options.Listen)
+	if err != nil {
+		return nil, E.Cause(err, "listen debug HTTP server")
+	}
 	go func() {
-		err := debugHTTPServer.ListenAndServe()
-		if err != nil && !errors.Is(err, http.ErrServerClosed) && !E.IsClosed(err) { //karing
-			log.Warn(E.Cause(err, "serve debug HTTP server")) //karing
+		err := server.Serve(listener)
+		if err != nil && !E.IsClosed(err) {
+			log.Error(E.Cause(err, "serve debug HTTP server"))
 		}
 	}()
+	return server, nil
 }

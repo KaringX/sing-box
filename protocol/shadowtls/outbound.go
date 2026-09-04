@@ -93,7 +93,6 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 	}
 	ctx, metadata := adapter.ExtendContext(ctx)
 	metadata.Outbound = h.Tag()
-	metadata.Destination = destination
 	switch N.NetworkName(network) {
 	case N.NetworkTCP:
 		return h.client.DialContext(ctx)

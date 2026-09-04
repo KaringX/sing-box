@@ -9,22 +9,22 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/sagernet/cors"
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/common/compatible"
+	"github.com/sagernet/sing-box/common/trafficcontrol"
 	"github.com/sagernet/sing-box/common/urltest"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/experimental"
-	"github.com/sagernet/sing-box/experimental/clashapi/trafficontrol"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing/common"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/json"
-	N "github.com/sagernet/sing/common/network"
 	"github.com/sagernet/sing/common/observable"
 	"github.com/sagernet/sing/service"
 	"github.com/sagernet/sing/service/filemanager"
@@ -51,13 +51,14 @@ type Server struct {
 	endpoint       adapter.EndpointManager
 	logger         log.ContextLogger //karing
 	httpServer     *http.Server
-	trafficManager *trafficontrol.Manager
-	urlTestHistory adapter.URLTestHistoryStorage
+	trafficManager *trafficcontrol.Manager
+	urlTestHistory *urltest.HistoryStorage
 	logDebug       bool
 
-	mode           string
-	modeList       []string
-	modeUpdateHook *observable.Subscriber[struct{}]
+	mode             string
+	modeList         []string
+	modeUpdateAccess sync.Mutex
+	modeUpdateHooks  []*observable.Subscriber[struct{}]
 
 	externalController       bool
 	externalUI               string
@@ -67,7 +68,14 @@ type Server struct {
 }
 
 func NewServer(ctx context.Context, logFactory log.ObservableFactory, options option.ClashAPIOptions) (adapter.ClashServer, error) {
-	trafficManager := trafficontrol.NewManager(ctx, logFactory) //karing
+	trafficManager := service.PtrFromContext[trafficcontrol.Manager](ctx)
+	if trafficManager == nil {
+		return nil, E.New("missing traffic manager")
+	}
+	urlTestHistory := service.PtrFromContext[urltest.HistoryStorage](ctx)
+	if urlTestHistory == nil {
+		return nil, E.New("missing URL test history storage")
+	}
 	chiRouter := chi.NewRouter()
 	s := &Server{
 		ctx:       ctx,
@@ -82,15 +90,12 @@ func NewServer(ctx context.Context, logFactory log.ObservableFactory, options op
 			Handler: chiRouter,
 		},
 		trafficManager:           trafficManager,
+		urlTestHistory:           urlTestHistory,
 		logDebug:                 logFactory.Level() >= log.LevelDebug,
 		modeList:                 options.ModeList,
 		externalController:       options.ExternalController != "",
 		externalUIDownloadURL:    options.ExternalUIDownloadURL,
 		externalUIDownloadDetour: options.ExternalUIDownloadDetour,
-	}
-	s.urlTestHistory = service.FromContext[adapter.URLTestHistoryStorage](ctx)
-	if s.urlTestHistory == nil {
-		s.urlTestHistory = urltest.NewHistoryStorage()
 	}
 	defaultMode := "Rule"
 	if options.DefaultMode != "" {
@@ -139,6 +144,10 @@ func NewServer(ctx context.Context, logFactory log.ObservableFactory, options op
 	})
 	if options.ExternalUI != "" {
 		s.externalUI = filemanager.BasePath(ctx, os.ExpandEnv(options.ExternalUI))
+		_, err := filemanager.ReadDir(ctx, s.externalUI)
+		if err != nil && !os.IsNotExist(err) {
+			return nil, E.Cause(err, "read external UI directory")
+		}
 		chiRouter.Group(func(r chi.Router) {
 			r.Get("/ui", http.RedirectHandler("/ui/", http.StatusMovedPermanently).ServeHTTP)
 			r.Handle("/ui/*", http.StripPrefix("/ui/", http.FileServer(Dir(s.externalUI))))
@@ -198,8 +207,6 @@ func (s *Server) Close() error {
 	s.RemoveTicks()      //karing
 	err := common.Close( //karing
 		common.PtrOrNil(s.httpServer),
-		s.trafficManager,
-		s.urlTestHistory,
 	)
 
 	s.router = nil         //karing
@@ -219,8 +226,10 @@ func (s *Server) ModeList() []string {
 	return s.modeList
 }
 
-func (s *Server) SetModeUpdateHook(hook *observable.Subscriber[struct{}]) {
-	s.modeUpdateHook = hook
+func (s *Server) AddModeUpdateHook(hook *observable.Subscriber[struct{}]) {
+	s.modeUpdateAccess.Lock()
+	defer s.modeUpdateAccess.Unlock()
+	s.modeUpdateHooks = append(s.modeUpdateHooks, hook)
 }
 
 func (s *Server) SetMode(newMode string) {
@@ -236,9 +245,11 @@ func (s *Server) SetMode(newMode string) {
 		return
 	}
 	s.mode = newMode
-	if s.modeUpdateHook != nil {
-		s.modeUpdateHook.Emit(struct{}{})
+	s.modeUpdateAccess.Lock()
+	for _, hook := range s.modeUpdateHooks {
+		hook.Emit(struct{}{})
 	}
+	s.modeUpdateAccess.Unlock()
 	s.dnsRouter.ClearCache()
 	cacheFile := service.FromContext[adapter.CacheFile](s.ctx)
 	if cacheFile != nil {
@@ -248,28 +259,6 @@ func (s *Server) SetMode(newMode string) {
 		}
 	}
 	s.logger.Info("updated mode: ", newMode)
-}
-
-func (s *Server) HistoryStorage() adapter.URLTestHistoryStorage {
-	return s.urlTestHistory
-}
-
-func (s *Server) TrafficManager() *trafficontrol.Manager {
-	return s.trafficManager
-}
-
-func (s *Server) RoutedConnection(ctx context.Context, conn net.Conn, metadata adapter.InboundContext, matchedRule adapter.Rule, matchOutbound adapter.Outbound) net.Conn {
-	if s.trafficManager == nil { //karing
-		return conn
-	}
-	return trafficontrol.NewTCPTracker(ctx, conn, s.trafficManager, metadata, s.outbound, matchedRule, matchOutbound) //karing
-}
-
-func (s *Server) RoutedPacketConnection(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext, matchedRule adapter.Rule, matchOutbound adapter.Outbound) N.PacketConn {
-	if s.trafficManager == nil { //karing
-		return conn
-	}
-	return trafficontrol.NewUDPTracker(ctx, conn, s.trafficManager, metadata, s.outbound, matchedRule, matchOutbound) //karing
 }
 
 func authentication(serverSecret string) func(next http.Handler) http.Handler {
@@ -324,7 +313,7 @@ type Traffic struct {
 	Down int64 `json:"down"`
 }
 
-func traffic(ctx context.Context, server *Server, trafficManager *trafficontrol.Manager) func(w http.ResponseWriter, r *http.Request) { //karing
+func traffic(ctx context.Context, server *Server, trafficManager *trafficcontrol.Manager) func(w http.ResponseWriter, r *http.Request) { //karing
 	return func(w http.ResponseWriter, r *http.Request) {
 		var conn net.Conn
 		if r.Header.Get("Upgrade") == "websocket" {

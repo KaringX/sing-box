@@ -5,10 +5,10 @@ import (
 	"context"
 	"net"
 	"net/http"
+	"runtime"
 	"runtime/debug"
 	"time"
 
-	"github.com/sagernet/sing-box/experimental/clashapi/trafficontrol"
 	"github.com/sagernet/sing/common/json"
 	"github.com/sagernet/sing/service"
 	"github.com/sagernet/sing/service/pause"
@@ -38,6 +38,12 @@ func (s *Server) setupMetaAPI(r chi.Router) {
 type Memory struct {
 	Inuse   uint64 `json:"inuse"`
 	OSLimit uint64 `json:"oslimit"` // maybe we need it in the future
+}
+
+func inuseMemory() uint64 {
+	var memStats runtime.MemStats
+	runtime.ReadMemStats(&memStats)
+	return memStats.StackInuse + memStats.HeapInuse + memStats.HeapIdle - memStats.HeapReleased
 }
 
 func memory(ctx context.Context, server *Server, trafficManager *trafficontrol.Manager) func(w http.ResponseWriter, r *http.Request) { //karing
@@ -77,6 +83,7 @@ func memory(ctx context.Context, server *Server, trafficManager *trafficontrol.M
 			case <-tick.C:
 			}
 			buf.Reset()
+
 			if closed { //karing
 				break
 			}
@@ -84,7 +91,8 @@ func memory(ctx context.Context, server *Server, trafficManager *trafficontrol.M
 			if pauseManager == nil || pauseManager.IsDevicePaused() {      //karing
 				break
 			}
-			inuse := trafficManager.Snapshot(false).Memory //karing
+
+			inuse := inuseMemory()
 
 			// make chat.js begin with zero
 			// this is shit var,but we need output 0 for first time
