@@ -3,13 +3,13 @@ package group
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/adapter/outbound"
 	"github.com/sagernet/sing-box/common/urltest"
 	C "github.com/sagernet/sing-box/constant"
-	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing/service"
 	"github.com/sagernet/sing/service/pause"
 )
@@ -220,5 +220,82 @@ func (g *URLTestGroup) loopHealthCheckSelected() {
 	}
 }
 
-func URLTestOutbounds2(ctx context.Context, outboundManager adapter.OutboundManager, history *urltest.HistoryStorage, logger log.Logger, outbounds []adapter.Outbound, link string, interval time.Duration, force bool) map[string]uint16 {
+func (b *urlTestBatch) batchTest(outbounds []adapter.Outbound, link string, interval time.Duration, force bool) { //karing
+	group := b.batchGroup
+	count := 0
+	if b.skipTest {
+		if b.testTimes != 0 {
+			b.performUpdateCheck(false)
+			return b.result, nil
+		}
+	}
+	b.testTimes++
+
+	var resultAccess sync.Mutex
+	for _, detour := range outbounds {
+		tag := detour.Tag()
+		realTag := RealTag(detour)
+		if b.checked[realTag] {
+			continue
+		}
+		history := b.history.LoadURLTestHistory(realTag)
+		if !force && history != nil && time.Since(history.Time) < interval {
+			continue
+		}
+		b.checked[realTag] = true
+		p, loaded := b.outbound.Outbound(realTag)
+		if !loaded {
+			continue
+		}
+		pauseManager := service.FromContext[pause.Manager](b.ctx)
+		if pauseManager == nil {
+			return b.result, nil
+		}
+		if pauseManager.IsNetworkPaused() {
+			pauseManager.WaitActive()
+		}
+		group.Submit(func() {
+			testCtx, cancel := context.WithTimeout(b.ctx, C.TCPTimeout)
+			defer cancel()
+			t, _, err := urltest.URLTest(testCtx, link, p)
+			pauseManager := service.FromContext[pause.Manager](b.ctx)
+			if pauseManager == nil {
+				return
+			}
+			if err != nil {
+				b.logger.Debug("outbound ", tag, " unavailable: ", err)
+				b.history.StoreURLTestHistory(realTag, &adapter.URLTestHistory{
+					Time:  time.Now(),
+					Delay: 0,
+					Err:   err.Error(),
+				})
+			} else {
+				b.logger.Debug("outbound ", tag, " available: ", t, "ms")
+				b.history.StoreURLTestHistory(realTag, &adapter.URLTestHistory{
+					Time:  time.Now(),
+					Delay: t,
+					Err:   "",
+				})
+			}
+			resultAccess.Lock()
+			if err == nil {
+				b.result[tag] = adapter.URLTestResult{Delay: t, Err: ""}
+			} else {
+				b.result[tag] = adapter.URLTestResult{Delay: 0, Err: err.Error()}
+			}
+			resultAccess.Unlock()
+		})
+		count++
+		pauseManager = service.FromContext[pause.Manager](b.ctx)
+		if pauseManager == nil {
+			return b.result, nil
+		}
+		if count%10 == 0 || count == len(outbounds) {
+			group.Wait()
+			b.performUpdateCheck(false)
+		}
+	}
+	batchGroup.StopAndWait()
+	gofree.FreeIdleThread()
+	g.performUpdateCheck(false)
 }
