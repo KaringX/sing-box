@@ -12,13 +12,14 @@ import (
 	"github.com/alitto/pond"
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/adapter/outbound"
-	"github.com/sagernet/sing-box/common/gofree"
+	"github.com/sagernet/sing-box/common/gofree" //karing
 	"github.com/sagernet/sing-box/common/interrupt"
 	"github.com/sagernet/sing-box/common/urltest"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing/common"
+	"github.com/sagernet/sing/common/batch"
 	E "github.com/sagernet/sing/common/exceptions"
 	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
@@ -145,7 +146,7 @@ func (s *URLTest) CheckOutbounds() {
 }
 
 func (s *URLTest) PerformUpdateCheck() {
-	s.group.performUpdateCheck(false)//karing
+	s.group.performUpdateCheck(false) //karing
 }
 
 func (s *URLTest) InterfaceUpdated(ctx context.Context) {
@@ -154,6 +155,9 @@ func (s *URLTest) InterfaceUpdated(ctx context.Context) {
 		return
 	}
 	if group.pause.IsDevicePaused() || group.pause.IsNetworkPaused() {
+		return
+	}
+	if !s.reTestIfNetworkUpdate { //karing
 		return
 	}
 	go func() {
@@ -187,7 +191,7 @@ func (s *URLTest) DialContext(ctx context.Context, network string, destination M
 		return nil, E.New("missing supported outbound")
 	}
 	conn, err := outbound.DialContext(ctx, network, destination)
-	realTag := RealTag(outbound) //karing
+	realTag := RealTag(s.outbound, outbound) //karing
 	if err == nil {
 		s.updateHistory(outbound.Type(), realTag) //karing
 		return s.group.interruptGroup.NewConn(conn, interrupt.IsExternalConnectionFromContext(ctx)), nil
@@ -219,7 +223,7 @@ func (s *URLTest) ListenPacket(ctx context.Context, destination M.Socksaddr) (ne
 		return nil, E.New("missing supported outbound")
 	}
 	conn, err := outbound.ListenPacket(ctx, destination)
-	realTag := RealTag(outbound) //karing
+	realTag := RealTag(s.outbound, outbound) //karing
 	if err == nil {
 		s.updateHistory(outbound.Type(), realTag) //karing
 		return s.group.interruptGroup.NewPacketConn(conn, interrupt.IsExternalConnectionFromContext(ctx)), nil
@@ -469,12 +473,19 @@ func (g *URLTestGroup) URLTest(ctx context.Context, force bool) (map[string]adap
 }
 
 func (g *URLTestGroup) urlTest(ctx context.Context, force bool) (map[string]adapter.URLTestResult, error) { //karing
-	result := make(map[string]adapter.URLTestResult) //karing
 	if g.checking.Swap(true) {
-		return result, nil //karing
+		return make(map[string]adapter.URLTestResult), nil //karing
 	}
+	if g.skipTest { //karing
+		if g.testTimes != 0 {
+			g.performUpdateCheck(false)
+			return make(map[string]adapter.URLTestResult), nil
+		}
+	}
+	g.testTimes++
 	defer g.checking.Store(false)
 	result := URLTestOutbounds(ctx, g.outbound, g.history, g.logger, g.outbounds, g.link, g.interval, force)
+	gofree.FreeIdleThread()     //karing
 	g.performUpdateCheck(false) //karing
 	return result, nil
 }
@@ -485,32 +496,33 @@ type urlTestResult struct {
 }
 
 type urlTestBatch struct {
-	ctx      context.Context
-	outbound adapter.OutboundManager
-	history  *urltest.HistoryStorage
-	logger   log.Logger
-	//batch      *batch.Batch[any]//karing
-	batchGroup *pond.WorkerPool //karing
-	checked    map[string]bool
-	groups     []adapter.OutboundGroup
-	access     sync.Mutex
-	result     make(map[string]adapter.URLTestResult)//karing
+	ctx       context.Context
+	outbound  adapter.OutboundManager
+	history   *urltest.HistoryStorage
+	logger    log.Logger
+	batch     *batch.Batch[any] //karing
+	batchPool *pond.WorkerPool  //karing
+	checked   map[string]bool
+	groups    []adapter.OutboundGroup
+	access    sync.Mutex
+	result    map[string]adapter.URLTestResult //karing
 }
 
-func URLTestOutbounds(ctx context.Context, outboundManager adapter.OutboundManager, history *urltest.HistoryStorage, logger log.Logger, outbounds []adapter.Outbound, link string, interval time.Duration, force bool) map[string]uint16 {
+func URLTestOutbounds(ctx context.Context, outboundManager adapter.OutboundManager, history *urltest.HistoryStorage, logger log.Logger, outbounds []adapter.Outbound, link string, interval time.Duration, force bool) map[string]adapter.URLTestResult { //karing
 	//b, _ := batch.New(ctx, batch.WithConcurrencyNum[any](10))//karing
-	batchGroup := pond.New(10, 20) //karing
+	batchPool := pond.New(10, 20) //karing
 	testBatch := &urlTestBatch{
-		ctx:      ctx,
-		outbound: outboundManager,
-		history:  history,
-		logger:   logger,
-		//batch:      b,//karing
-		batchGroup: batchGroup, //karing
-		checked:    make(map[string]bool),
-		result:     make(map[string]adapter.URLTestResult), //karing
+		ctx:       ctx,
+		outbound:  outboundManager,
+		history:   history,
+		logger:    logger,
+		batch:     nil,       //karing
+		batchPool: batchPool, //karing
+		checked:   make(map[string]bool),
+		result:    make(map[string]adapter.URLTestResult), //karing
 	}
 	testBatch.batchTest(outbounds, link, interval, force) //karing
+
 	//testBatch.test(outbounds, link, interval, force)  //karing
 	//b.Wait() //karing
 	for _, outboundGroup := range testBatch.groups {
@@ -585,7 +597,7 @@ func (b *urlTestBatch) test(outbounds []adapter.Outbound, link string, interval 
 	}
 }
 
-func (g *URLTestGroup) performUpdateCheck(retestGroupIfAllFailed bool) {//karing
+func (g *URLTestGroup) performUpdateCheck(retestGroupIfAllFailed bool) { //karing
 	g.updateAccess.Lock()
 	defer g.updateAccess.Unlock()
 	var updated bool
@@ -617,7 +629,7 @@ func (g *URLTestGroup) performUpdateCheck(retestGroupIfAllFailed bool) {//karing
 		pauseManager := service.FromContext[pause.Manager](g.ctx)
 		if pauseManager != nil && !pauseManager.IsNetworkPaused() && !pauseManager.IsDevicePaused() {
 			g.logger.WarnContext(g.ctx, "URLTest performUpdateCheck need retest")
-			go g.CheckOutbounds(true)
+			go g.CheckOutbounds(g.ctx, true)
 		}
 	}
 }

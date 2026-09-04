@@ -49,23 +49,6 @@ func (s *URLTest) updateHistory(outboundType string, realTag string) {
 	}
 }
 
-func (s *URLTest) InterfaceUpdated() {
-	pauseManager := service.FromContext[pause.Manager](s.ctx)
-	if pauseManager == nil {
-		return
-	}
-	if pauseManager.IsNetworkPaused() {
-		return
-	}
-	if !s.reTestIfNetworkUpdate {
-		return
-	}
-	if s.group == nil {
-		return
-	}
-	go s.group.CheckOutbounds(true)
-}
-
 func (g *URLTestGroup) Checking() bool {
 	return g.checking.Load()
 }
@@ -158,10 +141,10 @@ func (g *URLTestGroup) HealthCheckSelected() {
 	selectedOutboundTCP := g.selectedOutboundTCP
 	selectedOutboundUDP := g.selectedOutboundUDP
 	if selectedOutboundTCP != nil && g.isProxyOutbound(selectedOutboundTCP.Type()) {
-		tags[RealTag(selectedOutboundTCP)] = true
+		tags[RealTag(g.outbound, selectedOutboundTCP)] = true
 	}
 	if selectedOutboundUDP != nil && g.isProxyOutbound(selectedOutboundUDP.Type()) {
-		tags[RealTag(selectedOutboundUDP)] = true
+		tags[RealTag(g.outbound, selectedOutboundUDP)] = true
 	}
 	for tag := range tags {
 		g.HealthCheck(tag, false)
@@ -221,20 +204,14 @@ func (g *URLTestGroup) loopHealthCheckSelected() {
 }
 
 func (b *urlTestBatch) batchTest(outbounds []adapter.Outbound, link string, interval time.Duration, force bool) { //karing
-	group := b.batchGroup
+	pool := b.batchPool
+	group := pool.Group()
 	count := 0
-	if b.skipTest {
-		if b.testTimes != 0 {
-			b.performUpdateCheck(false)
-			return b.result, nil
-		}
-	}
-	b.testTimes++
 
 	var resultAccess sync.Mutex
 	for _, detour := range outbounds {
 		tag := detour.Tag()
-		realTag := RealTag(detour)
+		realTag := RealTag(b.outbound, detour)
 		if b.checked[realTag] {
 			continue
 		}
@@ -249,7 +226,7 @@ func (b *urlTestBatch) batchTest(outbounds []adapter.Outbound, link string, inte
 		}
 		pauseManager := service.FromContext[pause.Manager](b.ctx)
 		if pauseManager == nil {
-			return b.result, nil
+			return
 		}
 		if pauseManager.IsNetworkPaused() {
 			pauseManager.WaitActive()
@@ -288,14 +265,12 @@ func (b *urlTestBatch) batchTest(outbounds []adapter.Outbound, link string, inte
 		count++
 		pauseManager = service.FromContext[pause.Manager](b.ctx)
 		if pauseManager == nil {
-			return b.result, nil
+			return
 		}
 		if count%10 == 0 || count == len(outbounds) {
 			group.Wait()
 			b.performUpdateCheck(false)
 		}
 	}
-	batchGroup.StopAndWait()
-	gofree.FreeIdleThread()
-	g.performUpdateCheck(false)
+	pool.StopAndWait()
 }

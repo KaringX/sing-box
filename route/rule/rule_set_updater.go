@@ -47,6 +47,7 @@ func (u *RuleSetUpdater) loopUpdate() {
 	for i, ruleSet := range u.ruleSets {
 		nextUpdates[i] = ruleSet.lastUpdated.Add(ruleSet.updateInterval)
 	}
+	var updated bool
 	for i, ruleSet := range u.ruleSets { //karing
 		now := time.Now()
 		if now.Before(nextUpdates[i]) {
@@ -55,6 +56,9 @@ func (u *RuleSetUpdater) loopUpdate() {
 		ruleSet.updateOnce()
 		nextUpdates[i] = now.Add(ruleSet.updateInterval)
 		updated = true
+	}
+	if updated {
+		runtime.GC()
 	}
 
 	timer := time.NewTimer(0)

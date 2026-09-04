@@ -130,7 +130,6 @@ func (c *CacheFile) Dependencies() []string {
 	return nil
 }
 
- 
 func (c *CacheFile) CacheID() string {
 	return c.cacheIDText
 }
@@ -149,7 +148,7 @@ func (c *CacheFile) Start(stage adapter.StartStage) error {
 		return nil //c.start() //karing
 	case adapter.StartStateStart:
 		c.startCacheCleanup()
- 
+
 	}
 	return nil
 }
@@ -274,7 +273,6 @@ func (c *CacheFile) database() *bbolt.DB {
 
 func (c *CacheFile) view(fn func(tx *bbolt.Tx) error) (err error) {
 	db := c.database()
->>>>>>> v1.14.0
 	defer func() {
 		r := recover()
 		if r != nil {
@@ -320,7 +318,6 @@ func (c *CacheFile) update(fn func(tx *bbolt.Tx) error) (err error) {
 	}()
 	return db.Update(fn)
 }
-
 
 func (c *CacheFile) resetDB(failedDB *bbolt.DB, reason any) {
 	c.dbAccess.Lock()

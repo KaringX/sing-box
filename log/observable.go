@@ -3,7 +3,6 @@ package log
 import (
 	"context"
 	"io"
-	"log"
 	"os"
 
 	"path"
@@ -16,17 +15,14 @@ import (
 
 	"time"
 
-	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing/common"
 	F "github.com/sagernet/sing/common/format"
 	"github.com/sagernet/sing/common/observable"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-
 var _ ObservableFactory = (*defaultFactory)(nil)
 var CaptureFatalMessageFunc func(message string) //karing
-
 
 type defaultFactory struct {
 	ctx               context.Context
@@ -168,8 +164,12 @@ func (f *defaultFactory) UnSubscribe(sub observable.Subscription[Entry]) {
 }
 
 func (f *defaultFactory) output(ctx context.Context, level Level, tag string, message string, timestamp time.Time) {
+	contextId, ok := f.ctx.Value(CtxKeyLogContextIdName).(string) // karing
+	if !ok {                                                      //karing
+		contextId = ""
+	}
 	if f.needObservable {
-		formatted, formattedSimple := f.formatter.FormatWithSimple(ctx, level, tag, message, timestamp)
+		formatted, formattedSimple := f.formatter.FormatWithSimple(ctx, contextId, level, tag, message, timestamp) // karing
 		if level <= f.level {
 			if level == LevelPanic {
 				panic(formatted)
@@ -181,7 +181,7 @@ func (f *defaultFactory) output(ctx context.Context, level Level, tag string, me
 		}
 		f.subscriber.Emit(Entry{level, formattedSimple})
 	} else if level <= f.level {
-		formatted := f.formatter.Format(ctx, level, tag, message, timestamp)
+		formatted := f.formatter.Format(ctx, contextId, level, tag, message, timestamp)
 		if level == LevelPanic {
 			panic(formatted)
 		}
@@ -192,7 +192,7 @@ func (f *defaultFactory) output(ctx context.Context, level Level, tag string, me
 	}
 	platformWriters := f.loadPlatformWriters()
 	if len(platformWriters) > 0 {
-		platformMessage := f.platformFormatter.Format(ctx, level, tag, message, timestamp)
+		platformMessage := f.platformFormatter.Format(ctx, contextId, level, tag, message, timestamp)
 		for _, platformWriter := range platformWriters {
 			platformWriter.WriteMessage(level, platformMessage)
 		}
@@ -225,14 +225,13 @@ func (l *observableLogger) log(ctx context.Context, level Level, deep int, args 
 	nowTime := time.Now()
 	//message := F.ToString(args...)//karing
 	message := l.formatter.Format(ctx, contextId, level, tag, F.ToString(args...), nowTime) //karing
-	if level == LevelFatal || level == LevelPanic {//karing
-		if  CaptureFatalMessageFunc != nil {  
-			index := strings.Index(message, "FATAL")       
+	if level == LevelFatal || level == LevelPanic {                                         //karing
+		if CaptureFatalMessageFunc != nil {
+			index := strings.Index(message, "FATAL")
 			if index >= 0 {
 				CaptureFatalMessageFunc(message[index:])
-			}
-			else{
-				CaptureFatalMessageFunc(message )
+			} else {
+				CaptureFatalMessageFunc(message)
 			}
 		}
 	}

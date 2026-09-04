@@ -114,7 +114,7 @@ func (s *LocalRuleSet) reloadFile(path string, isAsset bool) error { //karing
 			router := service.FromContext[adapter.Router](s.ctx) //karing
 			content, err = router.GetAssetContent(path)
 		} else { //karing
-			content, err := filemanager.ReadFile(s.ctx, path)
+			content, err = filemanager.ReadFile(s.ctx, path)
 		}
 		if err != nil {
 			return err

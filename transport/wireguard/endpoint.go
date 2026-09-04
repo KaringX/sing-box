@@ -15,7 +15,6 @@ import (
 
 	"github.com/sagernet/sing-box/common/dialer"
 
-	"github.com/sagernet/sing-box/common/dialer"
 	"github.com/sagernet/sing-box/service/powerreport"
 
 	"github.com/sagernet/sing/common"
@@ -223,12 +222,14 @@ func (e *Endpoint) start() error {
 	if e.device != nil { //karing
 		return nil
 	}
+	/*//karing
 	hasDomainPeer := common.Any(e.peers, func(peer peerConfig) bool {
 		return peer.destination.IsDomain()
 	})
-	//if postStart != hasDomainPeer {//karing
-	//	return nil
-	//}
+	if postStart != hasDomainPeer {//karing
+		return nil
+	}
+	*/
 	var bind conn.Bind
 	udpListener, isUDPListener := common.Cast[dialer.UDPListener](e.options.Dialer)
 	if isUDPListener {

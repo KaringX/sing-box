@@ -10,7 +10,7 @@ import (
 )
 
 func (c *CacheFile) BeforeStart() error {
-	return c.start(adapter.StartStateInitialize)
+	return c.start()
 }
 
 func (c *CacheFile) DeleteRuleSet(tag string) {
