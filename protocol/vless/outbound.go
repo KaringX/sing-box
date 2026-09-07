@@ -107,11 +107,11 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 	if options.Encryption != "" && options.Encryption != "none" {
 		encryptionConfig, err := parseClientEncryption(options.Encryption)
 		if err != nil {
-			return nil, E.Cause(err, "parse encryption")
+			return empty, E.Cause(err, "parse encryption")
 		}
 		outbound.encryption = &encryption.ClientInstance{}
 		if err := outbound.encryption.Init(encryptionConfig.keys, encryptionConfig.xorMode, encryptionConfig.seconds, encryptionConfig.padding); err != nil {
-			return nil, E.Cause(err, "initialize encryption")
+			return empty, E.Cause(err, "initialize encryption")
 		}
 		logger.Debug("encryption initialized: keys=", len(encryptionConfig.keys), " xorMode=", encryptionConfig.xorMode, " seconds=", encryptionConfig.seconds, " padding=", encryptionConfig.padding)
 	}
