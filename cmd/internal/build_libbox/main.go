@@ -152,8 +152,8 @@ func checkJavaVersion() {
 	if err != nil {
 		log.Fatal(E.Cause(err, "check java version"))
 	}
-	if !strings.Contains(javaVersion, "openjdk 21") { //karing
-		log.Fatal("java version should be openjdk 21, current is " + javaVersion) //karing
+	if !strings.Contains(javaVersion, "openjdk 17") {
+		log.Fatal("java version should be openjdk 17, current is " + javaVersion) //karing
 	}
 }
 
