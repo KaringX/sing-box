@@ -2,9 +2,14 @@
 icon: material/new-box
 ---
 
-!!! quote "Changes in sing-box 1.14.0"
+!!! quote "Changes in sing-box 1.15.0"
 
     :material-plus: [auto_redirect_tproxy_mark](#auto_redirect_tproxy_mark)  
+    :material-plus: [multi_queue](#multi_queue)  
+    :material-delete-clock: [stack](#stack)
+
+!!! quote "Changes in sing-box 1.14.0"
+
     :material-plus: [include_mac_address](#include_mac_address)  
     :material-plus: [exclude_mac_address](#exclude_mac_address)  
     :material-plus: [dns_mode](#dns_mode)  
@@ -120,7 +125,7 @@ icon: material/new-box
 
   ... // UDP NAT Fields
 
-  "stack": "system",
+  "multi_queue": false,
   "include_interface": [
     "lan0"
   ],
@@ -165,6 +170,7 @@ icon: material/new-box
     }
   },
   // Deprecated
+  "stack": "system",
   "gso": false,
   "inet4_address": [
     "172.19.0.1/30"
@@ -390,7 +396,7 @@ Connection reset mark used by `auto_redirect` pre-matching.
 
 #### auto_redirect_tproxy_mark
 
-!!! question "Since sing-box 1.14.0"
+!!! question "Since sing-box 1.15.0"
 
 Connection TPROXY mark used by the `auto_redirect` iptables backend for IPv6 TCP.
 
@@ -559,15 +565,23 @@ Exclude custom routes when `auto_route` is enabled.
 
 #### endpoint_independent_nat
 
-!!! info ""
+This option has had no effect since sing-box 1.11.0 and can be removed from the configuration.
 
-    This item is only available on the gvisor stack, other stacks are endpoint-independent NAT by default.
-
-Enable endpoint-independent NAT.
-
-Performance may degrade slightly, so it is not recommended to enable on when it is not needed.
+Since sing-box 1.14.0, use [UDP NAT fields](/configuration/shared/udp-nat/)
+to customize the mapping and filtering behavior.
 
 #### stack
+
+!!! failure "Deprecated in sing-box 1.15.0"
+
+    `stack` is deprecated and will be removed in sing-box 1.17.0.
+    Remove the `stack` option to use sing-tun's own TCP/IP stack.
+    See [Migration](/migration/#migrate-tun-stack).
+
+!!! quote "Changes in sing-box 1.15.0"
+
+    Since 1.15.0, sing-tun uses its own TCP/IP stack, with substantial improvements over all previous
+    implementations in peak performance, energy efficiency, and memory usage.
 
 !!! quote "Changes in sing-box 1.8.0"
 
@@ -575,13 +589,21 @@ Performance may degrade slightly, so it is not recommended to enable on when it 
 
 TCP/IP stack.
 
+The following legacy implementations remain available during the deprecation period.
+
 | Stack    | Description                                                                                           | 
 |----------|-------------------------------------------------------------------------------------------------------|
 | `system` | Perform L3 to L4 translation using the system network stack                                           |
 | `gvisor` | Perform L3 to L4 translation using [gVisor](https://github.com/google/gvisor)'s virtual network stack |
 | `mixed`  | Mixed `system` TCP stack and `gvisor` UDP stack                                                       |
 
-Defaults to the `mixed` stack if the gVisor build tag is enabled, otherwise defaults to the `system` stack.
+#### multi_queue
+
+!!! quote ""
+
+    Only supported on Linux, and requires sing-tun's own TCP/IP stack.
+
+Enable multi-queue support based on `IFF_MULTI_QUEUE`, allowing throughput to scale with the number of CPU cores.
 
 #### include_interface
 

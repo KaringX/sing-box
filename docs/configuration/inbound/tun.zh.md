@@ -2,9 +2,14 @@
 icon: material/new-box
 ---
 
-!!! quote "sing-box 1.14.0 中的更改"
+!!! quote "sing-box 1.15.0 中的更改"
 
     :material-plus: [auto_redirect_tproxy_mark](#auto_redirect_tproxy_mark)  
+    :material-plus: [multi_queue](#multi_queue)  
+    :material-delete-clock: [stack](#stack)
+
+!!! quote "sing-box 1.14.0 中的更改"
+
     :material-plus: [include_mac_address](#include_mac_address)  
     :material-plus: [exclude_mac_address](#exclude_mac_address)  
     :material-plus: [dns_mode](#dns_mode)  
@@ -121,7 +126,7 @@ icon: material/new-box
 
   ... // UDP NAT 字段
 
-  "stack": "system",
+  "multi_queue": false,
   "include_interface": [
     "lan0"
   ],
@@ -167,6 +172,7 @@ icon: material/new-box
   },
 
   // 已弃用
+  "stack": "system",
   "gso": false,
   "inet4_address": [
     "172.19.0.1/30"
@@ -383,7 +389,7 @@ sing-box DNS 模块，等价于一条
 
 #### auto_redirect_tproxy_mark
 
-!!! question "自 sing-box 1.14.0 起"
+!!! question "自 sing-box 1.15.0 起"
 
 `auto_redirect` iptables 后端为 IPv6 TCP 使用的连接 TPROXY 标记。
 
@@ -545,11 +551,21 @@ sing-box DNS 模块，等价于一条
 
 #### endpoint_independent_nat
 
-启用独立于端点的 NAT。
+此选项自 sing-box 1.11.0 起不再生效，可从配置中移除。
 
-性能可能会略有下降，所以不建议在不需要的时候开启。
+自 sing-box 1.14.0 起，可使用 [UDP NAT 字段](/zh/configuration/shared/udp-nat/)自定义映射和过滤行为。
 
 #### stack
+
+!!! failure "已在 sing-box 1.15.0 废弃"
+
+    `stack` 已废弃，并将在 sing-box 1.17.0 中被移除。
+    移除 `stack` 参数以使用 sing-tun 自有的 TCP/IP stack。
+    参阅[迁移指南](/zh/migration/#迁移-tun-stack)。
+
+!!! quote "sing-box 1.15.0 中的更改"
+
+    自 1.15.0 起，sing-tun 使用自有 TCP/IP stack，极限性能、能效以及内存占用均大幅领先于所有旧实现。
 
 !!! quote "sing-box 1.8.0 中的更改"
 
@@ -557,13 +573,21 @@ sing-box DNS 模块，等价于一条
 
 TCP/IP 栈。
 
+以下旧实现在废弃过渡期内仍可选择。
+
 | 栈       | 描述                                                                                                  | 
 |----------|-------------------------------------------------------------------------------------------------------|
 | `system` | 基于系统网络栈执行 L3 到 L4 转换                                                                        |
 | `gvisor` | 基于 [gVisor](https://github.com/google/gvisor) 虚拟网络栈执行 L3 到 L4 转换                            |
 | `mixed`  | 混合 `system` TCP 栈与 `gvisor` UDP 栈                                                                 |
 
-默认使用 `mixed` 栈如果 gVisor 构建标记已启用，否则默认使用 `system` 栈。
+#### multi_queue
+
+!!! quote ""
+
+    仅在 Linux 下被支持，且需要使用 sing-tun 自有的 TCP/IP stack。
+
+启用基于 `IFF_MULTI_QUEUE` 的多队列支持，使吞吐量能够随 CPU 核心数量扩展。
 
 #### include_interface
 
