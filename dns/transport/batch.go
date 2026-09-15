@@ -201,6 +201,12 @@ func (t *BatchTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS
 	return nil, E.New("batch exchange: unknown error")
 }
 
+func (t *BatchTransport) ExchangeAsync(ctx context.Context, message *mDNS.Msg, callback func(response *mDNS.Msg, err error)) {
+	go func() {
+		callback(t.Exchange(ctx, message))
+	}()
+}
+
 func (t *BatchTransport) transportCounter(tag string) *atomic.Int64 {
 	counter, loaded := batchTransportExchangingByTag.Load(tag)
 	if loaded {

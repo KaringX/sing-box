@@ -14,6 +14,10 @@ func (r *RuleActionDNSRoute) Target() string {
 	return r.Server
 }
 
+func (r *RuleActionRespond) Target() string {
+	return ""
+}
+
 func (r *RuleActionDNSRouteOptions) Target() string {
 	return ""
 }

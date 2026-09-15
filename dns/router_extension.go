@@ -19,8 +19,16 @@ import (
 
 func (r *Router) LookupTag(ctx context.Context, domain string, options adapter.DNSQueryOptions) ([]netip.Addr, string, error) {
 	if r.transport == nil { //karing
-		return nil, "", E.New("router closed")
+		return nil, "", E.New("router closed") //karing
 	}
+	r.rulesAccess.RLock()
+	if r.closing {
+		r.rulesAccess.RUnlock()
+		return nil, "", E.New("dns router closed") //karing
+	}
+	rules := r.rules
+	legacyDNSMode := r.legacyDNSMode
+	r.rulesAccess.RUnlock()
 	var (
 		responseAddrs []netip.Addr
 		err           error
@@ -35,6 +43,10 @@ func (r *Router) LookupTag(ctx context.Context, domain string, options adapter.D
 				r.logger.DebugContext(ctx, "response rejected for ", domain, " (cached)")
 			} else if errors.Is(err, ErrResponseRejected) {
 				r.logger.DebugContext(ctx, "response rejected for ", domain)
+			} else if R.IsRejected(err) {
+				r.logger.DebugContext(ctx, "lookup rejected for ", domain)
+			} else if errors.Is(err, ErrNotCached) {
+				r.logger.DebugContext(ctx, "cache-only lookup missed for ", domain)
 			} else {
 				r.logger.ErrorContext(ctx, E.Cause(err, "lookup failed for ", domain))
 			}
@@ -47,21 +59,18 @@ func (r *Router) LookupTag(ctx context.Context, domain string, options adapter.D
 	ctx, metadata := adapter.ExtendContext(ctx)
 	metadata.Destination = M.Socksaddr{}
 	metadata.Domain = FqdnToDomain(domain)
+	metadata.DNSResponse = nil
+	metadata.NamedDNSResponses = nil
+	metadata.DestinationAddressMatchFromResponse = false
 	if options.Transport != nil {
 		transport := options.Transport
 		transportTag = transport.Tag() //karing
-		if legacyTransport, isLegacy := transport.(adapter.LegacyDNSTransport); isLegacy {
-			if options.Strategy == C.DomainStrategyAsIS {
-				options.Strategy = r.defaultDomainStrategy
-			}
-			if !options.ClientSubnet.IsValid() {
-				options.ClientSubnet = legacyTransport.LegacyClientSubnet()
-			}
-		}
 		if options.Strategy == C.DomainStrategyAsIS {
 			options.Strategy = r.defaultDomainStrategy
 		}
 		responseAddrs, err = r.client.Lookup(ctx, transport, domain, options, nil)
+	} else if !legacyDNSMode {
+		responseAddrs, err = r.lookupWithRules(ctx, rules, domain, options)
 	} else {
 		var (
 			transport adapter.DNSTransport
@@ -72,15 +81,17 @@ func (r *Router) LookupTag(ctx context.Context, domain string, options adapter.D
 		for {
 			dnsCtx := adapter.OverrideContext(ctx)
 			dnsOptions := options
-			transport, rule, ruleIndex = r.matchDNS(ctx, false, ruleIndex, true, &dnsOptions)
+			transport, rule, ruleIndex = r.matchDNS(ctx, rules, false, ruleIndex, true, &dnsOptions)
 			if rule != nil {
 				switch action := rule.Action().(type) {
 				case *R.RuleActionReject:
 					return nil, "", &R.RejectedError{Cause: action.Error(ctx)}
 				case *R.RuleActionPredefined:
+					responseAddrs = nil
 					if action.Rcode != mDNS.RcodeSuccess {
 						err = RcodeError(action.Rcode)
 					} else {
+						err = nil
 						for _, answer := range action.Answer {
 							switch record := answer.(type) {
 							case *mDNS.A:
@@ -98,13 +109,7 @@ func (r *Router) LookupTag(ctx context.Context, domain string, options adapter.D
 			} else { //karing
 				transportTag = ""
 			}
-			var responseCheck func(responseAddrs []netip.Addr) bool
-			if rule != nil && rule.WithAddressLimit() {
-				responseCheck = func(responseAddrs []netip.Addr) bool {
-					metadata.DestinationAddresses = responseAddrs
-					return rule.MatchAddressLimit(metadata)
-				}
-			}
+			responseCheck := addressLimitResponseCheck(rule, metadata)
 			if dnsOptions.Strategy == C.DomainStrategyAsIS {
 				dnsOptions.Strategy = r.defaultDomainStrategy
 			}
@@ -118,10 +123,17 @@ func (r *Router) LookupTag(ctx context.Context, domain string, options adapter.D
 response:
 	printResult()
 	if len(responseAddrs) > 0 {
-		laterString := F.MakeLaterString(func() string { //karing
+		laterString := F.MakeLaterString(func() (s string) { //karing
+			defer func() {
+				v := recover()
+				if v != nil {
+					r.logger.ErrorContext(ctx, "panic on makeLaterString")
+					s = "panic on makeLaterString"
+				}
+			}()
 			return strings.Join(F.MapToString(responseAddrs), " ")
 		})
-		r.logger.Info("lookup succeed for ", domain, ": ", laterString) //karing
+		r.logger.InfoContext(ctx, "lookup succeed for ", domain, ": ", laterString) //karing
 	}
-	return responseAddrs, transportTag, err //karing
+	return responseAddrs, transportTag, err
 }

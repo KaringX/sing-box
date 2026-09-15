@@ -35,7 +35,7 @@ type NetworkManager interface {
 	WIFIState() WIFIState
 	UpdateWIFIState(ctx context.Context)
 	ResetNetwork(ctx context.Context)
-	ResetOutboundNetwork(tags []string) //karing
+	ResetOutboundNetwork(ctx context.Context, tags []string) //karing
 }
 
 type NetworkOptions struct {

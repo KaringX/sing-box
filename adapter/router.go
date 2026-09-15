@@ -28,7 +28,7 @@ type Router interface {
 	NeighborResolver() NeighborResolver
 	AppendTracker(tracker ConnectionTracker)
 	ResetNetwork()
-	ResetOutboundNetwork(tags []string)                                                                    //karing
+	ResetOutboundNetwork(ctx context.Context, tags []string)                                               //karing
 	GetRemoteRuleSetRulesCount() map[string]int                                                            //karing
 	FindProcessInfo(ctx context.Context, network string, source netip.AddrPort) (*ConnectionOwner, error)  //karing
 	GetMatchRuleChain(outboundManager OutboundManager, matchOutboundTag string) ([]string, string, string) //karing

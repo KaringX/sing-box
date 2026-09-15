@@ -15,9 +15,9 @@ import (
 
 var _ adapter.Router = (*Router)(nil)
 
-func (r *Router) ResetOutboundNetwork(tags []string) {
+func (r *Router) ResetOutboundNetwork(ctx context.Context, tags []string) {
 	if r.network != nil {
-		r.network.ResetOutboundNetwork(tags)
+		r.network.ResetOutboundNetwork(ctx, tags)
 	}
 }
 
@@ -44,7 +44,7 @@ func (r *Router) GetMatchRuleChain(outboundManager adapter.OutboundManager, matc
 }
 
 func (r *Router) GetMatchRule(ctx context.Context, metadata *adapter.InboundContext) (adapter.Rule, error) {
-	rule, _, _, _, err := r.matchRule(ctx, metadata, false, false, nil, nil)
+	rule, _, _, _, err := r.matchRule(ctx, metadata, nil, nil)
 	if err != nil {
 		return nil, err
 	}

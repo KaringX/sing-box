@@ -530,7 +530,10 @@ func URLTestOutbounds(ctx context.Context, outboundManager adapter.OutboundManag
 	for _, outboundGroup := range testBatch.groups {
 		groupHistory := history.LoadURLTestHistory(RealTag(outboundManager, outboundGroup))
 		if groupHistory != nil {
-			testBatch.result[outboundGroup.Tag()] = groupHistory.Delay
+			testBatch.result[outboundGroup.Tag()] = adapter.URLTestResult{ //karing
+				Delay: groupHistory.Delay,
+				Err:   groupHistory.Err,
+			}
 		}
 	}
 	return testBatch.result
@@ -571,7 +574,7 @@ func (b *urlTestBatch) test(outbounds []adapter.Outbound, link string, interval 
 				defer cancel()
 				testChan := make(chan urlTestResult, 1)
 				go func() {
-					delay, testErr := urltest.URLTest(testCtx, link, detour)
+					delay, _, testErr := urltest.URLTest(testCtx, link, detour) //karing
 					testChan <- urlTestResult{delay, testErr}
 				}()
 				var testResult urlTestResult
@@ -590,7 +593,9 @@ func (b *urlTestBatch) test(outbounds []adapter.Outbound, link string, interval 
 						Delay: testResult.delay,
 					})
 					b.access.Lock()
-					b.result[tag] = testResult.delay
+					b.result[tag] = adapter.URLTestResult{ //karing
+						Delay: testResult.delay,
+					}
 					b.access.Unlock()
 				}
 				return nil, nil

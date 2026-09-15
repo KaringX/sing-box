@@ -56,3 +56,9 @@ func (t *PredefinedTransport) Exchange(ctx context.Context, message *mDNS.Msg) (
 		Question: []mDNS.Question{question},
 	}, nil
 }
+
+func (t *PredefinedTransport) ExchangeAsync(ctx context.Context, message *mDNS.Msg, callback func(response *mDNS.Msg, err error)) {
+	go func() {
+		callback(t.Exchange(ctx, message))
+	}()
+}

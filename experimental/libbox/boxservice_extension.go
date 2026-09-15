@@ -85,7 +85,7 @@ func (s *BoxService) tryResetOutboundNetwork() {
 			instance.Box().Logger().Info("BoxService:tryResetOutboundNetwork")
 		}
 		if instance != nil {
-			instance.Box().Router().ResetOutboundNetwork(tags)
+			instance.Box().Router().ResetOutboundNetwork(s.ctx, tags)
 		}
 	}
 }

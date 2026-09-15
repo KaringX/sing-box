@@ -193,7 +193,7 @@ func outboundTLSOptions(options option.Hysteria2OutboundOptions) (string, option
 	return serverName, tlsOptions, nil
 }
 
-func (h *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
+func (h *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (conn net.Conn, err error) { //karing
 	defer func() { //karing
 		if err == nil {
 			conn = h.OnNewConnection(conn, func() {

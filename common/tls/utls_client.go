@@ -92,7 +92,11 @@ func (c *UTLSClientConfig) Client(conn net.Conn) (Conn, error) {
 		return &utlsALPNWrapper{utlsConnWrapper{utls.UClient(conn, c.config.Clone(), c.id)}, c.config.NextProtos}, nil //hiddify
 	}
 	if c.id != utls.HelloCustom { //hiddify
+		var err error //hiddify
 		conn, err = applyTLSSpoof(conn, c.spoof, c.spoofMethod)
+		if err != nil {
+			return nil, err
+		}
 	} else { //hiddify
 		uConn := utls.UClient(conn, c.config.Clone(), randomFingerprint)
 		var err error
@@ -101,8 +105,8 @@ func (c *UTLSClientConfig) Client(conn net.Conn) (Conn, error) {
 			return nil, err
 		}
 	}
-	//return &utlsALPNWrapper{utlsConnWrapper{utls.UClient(conn, c.config.Clone(), c.id)}, c.config.NextProtos}, nil //hiddify
-	return &utlsALPNWrapper{utlsConnWrapper{UConn: conn}, c.config.NextProtos}, nil //hiddify
+	return &utlsALPNWrapper{utlsConnWrapper{utls.UClient(conn, c.config.Clone(), c.id)}, c.config.NextProtos}, nil
+	//return &utlsALPNWrapper{utlsConnWrapper{UConn: conn}, c.config.NextProtos}, nil //hiddify
 }
 
 func (c *UTLSClientConfig) SetSessionIDGenerator(generator func(clientHello []byte, sessionID []byte) error) {
