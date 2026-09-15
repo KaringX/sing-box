@@ -236,11 +236,11 @@ func (t *Transport) Fetch() []M.Socksaddr {
 func (t *Transport) fetch() error {
 	if t.fetchFailTimes.Load() >= C.DHCPFetchMaxFaildTimes { //karing
 		t.logger.InfoContext(t.ctx, "dhcp: fetch server failed")
-		return nil, E.New("dhcp: fetch server failed")
+		return nil
 	}
 	if t.fetching.Load() { //karing
 		t.logger.InfoContext(t.ctx, "dhcp: fetching server")
-		return nil, E.New("dhcp: fetching server")
+		return nil
 	}
 	state := t.savedState.Load()
 	if state != nil {
@@ -284,9 +284,10 @@ func (t *Transport) startRefresh() {
 			}
 			t.fetchFailTimes.Add(1)                                  //karing
 			if len(cachedServers) > 0 && !cachedUpdatedAt.IsZero() { //karing
-				t.servers = cachedServers
-				t.updatedAt = cachedUpdatedAt
-				return t.servers, nil
+				state := t.savedState.Load()
+				state.servers = cachedServers
+				state.updatedAt = cachedUpdatedAt
+				return
 			}
 			return //karing
 		}
@@ -321,15 +322,16 @@ func (t *Transport) fetchInterface() (*control.Interface, error) {
 }
 
 func (t *Transport) updateServersLocked(ctx context.Context) error {
-	if GetServersFromSystemDNS != nil { //karing
+	/*if GetServersFromSystemDNS != nil { //karing
 		serversFromSystemDNS := GetServersFromSystemDNS(t.ctx)
 		if len(serversFromSystemDNS) > 0 {
-			t.servers = serversFromSystemDNS
-			t.updatedAt = time.Now()
-			t.logger.InfoContext(t.ctx, "dhcp: updated DNS servers from system dns", ": [", strings.Join(common.Map(t.servers, M.Socksaddr.String), ","), "]")
+			state := t.savedState.Load()
+			state.servers = serversFromSystemDNS
+			state.updatedAt = time.Now()
+			t.logger.InfoContext(t.ctx, "dhcp: updated DNS servers from system dns", ": [", strings.Join(common.Map(state.servers, M.Socksaddr.String), ","), "]")
 			return nil
 		}
-	}
+	}*/
 	t.fetching.Store(true)        //karing
 	defer t.fetching.Store(false) //karing
 	iface, err := t.fetchInterface()
@@ -539,8 +541,8 @@ func (t *Transport) recreateServersLocked(iface *control.Interface, dhcpPacket *
 		closeServerTransports(previousState.serverTransports)
 	}
 
-	t.servers = serverAddrs
-	cachedServers = t.servers    //karing
-	cachedUpdatedAt = time.Now() //karing
+	t.savedState.Load().servers = newState.servers //karing
+	cachedServers = newState.servers               //karing
+	cachedUpdatedAt = time.Now()                   //karing
 	return nil
 }

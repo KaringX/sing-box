@@ -9,8 +9,6 @@ import (
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/dns"
 
-	"github.com/sagernet/sing-box/dns/transport/dhcp"
-
 	"github.com/sagernet/sing-box/dns/transport/local/systemconfig"
 	"github.com/sagernet/sing-box/dns/transport/mdns"
 
@@ -26,7 +24,7 @@ import (
 
 func RegisterTransport(registry *dns.TransportRegistry) {
 	dns.RegisterTransport[option.LocalDNSServerOptions](registry, C.DNSTypeLocal, NewTransport)
-	dhcp.GetServersFromSystemDNS = getServersFromSystemDNS //karing
+	//dhcp.GetServersFromSystemDNS = getServersFromSystemDNS //karing
 }
 
 var (
