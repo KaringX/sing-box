@@ -755,7 +755,6 @@ func (t *Endpoint) DialContext(ctx context.Context, network string, destination 
 	if t.GetParseErr() != nil { //karing
 		return nil, t.GetParseErr()
 	}
-
 	switch network {
 	case N.NetworkTCP:
 		t.logger.InfoContext(ctx, "outbound connection to ", destination)

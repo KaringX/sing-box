@@ -273,17 +273,14 @@ func (r *NetworkManager) Close() error {
 		})
 		monitor.Finish()
 	}
-
 	r.endpoint = nil //karing
 	r.inbound = nil  //karing
 	r.outbound = nil //karing
-
 	r.environmentUpdateAccess.Lock()
 	if r.environmentUpdateTimer != nil {
 		r.environmentUpdateTimer.Stop()
 	}
 	r.environmentUpdateAccess.Unlock()
-
 	if r.wifiMonitor != nil {
 		monitor.Start("close WIFI monitor")
 		err = E.Append(err, r.wifiMonitor.Close(), func(err error) error {
@@ -600,13 +597,11 @@ func (r *NetworkManager) updateInterface(ctx context.Context, defaultInterface *
 func (r *NetworkManager) notifyWindowsPowerEvent(event int) {
 	switch event {
 	case winpowrprof.EVENT_SUSPEND:
-
 		if r.pauseManager != nil { //karing
 			r.pauseManager.DevicePause()
 		}
 		r.cancelPowerUpdate()
 		r.ResetNetwork(r.ctx)
-
 	case winpowrprof.EVENT_RESUME:
 		if r.pauseManager != nil { //karing
 			if !r.pauseManager.IsDevicePaused() {
@@ -615,7 +610,6 @@ func (r *NetworkManager) notifyWindowsPowerEvent(event int) {
 		}
 		fallthrough
 	case winpowrprof.EVENT_RESUME_AUTOMATIC:
-
 		if r.pauseManager != nil { //karing
 			r.pauseManager.DeviceWake()
 		}

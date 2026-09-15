@@ -56,7 +56,7 @@ func NewLocalRuleSet(ctx context.Context, logger logger.Logger, tag string, opti
 			return nil, err
 		}
 	} else {
-		/*
+		/* karing
 			filePath := filemanager.BasePath(ctx, strings.ReplaceAll(options.LocalOptions.Path, C.RuleSetTagPlaceholder, tag))
 			filePath, _ = filepath.Abs(filePath)
 			err := ruleSet.reloadFile(filePath)

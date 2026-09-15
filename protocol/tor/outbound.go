@@ -86,7 +86,6 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		startConf.ProcessCreator = nil
 		startConf.UseEmbeddedControlConn = false
 	}
-
 	outboundDialer, err := dialer.New(ctx, options.DialerOptions, false)
 	if err != nil {
 		return empty, err //karing

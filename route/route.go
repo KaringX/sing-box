@@ -5,7 +5,6 @@ import (
 	"errors"
 	"net"
 	"net/netip"
-	"reflect"
 	"strings"
 	"time"
 
@@ -71,7 +70,7 @@ func (r *Router) RouteConnectionEx(ctx context.Context, conn net.Conn, metadata 
 }
 
 func (r *Router) routeConnection(ctx context.Context, conn net.Conn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) error {
-	if isNilPauseManager(r.pauseManager) { //karing
+	if r.pauseManager == nil { //karing
 		return E.New("TCP: route.pauseManager closed")
 	}
 	if r.pauseManager.IsNetworkPaused() { //karing
@@ -233,7 +232,7 @@ func (r *Router) RoutePacketConnectionEx(ctx context.Context, conn N.PacketConn,
 }
 
 func (r *Router) routePacketConnection(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) error {
-	if isNilPauseManager(r.pauseManager) { //karing
+	if r.pauseManager == nil { //karing
 		return E.New("UDP: route.pauseManager closed")
 	}
 	if r.pauseManager.IsNetworkPaused() { //karing
@@ -649,7 +648,6 @@ match:
 		if !currentRule.Match(metadata) {
 			continue
 		}
-
 		ruleDescription := currentRule.String()
 		if ruleDescription != "" {
 			r.logger.DebugContext(ctx, metadata.Domain, " ", "match[", currentRuleIndex, "] ", currentRule, " => ", currentRule.Action()) //karing
@@ -984,17 +982,4 @@ func (r *Router) actionResolve(ctx context.Context, metadata *adapter.InboundCon
 		r.logger.DebugContext(ctx, "resolved [", laterString, "]") //karing
 	}
 	return nil
-}
-
-func isNilPauseManager(manager interface{}) bool { //karing
-	if manager == nil {
-		return true
-	}
-	value := reflect.ValueOf(manager)
-	switch value.Kind() {
-	case reflect.Ptr, reflect.Interface:
-		return value.IsNil()
-	default:
-		return false
-	}
 }

@@ -7,7 +7,6 @@ import (
 	"fmt"
 
 	"crypto/sha256"
-
 	"io"
 	"net/http"
 	"path/filepath"
@@ -309,7 +308,7 @@ func (s *RemoteRuleSet) fetch(ctx context.Context, isStart bool) error {
 	}
 	s.lastUpdated = time.Now()
 	if cacheFile != nil { //karing
-		err = cacheFile.SaveRuleSet(s.options.RemoteOptions.URL, &adapter.SavedBinary{ //karing
+		err = cacheFile.SaveRuleSet(s.tag, &adapter.SavedBinary{ //karing
 			LastUpdated: s.lastUpdated,
 			Content:     content,
 			LastEtag:    s.lastEtag,

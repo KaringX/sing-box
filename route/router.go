@@ -2,7 +2,6 @@ package route
 
 import (
 	"context"
-
 	"os"
 	"runtime"
 	"time"

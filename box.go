@@ -177,7 +177,6 @@ func New(options Options) (box *Box, err error) { //karing
 	if experimentalOptions.V2RayAPI != nil && experimentalOptions.V2RayAPI.Listen != "" {
 		needV2RayAPI = true
 	}
-
 	needAPIService := common.Any(options.Services, func(it option.Service) bool {
 		return it.Type == C.TypeAPI
 	})
@@ -595,6 +594,7 @@ func (s *Box) Start() error {
 
 func (s *Box) preStart() error {
 	s.logger.Info("box prestart") //karing
+	var err error                 //karing
 	/* //karing
 	monitor := taskmonitor.New(s.logger, C.StartTimeout)
 	monitor.Start("start logger")
@@ -605,7 +605,6 @@ func (s *Box) preStart() error {
 	}
 	*/ //karing
 	applyDebugOptions(s.debugOptions)
-	var err error //karing
 	s.debugHTTPServer, err = startDebugHTTPServer(s.debugOptions)
 	if err != nil {
 		return err

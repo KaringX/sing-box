@@ -334,7 +334,6 @@ func NewLogicalRule(ctx context.Context, logger log.ContextLogger, options optio
 		if err != nil {
 			return nil, E.Cause(err, "sub rule[", i, "]")
 		}
-
 		subRule, err := NewRule(ctx, logger, subOptions, false)
 		if err != nil {
 			return nil, E.Cause(err, "sub rule[", i, "]", options.Name) //karing
