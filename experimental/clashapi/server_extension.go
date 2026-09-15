@@ -4,6 +4,8 @@ package clashapi
 
 import (
 	"time"
+
+	"github.com/sagernet/sing-box/common/trafficcontrol"
 )
 
 func (s *Server) AddTick(tick *time.Ticker, onClose func()) {
@@ -16,4 +18,8 @@ func (s *Server) RemoveTick(tick *time.Ticker) {
 
 func (s *Server) RemoveTicks() {
 	s.ticks.Clear()
+}
+
+func (s *Server) TrafficManager() *trafficcontrol.Manager {
+	return s.trafficManager
 }
