@@ -13,14 +13,6 @@ import (
 	"github.com/sagernet/sing/common/varbin"
 )
 
-type ClashServer interface {
-	LifecycleService
-	Mode() string
-	ModeList() []string
-	SetMode(mode string)
-	AddModeUpdateHook(hook *observable.Subscriber[struct{}])
-}
-
 type URLTestHistory struct {
 	Time  time.Time `json:"time"`
 	Delay uint16    `json:"delay"`

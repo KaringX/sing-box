@@ -33,6 +33,7 @@ type defaultFactory struct {
 	file              *os.File
 	filePath          string
 	platformWriters   atomic.Pointer[[]PlatformWriter]
+	needConsole       bool
 	needObservable    bool
 	level             Level
 	subscriber        *observable.Subscriber[Entry]
@@ -67,6 +68,7 @@ func NewDefaultFactory(
 		},
 		writer:         writer,
 		filePath:       filePath,
+		needConsole:    writer != io.Discard || filePath != "",
 		needObservable: needObservable,
 		level:          LevelTrace,
 		subscriber:     observable.NewSubscriber[Entry](128),
@@ -100,6 +102,7 @@ func (f *defaultFactory) Start() error {
 			f.file = logFile
 		}
 		*/
+		f.needConsole = f.writer != io.Discard
 	}
 	if f.needObservable {
 		f.observer = observable.NewObserver[Entry](f.subscriber, 64)
@@ -164,24 +167,8 @@ func (f *defaultFactory) UnSubscribe(sub observable.Subscription[Entry]) {
 }
 
 func (f *defaultFactory) output(ctx context.Context, level Level, tag string, message string, timestamp time.Time) {
-	contextId, ok := f.ctx.Value(CtxKeyLogContextIdName).(string) // karing
-	if !ok {                                                      //karing
-		contextId = ""
-	}
-	if f.needObservable {
-		formatted, formattedSimple := f.formatter.FormatWithSimple(ctx, contextId, level, tag, message, timestamp) // karing
-		if level <= f.level {
-			if level == LevelPanic {
-				panic(formatted)
-			}
-			f.writer.Write([]byte(formatted))
-			if level == LevelFatal {
-				os.Exit(1)
-			}
-		}
-		f.subscriber.Emit(Entry{level, formattedSimple})
-	} else if level <= f.level {
-		formatted := f.formatter.Format(ctx, contextId, level, tag, message, timestamp)
+	if level <= f.level && (f.needConsole || level == LevelPanic || level == LevelFatal) {
+		formatted := f.formatter.Format(ctx, level, tag, message, timestamp) // karing
 		if level == LevelPanic {
 			panic(formatted)
 		}
@@ -190,9 +177,12 @@ func (f *defaultFactory) output(ctx context.Context, level Level, tag string, me
 			os.Exit(1)
 		}
 	}
+	if f.needObservable {
+		f.subscriber.Emit(Entry{level, f.formatter.FormatSimple(ctx, tag, message)})
+	}
 	platformWriters := f.loadPlatformWriters()
 	if len(platformWriters) > 0 {
-		platformMessage := f.platformFormatter.Format(ctx, contextId, level, tag, message, timestamp)
+		platformMessage := f.platformFormatter.Format(ctx, level, tag, message, timestamp)
 		for _, platformWriter := range platformWriters {
 			platformWriter.WriteMessage(level, platformMessage)
 		}
@@ -216,16 +206,12 @@ func (l *observableLogger) log(ctx context.Context, level Level, deep int, args 
 	if l.writer == nil { //karing
 		return
 	}
-	contextId, ok := l.ctx.Value(CtxKeyLogContextIdName).(string) // karing
-	if !ok {                                                      //karing
-		contextId = ""
-	}
 	_, file, line, _ := runtime.Caller(deep)                              // karing
 	tag := " " + path.Base(file) + ":" + strconv.Itoa(line) + " " + l.tag // karing
 	nowTime := time.Now()
 	//message := F.ToString(args...)//karing
-	message := l.formatter.Format(ctx, contextId, level, tag, F.ToString(args...), nowTime) //karing
-	if level == LevelFatal || level == LevelPanic {                                         //karing
+	message := l.formatter.Format(ctx, level, tag, F.ToString(args...), nowTime) //karing
+	if level == LevelFatal || level == LevelPanic {                              //karing
 		if CaptureFatalMessageFunc != nil {
 			index := strings.Index(message, "FATAL")
 			if index >= 0 {

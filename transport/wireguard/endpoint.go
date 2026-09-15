@@ -411,9 +411,9 @@ func (e *Endpoint) onPauseUpdated(event int) {
 		return
 	}
 	switch event {
-	case pause.EventDevicePaused, pause.EventNetworkPause:
+	case pause.EventNetworkPause:
 		e.device.Down()
-	case pause.EventDeviceWake, pause.EventNetworkWake:
+	case pause.EventNetworkWake:
 		e.device.Up()
 	}
 }
