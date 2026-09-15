@@ -25,7 +25,6 @@ func connectionRouter(ctx context.Context, server *Server, network adapter.Netwo
 	r := chi.NewRouter()
 	r.Get("/", getConnections(ctx, server, trafficManager)) //karing
 	r.Delete("/", closeAllConnections(ctx, network, trafficManager))
-
 	r.Delete("/{id}", closeConnection(trafficManager))
 	return r
 }

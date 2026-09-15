@@ -164,7 +164,7 @@ func (i *Instance) Start() error {
 }
 
 func (i *Instance) Close() error {
-	/*
+	/* //karing
 		i.cancel()
 		i.urlTestHistoryStorage.Close()
 		return i.instance.Close()

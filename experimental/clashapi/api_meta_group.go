@@ -8,9 +8,6 @@ import (
 	"time"
 
 	"github.com/sagernet/sing-box/adapter"
-
-	//karing
-
 	"github.com/sagernet/sing-box/protocol/group"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/json/badjson"

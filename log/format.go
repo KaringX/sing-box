@@ -40,7 +40,7 @@ func init() {
 	}
 }
 
-func (f Formatter) Format(ctx context.Context, level Level, tag string, message string, timestamp time.Time) string { //karing
+func (f Formatter) Format(ctx context.Context, level Level, tag string, message string, timestamp time.Time) string {
 	var id ID
 	var hasId bool
 	if ctx != nil {

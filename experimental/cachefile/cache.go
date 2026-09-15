@@ -148,7 +148,6 @@ func (c *CacheFile) Start(stage adapter.StartStage) error {
 		return nil //c.start() //karing
 	case adapter.StartStateStart:
 		c.startCacheCleanup()
-
 	}
 	return nil
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 
 	box "github.com/sagernet/sing-box"
-
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/adapter/certificate"
 	"github.com/sagernet/sing-box/adapter/endpoint"

@@ -738,26 +738,7 @@ func (s *StartedService) URLTest(ctx context.Context, request *URLTestRequest) (
 					Delay: t,
 				})
 			}
-			_, isGroup := it.(adapter.OutboundGroup)
-			return !isGroup
-		})
-		b, _ := batch.New(boxService.ctx, batch.WithConcurrencyNum[any](10))
-		for _, detour := range outbounds {
-			outboundToTest := detour
-			outboundTag := outboundToTest.Tag()
-			b.Go(outboundTag, func() (any, error) {
-				t, _, err := urltest.URLTest(boxService.ctx, "", outboundToTest) //karing
-				if err != nil {
-					historyStorage.DeleteURLTestHistory(outboundTag)
-				} else {
-					historyStorage.StoreURLTestHistory(outboundTag, &adapter.URLTestHistory{
-						Time:  time.Now(),
-						Delay: t,
-					})
-				}
-				return nil, nil
-			})
-		}
+		}()
 	}
 	return &emptypb.Empty{}, nil
 }

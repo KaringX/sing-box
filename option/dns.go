@@ -151,7 +151,6 @@ func (o DNSServerOptions) DescribeSchema(builder schema.Builder) (*schema.Node, 
 		if registry == nil {
 			return nil, E.New("missing DNS transport options registry in context")
 		}
-
 		return registryUnion(builder, registry, nil, true)
 	})
 }
