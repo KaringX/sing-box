@@ -1,5 +1,4 @@
-//go:build with_karing
-
+// karing
 package route
 
 import (
@@ -8,7 +7,7 @@ import (
 
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/common/process"
-	"github.com/sagernet/sing-box/experimental/clashapi/trafficontrol"
+	"github.com/sagernet/sing-box/common/trafficcontrol"
 	R "github.com/sagernet/sing-box/route/rule"
 	E "github.com/sagernet/sing/common/exceptions"
 )
@@ -40,7 +39,7 @@ func (r *Router) FindProcessInfo(ctx context.Context, network string, source net
 }
 
 func (r *Router) GetMatchRuleChain(outboundManager adapter.OutboundManager, matchOutboundTag string) ([]string, string, string) {
-	return trafficontrol.GetMatchRuleChain(outboundManager, matchOutboundTag)
+	return trafficcontrol.GetMatchRuleChain(outboundManager, matchOutboundTag)
 }
 
 func (r *Router) GetMatchRule(ctx context.Context, metadata *adapter.InboundContext) (adapter.Rule, error) {

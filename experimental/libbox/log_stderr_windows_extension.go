@@ -1,4 +1,6 @@
-//go:build with_karing && windows
+//go:build windows
+
+// karing
 
 package libbox
 

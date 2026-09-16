@@ -31,7 +31,7 @@ func connectionRouter(ctx context.Context, server *Server, network adapter.Netwo
 
 func connectionsSnapshot(trafficManager *trafficcontrol.Manager, noConnections bool) render.M { //karing
 	snapshot := trafficManager.Snapshot(noConnections) //karing
-	return render.JSON(w, r, snapshot)                 //karing
+	return render.M(snapshot.SnapshotMap())            //karing
 	/*karing
 	uplinkTotal, downlinkTotal := trafficManager.Total()
 	connections := common.Filter(trafficManager.Connections(), func(metadata *trafficcontrol.TrackerMetadata) bool {

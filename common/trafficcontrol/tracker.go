@@ -7,7 +7,8 @@ import (
 	"time"
 
 	"github.com/sagernet/sing-box/adapter"
-	"github.com/sagernet/sing-tun"
+	C "github.com/sagernet/sing-box/constant"
+	tun "github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/bufio"
 	N "github.com/sagernet/sing/common/network"
@@ -16,16 +17,25 @@ import (
 )
 
 type TrackerMetadata struct {
-	ID           uuid.UUID
-	Metadata     adapter.InboundContext
-	CreatedAt    time.Time
-	ClosedAt     time.Time
-	Upload       *atomic.Int64
-	Download     *atomic.Int64
-	Chain        []string
-	Rule         adapter.Rule
-	Outbound     string
-	OutboundType string
+	ID            uuid.UUID
+	Metadata      adapter.InboundContext
+	CreatedAt     time.Time
+	ClosedAt      time.Time
+	Upload        *atomic.Int64
+	Download      *atomic.Int64
+	UploadBlip    *atomic.Int64 //karing
+	DownloadBlip  *atomic.Int64 //karing
+	UploadSpeed   int64         //karing
+	DownloadSpeed int64         //karing
+	Chain         []string
+	Rule          adapter.Rule
+	Outbound      string
+	OutboundType  string
+	User          string       //karing
+	Protocol      string       //karing
+	UploadLast    *time.Time   //karing
+	DownloadLast  *time.Time   //karing
+	Dirty         *atomic.Bool //karing
 }
 
 type Tracker interface {
@@ -36,10 +46,28 @@ type Tracker interface {
 func (m *Manager) RoutedConnection(ctx context.Context, conn net.Conn, metadata adapter.InboundContext, matchedRule adapter.Rule, matchOutbound adapter.Outbound) net.Conn {
 	upload := new(atomic.Int64)
 	download := new(atomic.Int64)
+	uploadBlip := new(atomic.Int64)                                          //karing
+	downloadBlip := new(atomic.Int64)                                        //karing
+	uploadLast := new(time.Time)                                             //karing
+	downloadLast := new(time.Time)                                           //karing
+	dirty := new(atomic.Bool)                                                //karing
+	_, _, outboundType := GetMatchRuleChain(m.outbound, matchOutbound.Tag()) //karing
 	tracker := &connTracker{
-		ExtendedConn: bufio.NewInt64CounterConn(conn, []*atomic.Int64{upload}, []*atomic.Int64{download}),
-		metadata:     m.newTrackerMetadata(metadata, matchedRule, matchOutbound, upload, download),
-		manager:      m,
+		ExtendedConn: bufio.NewCounterConn(conn, []N.CountFunc{func(n int64) { //karing
+			upload.Add(n)
+			uploadBlip.Add(n)                               //karing
+			dirty.Store(true)                               //karing
+			*uploadLast = time.Now()                        //karing
+			m.PushUploaded(n, outboundType == C.TypeDirect) //karing
+		}}, []N.CountFunc{func(n int64) {
+			download.Add(n)
+			downloadBlip.Add(n)                               //karing
+			dirty.Store(true)                                 //karing
+			*downloadLast = time.Now()                        //karing
+			m.PushDownloaded(n, outboundType == C.TypeDirect) //karing
+		}}),
+		metadata: m.newTrackerMetadata(metadata, matchedRule, matchOutbound, upload, download, uploadBlip, downloadBlip, uploadLast, downloadLast, dirty), //karing
+		manager:  m,
 	}
 	m.join(tracker)
 	return tracker
@@ -48,10 +76,28 @@ func (m *Manager) RoutedConnection(ctx context.Context, conn net.Conn, metadata 
 func (m *Manager) RoutedPacketConnection(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext, matchedRule adapter.Rule, matchOutbound adapter.Outbound) N.PacketConn {
 	upload := new(atomic.Int64)
 	download := new(atomic.Int64)
+	uploadBlip := new(atomic.Int64)                                          //karing
+	downloadBlip := new(atomic.Int64)                                        //karing
+	uploadLast := new(time.Time)                                             //karing
+	downloadLast := new(time.Time)                                           //karing
+	dirty := new(atomic.Bool)                                                //karing
+	_, _, outboundType := GetMatchRuleChain(m.outbound, matchOutbound.Tag()) //karing
 	tracker := &packetConnTracker{
-		PacketConn: bufio.NewInt64CounterPacketConn(conn, []*atomic.Int64{upload}, nil, []*atomic.Int64{download}, nil),
-		metadata:   m.newTrackerMetadata(metadata, matchedRule, matchOutbound, upload, download),
-		manager:    m,
+		PacketConn: bufio.NewCounterPacketConn(conn, []N.CountFunc{func(n int64) {
+			upload.Add(n)
+			dirty.Store(true)                               //karing
+			uploadBlip.Add(n)                               //karing
+			*uploadLast = time.Now()                        //karing
+			m.PushUploaded(n, outboundType == C.TypeDirect) //karing
+		}}, []N.CountFunc{func(n int64) {
+			download.Add(n)
+			downloadBlip.Add(n)                               //karing
+			dirty.Store(true)                                 //karing
+			*downloadLast = time.Now()                        //karing
+			m.PushDownloaded(n, outboundType == C.TypeDirect) //karing
+		}}),
+		metadata: m.newTrackerMetadata(metadata, matchedRule, matchOutbound, upload, download, uploadBlip, downloadBlip, uploadLast, downloadLast, dirty), //karing
+		manager:  m,
 	}
 	m.join(tracker)
 	return tracker
@@ -59,13 +105,15 @@ func (m *Manager) RoutedPacketConnection(ctx context.Context, conn N.PacketConn,
 
 func (m *Manager) RoutedFlow(ctx context.Context, metadata adapter.InboundContext, matchedRule adapter.Rule, matchOutbound adapter.Outbound) tun.FlowTracker {
 	return &flowTracker{
-		metadata: m.newTrackerMetadata(metadata, matchedRule, matchOutbound, new(atomic.Int64), new(atomic.Int64)),
+		metadata: m.newTrackerMetadata(metadata, matchedRule, matchOutbound, new(atomic.Int64), new(atomic.Int64), new(atomic.Int64), new(atomic.Int64), new(time.Time), new(time.Time), new(atomic.Bool)), //karing
 		manager:  m,
 	}
 }
 
-func (m *Manager) newTrackerMetadata(metadata adapter.InboundContext, matchedRule adapter.Rule, matchOutbound adapter.Outbound, upload *atomic.Int64, download *atomic.Int64) TrackerMetadata {
+func (m *Manager) newTrackerMetadata(metadata adapter.InboundContext, matchedRule adapter.Rule, matchOutbound adapter.Outbound, upload *atomic.Int64, download *atomic.Int64, uploadBlip *atomic.Int64, downloadBlip *atomic.Int64, uploadLast *time.Time, downloadLast *time.Time, dirty *atomic.Bool) TrackerMetadata { //karing
 	id, _ := uuid.NewV4()
+	chain, outbound, outboundType := GetMatchRuleChain(m.outbound, matchOutbound.Tag()) //karing
+	/* //karing
 	var (
 		chain        []string
 		next         string
@@ -91,16 +139,26 @@ func (m *Manager) newTrackerMetadata(metadata adapter.InboundContext, matchedRul
 		}
 		next = outboundGroup.Now()
 	}
+	*/
 	return TrackerMetadata{
-		ID:           id,
-		Metadata:     metadata,
-		CreatedAt:    time.Now(),
-		Upload:       upload,
-		Download:     download,
-		Chain:        common.Reverse(chain),
-		Rule:         matchedRule,
-		Outbound:     outbound,
-		OutboundType: outboundType,
+		ID:            id,
+		Metadata:      metadata,
+		CreatedAt:     time.Now(),
+		Upload:        upload,
+		Download:      download,
+		UploadBlip:    uploadBlip,   //karing
+		DownloadBlip:  downloadBlip, //karing
+		UploadSpeed:   0,            //karing
+		DownloadSpeed: 0,            //karing
+		Chain:         common.Reverse(chain),
+		Rule:          matchedRule,
+		Outbound:      outbound,
+		OutboundType:  outboundType,
+		User:          metadata.User,     //karing
+		Protocol:      metadata.Protocol, //karing
+		UploadLast:    uploadLast,        //karing
+		DownloadLast:  downloadLast,      //karing
+		Dirty:         dirty,             //karing
 	}
 }
 
@@ -115,6 +173,8 @@ func (t *connTracker) Metadata() *TrackerMetadata {
 }
 
 func (t *connTracker) Close() error {
+	t.metadata.ClosedAt = time.Now() //karing
+	t.metadata.Dirty.Store(true)     //karing
 	t.manager.leave(t)
 	return t.ExtendedConn.Close()
 }
@@ -167,6 +227,8 @@ func (t *flowTracker) CloseFlow(reason tun.FlowCloseReason) {
 }
 
 func (t *flowTracker) Close() error {
+	t.metadata.ClosedAt = time.Now() //karing
+	t.metadata.Dirty.Store(true)     //karing
 	handle := t.handle
 	if handle != nil {
 		handle.CloseFlow()
@@ -187,6 +249,8 @@ func (t *packetConnTracker) Metadata() *TrackerMetadata {
 }
 
 func (t *packetConnTracker) Close() error {
+	t.metadata.ClosedAt = time.Now() //karing
+	t.metadata.Dirty.Store(true)     //karing
 	t.manager.leave(t)
 	return t.PacketConn.Close()
 }

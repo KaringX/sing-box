@@ -1,5 +1,6 @@
-//go:build with_karing && !(windows || linux)
+//go:build !(windows || linux)
 
+// karing
 package main
 
 func makeProcessSingleton() error {

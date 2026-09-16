@@ -1,10 +1,10 @@
-//go:build with_karing
-
-package trafficontrol
+// karing
+package trafficcontrol
 
 import (
 	"context"
 	"fmt"
+	"net"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -15,6 +15,7 @@ import (
 	safe "github.com/sagernet/sing-box/common/fix"
 	"github.com/sagernet/sing-box/common/gofree"
 	"github.com/sagernet/sing-box/log"
+	"github.com/sagernet/sing/common"
 	F "github.com/sagernet/sing/common/format"
 	"github.com/sagernet/sing/common/memory"
 	"github.com/sagernet/sing/common/x/list"
@@ -82,7 +83,7 @@ func IsCoreRestart() bool {
 func newManagerWithExtension(ctx context.Context, logFactory log.ObservableFactory) *Manager {
 	manager := &Manager{
 		ManagerExtension: ManagerExtension{ctx: ctx,
-			logger:       logFactory.NewLogger("trafficontrolmanager"),
+			logger:       logFactory.NewLogger("trafficcontrolmanager"),
 			startTime:    time.Now(),
 			ticker:       time.NewTicker(time.Second),
 			dbSizeTicker: time.NewTicker(time.Minute * 1),
@@ -122,11 +123,82 @@ func newManagerWithExtension(ctx context.Context, logFactory log.ObservableFacto
 	return manager
 }
 
+func (m *Manager) PushUploaded(size int64, direct bool) {
+	m.uploadTemp.Add(size)
+	m.uploadTotal.Add(size)
+	if direct {
+		m.uploadTotalDirect.Add(size)
+	}
+}
+
+func (m *Manager) PushDownloaded(size int64, direct bool) {
+	m.downloadTemp.Add(size)
+	m.downloadTotal.Add(size)
+	if direct {
+		m.downloadTotalDirect.Add(size)
+	}
+}
+
+func (m *Manager) Snapshot(includeConnections bool) *Snapshot {
+	var connections []Tracker
+	var connectionsOut []TrackerMetadataOut
+	connectionManager := service.FromContext[adapter.ConnectionManager](m.ctx)
+	if includeConnections {
+		m.connections.Range(func(_ uuid.UUID, value Tracker) bool {
+			//if value.Metadata().OutboundType != C.TypeDNS {
+			connections = append(connections, value)
+			//}
+			return true
+		})
+		connectionsOut = common.Map(connectionManager.Connections(), func(t adapter.OutboundContext) TrackerMetadataOut {
+			return TrackerMetadataOut{
+				CreatedAt:   t.CreatedAt,
+				Network:     t.Network,
+				Source:      safe.SafeSocksaddrString(t.Source),
+				Destination: safe.SafeSocksaddrString(t.Destination),
+				Fqdn:        t.Fqdn,
+				Outbound:    t.Outbound,
+			}
+		})
+	}
+
+	var memStats runtime.MemStats
+	runtime.ReadMemStats(&memStats)
+	m.memory = memStats.StackInuse + memStats.HeapInuse + memStats.HeapIdle - memStats.HeapReleased
+	m.memoryTotal = memory.Total()
+	return &Snapshot{
+		Upload:      m.uploadTotal.Load(),
+		Download:    m.downloadTotal.Load(),
+		Connections: connections,
+		Memory:      m.memory,
+		MemoryTotal: m.memoryTotal,
+		SnapshotExtension: SnapshotExtension{
+			StartTime:           m.startTime,
+			DownloadDirect:      m.downloadTotalDirect.Load(),
+			UploadDirect:        m.uploadTotalDirect.Load(),
+			DownloadSpeed:       m.downloadBlip.Load(),
+			UploadSpeed:         m.uploadBlip.Load(),
+			ConnectionsOut:      connectionsOut,
+			ConnectionsOutCount: int32(connectionManager.Count()),
+			ConnectionsInCount:  int32(m.connections.Len()),
+			Goroutines:          int32(runtime.NumGoroutine()),
+			ThreadCount:         int32(gofree.ThreadNum()),
+		},
+	}
+}
+
+func (m *Manager) ResetStatistic() {
+	m.uploadTotal.Store(0)
+	m.downloadTotal.Store(0)
+	m.uploadTotalDirect.Store(0)
+	m.downloadTotalDirect.Store(0)
+	m.resetStatistic()
+}
 func (m *Manager) GetLatestDownloadTime(tag string) (bool, time.Time) {
 	hasConn := false
 	var downloadLatest time.Time
 	m.connections.Range(func(_ uuid.UUID, value Tracker) bool {
-		if info, istrack := value.(*TCPConn); istrack {
+		if info, istrack := value.(*net.TCPConn); istrack {
 			for _, data := range info.metadata.Chain {
 				if data == tag {
 					hasConn = true
@@ -137,7 +209,7 @@ func (m *Manager) GetLatestDownloadTime(tag string) (bool, time.Time) {
 			}
 			return true
 		}
-		if info, istrack := value.(*UDPConn); istrack {
+		if info, istrack := value.(*net.UDPConn); istrack {
 			for _, data := range info.metadata.Chain {
 				if data == tag {
 					hasConn = true
@@ -287,7 +359,7 @@ func (m *Manager) resetStatistic() {
 	m.downloadTotalDirect.Store(0)
 }
 
-func (m *Manager) Close() error {
+func (m *Manager) CloseExtension() error {
 	m.ticker.Stop()
 	m.dbSizeTicker.Stop()
 	close(m.done)

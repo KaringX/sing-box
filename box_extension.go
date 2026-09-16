@@ -1,4 +1,4 @@
-//go:build with_karing
+//karing
 
 package box
 

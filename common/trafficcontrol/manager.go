@@ -1,14 +1,17 @@
 package trafficcontrol
 
 import (
+	"context"
 	"sync"
 	"time"
 
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/common/compatible"
+	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing/common/cleanup"
 	"github.com/sagernet/sing/common/observable"
 	"github.com/sagernet/sing/common/x/list"
+	"github.com/sagernet/sing/service"
 
 	"github.com/gofrs/uuid/v5"
 )
@@ -35,7 +38,8 @@ var (
 )
 
 type Manager struct {
-	outbound adapter.OutboundManager
+	ManagerExtension //karing
+	outbound         adapter.OutboundManager
 
 	connections             compatible.Map[uuid.UUID, Tracker]
 	closedConnectionsAccess sync.Mutex
@@ -48,11 +52,17 @@ type Manager struct {
 	cleaner         *cleanup.Cleaner
 }
 
-func NewManager(outbound adapter.OutboundManager) *Manager {
+func NewManager(ctx context.Context, logFactory log.ObservableFactory, outbound adapter.OutboundManager) *Manager {
+	/*karing
 	return &Manager{
 		outbound:        outbound,
 		eventSubscriber: observable.NewSubscriber[ConnectionEvent](256),
 	}
+	*/
+	manager := newManagerWithExtension(ctx, logFactory) //karing
+	manager.outbound = outbound
+	manager.eventSubscriber = observable.NewSubscriber[ConnectionEvent](256)
+	return manager
 }
 
 func (m *Manager) Name() string {
@@ -68,6 +78,7 @@ func (m *Manager) Start(stage adapter.StartStage) error {
 }
 
 func (m *Manager) Close() error {
+	m.CloseExtension() //karing
 	if m.cleaner != nil {
 		m.cleaner.Close()
 	}
@@ -110,6 +121,14 @@ func (m *Manager) leave(tracker Tracker) {
 		evicted := m.closedConnections.PopFront()
 		m.closedUploadTotal += evicted.Upload.Load()
 		m.closedDownloadTotal += evicted.Download.Load()
+	}
+	statistics := service.FromContext[adapter.Statistics](m.ctx) //karing
+	if statistics != nil {                                       //karing
+		if !m.dbCacheSizeLimited.Load() {
+			m.persistAccess.Lock()
+			defer m.persistAccess.Unlock()
+			m.closedConnectionsForPersist.PushBack(*metadata)
+		}
 	}
 	m.closedConnections.PushBack(metadataCopy)
 	m.closedConnectionsAccess.Unlock()

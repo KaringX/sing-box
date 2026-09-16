@@ -1,5 +1,6 @@
-//go:build with_karing && linux
+//go:build linux
 
+// karing
 package main
 
 import (
