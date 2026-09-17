@@ -75,6 +75,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		dialer:         outboundDialer.(dialer.ParallelInterfaceDialer),
 		isEmpty:        reflect.DeepEqual(options.DialerOptions, option.DialerOptions{UDPFragmentDefault: true}),
 	}
+	outbound.fetchConfiguredTUNAddresses()
 	//nolint:staticcheck
 	if options.ProxyProtocol != 0 {
 		return empty, E.New("Proxy Protocol is deprecated and removed in sing-box 1.6.0") //karing
@@ -91,7 +92,7 @@ func (h *Outbound) Start(stage adapter.StartStage) error {
 }
 
 func (h *Outbound) fetchMyAddresses() {
-	if len(h.myAddresses.Load()) > 0 {
+	if len(h.myAddresses.Load()) > 0 || h.fetchConfiguredTUNAddresses() {
 		return
 	}
 	myInterfaceNames := h.network.InterfaceMonitor().MyInterfaces()
@@ -107,6 +108,19 @@ func (h *Outbound) fetchMyAddresses() {
 		myAddresses = append(myAddresses, myInterface.Addresses...)
 	}
 	h.myAddresses.Store(myAddresses)
+}
+
+func (h *Outbound) fetchConfiguredTUNAddresses() bool {
+	inboundManager := service.FromContext[adapter.InboundManager](h.ctx)
+	if inboundManager == nil {
+		return false
+	}
+	tunAddresses := inboundManager.GetTunAddressPrefix()
+	if len(tunAddresses) == 0 {
+		return false
+	}
+	h.myAddresses.Store(append([]netip.Prefix(nil), tunAddresses...))
+	return true
 }
 
 func (h *Outbound) isMyLoopbackAddress(addresses ...netip.Addr) bool {
