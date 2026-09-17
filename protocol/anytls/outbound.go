@@ -175,5 +175,8 @@ func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
 }
 
 func (h *Outbound) Close() error {
+	if h.client == nil { //karing
+		return nil
+	}
 	return common.Close(common.PtrOrNil(h.client))
 }
