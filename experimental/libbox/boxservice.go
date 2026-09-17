@@ -3,6 +3,7 @@
 package libbox
 
 import (
+	"context"
 	"fmt"
 	"runtime"
 	"runtime/debug"
@@ -12,16 +13,22 @@ import (
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/daemon"
 	"github.com/sagernet/sing-box/log"
+	"github.com/sagernet/sing-box/service/oomkiller"
+	"github.com/sagernet/sing-box/service/powerreport"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/service"
 )
 
 // CommandServer
 type BoxService struct {
-	instance          *daemon.StartedService
+	*daemon.StartedService
+	ctx               context.Context
+	managedService    *daemon.ManagedService
 	handler           CommandServerHandler
 	platformInterface PlatformInterface
 	platformWrapper   *platformInterfaceWrapper
+	powerManager      *powerreport.Manager
+	oomRecorder       *oomkiller.Recorder
 	endPauseTimer     *time.Timer
 }
 
@@ -30,7 +37,9 @@ type BoxServiceHandler interface {
 	ServiceReload() error
 	GetSystemProxyStatus() (*SystemProxyStatus, error)
 	SetSystemProxyEnabled(enabled bool) error
+	TriggerNativeCrash() error
 	WriteDebugMessage(message string)
+	ConnectSSHAgent() (int32, error)
 }
 
 func NewService(handler BoxServiceHandler, platformInterface PlatformInterface) (boxService *BoxService, err error) {
@@ -44,34 +53,55 @@ func NewService(handler BoxServiceHandler, platformInterface PlatformInterface) 
 		}
 	}()
 	ctx := baseContext(platformInterface)
-
+	powerManager := powerreport.NewManager()
+	service.MustRegister[*powerreport.Manager](ctx, powerManager)
 	var platformWrapper *platformInterfaceWrapper //karing
 	if platformInterface != nil {                 //karing
 		platformWrapper = &platformInterfaceWrapper{ //karing
-			iif:       platformInterface,
-			useProcFS: platformInterface.UseProcFS(),
+			iif:          platformInterface,
+			useProcFS:    platformInterface.UseProcFS(),
+			powerManager: powerManager,
 		}
 		service.MustRegister[adapter.PlatformInterface](ctx, platformWrapper)
 	}
 
 	server := &BoxService{
+		ctx:               ctx,
 		handler:           handler,
 		platformInterface: platformInterface,
 		platformWrapper:   platformWrapper,
+		powerManager:      powerManager,
 	}
-	server.instance = daemon.NewStartedService(daemon.ServiceOptions{
+	server.StartedService = daemon.NewStartedService(daemon.ServiceOptions{
 		Context: ctx,
 		// Platform:         platformWrapper,
-		Handler:     (*boxServiceplatformHandler)(server),
-		Debug:       sDebug,
-		LogMaxLines: sLogMaxLines,
-		OOMKiller:   memoryLimitEnabled,
+		Handler:           (*boxServicePlatformHandler)(server),
+		Debug:             sDebug,
+		LogMaxLines:       sLogMaxLines,
+		OOMKillerEnabled:  sOOMKillerEnabled,
+		OOMKillerDisabled: sOOMKillerDisabled,
+		OOMMemoryLimit:    uint64(sOOMMemoryLimit),
 		// WorkingDirectory: sWorkingPath,
 		// TempDirectory:    sTempPath,
 		// UserID:           sUserID,
 		// GroupID:          sGroupID,
 		// SystemProxyEnabled: false,
 	})
+	oomRecorder := oomkiller.NewRecorder(OOMRecorderOptions(server.StartedService))
+	service.MustRegister[*oomkiller.Recorder](ctx, oomRecorder)
+	oomRecorder.Start()
+	server.oomRecorder = oomRecorder
+	server.managedService = daemon.NewManagedService(daemon.ManagedServiceOptions{
+		Handler:     (*boxServicePlatformHandler)(server),
+		Debug:       sDebug,
+		OOMRecorder: oomRecorder,
+	})
+	if sPowerReportEnabled {
+		err := powerManager.Start(PowerReportOptions(server.StartedService))
+		if err != nil {
+			log.StdLogger().Error(E.Cause(err, "start power report recorder"))
+		}
+	}
 	return server, nil
 }
 
@@ -84,8 +114,8 @@ func (s *BoxService) Start(configContent string) (err error) {
 			SentryCapturePanicMessage(panicErrMessage, "panic: start service", stack)
 		}
 	}()
-	//daemon.RegisterStartedServiceServer(nil, s.StartedService)
-	err = s.instance.StartOrReloadService(configContent, nil)
+	//daemon.RegisterStartedServiceServer(s.ctx, s.StartedService)
+	err = s.StartedService.StartOrReloadService(s.ctx, configContent, nil)
 	if err != nil {
 		SentryCaptureMessage(err, "start service")
 		return err
@@ -98,32 +128,34 @@ func (s *BoxService) Start(configContent string) (err error) {
 }
 
 func (s *BoxService) Close() error {
-	if s.instance == nil {
+	if s.StartedService == nil {
 		return nil
 	}
-	s.instance.Close()
-	return s.instance.CloseService()
+	s.StartedService.Close()
+	s.oomRecorder.Close()
+	s.powerManager.Close()
+	return s.StartedService.CloseService()
 }
 
 func (s *BoxService) WriteMessage(level int32, message string) {
-	if s.instance == nil {
+	if s.StartedService == nil {
 		return
 	}
-	s.instance.WriteMessage(log.Level(level), message)
+	s.StartedService.WriteMessage(log.Level(level), message)
 }
 
 func (s *BoxService) SetError(message string) {
-	if s.instance == nil {
+	if s.StartedService == nil {
 		return
 	}
-	s.instance.SetError(E.New(message))
+	s.StartedService.SetError(E.New(message))
 }
 
 func (s *BoxService) NeedWIFIState() bool {
-	if s.instance == nil {
+	if s.StartedService == nil {
 		return false
 	}
-	instance := s.instance.Instance()
+	instance := s.StartedService.Instance()
 	if instance == nil || instance.Box() == nil || instance.Box().Network() == nil { //karing
 		return false
 	}
@@ -131,10 +163,10 @@ func (s *BoxService) NeedWIFIState() bool {
 }
 
 func (s *BoxService) NeedFindProcess() bool {
-	if s.instance == nil {
+	if s.StartedService == nil {
 		return false
 	}
-	instance := s.instance.Instance()
+	instance := s.StartedService.Instance()
 	if instance == nil || instance.Box() == nil {
 		return false
 	}
@@ -142,10 +174,10 @@ func (s *BoxService) NeedFindProcess() bool {
 }
 
 func (s *BoxService) Pause() {
-	if s.instance == nil {
+	if s.StartedService == nil {
 		return
 	}
-	instance := s.instance.Instance()
+	instance := s.StartedService.Instance()
 	if instance == nil || instance.PauseManager() == nil {
 		return
 	}
@@ -157,10 +189,10 @@ func (s *BoxService) Pause() {
 }
 
 func (s *BoxService) Wake() {
-	if s.instance == nil {
+	if s.StartedService == nil {
 		return
 	}
-	instance := s.instance.Instance()
+	instance := s.StartedService.Instance()
 	if instance == nil || instance.PauseManager() == nil {
 		return
 	}
@@ -174,10 +206,10 @@ func (s *BoxService) Wake() {
 }
 
 func (s *BoxService) ResetNetwork() {
-	if s.instance == nil {
+	if s.StartedService == nil {
 		return
 	}
-	instance := s.instance.Instance()
+	instance := s.StartedService.Instance()
 	if instance == nil || instance.Box() == nil {
 		return
 	}
@@ -185,42 +217,30 @@ func (s *BoxService) ResetNetwork() {
 }
 
 func (s *BoxService) UpdateWIFIState() {
-	if s.instance == nil {
+	if s.StartedService == nil {
 		return
 	}
-	instance := s.instance.Instance()
+	instance := s.StartedService.Instance()
 	if instance == nil || instance.Box() == nil || instance.Box().Network() == nil { //karing
 		return
 	}
-	instance.Box().Network().UpdateWIFIState()
+	instance.Box().Network().UpdateWIFIState(context.Background())
 }
 
-type boxServiceplatformHandler BoxService
+type boxServicePlatformHandler BoxService
 
-func (h *boxServiceplatformHandler) ServiceStop() error {
-	handler := (*BoxService)(h).handler
-	if handler == nil {
-		return nil
-	}
-	return handler.ServiceStop()
+func (h *boxServicePlatformHandler) ServiceStop() error {
+	return (*BoxService)(h).handler.ServiceStop()
 }
 
-func (h *boxServiceplatformHandler) ServiceReload() error {
-	handler := (*BoxService)(h).handler
-	if handler == nil {
-		return nil
-	}
-	return handler.ServiceReload()
+func (h *boxServicePlatformHandler) ServiceReload(ctx context.Context) error {
+	return (*BoxService)(h).handler.ServiceReload()
 }
 
-func (h *boxServiceplatformHandler) SystemProxyStatus() (*daemon.SystemProxyStatus, error) {
-	handler := (*BoxService)(h).handler
-	if handler == nil {
-		return nil, nil
-	}
-	status, err := handler.GetSystemProxyStatus()
+func (h *boxServicePlatformHandler) SystemProxyStatus() (*daemon.SystemProxyStatus, error) {
+	status, err := (*BoxService)(h).handler.GetSystemProxyStatus()
 	if err != nil {
-		return nil, err
+		return nil, E.Cause(err, "get system proxy status")
 	}
 	return &daemon.SystemProxyStatus{
 		Enabled:   status.Enabled,
@@ -228,18 +248,18 @@ func (h *boxServiceplatformHandler) SystemProxyStatus() (*daemon.SystemProxyStat
 	}, nil
 }
 
-func (h *boxServiceplatformHandler) SetSystemProxyEnabled(enabled bool) error {
-	handler := (*BoxService)(h).handler
-	if handler == nil {
-		return nil
-	}
-	return handler.SetSystemProxyEnabled(enabled)
+func (h *boxServicePlatformHandler) SetSystemProxyEnabled(enabled bool) error {
+	return (*BoxService)(h).handler.SetSystemProxyEnabled(enabled)
 }
 
-func (h *boxServiceplatformHandler) WriteDebugMessage(message string) {
-	handler := (*BoxService)(h).handler
-	if handler == nil {
-		return
-	}
-	handler.WriteDebugMessage(message)
+func (h *boxServicePlatformHandler) TriggerNativeCrash() error {
+	return (*BoxService)(h).handler.TriggerNativeCrash()
+}
+
+func (h *boxServicePlatformHandler) WriteDebugMessage(message string) {
+	(*BoxService)(h).handler.WriteDebugMessage(message)
+}
+
+func (h *boxServicePlatformHandler) ConnectSSHAgent() (int32, error) {
+	return (*BoxService)(h).handler.ConnectSSHAgent()
 }

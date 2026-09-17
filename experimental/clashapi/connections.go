@@ -21,7 +21,7 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
-func connectionRouter(ctx context.Context, server *Server, network adapter.NetworkManager, trafficManager *trafficontrol.Manager) http.Handler { //karing
+func connectionRouter(ctx context.Context, server *Server, network adapter.NetworkManager, trafficManager *trafficcontrol.Manager) http.Handler { //karing
 	r := chi.NewRouter()
 	r.Get("/", getConnections(ctx, server, trafficManager)) //karing
 	r.Delete("/", closeAllConnections(ctx, network, trafficManager))
@@ -108,7 +108,7 @@ func (c connectionObject) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func getConnections(ctx context.Context, server *Server, trafficManager *trafficontrol.Manager) func(w http.ResponseWriter, r *http.Request) { //karing
+func getConnections(ctx context.Context, server *Server, trafficManager *trafficcontrol.Manager) func(w http.ResponseWriter, r *http.Request) { //karing
 	return func(w http.ResponseWriter, r *http.Request) {
 		noConnections := r.URL.Query().Get("noConnections") //karing
 		if r.Header.Get("Upgrade") != "websocket" {

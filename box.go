@@ -28,7 +28,6 @@ import (
 	"github.com/sagernet/sing-box/dns"
 	"github.com/sagernet/sing-box/experimental"
 	"github.com/sagernet/sing-box/experimental/cachefile"
-	"github.com/sagernet/sing-box/experimental/clashapi"
 	"github.com/sagernet/sing-box/experimental/clashmode"
 	"github.com/sagernet/sing-box/experimental/deprecated"
 	"github.com/sagernet/sing-box/log"
@@ -209,7 +208,7 @@ func New(options Options) (box *Box, err error) { //karing
 	logFactory.Logger().Info("box new") //karing
 
 	if needCacheFile { //karing
-		cacheFile := cachefile.New(ctx, common.PtrValueOrDefault(experimentalOptions.CacheFile))
+		cacheFile := cachefile.New(ctx, logFactory.Logger(), common.PtrValueOrDefault(experimentalOptions.CacheFile)) //karing
 		service.MustRegister[adapter.CacheFile](ctx, cacheFile)
 		internalServices = append(internalServices, cacheFile)
 		err = cacheFile.BeforeStart()
@@ -282,7 +281,7 @@ func New(options Options) (box *Box, err error) { //karing
 		return nil, E.Cause(err, "initialize router")
 	}
 	if needClashAPI || needAPIService || options.PlatformLogWriter != nil {
-		trafficManager := trafficcontrol.NewManager(outboundManager)
+		trafficManager := trafficcontrol.NewManager(ctx, logFactory.NewLogger("trafficcontrolmanager"), outboundManager) //karing
 		service.MustRegisterPtr(ctx, trafficManager)
 		router.AppendTracker(trafficManager)
 		internalServices = append(internalServices, trafficManager)
@@ -485,17 +484,6 @@ func New(options Options) (box *Box, err error) { //karing
 			return nil, E.Cause(err, "create clash-server")
 		}
 		internalServices = append(internalServices, clashServer)
-		outbound.GetLatestDownloadTime = func(tag string) (bool, time.Time) { //karing
-			clashServer := service.FromContext[adapter.ClashServer](ctx)
-			if clashServer == nil {
-				return false, time.Now()
-			}
-			trafficManager := clashServer.(*clashapi.Server).TrafficManager()
-			if trafficManager == nil {
-				return false, time.Now()
-			}
-			return trafficManager.GetLatestDownloadTime(tag)
-		}
 	}
 	if needV2RayAPI {
 		v2rayServer, err := experimental.NewV2RayServer(logFactory.NewLogger("v2ray-api"), common.PtrValueOrDefault(experimentalOptions.V2RayAPI))

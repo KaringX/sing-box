@@ -115,7 +115,7 @@ func (s *StartedService) newInstance(ctx context.Context, profileContent string,
 		}
 	}
 	urlTestHistoryStorage := urltest.NewHistoryStorage()
-	service.MustRegister[adapter.URLTestHistoryStorage](ctx, urlTestHistoryStorage) //karing
+	//service.MustRegister[adapter.URLTestHistoryStorage](ctx, urlTestHistoryStorage) //karing
 	ctx = service.ContextWithPtr(ctx, urlTestHistoryStorage)
 	i := &Instance{
 		ctx:                   ctx,
@@ -165,9 +165,9 @@ func (i *Instance) Start() error {
 
 func (i *Instance) Close() error {
 	/* //karing
-		i.cancel()
-		i.urlTestHistoryStorage.Close()
-		return i.instance.Close()
+	i.cancel()
+	i.urlTestHistoryStorage.Close()
+	return i.instance.Close()
 	*/
 	return i.close() //karing
 }

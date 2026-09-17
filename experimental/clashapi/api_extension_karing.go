@@ -41,9 +41,8 @@ var (
 
 func init() {
 	dnsClient = dns.NewClient(dns.ClientOptions{
-		DisableCache:     true,
-		DisableExpire:    false,
-		IndependentCache: true,
+		DisableCache:  true,
+		DisableExpire: false,
 		//Logger:           router.dns,
 	})
 }

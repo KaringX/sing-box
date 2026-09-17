@@ -9,6 +9,7 @@ import (
 	"runtime/debug"
 	"time"
 
+	"github.com/sagernet/sing-box/common/trafficcontrol"
 	"github.com/sagernet/sing/common/json"
 	"github.com/sagernet/sing/service"
 	"github.com/sagernet/sing/service/pause"
@@ -46,7 +47,7 @@ func inuseMemory() uint64 {
 	return memStats.StackInuse + memStats.HeapInuse + memStats.HeapIdle - memStats.HeapReleased
 }
 
-func memory(ctx context.Context, server *Server, trafficManager *trafficontrol.Manager) func(w http.ResponseWriter, r *http.Request) { //karing
+func memory(ctx context.Context, server *Server, trafficManager *trafficcontrol.Manager) func(w http.ResponseWriter, r *http.Request) { //karing
 	return func(w http.ResponseWriter, r *http.Request) {
 		var conn net.Conn
 		if r.Header.Get("Upgrade") == "websocket" {

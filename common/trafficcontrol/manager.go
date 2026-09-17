@@ -52,14 +52,14 @@ type Manager struct {
 	cleaner         *cleanup.Cleaner
 }
 
-func NewManager(ctx context.Context, logFactory log.ObservableFactory, outbound adapter.OutboundManager) *Manager {
+func NewManager(ctx context.Context, logger log.ContextLogger, outbound adapter.OutboundManager) *Manager { //karing
 	/*karing
 	return &Manager{
 		outbound:        outbound,
 		eventSubscriber: observable.NewSubscriber[ConnectionEvent](256),
 	}
 	*/
-	manager := newManagerWithExtension(ctx, logFactory) //karing
+	manager := newManagerWithExtension(ctx, logger) //karing
 	manager.outbound = outbound
 	manager.eventSubscriber = observable.NewSubscriber[ConnectionEvent](256)
 	return manager

@@ -4,7 +4,6 @@ package trafficcontrol
 import (
 	"context"
 	"fmt"
-	"net"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -54,7 +53,10 @@ type ManagerExtension struct {
 	dbCacheSizeLimited          atomic.Bool
 	done                        chan struct{}
 	memoryTotal                 uint64
+	memory                      uint64
 	startTime                   time.Time
+	uploadTotal                 atomic.Int64
+	downloadTotal               atomic.Int64
 	uploadTemp                  atomic.Int64
 	downloadTemp                atomic.Int64
 	uploadBlip                  atomic.Int64
@@ -80,10 +82,10 @@ func IsCoreRestart() bool {
 	return coreRestart
 }
 
-func newManagerWithExtension(ctx context.Context, logFactory log.ObservableFactory) *Manager {
+func newManagerWithExtension(ctx context.Context, logger log.ContextLogger) *Manager {
 	manager := &Manager{
 		ManagerExtension: ManagerExtension{ctx: ctx,
-			logger:       logFactory.NewLogger("trafficcontrolmanager"),
+			logger:       logger,
 			startTime:    time.Now(),
 			ticker:       time.NewTicker(time.Second),
 			dbSizeTicker: time.NewTicker(time.Minute * 1),
@@ -198,29 +200,14 @@ func (m *Manager) GetLatestDownloadTime(tag string) (bool, time.Time) {
 	hasConn := false
 	var downloadLatest time.Time
 	m.connections.Range(func(_ uuid.UUID, value Tracker) bool {
-		if info, istrack := value.(*net.TCPConn); istrack {
-			for _, data := range info.metadata.Chain {
-				if data == tag {
-					hasConn = true
-					if downloadLatest.Before(*info.metadata.DownloadLast) {
-						downloadLatest = *info.metadata.DownloadLast
-					}
+		for _, data := range value.Metadata().Chain {
+			if data == tag {
+				hasConn = true
+				if downloadLatest.Before(*value.Metadata().DownloadLast) {
+					downloadLatest = *value.Metadata().DownloadLast
 				}
 			}
-			return true
 		}
-		if info, istrack := value.(*net.UDPConn); istrack {
-			for _, data := range info.metadata.Chain {
-				if data == tag {
-					hasConn = true
-					if downloadLatest.Before(*info.metadata.DownloadLast) {
-						downloadLatest = *info.metadata.DownloadLast
-					}
-				}
-			}
-			return true
-		}
-
 		return true
 	})
 	return hasConn, downloadLatest

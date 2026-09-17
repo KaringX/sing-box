@@ -236,7 +236,7 @@ func getProxyDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 		ctx, cancel := context.WithTimeout(server.ctx, time.Second*time.Duration(timeout)) //karing
 		defer cancel()
 
-		delay, delay2, err := urltest.URLTest(ctx, url, proxy) //karing
+		delay, _, err := urltest.URLTest(ctx, url, proxy) //karing
 		defer func() {
 			realTag := group.RealTag(server.outbound, proxy)
 			if err != nil {
@@ -285,8 +285,7 @@ func getProxyDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 		}
 
 		render.JSON(w, r, render.M{
-			"delay":  delay,
-			"delay2": delay2, //karing
+			"delay": delay,
 		})
 	}
 }

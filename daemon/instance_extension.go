@@ -7,10 +7,9 @@ import (
 	runtimeDebug "runtime/debug"
 	"time"
 
-	"github.com/sagernet/sing-box/adapter"
 	D "github.com/sagernet/sing-box/common/debug"
+	"github.com/sagernet/sing-box/common/trafficcontrol"
 	C "github.com/sagernet/sing-box/constant"
-	"github.com/sagernet/sing-box/experimental/clashapi"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/service"
 )
@@ -34,7 +33,6 @@ func (i *Instance) close() error {
 		err = i.instance.Close()
 		close(done)
 		i.urlTestHistoryStorage = nil //karing
-		i.clashServer = nil           //karing
 		i.pauseManager = nil          //karing
 		i.instance = nil              //karing
 		runtime.GC()                  //karing
@@ -51,27 +49,25 @@ func (i *Instance) close() error {
 
 func (s *Instance) GetOutboundIfHasIssue() []string {
 	outboundTranffics := make(map[string]outboundUploadDownload)
-	clashServer := service.FromContext[adapter.ClashServer](s.ctx)
-	if clashServer != nil {
-		trafficManager := clashServer.(*clashapi.Server).TrafficManager()
-		if trafficManager != nil {
-			connections := trafficManager.Connections()
-			for _, connection := range connections {
-				if isProxyOutbound(connection.OutboundType) {
-					conn, exist := outboundTranffics[connection.Outbound]
-					if exist {
-						outboundTranffics[connection.Outbound] = outboundUploadDownload{
-							upload:   conn.upload + connection.Upload.Load(),
-							download: conn.download + connection.Download.Load()}
-					} else {
-						outboundTranffics[connection.Outbound] = outboundUploadDownload{
-							upload:   connection.Upload.Load(),
-							download: connection.Download.Load()}
-					}
+	trafficManager := service.PtrFromContext[trafficcontrol.Manager](s.ctx)
+	if trafficManager != nil {
+		connections := trafficManager.Connections()
+		for _, connection := range connections {
+			if isProxyOutbound(connection.OutboundType) {
+				conn, exist := outboundTranffics[connection.Outbound]
+				if exist {
+					outboundTranffics[connection.Outbound] = outboundUploadDownload{
+						upload:   conn.upload + connection.Upload.Load(),
+						download: conn.download + connection.Download.Load()}
+				} else {
+					outboundTranffics[connection.Outbound] = outboundUploadDownload{
+						upload:   connection.Upload.Load(),
+						download: connection.Download.Load()}
 				}
 			}
 		}
 	}
+
 	tags := make([]string, 0)
 	for tag, outbound := range outboundTranffics {
 		if outbound.upload > 0 && outbound.download == 0 {
@@ -82,20 +78,19 @@ func (s *Instance) GetOutboundIfHasIssue() []string {
 }
 
 func (s *Instance) GetConnections(includeConnections bool) string {
-	if s.clashServer != nil {
-		trafficManager := s.clashServer.(*clashapi.Server).TrafficManager()
-		if trafficManager != nil {
-			snapshot := trafficManager.Snapshot(includeConnections)
-			data, err := json.Marshal(snapshot)
-			if err != nil {
-				return fmt.Sprintf("{err:%s}", err.Error())
-			}
-			if len(data) == 0 {
-				return fmt.Sprintf("{}")
-			}
-			return string(data)
+	trafficManager := service.PtrFromContext[trafficcontrol.Manager](s.ctx)
+	if trafficManager != nil {
+		snapshot := trafficManager.Snapshot(includeConnections)
+		data, err := json.Marshal(snapshot)
+		if err != nil {
+			return fmt.Sprintf("{err:%s}", err.Error())
 		}
+		if len(data) == 0 {
+			return fmt.Sprintf("{}")
+		}
+		return string(data)
 	}
+
 	return "{}"
 }
 

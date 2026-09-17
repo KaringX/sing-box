@@ -14,6 +14,7 @@ import (
 
 	"github.com/sagernet/cors"
 	"github.com/sagernet/sing-box/adapter"
+	"github.com/sagernet/sing-box/adapter/outbound"
 	"github.com/sagernet/sing-box/common/compatible"
 	"github.com/sagernet/sing-box/common/trafficcontrol"
 	"github.com/sagernet/sing-box/common/urltest"
@@ -143,6 +144,13 @@ func NewServer(ctx context.Context, logFactory log.ObservableFactory, options op
 			r.Get("/ui", http.RedirectHandler("/ui/", http.StatusMovedPermanently).ServeHTTP)
 			r.Handle("/ui/*", http.StripPrefix("/ui/", http.FileServer(Dir(s.externalUI))))
 		})
+	}
+	outbound.GetLatestDownloadTime = func(tag string) (bool, time.Time) { //karing
+		trafficManager := service.PtrFromContext[trafficcontrol.Manager](ctx)
+		if trafficManager == nil {
+			return false, time.Now()
+		}
+		return trafficManager.GetLatestDownloadTime(tag)
 	}
 	return s, nil
 }
