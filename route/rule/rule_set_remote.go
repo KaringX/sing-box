@@ -68,7 +68,7 @@ func NewRemoteRuleSet(ctx context.Context, logger logger.ContextLogger, tag stri
 	}
 	var initialPath string
 	if options.RemoteOptions.InitialPath != "" {
-		initialPath = filemanager.BasePath(ctx, strings.ReplaceAll(options.RemoteOptions.InitialPath, C.RuleSetTagPlaceholder, tag))
+		initialPath = filemanager.WorkPath(ctx, strings.ReplaceAll(options.RemoteOptions.InitialPath, C.RuleSetTagPlaceholder, tag)) //karing
 		initialPath, _ = filepath.Abs(initialPath)
 	}
 	url := strings.ReplaceAll(options.RemoteOptions.URL, C.RuleSetTagPlaceholder, tag)
@@ -124,7 +124,12 @@ func (s *RemoteRuleSet) StartContext(ctx context.Context, startContext *adapter.
 	var loadedFromInitialPath bool
 	if s.lastUpdated.IsZero() && s.initialPath != "" {
 		var content []byte
-		content, err = filemanager.ReadFile(s.ctx, s.initialPath)
+		if s.options.RemoteOptions.IsAsset { //karing
+			router := service.FromContext[adapter.Router](s.ctx) //karing
+			content, err = router.GetAssetContent(s.initialPath)
+		} else { //karing
+			content, err = filemanager.ReadFile(s.ctx, s.initialPath)
+		}
 		if err == nil {
 			err = s.loadBytes(content)
 		}

@@ -181,7 +181,7 @@ type LocalRuleSet struct {
 }
 
 type RemoteRuleSet struct {
-	LocalRuleSet                      //karing
+	IsAsset        bool               `json:"is_asset,omitempty"` //karing
 	URL            string             `json:"url"`
 	InitialPath    string             `json:"initial_path,omitempty"`
 	HTTPClient     *HTTPClientOptions `json:"http_client,omitempty"`

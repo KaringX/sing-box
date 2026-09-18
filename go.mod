@@ -106,7 +106,7 @@ require ( //karing
 //replace github.com/metacubex/mihomo => github.com/KaringX/clash v0.0.0-20241101044429-f71df89d4091
 
 //go get github.com/KaringX/sing@a5ccca51fe8a39390591cf9480ffebb9f0c3fc61
-//replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20260819025303-12e7cea73174 //karing_v0.9.0-beta.4
+//replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20260819025303-12e7cea73174 //karing_v0.9.4
 
 replace github.com/sagernet/sing => ../../KaringX/sing
 
@@ -114,7 +114,7 @@ replace github.com/sagernet/sing => ../../KaringX/sing
 
 //replace github.com/sagernet/sing-dns => ../../KaringX/sing-dns
 
-//replace github.com/sagernet/sing-quic => github.com/KaringX/sing-quic v0.2.0-beta.12.0.20260805050642-0122883b056b //karing_v0.7.0-beta.4
+//replace github.com/sagernet/sing-quic => github.com/KaringX/sing-quic v0.2.0-beta.12.0.20260805050642-0122883b056b //karing_v0.7.0
 
 replace github.com/sagernet/sing-quic => ../../KaringX/sing-quic
 
@@ -122,7 +122,7 @@ replace github.com/sagernet/sing-quic => ../../KaringX/sing-quic
 
 replace github.com/sagernet/quic-go => ../../KaringX/quic-go
 
-//replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.20260819025838-60cad1147202 //karing_v0.9.0-beta.4
+//replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.20260819025838-60cad1147202 //karing_v0.9.3
 
 replace github.com/sagernet/sing-tun => ../../KaringX/sing-tun
 
@@ -130,17 +130,17 @@ replace github.com/sagernet/ws => github.com/KaringX/ws v0.0.0-20250301004503-08
 
 //replace github.com/sagernet/ws => ../../KaringX/ws
 
-//replace github.com/sagernet/wireguard-go => github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20260812025805-7d2d140c5113 //karing_v0.0.5
+//replace github.com/sagernet/wireguard-go => github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20260812025805-7d2d140c5113 //karing_v0.0.6
 
 replace github.com/sagernet/wireguard-go => ../../KaringX/wireguard-go
 
-//replace github.com/sagernet/tailscale => github.com/KaringX/tailscale v1.80.3-mod.5.0.20260812023457-7007033a39f9 //karing_v1.102.1-sing-box-1.14-mod.4
+//replace github.com/sagernet/tailscale => github.com/KaringX/tailscale v1.80.3-mod.5.0.20260812023457-7007033a39f9 //karing_v1.102.1-sing-box-1.14-mod.5
 
 replace github.com/sagernet/tailscale => ../../KaringX/tailscale
 
-replace github.com/sagernet/sing-vmess => github.com/KaringX/sing-vmess v0.2.8-0.20260526023644-9a9b48357eaf //v0.2.8-0
+//replace github.com/sagernet/sing-vmess => github.com/KaringX/sing-vmess v0.2.8-0.20260526023644-9a9b48357eaf //v0.2.8
 
-//replace github.com/sagernet/sing-vmess => ../../KaringX/sing-vmess
+replace github.com/sagernet/sing-vmess => ../../KaringX/sing-vmess
 
 replace github.com/metacubex/sing-shadowsocks2 => github.com/Restia-Ashbell/sing-shadowsocks2 v0.0.0-20250606153500-31ef7b14aaa6
 
