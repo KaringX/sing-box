@@ -226,6 +226,12 @@ func buildMieruClientConfig(options option.MieruOutboundOptions, dialer mieruDia
 			Level: mierupb.MultiplexingLevel(multiplexing).Enum(),
 		}
 	}
+	if options.MTU != 0 { // https://github.com/shtorm-7/sing-box-extended
+		config.Profile.Mtu = proto.Int32(int32(options.MTU))
+	}
+	if handshakeMode, ok := mierupb.HandshakeMode_value[options.HandshakeMode]; ok { // https://github.com/shtorm-7/sing-box-extended
+		config.Profile.HandshakeMode = mierupb.HandshakeMode(handshakeMode).Enum()
+	}
 	if options.TrafficPattern != "" {
 		trafficPattern, _ := mierutp.Decode(options.TrafficPattern)
 		config.Profile.TrafficPattern = trafficPattern
@@ -267,6 +273,11 @@ func validateMieruOptions(options option.MieruOutboundOptions) error {
 	if options.Multiplexing != "" {
 		if _, ok := mierupb.MultiplexingLevel_value[options.Multiplexing]; !ok {
 			return fmt.Errorf("invalid multiplexing level: %s", options.Multiplexing)
+		}
+	}
+	if options.HandshakeMode != "" { // https://github.com/shtorm-7/sing-box-extended
+		if _, ok := mierupb.HandshakeMode_value[options.HandshakeMode]; !ok {
+			return fmt.Errorf("invalid handshake mode: %s", options.HandshakeMode)
 		}
 	}
 	if options.TrafficPattern != "" {

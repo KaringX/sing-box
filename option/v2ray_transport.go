@@ -144,11 +144,6 @@ type V2RayHTTPUpgradeOptions struct {
 }
 
 // https://github.com/starifly/sing-box begin
-// github.com/sagernet/sing-box/common/vision
-// github.com/sagernet/sing-box/common/xray
-// github.com/sagernet/sing-box/transport/v2raykcp
-// github.com/sagernet/sing-box/transport/v2rayxhttp
-// github.com/sagernet/sing-box/protocol/vless/encryption
 type V2RayXHTTPBaseOptions struct {
 	Mode                 string                     `json:"mode"`
 	Host                 string                     `json:"host,omitempty"`

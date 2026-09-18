@@ -42,9 +42,13 @@ type snellClient interface {
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.SnellOutboundOptions) (adapter.Outbound, error) {
+	empty := &Outbound{ //karing
+		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeSnell, tag, options.Network.Build(), options.DialerOptions),
+		logger:  logger,
+	}
 	outboundDialer, err := dialer.New(ctx, options.DialerOptions, options.ServerIsDomain())
 	if err != nil {
-		return nil, err
+		return empty, err //karing
 	}
 	serverAddr := options.ServerOptions.Build()
 	var client snellClient
@@ -53,7 +57,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		var obfsMode snellprotocol.ObfsMode
 		obfsMode, err = snellprotocol.ParseObfsMode(options.ObfsOptions.ObfsMode)
 		if err != nil {
-			return nil, err
+			return empty, err //karing
 		}
 		client, err = snellv4.NewClient(snellv4.ClientOptions{
 			PSK:      []byte(options.PSK),
@@ -68,7 +72,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		var mode snellv6.Mode
 		mode, err = snellv6.ParseMode(options.V6Options.Mode)
 		if err != nil {
-			return nil, err
+			return empty, err //karing
 		}
 		client, err = snellv6.NewClient(snellv6.ClientOptions{
 			PSK:     []byte(options.PSK),
@@ -79,12 +83,12 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 			Server:  serverAddr,
 		})
 	case 0:
-		return nil, E.New("snell: missing version")
+		return empty, E.New("snell: missing version") //karing
 	default:
-		return nil, E.New("snell: unsupported version: ", options.Version)
+		return empty, E.New("snell: unsupported version: ", options.Version) //karing
 	}
 	if err != nil {
-		return nil, err
+		return empty, err //karing
 	}
 	outbound := &Outbound{
 		Adapter:    outbound.NewAdapterWithDialerOptions(C.TypeSnell, tag, options.Network.Build(), options.DialerOptions),

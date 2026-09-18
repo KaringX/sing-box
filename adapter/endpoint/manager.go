@@ -35,7 +35,6 @@ func NewManager(logger log.ContextLogger, registry adapter.EndpointRegistry) *Ma
 
 func (m *Manager) Start(stage adapter.StartStage) error {
 	m.access.Lock()
-	defer m.access.Unlock()
 	if m.started && m.stage >= stage {
 		panic("already started")
 	}
@@ -43,9 +42,12 @@ func (m *Manager) Start(stage adapter.StartStage) error {
 	m.stage = stage
 	if stage == adapter.StartStateStart {
 		// started with outbound manager
+		m.access.Unlock() //karing
 		return nil
 	}
-	for _, endpoint := range m.endpoints {
+	endpoints := m.endpoints //karing
+	m.access.Unlock()        //karing
+	for _, endpoint := range endpoints {
 		name := "endpoint/" + endpoint.Type() + "[" + endpoint.Tag() + "]"
 		done := adapter.LogElapsed(m.logger, stage, " ", name)
 		err := adapter.LegacyStart(endpoint, stage)
@@ -119,7 +121,7 @@ func (m *Manager) Remove(tag string) error {
 
 func (m *Manager) Create(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, outboundType string, options any, parseErr error) error {
 	if tag == "" { //karing
-		m.logger.Error("create endpoint failed: empty tag") 
+		m.logger.Error("create endpoint failed: empty tag")
 		return os.ErrInvalid
 	}
 	endpoint, err := m.registry.Create(ctx, router, logger, tag, outboundType, options)
@@ -130,7 +132,7 @@ func (m *Manager) Create(ctx context.Context, router adapter.Router, logger log.
 		err = parseErr
 	}
 	if err != nil {
-		endpoint.SetParseErr(err) //karing
+		endpoint.SetParseErr(err)                                               //karing
 		m.logger.Error("create endpoint failed: ", endpoint.Tag(), " -> ", err) //karing
 		//return err //karing
 	}

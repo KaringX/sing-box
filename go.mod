@@ -88,6 +88,13 @@ require ( //hiddify
 	github.com/pires/go-proxyproto v0.15.0
 )
 
+require ( // https://github.com/shtorm-7/sing-box-extended
+	filippo.io/edwards25519 v1.2.0
+	github.com/Diniboy1123/connect-ip-go v0.0.0-20260409225322-8d7bb0a858a2
+	github.com/gobwas/ws v1.4.0
+	github.com/yosida95/uritemplate/v3 v3.0.2
+)
+
 require ( //karing
 	github.com/alitto/pond v1.9.2
 	github.com/enfein/mieru/v3 v3.36.0
@@ -102,6 +109,8 @@ require ( //karing
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	lukechampine.com/blake3 v1.3.0
 )
+
+replace github.com/Diniboy1123/connect-ip-go => github.com/shtorm-7/connect-ip-go v1.0.0-extended-1.1.1
 
 //replace github.com/metacubex/mihomo => github.com/KaringX/clash v0.0.0-20241101044429-f71df89d4091
 
@@ -145,7 +154,6 @@ replace github.com/sagernet/sing-vmess => github.com/KaringX/sing-vmess v0.2.8-0
 replace github.com/metacubex/sing-shadowsocks2 => github.com/Restia-Ashbell/sing-shadowsocks2 v0.0.0-20250606153500-31ef7b14aaa6
 
 require (
-	filippo.io/edwards25519 v1.2.0 // indirect
 	filippo.io/hpke v0.4.0 // indirect
 	github.com/RyuaNerin/go-krypto v1.3.0 // indirect
 	github.com/ajg/form v1.7.1 // indirect
@@ -163,6 +171,7 @@ require (
 	github.com/dgrijalva/jwt-go/v4 v4.0.0-preview1 // indirect
 	github.com/dgryski/go-camellia v0.0.0-20191119043421-69a8a13fb23d // indirect
 	github.com/dgryski/go-metro v0.0.0-20180109044635-280f6062b5bc // indirect
+	github.com/dunglas/httpsfv v1.0.2 // indirect
 	github.com/ebitengine/purego v0.10.0 // indirect
 	github.com/florianl/go-nfqueue/v2 v2.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
@@ -206,6 +215,7 @@ require (
 	github.com/pion/transport/v4 v4.0.2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/quic-go/qpack v0.6.0 // indirect
+	github.com/quic-go/quic-go v0.59.0 // indirect
 	github.com/safchain/ethtool v0.3.0 // indirect
 	github.com/sagernet/cronet-go/lib/android_386 v0.0.0-20260912104006-c10c03c318db // indirect
 	github.com/sagernet/cronet-go/lib/android_amd64 v0.0.0-20260912104006-c10c03c318db // indirect

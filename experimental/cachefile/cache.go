@@ -50,6 +50,9 @@ type CacheFile struct {
 	storeFakeIP        bool
 	storeRDRC          bool
 	storeDNS           bool
+	storeWARPConfig    bool // https://github.com/shtorm-7/sing-box-extended
+	storeMASQUEConfig  bool // https://github.com/shtorm-7/sing-box-extended
+	storeSubscriptions bool // https://github.com/shtorm-7/sing-box-extended
 	disableExpire      bool
 	rdrcTimeout        time.Duration
 	optimisticTimeout  time.Duration
@@ -105,20 +108,23 @@ func New(ctx context.Context, logger logger.Logger, options option.CacheFileOpti
 		}
 	}
 	return &CacheFile{
-		ctx:          ctx,
-		logger:       logger,
-		path:         filemanager.BasePath(ctx, path),
-		cacheID:      cacheIDBytes,
-		cacheIDText:  options.CacheID,
-		storeFakeIP:  options.StoreFakeIP,
-		storeRDRC:    options.StoreRDRC,
-		storeDNS:     options.StoreDNS,
-		rdrcTimeout:  rdrcTimeout,
-		saveDomain:   make(map[netip.Addr]string),
-		saveAddress4: make(map[string]netip.Addr),
-		saveAddress6: make(map[string]netip.Addr),
-		saveRDRC:     make(map[saveCacheKey]bool),
-		saveDNSCache: make(map[saveCacheKey]saveDNSCacheEntry),
+		ctx:                ctx,
+		logger:             logger,
+		path:               filemanager.BasePath(ctx, path),
+		cacheID:            cacheIDBytes,
+		cacheIDText:        options.CacheID,
+		storeFakeIP:        options.StoreFakeIP,
+		storeRDRC:          options.StoreRDRC,
+		storeDNS:           options.StoreDNS,
+		storeWARPConfig:    options.StoreWARPConfig,    // https://github.com/shtorm-7/sing-box-extended
+		storeMASQUEConfig:  options.StoreMASQUEConfig,  // https://github.com/shtorm-7/sing-box-extended
+		storeSubscriptions: options.StoreSubscriptions, // https://github.com/shtorm-7/sing-box-extended
+		rdrcTimeout:        rdrcTimeout,
+		saveDomain:         make(map[netip.Addr]string),
+		saveAddress4:       make(map[string]netip.Addr),
+		saveAddress6:       make(map[string]netip.Addr),
+		saveRDRC:           make(map[saveCacheKey]bool),
+		saveDNSCache:       make(map[saveCacheKey]saveDNSCacheEntry),
 	}
 }
 
@@ -209,11 +215,13 @@ func (c *CacheFile) start() error {
 	if err != nil {
 		return err
 	}
-	/*err = filemanager.Chown(c.ctx, c.path)//karing
+	/*//karing
+	err = filemanager.Chown(c.ctx, c.path)
 	if err != nil {
 		db.Close()
 		return E.Cause(err, "platform chown")
-	}*/
+	}
+	*/
 	err = db.Batch(func(tx *bbolt.Tx) error {
 		return tx.ForEach(func(name []byte, b *bbolt.Bucket) error {
 			if name[0] == 0 {
@@ -481,3 +489,117 @@ func (c *CacheFile) SaveRuleSet(tag string, set *adapter.SavedBinary) error {
 		return bucket.Put([]byte(tag), setBinary)
 	})
 }
+
+// https://github.com/shtorm-7/sing-box-extended begin
+func (c *CacheFile) StoreWARPConfig() bool {
+	return c.storeWARPConfig
+}
+
+func (c *CacheFile) StoreMASQUEConfig() bool {
+	return c.storeMASQUEConfig
+}
+
+func (c *CacheFile) StoreSubscriptions() bool {
+	return c.storeSubscriptions
+}
+
+func (c *CacheFile) LoadWARPConfig(tag string) *adapter.SavedBinary {
+	var savedConfig adapter.SavedBinary
+	err := c.DB.View(func(t *bbolt.Tx) error {
+		bucket := c.bucket(t, bucketRuleSet)
+		if bucket == nil {
+			return os.ErrNotExist
+		}
+		configBinary := bucket.Get([]byte(tag))
+		if len(configBinary) == 0 {
+			return os.ErrInvalid
+		}
+		return savedConfig.UnmarshalBinary(configBinary)
+	})
+	if err != nil {
+		return nil
+	}
+	return &savedConfig
+}
+
+func (c *CacheFile) SaveWARPConfig(tag string, set *adapter.SavedBinary) error {
+	return c.DB.Batch(func(t *bbolt.Tx) error {
+		bucket, err := c.createBucket(t, bucketRuleSet)
+		if err != nil {
+			return err
+		}
+		configBinary, err := set.MarshalBinary()
+		if err != nil {
+			return err
+		}
+		return bucket.Put([]byte(tag), configBinary)
+	})
+}
+
+func (c *CacheFile) LoadMASQUEConfig(tag string) *adapter.SavedBinary {
+	var savedConfig adapter.SavedBinary
+	err := c.DB.View(func(t *bbolt.Tx) error {
+		bucket := c.bucket(t, bucketRuleSet)
+		if bucket == nil {
+			return os.ErrNotExist
+		}
+		configBinary := bucket.Get([]byte(tag))
+		if len(configBinary) == 0 {
+			return os.ErrInvalid
+		}
+		return savedConfig.UnmarshalBinary(configBinary)
+	})
+	if err != nil {
+		return nil
+	}
+	return &savedConfig
+}
+
+func (c *CacheFile) SaveMASQUEConfig(tag string, set *adapter.SavedBinary) error {
+	return c.DB.Batch(func(t *bbolt.Tx) error {
+		bucket, err := c.createBucket(t, bucketRuleSet)
+		if err != nil {
+			return err
+		}
+		configBinary, err := set.MarshalBinary()
+		if err != nil {
+			return err
+		}
+		return bucket.Put([]byte(tag), configBinary)
+	})
+}
+
+func (c *CacheFile) LoadSubscription(tag string) *adapter.SavedBinary {
+	var savedSet adapter.SavedBinary
+	err := c.DB.View(func(t *bbolt.Tx) error {
+		bucket := c.bucket(t, bucketRuleSet)
+		if bucket == nil {
+			return os.ErrNotExist
+		}
+		setBinary := bucket.Get([]byte(tag))
+		if len(setBinary) == 0 {
+			return os.ErrInvalid
+		}
+		return savedSet.UnmarshalBinary(setBinary)
+	})
+	if err != nil {
+		return nil
+	}
+	return &savedSet
+}
+
+func (c *CacheFile) SaveSubscription(tag string, sub *adapter.SavedBinary) error {
+	return c.DB.Batch(func(t *bbolt.Tx) error {
+		bucket, err := c.createBucket(t, bucketRuleSet)
+		if err != nil {
+			return err
+		}
+		setBinary, err := sub.MarshalBinary()
+		if err != nil {
+			return err
+		}
+		return bucket.Put([]byte(tag), setBinary)
+	})
+}
+
+// https://github.com/shtorm-7/sing-box-extended end

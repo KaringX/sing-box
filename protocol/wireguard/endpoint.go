@@ -77,6 +77,34 @@ func NewEndpoint(ctx context.Context, router adapter.Router, logger log.ContextL
 	} else {
 		udpTimeout = C.UDPTimeout
 	}
+	var amnezia *wireguard.AmneziaOptions // https://github.com/shtorm-7/sing-box-extended
+	if options.Amnezia != nil {           // https://github.com/shtorm-7/sing-box-extended
+		amnezia = &wireguard.AmneziaOptions{
+			JC:                     options.Amnezia.JC,
+			JMin:                   options.Amnezia.JMin,
+			JMax:                   options.Amnezia.JMax,
+			S1:                     options.Amnezia.S1,
+			S2:                     options.Amnezia.S2,
+			S3:                     options.Amnezia.S3,
+			S4:                     options.Amnezia.S4,
+			H1:                     options.Amnezia.H1,
+			H2:                     options.Amnezia.H2,
+			H3:                     options.Amnezia.H3,
+			H4:                     options.Amnezia.H4,
+			I1:                     options.Amnezia.I1,
+			I2:                     options.Amnezia.I2,
+			I3:                     options.Amnezia.I3,
+			I4:                     options.Amnezia.I4,
+			I5:                     options.Amnezia.I5,
+			HeaderProtectionKey:    options.Amnezia.HeaderProtectionKey,
+			ContentPaddingAddition: options.Amnezia.ContentPaddingAddition,
+			RekeyAfterTime:         options.Amnezia.RekeyAfterTime,
+			RekeyTimeout:           options.Amnezia.RekeyTimeout,
+			RejectAfterTime:        options.Amnezia.RejectAfterTime,
+			KeepaliveTimeout:       options.Amnezia.KeepaliveTimeout,
+			MaxHandshakeAttempts:   options.Amnezia.MaxHandshakeAttempts,
+		}
+	}
 	networkManager := service.FromContext[adapter.NetworkManager](ctx)
 	wgEndpoint, err := wireguard.NewEndpoint(wireguard.EndpointOptions{
 		Context:         ctx,
@@ -125,11 +153,14 @@ func NewEndpoint(ctx context.Context, router adapter.Router, logger log.ContextL
 				Reserved:                    it.Reserved,
 			}
 		}),
-		Workers:          options.Workers,
-		FakePackets:      options.FakePackets,      //hiddify
-		FakePacketsSize:  options.FakePacketsSize,  //hiddify
-		FakePacketsDelay: options.FakePacketsDelay, //hiddify
-		FakePacketsMode:  options.FakePacketsMode,  //hiddify
+		Workers:                    options.Workers,
+		PreallocatedBuffersPerPool: options.PreallocatedBuffersPerPool, // https://github.com/shtorm-7/sing-box-extended
+		DisablePauses:              options.DisablePauses,              // https://github.com/shtorm-7/sing-box-extended
+		Amnezia:                    amnezia,                            // https://github.com/shtorm-7/sing-box-extended
+		FakePackets:                options.FakePackets,                //hiddify
+		FakePacketsSize:            options.FakePacketsSize,            //hiddify
+		FakePacketsDelay:           options.FakePacketsDelay,           //hiddify
+		FakePacketsMode:            options.FakePacketsMode,            //hiddify
 	})
 	if err != nil {
 		return ep, err //karing

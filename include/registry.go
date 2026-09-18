@@ -104,10 +104,12 @@ func OutboundRegistry() *outbound.Registry {
 	ssh.RegisterOutbound(registry)
 	shadowtls.RegisterOutbound(registry)
 	vless.RegisterOutbound(registry)
-	anytls.RegisterOutbound(registry)
 	mieru.RegisterOutbound(registry) //karing https://github.com/enfein/mbox
+	anytls.RegisterOutbound(registry)
+	registerMASQUEOutbound(registry)
 
 	registerQUICOutbounds(registry)
+	registerSudokuOutbound(registry)        // https://github.com/shtorm-7/sing-box-extended
 	registerWireGuardOutbound(registry)     //karing
 	shadowsocksr.RegisterOutbound(registry) //karing
 	//registerStubForRemovedOutbounds(registry) //karing

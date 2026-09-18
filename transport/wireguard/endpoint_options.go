@@ -5,6 +5,7 @@ import (
 	"net/netip"
 	"time"
 
+	Xbadoption "github.com/sagernet/sing-box/common/xray/json/badoption"
 	tun "github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common/control"
 	"github.com/sagernet/sing/common/logger"
@@ -23,23 +24,26 @@ type EndpointOptions struct {
 	UDPFiltering tun.NATFiltering
 	UDPNATMax    uint32
 
-	InterfaceFinder   control.InterfaceFinder
-	EgressPoolOptions tun.UDPEgressPoolOptions
-	Dialer            N.Dialer
-	CreateDialer      func(interfaceName string) N.Dialer
-	Tag               string
-	Name              string
-	MTU               uint32
-	Address           []netip.Prefix
-	PrivateKey        string
-	ListenPort        uint16
-	ResolvePeer       func(domain string) ([]netip.Addr, error)
-	Peers             []PeerOptions
-	Workers           int
-	FakePackets       string //hiddify
-	FakePacketsSize   string //hiddify
-	FakePacketsDelay  string //hiddify
-	FakePacketsMode   string //hiddify
+	InterfaceFinder            control.InterfaceFinder
+	EgressPoolOptions          tun.UDPEgressPoolOptions
+	Dialer                     N.Dialer
+	CreateDialer               func(interfaceName string) N.Dialer
+	Tag                        string
+	Name                       string
+	MTU                        uint32
+	Address                    []netip.Prefix
+	PrivateKey                 string
+	ListenPort                 uint16
+	ResolvePeer                func(domain string) ([]netip.Addr, error)
+	Peers                      []PeerOptions
+	Workers                    int
+	PreallocatedBuffersPerPool uint32          // https://github.com/shtorm-7/sing-box-extended
+	DisablePauses              bool            // https://github.com/shtorm-7/sing-box-extended
+	Amnezia                    *AmneziaOptions // https://github.com/shtorm-7/sing-box-extended
+	FakePackets                string          //hiddify
+	FakePacketsSize            string          //hiddify
+	FakePacketsDelay           string          //hiddify
+	FakePacketsMode            string          //hiddify
 }
 
 type PeerOptions struct {
@@ -49,4 +53,30 @@ type PeerOptions struct {
 	AllowedIPs                  []netip.Prefix
 	PersistentKeepaliveInterval uint16
 	Reserved                    []uint8
+}
+
+type AmneziaOptions struct { // https://github.com/shtorm-7/sing-box-extended
+	JC                     int
+	JMin                   int
+	JMax                   int
+	S1                     int
+	S2                     int
+	S3                     int
+	S4                     int
+	H1                     *Xbadoption.Range
+	H2                     *Xbadoption.Range
+	H3                     *Xbadoption.Range
+	H4                     *Xbadoption.Range
+	I1                     string
+	I2                     string
+	I3                     string
+	I4                     string
+	I5                     string
+	HeaderProtectionKey    string
+	ContentPaddingAddition *Xbadoption.Range
+	RekeyAfterTime         *Xbadoption.Range
+	RekeyTimeout           *Xbadoption.Range
+	RejectAfterTime        *Xbadoption.Range
+	KeepaliveTimeout       *Xbadoption.Range
+	MaxHandshakeAttempts   *Xbadoption.Range
 }

@@ -90,9 +90,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		DialOut:                  outbound.dialOut,
 		Logger:                   logger,
 	}
-	if err != nil {
-		return empty, err //karing
-	}
+	outbound.clientMetadata = options.ClientMetadata //karing
 	return outbound, nil
 }
 

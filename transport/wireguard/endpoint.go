@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/netip"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/sagernet/sing-box/option"
@@ -292,16 +293,91 @@ func (e *Endpoint) start() error {
 			e.options.Logger.Error(fmt.Sprintf(strings.ToLower(format), args...))
 		},
 	}
-	wgDevice := device.NewDevice(e.options.Context, e.returnDevice, bind, logger, e.options.Workers)
-	wgDevice.FakePackets = e.fakePackets                 //hiddify
-	wgDevice.FakePacketsSize = e.fakePacketsSize         //hiddify
-	wgDevice.FakePacketsDelays = e.fakePacketsDelay      //hiddify
-	wgDevice.FakePacketsHeader = e.fakePacketsHeader     //hiddify
-	wgDevice.FakePacketsNoModify = e.fakePacketsNoModify //hiddify
+	wgDevice := device.NewDevice(e.options.Context, e.returnDevice, bind, logger, e.options.Workers /*, e.options.PreallocatedBuffersPerPool, e.options.DisablePauses*/) // https://github.com/shtorm-7/sing-box-extended todo
+	wgDevice.FakePackets = e.fakePackets                                                                                                                                 //hiddify
+	wgDevice.FakePacketsSize = e.fakePacketsSize                                                                                                                         //hiddify
+	wgDevice.FakePacketsDelays = e.fakePacketsDelay                                                                                                                      //hiddify
+	wgDevice.FakePacketsHeader = e.fakePacketsHeader                                                                                                                     //hiddify
+	wgDevice.FakePacketsNoModify = e.fakePacketsNoModify                                                                                                                 //hiddify
 
 	e.tunDevice.SetDevice(wgDevice)
 	var ipcConf strings.Builder
 	ipcConf.WriteString(e.ipcConf)
+	if e.options.Amnezia != nil { // https://github.com/shtorm-7/sing-box-extended
+		if e.options.Amnezia.JC > 0 {
+			ipcConf.WriteString("\njc=" + strconv.Itoa(e.options.Amnezia.JC))
+		}
+		if e.options.Amnezia.JMin > 0 {
+			ipcConf.WriteString("\njmin=" + strconv.Itoa(e.options.Amnezia.JMin))
+		}
+		if e.options.Amnezia.JMax > 0 {
+			ipcConf.WriteString("\njmax=" + strconv.Itoa(e.options.Amnezia.JMax))
+		}
+		if e.options.Amnezia.S1 > 0 {
+			ipcConf.WriteString("\ns1=" + strconv.Itoa(e.options.Amnezia.S1))
+		}
+		if e.options.Amnezia.S2 > 0 {
+			ipcConf.WriteString("\ns2=" + strconv.Itoa(e.options.Amnezia.S2))
+		}
+		if e.options.Amnezia.S3 > 0 {
+			ipcConf.WriteString("\ns3=" + strconv.Itoa(e.options.Amnezia.S3))
+		}
+		if e.options.Amnezia.S4 > 0 {
+			ipcConf.WriteString("\ns4=" + strconv.Itoa(e.options.Amnezia.S4))
+		}
+		if e.options.Amnezia.H1 != nil {
+			ipcConf.WriteString("\nh1=" + e.options.Amnezia.H1.String())
+		}
+		if e.options.Amnezia.H2 != nil {
+			ipcConf.WriteString("\nh2=" + e.options.Amnezia.H2.String())
+		}
+		if e.options.Amnezia.H3 != nil {
+			ipcConf.WriteString("\nh3=" + e.options.Amnezia.H3.String())
+		}
+		if e.options.Amnezia.H4 != nil {
+			ipcConf.WriteString("\nh4=" + e.options.Amnezia.H4.String())
+		}
+		if e.options.Amnezia.I1 != "" {
+			ipcConf.WriteString("\ni1=" + e.options.Amnezia.I1)
+		}
+		if e.options.Amnezia.I2 != "" {
+			ipcConf.WriteString("\ni2=" + e.options.Amnezia.I2)
+		}
+		if e.options.Amnezia.I3 != "" {
+			ipcConf.WriteString("\ni3=" + e.options.Amnezia.I3)
+		}
+		if e.options.Amnezia.I4 != "" {
+			ipcConf.WriteString("\ni4=" + e.options.Amnezia.I4)
+		}
+		if e.options.Amnezia.I5 != "" {
+			ipcConf.WriteString("\ni5=" + e.options.Amnezia.I5)
+		}
+		if e.options.Amnezia.HeaderProtectionKey != "" {
+			headerProtectionKeyBytes, err := base64.StdEncoding.DecodeString(e.options.Amnezia.HeaderProtectionKey)
+			if err != nil {
+				return E.Cause(err, "decode header protection key")
+			}
+			ipcConf.WriteString("\nheader_protection_key=" + hex.EncodeToString(headerProtectionKeyBytes))
+		}
+		if e.options.Amnezia.ContentPaddingAddition != nil {
+			ipcConf.WriteString("\ncontent_padding_addition=" + e.options.Amnezia.ContentPaddingAddition.String())
+		}
+		if e.options.Amnezia.RekeyAfterTime != nil {
+			ipcConf.WriteString("\nrekey_after_time=" + e.options.Amnezia.RekeyAfterTime.String())
+		}
+		if e.options.Amnezia.RekeyTimeout != nil {
+			ipcConf.WriteString("\nrekey_timeout=" + e.options.Amnezia.RekeyTimeout.String())
+		}
+		if e.options.Amnezia.RejectAfterTime != nil {
+			ipcConf.WriteString("\nreject_after_time=" + e.options.Amnezia.RejectAfterTime.String())
+		}
+		if e.options.Amnezia.KeepaliveTimeout != nil {
+			ipcConf.WriteString("\nkeepalive_timeout=" + e.options.Amnezia.KeepaliveTimeout.String())
+		}
+		if e.options.Amnezia.MaxHandshakeAttempts != nil {
+			ipcConf.WriteString("\nmax_handshake_attempts=" + e.options.Amnezia.MaxHandshakeAttempts.String())
+		}
+	}
 	for _, peer := range e.peers {
 		ipcConf.WriteString(peer.GenerateIpcLines())
 	}

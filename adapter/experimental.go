@@ -50,6 +50,10 @@ type CacheFile interface {
 	StoreRDRC() bool
 	RDRCStore
 
+	StoreWARPConfig() bool    // https://github.com/shtorm-7/sing-box-extended
+	StoreMASQUEConfig() bool  // https://github.com/shtorm-7/sing-box-extended
+	StoreSubscriptions() bool // https://github.com/shtorm-7/sing-box-extended
+
 	StoreDNS() bool
 	DNSCacheStore
 
@@ -64,6 +68,12 @@ type CacheFile interface {
 	StoreGroupExpand(group string, expand bool) error
 	LoadRuleSet(tag string) *SavedBinary
 	SaveRuleSet(tag string, set *SavedBinary) error
+	LoadWARPConfig(tag string) *SavedBinary               // https://github.com/shtorm-7/sing-box-extended
+	SaveWARPConfig(tag string, set *SavedBinary) error    // https://github.com/shtorm-7/sing-box-extended
+	LoadMASQUEConfig(tag string) *SavedBinary             // https://github.com/shtorm-7/sing-box-extended
+	SaveMASQUEConfig(tag string, set *SavedBinary) error  // https://github.com/shtorm-7/sing-box-extended
+	LoadSubscription(tag string) *SavedBinary             // https://github.com/shtorm-7/sing-box-extended
+	SaveSubscription(tag string, sub *SavedBinary) error  // https://github.com/shtorm-7/sing-box-extended
 	DeleteRuleSet(tag string)                             //karing
 	HasRuleSet(tag string) bool                           //karing
 	GetAllRuleSetCachedLastUpdated() map[string]time.Time //karing

@@ -15,14 +15,18 @@ const (
 	TypeSnell              = "snell"
 	TypeVMess              = "vmess"
 	TypeTrojan             = "trojan"
+	TypeTrustTunnel        = "trusttunnel" // https://github.com/shtorm-7/sing-box-extended
 	TypeNaive              = "naive"
 	TypeWireGuard          = "wireguard"
+	TypeWARP               = "warp"   // https://github.com/shtorm-7/sing-box-extended
+	TypeMASQUE             = "masque" // https://github.com/shtorm-7/sing-box-extended
 	TypeHysteria           = "hysteria"
 	TypeTor                = "tor"
 	TypeSSH                = "ssh"
 	TypeShadowTLS          = "shadowtls"
-	TypeAnyTLS             = "anytls"
 	TypeMieru              = "mieru" //karing https://github.com/enfein/mbox
+	TypeAnyTLS             = "anytls"
+	TypeSudoku             = "sudoku" // https://github.com/shtorm-7/sing-box-extended
 	TypeShadowsocksR       = "shadowsocksr"
 	TypeVLESS              = "vless"
 	TypeTUIC               = "tuic"
@@ -30,6 +34,8 @@ const (
 	TypeOpenConnect        = "openconnect"
 	TypeOpenVPNClient      = "openvpn-client"
 	TypeOpenVPNServer      = "openvpn-server"
+	TypeVPNServer          = "vpn-server" // https://github.com/shtorm-7/sing-box-extended
+	TypeVPNClient          = "vpn-client" // https://github.com/shtorm-7/sing-box-extended
 	TypeTailscale          = "tailscale"
 	TypeCloudflared        = "cloudflared"
 	TypeDERP               = "derp"
@@ -81,10 +87,16 @@ func ProxyDisplayName(proxyType string) string {
 		return "VMess"
 	case TypeTrojan:
 		return "Trojan"
+	case TypeTrustTunnel: // https://github.com/shtorm-7/sing-box-extended
+		return "TrustTunnel"
 	case TypeNaive:
 		return "Naive"
 	case TypeWireGuard:
 		return "WireGuard"
+	case TypeWARP: // https://github.com/shtorm-7/sing-box-extended
+		return "WARP"
+	case TypeMASQUE: // https://github.com/shtorm-7/sing-box-extended
+		return "MASQUE"
 	case TypeHysteria:
 		return "Hysteria"
 	case TypeTor:
@@ -101,10 +113,12 @@ func ProxyDisplayName(proxyType string) string {
 		return "TUIC"
 	case TypeHysteria2:
 		return "Hysteria2"
+	case TypeMieru: //karing https://github.com/enfein/mbox
+		return "Mieru"
 	case TypeAnyTLS:
 		return "AnyTLS"
-	case TypeMieru:
-		return "Mieru" //karing https://github.com/enfein/mbox
+	case TypeSudoku: // https://github.com/shtorm-7/sing-box-extended
+		return "Sudoku"
 	case TypeOpenConnect:
 		return "OpenConnect"
 	case TypeOpenVPNClient:
@@ -119,6 +133,10 @@ func ProxyDisplayName(proxyType string) string {
 		return "Selector"
 	case TypeURLTest:
 		return "URLTest"
+	case TypeVPNClient: // https://github.com/shtorm-7/sing-box-extended
+		return "VPN Client"
+	case TypeVPNServer: // https://github.com/shtorm-7/sing-box-extended
+		return "VPN Server"
 	default:
 		return "Unknown"
 	}
