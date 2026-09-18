@@ -17,7 +17,7 @@ import (
 	"github.com/sagernet/sing/common/json/badoption"
 )
 
-func NormalizeXHTTPMode(mode string) (string, error) {
+func NormalizeXHTTPMode(mode string) (string, error) { // https://github.com/starifly/sing-box
 	mode = strings.TrimSpace(mode)
 	if mode == "" {
 		return "auto", nil
