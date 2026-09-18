@@ -59,10 +59,10 @@ func NewManager(ctx context.Context, logger log.ContextLogger, outbound adapter.
 		eventSubscriber: observable.NewSubscriber[ConnectionEvent](256),
 	}
 	*/
-	manager := newManagerWithExtension(ctx, logger) //karing
-	manager.outbound = outbound
-	manager.eventSubscriber = observable.NewSubscriber[ConnectionEvent](256)
-	return manager
+	manager := newManagerWithExtension(ctx, logger)                          //karing
+	manager.outbound = outbound                                              //karing
+	manager.eventSubscriber = observable.NewSubscriber[ConnectionEvent](256) //karing
+	return manager                                                           //karing
 }
 
 func (m *Manager) Name() string {

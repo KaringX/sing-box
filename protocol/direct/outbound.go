@@ -56,7 +56,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 	}
 	options.UDPFragmentDefault = true
 	if options.Detour != "" {
-		return nil, E.New("`detour` is not supported in direct context")
+		return empty, E.New("`detour` is not supported in direct context") //karing
 	}
 	outboundDialer, err := dialer.NewWithOptions(dialer.Options{
 		Context:        ctx,

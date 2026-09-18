@@ -167,7 +167,7 @@ func (f *defaultFactory) UnSubscribe(sub observable.Subscription[Entry]) {
 
 func (f *defaultFactory) output(ctx context.Context, level Level, tag string, message string, timestamp time.Time) {
 	if level <= f.level && (f.needConsole || level == LevelPanic || level == LevelFatal) {
-		formatted := f.formatter.Format(ctx, level, tag, message, timestamp) // karing
+		formatted := f.formatter.Format(ctx, level, tag, message, timestamp)
 		if level == LevelPanic {
 			panic(formatted)
 		}

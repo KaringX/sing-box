@@ -2,7 +2,6 @@ package adapter
 
 import (
 	"context"
-	"io"
 	"net"
 	"net/netip"
 	"time"
@@ -218,14 +217,4 @@ func OverrideContext(ctx context.Context) context.Context {
 		return WithContext(ctx, &newMetadata)
 	}
 	return ctx
-}
-
-type OutboundContext struct { //karing
-	Closer      io.Closer
-	CreatedAt   time.Time
-	Network     string
-	Source      M.Socksaddr
-	Destination M.Socksaddr
-	Fqdn        string
-	Outbound    string
 }

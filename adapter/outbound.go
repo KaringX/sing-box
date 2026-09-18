@@ -2,11 +2,14 @@ package adapter
 
 import (
 	"context"
+	"io"
 	"net/netip"
+	"time"
 
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
-	"github.com/sagernet/sing-tun"
+	tun "github.com/sagernet/sing-tun"
+	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
 )
 
@@ -50,4 +53,14 @@ type OutboundManager interface {
 	Default() Outbound
 	Remove(tag string) error
 	Create(ctx context.Context, router Router, logger log.ContextLogger, tag string, outboundType string, options any, parseErr error) error //karing
+}
+
+type OutboundContext struct { //karing
+	Closer      io.Closer
+	CreatedAt   time.Time
+	Network     string
+	Source      M.Socksaddr
+	Destination M.Socksaddr
+	Fqdn        string
+	Outbound    string
 }

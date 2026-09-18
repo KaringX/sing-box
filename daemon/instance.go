@@ -115,7 +115,6 @@ func (s *StartedService) newInstance(ctx context.Context, profileContent string,
 		}
 	}
 	urlTestHistoryStorage := urltest.NewHistoryStorage()
-	//service.MustRegister[adapter.URLTestHistoryStorage](ctx, urlTestHistoryStorage) //karing
 	ctx = service.ContextWithPtr(ctx, urlTestHistoryStorage)
 	i := &Instance{
 		ctx:                   ctx,
