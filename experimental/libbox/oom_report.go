@@ -40,7 +40,7 @@ type oomReportMetadata struct {
 
 func OOMRecorderOptions(startedService *daemon.StartedService) oomkiller.RecorderOptions {
 	return oomkiller.RecorderOptions{
-		BasePath:    sWorkingPath,
+		BasePath:    sBasePath, //karing
 		Logger:      log.StdLogger(),
 		AcceptDraft: acceptOOMDraft,
 		MetadataCallback: func(status oomkiller.ReportStatus) any {
@@ -250,7 +250,7 @@ func writeOOMProfile(filePath string, name string) {
 }
 
 func PromoteOOMDraft() {
-	oomkiller.PromoteDraft(sWorkingPath, acceptOOMDraft)
+	oomkiller.PromoteDraft(sBasePath, acceptOOMDraft) //karing
 }
 
 func PromoteOOMDraftAt(workingPath string) {

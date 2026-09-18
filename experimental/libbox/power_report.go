@@ -18,7 +18,7 @@ type powerReportMetadata struct {
 
 func PowerReportOptions(startedService *daemon.StartedService) powerreport.Options {
 	return powerreport.Options{
-		BasePath: sWorkingPath,
+		BasePath: sBasePath, //karing
 		Logger:   log.StdLogger(),
 		Metadata: powerReportMetadata{
 			reportMetadata: baseReportMetadata(),
@@ -37,5 +37,5 @@ func PowerReportOptions(startedService *daemon.StartedService) powerreport.Optio
 }
 
 func PromotePowerReportDraft() {
-	powerreport.PromoteDraft(sWorkingPath)
+	powerreport.PromoteDraft(sBasePath) //karing
 }

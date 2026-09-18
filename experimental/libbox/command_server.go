@@ -214,7 +214,7 @@ type OverrideOptions struct {
 func (s *CommandServer) StartOrReloadService(configContent string, options *OverrideOptions) error {
 	saveConfigSnapshot(configContent)
 	if s.powerManager.Recorder() != nil {
-		copyConfigSnapshot(filepath.Join(sWorkingPath, powerreport.DraftDirectoryName))
+		copyConfigSnapshot(filepath.Join(sBasePath, powerreport.DraftDirectoryName)) //karing
 	}
 	err := s.StartedService.StartOrReloadService(s.ctx, configContent, &daemon.OverrideOptions{
 		AutoRedirect:   options.AutoRedirect,

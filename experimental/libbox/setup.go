@@ -111,9 +111,9 @@ func ReloadSetupOptions(options *SetupOptions) {
 
 func Setup(options *SetupOptions) error {
 	applySetupOptions(options)
-	os.MkdirAll(sWorkingPath, 0o777)
+	os.MkdirAll(sBasePath, 0o777) //karing
 	os.MkdirAll(sTempPath, 0o777)
-	return redirectStderr(filepath.Join(sWorkingPath, "CrashReport-"+sCrashReportSource+".log"))
+	return redirectStderr(filepath.Join(sBasePath, "CrashReport-"+sCrashReportSource+".log")) //karing
 }
 
 func SetLocale(localeID string) error {

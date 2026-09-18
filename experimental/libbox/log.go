@@ -64,7 +64,7 @@ func saveConfigSnapshot(configContent string) {
 }
 
 func redirectStderr(path string) error {
-	crashReportsDir := filepath.Join(sWorkingPath, "crash_reports")
+	crashReportsDir := filepath.Join(sBasePath, "crash_reports") //karing
 	archiveCrashReport(path, crashReportsDir)
 	archiveCrashReport(path+".old", crashReportsDir)
 
