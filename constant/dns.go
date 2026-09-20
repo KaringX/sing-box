@@ -30,8 +30,7 @@ const (
 	DNSTypeTailscale   = "tailscale"
 	DNSTypeOpenConnect = "openconnect"
 	DNSTypeOpenVPN     = "openvpn"
-	DNSTypeBatch       = "batch"      //karing
-	DNSTypePredefined  = "predefined" //karing
+	DNSTypeBatch       = "batch" //karing
 )
 
 const (
