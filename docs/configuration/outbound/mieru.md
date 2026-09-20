@@ -19,6 +19,9 @@ icon: material/new-box
   "username": "asdf",
   "password": "hjkl",
   "multiplexing": "MULTIPLEXING_LOW",
+  "traffic_pattern": "GgQIARAK",
+  "mtu": 1400,
+  "handshake_mode": "HANDSHAKE_STANDARD",
 
   ... // Dial Fields
 }
@@ -65,6 +68,18 @@ mieru password.
 #### multiplexing
 
 Multiplexing level. Supported values are `MULTIPLEXING_OFF`, `MULTIPLEXING_LOW`, `MULTIPLEXING_MIDDLE`, `MULTIPLEXING_HIGH`. `MULTIPLEXING_OFF` disables multiplexing.
+
+#### traffic_pattern
+
+A base64 string to fine tune network behavior.
+
+#### mtu
+
+Maximum transmission unit of L2 payload. Only applies to UDP transport egress traffic.
+
+#### handshake_mode
+
+Handshake mode when the client opens a connection. Allowed values are `HANDSHAKE_STANDARD` (1-RTT, wait for the proxy server to establish the connection to the destination before sending payload) and `HANDSHAKE_NO_WAIT` (0-RTT, send payload together with the connection to the proxy server).
 
 ### Dial Fields
 
