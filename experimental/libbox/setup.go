@@ -3,7 +3,6 @@ package libbox
 import (
 	"math"
 	"os"
-	"path/filepath"
 	"runtime"
 	"runtime/debug"
 	"time"
@@ -113,7 +112,8 @@ func Setup(options *SetupOptions) error {
 	applySetupOptions(options)
 	os.MkdirAll(sBasePath, 0o777) //karing
 	os.MkdirAll(sTempPath, 0o777)
-	return redirectStderr(filepath.Join(sBasePath, "CrashReport-"+sCrashReportSource+".log")) //karing
+	//return redirectStderr(filepath.Join(sBasePath, "CrashReport-"+sCrashReportSource+".log")) //karing
+	return nil //karing
 }
 
 func SetLocale(localeID string) error {

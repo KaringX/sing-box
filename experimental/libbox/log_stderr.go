@@ -30,6 +30,7 @@ func StderrRedirect(path string) (err error) {
 	if err != nil {
 		return E.Cause(err, "StderrRedirect:")
 	}
+	debug.SetCrashOutput(stderrLogFile, debug.CrashOptions{})
 	StderrCheckAndCapture()
 	return stderrRedirect(stderrLogFile)
 }
