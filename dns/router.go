@@ -1682,7 +1682,7 @@ func validateLegacyDNSModeDisabledDefaultRule(router adapter.Router, rule option
 				return dnsRuleResponseUse{}, err
 			}
 			if metadata.ContainsIPCIDRRule && !metadata.ContainsNonIPCIDRRule {
-				return dnsRuleResponseUse{}, E.New(deprecated.OptionLegacyDNSAddressFilter.MessageWithLink())
+				//return dnsRuleResponseUse{}, E.New(deprecated.OptionLegacyDNSAddressFilter.MessageWithLink()) //karing
 			}
 		}
 	}
