@@ -213,6 +213,9 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 }
 
 func (w *Outbound) Start(stage adapter.StartStage) error {
+	if w.GetParseErr() != nil { //karing
+		return nil
+	}
 	if stage != adapter.StartStatePostStart {
 		return nil
 	}
@@ -228,6 +231,9 @@ func (w *Outbound) Close() error {
 }
 
 func (w *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
+	if w.GetParseErr() != nil { //karing
+		return nil, w.GetParseErr()
+	}
 	if err := w.isTunnelInitialized(ctx); err != nil {
 		return nil, err
 	}
@@ -250,6 +256,9 @@ func (w *Outbound) DialContext(ctx context.Context, network string, destination 
 }
 
 func (w *Outbound) ListenPacketWithDestination(ctx context.Context, destination M.Socksaddr) (net.PacketConn, netip.Addr, error) {
+	if w.GetParseErr() != nil { //karing
+		return nil, netip.Addr{}, w.GetParseErr()
+	}
 	if err := w.isTunnelInitialized(ctx); err != nil {
 		return nil, netip.Addr{}, err
 	}
@@ -272,6 +281,9 @@ func (w *Outbound) ListenPacketWithDestination(ctx context.Context, destination 
 }
 
 func (w *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
+	if w.GetParseErr() != nil { //karing
+		return nil, w.GetParseErr()
+	}
 	packetConn, destinationAddress, err := w.ListenPacketWithDestination(ctx, destination)
 	if err != nil {
 		return nil, err

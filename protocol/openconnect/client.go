@@ -20,8 +20,8 @@ import (
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
 	openconnecttransport "github.com/sagernet/sing-box/transport/openconnect"
-	"github.com/sagernet/sing-openconnect"
-	"github.com/sagernet/sing-tun"
+	openconnect "github.com/sagernet/sing-openconnect"
+	tun "github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/buf"
 	"github.com/sagernet/sing/common/bufio"
@@ -84,22 +84,29 @@ func NewEndpoint(ctx context.Context, router adapter.Router, logger log.ContextL
 	} else if options.TCPKeepAlive == 0 && options.TCPKeepAliveInterval == 0 {
 		options.TCPKeepAliveSystemDefaults = true
 	}
+	empty := &Endpoint{ //karing
+		endpointBase: endpointBase{
+			Adapter: endpoint.NewAdapterWithDialerOptions(C.TypeOpenConnect, tag, []string{N.NetworkTCP, N.NetworkUDP, N.NetworkICMP}, options.DialerOptions),
+			router:  router,
+			logger:  logger,
+		},
+	}
 	if options.CSD != nil && options.CSD.WrapperPath != "" {
 		err := adapter.CheckSecurityFeature(ctx, "OpenConnect `csd.wrapper_path`")
 		if err != nil {
-			return nil, err
+			return empty, err //karing
 		}
 	}
 	if options.HIP != nil && options.HIP.WrapperPath != "" {
 		err := adapter.CheckSecurityFeature(ctx, "OpenConnect `hip.wrapper_path`")
 		if err != nil {
-			return nil, err
+			return empty, err //karing
 		}
 	}
 	if options.TNCC != nil && options.TNCC.WrapperPath != "" {
 		err := adapter.CheckSecurityFeature(ctx, "OpenConnect `tncc.wrapper_path`")
 		if err != nil {
-			return nil, err
+			return empty, err //karing
 		}
 	}
 	options.UDPBindPort = options.DTLSLocalPort
@@ -132,7 +139,7 @@ func NewEndpoint(ctx context.Context, router adapter.Router, logger log.ContextL
 	}
 	serverURL, err := url.Parse(server)
 	if err != nil {
-		return nil, E.Cause(err, "parse server")
+		return empty, E.Cause(err, "parse server") //karing
 	}
 	serverPort := serverURL.Port()
 	if serverPort == "" {
@@ -153,7 +160,7 @@ func NewEndpoint(ctx context.Context, router adapter.Router, logger log.ContextL
 		NewDialer:        true,
 	})
 	if err != nil {
-		return nil, err
+		return empty, err //karing
 	}
 	udpTimeout := C.UDPTimeout
 	if options.UDPTimeout != 0 {
@@ -178,17 +185,17 @@ func NewEndpoint(ctx context.Context, router adapter.Router, logger log.ContextL
 		},
 	})
 	if err != nil {
-		return nil, err
+		return empty, err //karing
 	}
 	openConnectEndpoint.device = device
 	device.SetPacketWriter(openConnectEndpoint.writePacketBuffers)
 	clientOptions, err := openConnectEndpoint.buildClientOptions(options, outboundDialer)
 	if err != nil {
-		return nil, err
+		return empty, err //karing
 	}
 	client, err := openconnect.NewClient(clientOptions)
 	if err != nil {
-		return nil, err
+		return empty, err //karing
 	}
 	openConnectEndpoint.client = client
 	success = true
@@ -419,6 +426,9 @@ func (e *Endpoint) updateState(update func(state *clientState)) {
 }
 
 func (e *Endpoint) Start(stage adapter.StartStage) error {
+	if e.GetParseErr() != nil { //karing
+		return nil
+	}
 	if stage != adapter.StartStatePostStart {
 		return nil
 	}
@@ -556,6 +566,9 @@ func (e *Endpoint) NewPacketConnectionEx(ctx context.Context, conn N.PacketConn,
 }
 
 func (e *Endpoint) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
+	if e.GetParseErr() != nil { //karing
+		return nil, e.GetParseErr()
+	}
 	switch network {
 	case N.NetworkTCP:
 		e.logger.InfoContext(ctx, "outbound connection to ", destination)
@@ -579,6 +592,9 @@ func (e *Endpoint) DialContext(ctx context.Context, network string, destination 
 }
 
 func (e *Endpoint) ListenPacketWithDestination(ctx context.Context, destination M.Socksaddr) (net.PacketConn, netip.Addr, error) {
+	if e.GetParseErr() != nil { //karing
+		return nil, netip.Addr{}, e.GetParseErr()
+	}
 	e.logger.InfoContext(ctx, "outbound packet connection to ", destination)
 	if !e.ready() || !e.client.Ready() {
 		return nil, netip.Addr{}, E.New("endpoint is not ready yet")
@@ -605,6 +621,9 @@ func (e *Endpoint) ListenPacketWithDestination(ctx context.Context, destination 
 }
 
 func (e *Endpoint) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
+	if e.GetParseErr() != nil { //karing
+		return nil, e.GetParseErr()
+	}
 	packetConn, destinationAddress, err := e.ListenPacketWithDestination(ctx, destination)
 	if err != nil {
 		return nil, err

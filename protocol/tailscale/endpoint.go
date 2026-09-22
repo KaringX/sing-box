@@ -134,6 +134,12 @@ type Endpoint struct {
 }
 
 func NewEndpoint(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.TailscaleEndpointOptions) (adapter.Endpoint, error) {
+	empty := &Endpoint{ //karing
+		Adapter: endpoint.NewAdapter(C.TypeTailscale, tag, []string{N.NetworkTCP, N.NetworkUDP, N.NetworkICMP}, nil),
+		ctx:     ctx,
+		router:  router,
+		logger:  logger,
+	}
 	stateDirectory := options.StateDirectory
 	if stateDirectory == "" {
 		stateDirectory = "tailscale"
@@ -156,16 +162,16 @@ func NewEndpoint(ctx context.Context, router adapter.Router, logger log.ContextL
 	if options.SSHServer != nil && options.SSHServer.Enabled {
 		err := adapter.CheckSecurityFeature(ctx, "Tailscale `ssh_server`")
 		if err != nil {
-			return nil, err
+			return empty, err //karing
 		}
 	}
 	for _, advertiseRoute := range options.AdvertiseRoutes {
 		if advertiseRoute.Addr().IsUnspecified() && advertiseRoute.Bits() == 0 {
-			return nil, E.New("`advertise_routes` cannot be default, use `advertise_exit_node` instead.")
+			return empty, E.New("`advertise_routes` cannot be default, use `advertise_exit_node` instead.") //karing
 		}
 	}
 	if options.AdvertiseExitNode && options.ExitNode != "" {
-		return nil, E.New("cannot advertise an exit node and use an exit node at the same time.")
+		return empty, E.New("cannot advertise an exit node and use an exit node at the same time.") //karing
 	}
 	var udpTimeout time.Duration
 	if options.UDPTimeout != 0 {
@@ -181,7 +187,7 @@ func NewEndpoint(ctx context.Context, router adapter.Router, logger log.ContextL
 		NewDialer:        true,
 	})
 	if err != nil {
-		return nil, err
+		return empty, err //karing
 	}
 	dialerQueryOptions := outboundDialer.(dialer.ResolveDialer).QueryOptions()
 	dnsRouter := service.FromContext[adapter.DNSRouter](ctx)
@@ -252,6 +258,9 @@ func NewEndpoint(ctx context.Context, router adapter.Router, logger log.ContextL
 }
 
 func (t *Endpoint) Start(stage adapter.StartStage) error {
+	if t.GetParseErr() != nil { //karing
+		return nil
+	}
 	switch stage {
 	case adapter.StartStateInitialize:
 		mkdirErr := filemanager.MkdirAll(t.ctx, t.server.Dir, 0o700)
@@ -820,9 +829,6 @@ func (t *Endpoint) DialContext(ctx context.Context, network string, destination 
 }
 
 func (t *Endpoint) listenPacketWithAddress(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
-	if t.GetParseErr() != nil { //karing
-		return nil, t.GetParseErr()
-	}
 	if !t.started.Load() {
 		return nil, E.New("Tailscale is not ready yet")
 	}
@@ -855,6 +861,9 @@ func (t *Endpoint) listenPacketWithAddress(ctx context.Context, destination M.So
 }
 
 func (t *Endpoint) ListenPacketWithDestination(ctx context.Context, destination M.Socksaddr) (net.PacketConn, netip.Addr, error) {
+	if t.GetParseErr() != nil { //karing
+		return nil, netip.Addr{}, t.GetParseErr()
+	}
 	t.logger.InfoContext(ctx, "outbound packet connection to ", destination)
 	if destination.IsDomain() {
 		destinationAddresses, err := t.dnsRouter.Lookup(ctx, destination.Fqdn, adapter.DNSQueryOptions{})
@@ -882,6 +891,9 @@ func (t *Endpoint) ListenPacketWithDestination(ctx context.Context, destination 
 }
 
 func (t *Endpoint) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
+	if t.GetParseErr() != nil { //karing
+		return nil, t.GetParseErr()
+	}
 	packetConn, destinationAddress, err := t.ListenPacketWithDestination(ctx, destination)
 	if err != nil {
 		return nil, err

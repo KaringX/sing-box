@@ -50,13 +50,9 @@ type Outbound struct {
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.DirectOutboundOptions) (adapter.Outbound, error) {
-	empty := &Outbound{ //karing
-		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeDirect, tag, []string{}, options.DialerOptions),
-		logger:  logger,
-	}
 	options.UDPFragmentDefault = true
 	if options.Detour != "" {
-		return empty, E.New("`detour` is not supported in direct context") //karing
+		return nil, E.New("`detour` is not supported in direct context") //karing
 	}
 	outboundDialer, err := dialer.NewWithOptions(dialer.Options{
 		Context:        ctx,
@@ -65,7 +61,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		DirectOutbound: true,
 	})
 	if err != nil {
-		return empty, err //karing
+		return nil, err //karing
 	}
 	outbound := &Outbound{
 		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeDirect, tag, []string{N.NetworkTCP, N.NetworkUDP, N.NetworkICMP}, options.DialerOptions),
@@ -82,14 +78,14 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 	}
 	//nolint:staticcheck
 	if options.ProxyProtocol != 0 {
-		return empty, E.New("Proxy Protocol is deprecated and removed in sing-box 1.6.0") //karing
+		return nil, E.New("Proxy Protocol is deprecated and removed in sing-box 1.6.0") //karing
 	}
 	if defaultDialer, isDefaultDialer := common.Cast[*dialer.DefaultDialer](outbound.dialer); isDefaultDialer {
 		outbound.icmpPort = ping.NewPort(ctx, logger, func(destination netip.Addr) control.Func {
 			return defaultDialer.DialerForICMPDestination(destination).Control
 		}, 0)
 	}
-	return outbound, nil
+	return outbound, nil //karing
 }
 
 func (h *Outbound) Start(stage adapter.StartStage) error {
@@ -151,9 +147,6 @@ func (h *Outbound) isMyLoopbackAddress(addresses ...netip.Addr) bool {
 }
 
 func (h *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
-	if h.GetParseErr() != nil { //karing
-		return nil, h.GetParseErr()
-	}
 	if h.isMyLoopbackAddress(destination.Addr) {
 		return nil, E.New("loopback connection to TUN range")
 	}
@@ -171,9 +164,6 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 }
 
 func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
-	if h.GetParseErr() != nil { //karing
-		return nil, h.GetParseErr()
-	}
 	if h.isMyLoopbackAddress(destination.Addr) {
 		return nil, E.New("loopback connection to TUN range")
 	}

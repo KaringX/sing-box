@@ -101,6 +101,9 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 }
 
 func (t *Outbound) Start(stage adapter.StartStage) error {
+	if t.GetParseErr() != nil { //karing
+		return nil
+	}
 	switch stage {
 	case adapter.StartStateInitialize:
 		if t.startConf.DataDir == "" {

@@ -19,7 +19,7 @@ import (
 	"github.com/sagernet/sing-box/option"
 	ovpntransport "github.com/sagernet/sing-box/transport/openvpn"
 	ovpn "github.com/sagernet/sing-openvpn"
-	"github.com/sagernet/sing-tun"
+	tun "github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing-tun/gtcpip/header"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/buf"
@@ -98,7 +98,7 @@ func NewClientEndpoint(ctx context.Context, router adapter.Router, logger log.Co
 	}()
 	clientOptions, err := clientEndpoint.buildClientOptions(options)
 	if err != nil {
-		return nil, err
+		return clientEndpoint, err //karing
 	}
 	clientEndpoint.state.Store(&clientState{localAddresses: clientOptions.Tunnel.LocalAddress})
 	outboundDialer, err := dialer.NewWithOptions(dialer.Options{
@@ -109,7 +109,7 @@ func NewClientEndpoint(ctx context.Context, router adapter.Router, logger log.Co
 		NewDialer:        true,
 	})
 	if err != nil {
-		return nil, err
+		return clientEndpoint, err //karing
 	}
 	var queryOptions adapter.DNSQueryOptions
 	resolveDialer, isResolveDialer := outboundDialer.(dialer.ResolveDialer)
@@ -141,13 +141,13 @@ func NewClientEndpoint(ctx context.Context, router adapter.Router, logger log.Co
 		},
 	})
 	if err != nil {
-		return nil, err
+		return clientEndpoint, err //karing
 	}
 	clientEndpoint.device = device
 	device.SetPacketWriter(clientEndpoint.writePacketBuffers)
 	client, err := ovpn.NewClient(clientOptions)
 	if err != nil {
-		return nil, err
+		return clientEndpoint, err //karing
 	}
 	clientEndpoint.client = client
 	success = true
@@ -597,6 +597,9 @@ func (c *ClientEndpoint) uninstallDNSTransport(dnsTransport *DNSTransport) {
 }
 
 func (c *ClientEndpoint) Start(stage adapter.StartStage) error {
+	if c.GetParseErr() != nil { //karing
+		return nil
+	}
 	if stage != adapter.StartStatePostStart {
 		return nil
 	}
@@ -760,6 +763,9 @@ func (c *ClientEndpoint) NewPacketConnectionEx(ctx context.Context, conn N.Packe
 }
 
 func (c *ClientEndpoint) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
+	if c.GetParseErr() != nil { //karing
+		return nil, c.GetParseErr()
+	}
 	switch network {
 	case N.NetworkTCP:
 		c.logger.InfoContext(ctx, "outbound connection to ", destination)
@@ -783,6 +789,9 @@ func (c *ClientEndpoint) DialContext(ctx context.Context, network string, destin
 }
 
 func (c *ClientEndpoint) ListenPacketWithDestination(ctx context.Context, destination M.Socksaddr) (net.PacketConn, netip.Addr, error) {
+	if c.GetParseErr() != nil { //karing
+		return nil, netip.Addr{}, c.GetParseErr()
+	}
 	c.logger.InfoContext(ctx, "outbound packet connection to ", destination)
 	if !c.ready() || !c.client.Ready() {
 		return nil, netip.Addr{}, E.New("endpoint is not ready yet")
@@ -809,6 +818,9 @@ func (c *ClientEndpoint) ListenPacketWithDestination(ctx context.Context, destin
 }
 
 func (c *ClientEndpoint) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
+	if c.GetParseErr() != nil { //karing
+		return nil, c.GetParseErr()
+	}
 	packetConn, destinationAddress, err := c.ListenPacketWithDestination(ctx, destination)
 	if err != nil {
 		return nil, err
