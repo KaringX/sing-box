@@ -140,10 +140,12 @@ func (s *RemoteRuleSet) StartContext(ctx context.Context, startContext *adapter.
 		}
 	}
 	if s.lastUpdated.IsZero() && !loadedFromInitialPath {
+		/* karing
 		err = s.fetch(ctx, true)
 		if err != nil {
 			return E.Cause(err, "initial rule-set: ", s.tag)
 		}
+		*/
 	}
 	return nil
 }
