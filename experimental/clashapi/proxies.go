@@ -238,7 +238,11 @@ func getProxyDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 
 		delay, _, err := urltest.URLTest(ctx, url, proxy) //karing
 		defer func() {
-			realTag := group.RealTag(server.outbound, proxy)
+			outboundManager := server.outbound //karing
+			if outboundManager == nil {        //karing
+				return
+			}
+			realTag := group.RealTag(outboundManager, proxy) //karing
 			if err != nil {
 				//server.urlTestHistory.DeleteURLTestHistory(realTag)  //karing
 				server.urlTestHistory.StoreURLTestHistory(realTag, &adapter.URLTestHistory{ //karing
@@ -253,12 +257,12 @@ func getProxyDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 					Err:   "", //karing
 				})
 			}
-			for _, detour := range server.outbound.Outbounds() {
+			for _, detour := range outboundManager.Outbounds() { //karing
 				urlTestGroup, isURLTestGroup := detour.(adapter.URLTestGroup)
 				if !isURLTestGroup {
 					continue
 				}
-				if !groupContains(server.outbound, urlTestGroup, realTag, map[string]bool{detour.Tag(): true}) {
+				if !groupContains(outboundManager, urlTestGroup, realTag, map[string]bool{detour.Tag(): true}) { //karing
 					continue
 				}
 				urlTestGroup.PerformUpdateCheck()

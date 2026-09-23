@@ -193,6 +193,9 @@ func (s *Selector) NewPacketConnection(ctx context.Context, conn N.PacketConn, m
 }
 
 func RealTag(outboundManager adapter.OutboundManager, detour adapter.Outbound) string {
+	if outboundManager == nil || detour == nil { //karing
+		return ""
+	}
 	tag := detour.Tag()
 	for {
 		group, isGroup := detour.(adapter.OutboundGroup)

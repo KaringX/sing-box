@@ -3,6 +3,7 @@ package xhttp
 import (
 	"context"
 	gotls "crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -240,7 +241,8 @@ func (c *Client) DialContext(ctx context.Context) (net.Conn, error) {
 	scMaxEachPostBytes := options.GetNormalizedScMaxEachPostBytes()
 	scMinPostsIntervalMs := options.GetNormalizedScMinPostsIntervalMs()
 	if scMaxEachPostBytes.From <= 0 {
-		panic("`scMaxEachPostBytes` should be bigger than 0")
+		return nil, errors.New("`scMaxEachPostBytes` should be bigger than 0") //karing
+		// panic("`scMaxEachPostBytes` should be bigger than 0")//karing
 	}
 	maxUploadSize := scMaxEachPostBytes.Rand()
 	uploadPipeReader, uploadPipeWriter := pipe.New(pipe.WithSizeLimit(max(0, maxUploadSize-buf.Size)))
