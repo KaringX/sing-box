@@ -106,6 +106,9 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 }
 
 func (h *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (conn net.Conn, err error) { //karing
+	if h == nil {
+		return nil, E.New("hysteria outbound is nil") //karing
+	}
 	defer func() { //karing
 		if err == nil {
 			conn = h.OnNewConnection(conn, func() {

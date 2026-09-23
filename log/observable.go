@@ -3,6 +3,7 @@ package log
 import (
 	"context"
 	"io"
+	"log"
 	"os"
 
 	"sync"
@@ -167,6 +168,7 @@ func (f *defaultFactory) output(ctx context.Context, level Level, tag string, me
 		}
 		f.writer.Write([]byte(formatted))
 		if level == LevelFatal {
+			log.Fatal(message) //karing
 			os.Exit(1)
 		}
 	}

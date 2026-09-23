@@ -132,6 +132,9 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 }
 
 func (h *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
+	if h == nil {
+		return nil, E.New("vless outbound is nil") //karing
+	}
 	if h.GetParseErr() != nil { //karing
 		return nil, h.GetParseErr()
 	}
