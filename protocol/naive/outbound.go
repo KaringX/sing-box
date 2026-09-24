@@ -274,7 +274,9 @@ func (h *Outbound) InterfaceUpdated(ctx context.Context) {
 	if h.client == nil { //karing
 		return
 	}
-	h.client.CloseAllConnections()
+	//karing //github.com/sagernet/cronet-go v0.0.0-20260912104727-0d28acc44093 naive does not work
+	h.client.Engine().CloseAllConnections() //karing
+	//h.client.CloseAllConnections() //karing
 }
 
 func (h *Outbound) Close() error {

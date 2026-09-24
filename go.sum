@@ -10,8 +10,6 @@ filippo.io/edwards25519 v1.2.0/go.mod h1:xzAOLCNug/yB62zG1bQ8uziwrIqIuxhctzJT18Q
 filippo.io/hpke v0.4.0 h1:p575VVQ6ted4pL+it6M00V/f2qTZITO0zgmdKCkd5+A=
 filippo.io/hpke v0.4.0/go.mod h1:EmAN849/P3qdeK+PCMkDpDm83vRHM5cDipBJ8xbQLVY=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
-github.com/KaringX/quic-go v0.49.0-beta.1.0.20260904064851-842e428a76ab h1:Hkry8WWczZ//e1qAmAHobxGLhMj6sGQgjb7kAAEGtL0=
-github.com/KaringX/quic-go v0.49.0-beta.1.0.20260904064851-842e428a76ab/go.mod h1:hmLC8GJPp+BrpBgrgJnacvI4fZGIhasuy1ROJJ8GR4E=
 github.com/KaringX/quic-go v0.49.0-beta.1.0.20260921083033-b3290357f9e2 h1:VkijBZ4PfX77p/9oSy1YMW4fB2RGr3nUbUM5UW5hFPw=
 github.com/KaringX/quic-go v0.49.0-beta.1.0.20260921083033-b3290357f9e2/go.mod h1:hmLC8GJPp+BrpBgrgJnacvI4fZGIhasuy1ROJJ8GR4E=
 github.com/KaringX/sing v0.5.0-alpha.11.0.20260918015505-de2a582527b4 h1:l5fUO43F/P/tnS8SGVt/x21jw4XiJaQVdqG1qyOpXdg=
@@ -315,10 +313,10 @@ github.com/sagernet/bbolt v0.0.0-20260823094646-e24805439c9c h1:JdEDkgiwsDxiZb4+
 github.com/sagernet/bbolt v0.0.0-20260823094646-e24805439c9c/go.mod h1:7/qFPFH5fqK5XQeY8EA1Qpaly08Av77p38Zt50ieQww=
 github.com/sagernet/cors v1.2.1 h1:Cv5Z8y9YSD6Gm+qSpNrL3LO4lD3eQVvbFYJSG7JCMHQ=
 github.com/sagernet/cors v1.2.1/go.mod h1:O64VyOjjhrkLmQIjF4KGRrJO/5dVXFdpEmCW/eISRAI=
-github.com/sagernet/cronet-go v0.0.0-20260912104727-0d28acc44093 h1:CsvsLVIli53L6nzgEpyRjjWnRRhTds4D3eh5sEnF5Sw=
-github.com/sagernet/cronet-go v0.0.0-20260912104727-0d28acc44093/go.mod h1:T/mwtrpC4JlWfScw73CmSBvHzIvc7BatQ1MhRr+cYNw=
-github.com/sagernet/cronet-go/all v0.0.0-20260912104727-0d28acc44093 h1:1lRUqrLcBz0Q0r/xvyiXS5hZwH5pOq6Lwb4dqbSqJfs=
-github.com/sagernet/cronet-go/all v0.0.0-20260912104727-0d28acc44093/go.mod h1:bvm9T9FdwHYYfWdZkLoZ4Qr9Dce0TTQ7ngXlbGZnnJk=
+github.com/sagernet/cronet-go v0.0.0-20260807162344-ec9a39c5ba3b h1:SfX10lRxbq9ixHm4OZ4/7q+TSpK4Gh0lEVrPaIAB/K0=
+github.com/sagernet/cronet-go v0.0.0-20260807162344-ec9a39c5ba3b/go.mod h1:T/mwtrpC4JlWfScw73CmSBvHzIvc7BatQ1MhRr+cYNw=
+github.com/sagernet/cronet-go/all v0.0.0-20260807162344-ec9a39c5ba3b h1:ilEtBdfFgdHmCY3q/Gzp3wRDILYAT8wOh+jVAEAT77U=
+github.com/sagernet/cronet-go/all v0.0.0-20260807162344-ec9a39c5ba3b/go.mod h1:Mr2MlNGQYovxvSPGo0+HEgXJ+uITwvPMtp7kdZO8T9w=
 github.com/sagernet/cronet-go/lib/android_386 v0.0.0-20260912104006-c10c03c318db h1:o0NCKT9gZsOLJK5s5wXW5A5EaFCnF5En6SApmHwUMJo=
 github.com/sagernet/cronet-go/lib/android_386 v0.0.0-20260912104006-c10c03c318db/go.mod h1:XXDwdjX/T8xftoeJxQmbBoYXZp8MAPFR2CwbFuTpEtw=
 github.com/sagernet/cronet-go/lib/android_amd64 v0.0.0-20260912104006-c10c03c318db h1:75fzfzaz/j1mKsqNE01KTMMP3i/9FgmPlwO2BIV8TpU=

@@ -26,7 +26,7 @@ func (l *observableLogger) log(ctx context.Context, level Level, deep int, args 
 		return
 	}
 	_, file, line, _ := runtime.Caller(deep)
-	fileTag := " " + path.Base(file) + ":" + strconv.Itoa(line) + " " + l.tag
+	fileTag := path.Base(file) + ":" + strconv.Itoa(line) + " "
 	nowTime := time.Now()
 	message := fileTag + F.ToString(args...)
 	if level == LevelFatal || level == LevelPanic {

@@ -36,8 +36,8 @@ require (
 	github.com/sagernet/asc-go v0.0.0-20260827085112-8f8226245b0d
 	github.com/sagernet/bbolt v0.0.0-20260823094646-e24805439c9c
 	github.com/sagernet/cors v1.2.1
-	github.com/sagernet/cronet-go v0.0.0-20260912104727-0d28acc44093
-	github.com/sagernet/cronet-go/all v0.0.0-20260912104727-0d28acc44093
+	github.com/sagernet/cronet-go v0.0.0-20260807162344-ec9a39c5ba3b
+	github.com/sagernet/cronet-go/all v0.0.0-20260807162344-ec9a39c5ba3b
 	github.com/sagernet/fswatch v0.1.2
 	github.com/sagernet/gliderssh v0.3.4-0.20260531100337-2194faca5648
 	github.com/sagernet/gomobile v0.1.12
@@ -150,6 +150,11 @@ replace github.com/sagernet/tailscale => github.com/KaringX/tailscale v1.80.3-mo
 replace github.com/sagernet/sing-vmess => github.com/KaringX/sing-vmess v0.2.8-0.20260918020936-d32e82694d9c //v0.2.8
 
 //replace github.com/sagernet/sing-vmess => ../../KaringX/sing-vmess
+
+//github.com/sagernet/cronet-go v0.0.0-20260912104727-0d28acc44093 naive does not work
+replace github.com/sagernet/cronet-go => github.com/sagernet/cronet-go v0.0.0-20260807162344-ec9a39c5ba3b
+
+replace github.com/sagernet/cronet-go/all => github.com/sagernet/cronet-go/all v0.0.0-20260807162344-ec9a39c5ba3b
 
 replace github.com/metacubex/sing-shadowsocks2 => github.com/Restia-Ashbell/sing-shadowsocks2 v0.0.0-20250606153500-31ef7b14aaa6
 
