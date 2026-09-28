@@ -17,7 +17,6 @@ import (
 	D "github.com/sagernet/sing-box/common/debug"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/dns"
-	"github.com/sagernet/sing-box/dns/transport/local"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
 	E "github.com/sagernet/sing/common/exceptions"
@@ -73,10 +72,6 @@ func Lookup(ctx context.Context, router adapter.Router, logFactory log.Factory, 
 	dnsTransportManager := dns.NewTransportManager(logFactory.NewLogger("dns_Lookup/transport"), dnsTransportRegistry, outboundManager, "")
 	service.MustRegister[adapter.DNSTransportManager](ctxClone, dnsTransportManager)
 	defer dnsTransportManager.Close()
-	err := dnsTransportManager.Start(adapter.StartStateInitialize)
-	if err != nil {
-		return 0, nil, E.Cause(err, "dnsTransportManager start failed")
-	}
 	for i, transportOptions := range req.Servers {
 		var tag string
 		if transportOptions.Tag != "" {
@@ -96,11 +91,12 @@ func Lookup(ctx context.Context, router adapter.Router, logFactory log.Factory, 
 		}
 	}
 	dnsTransportManager.Initialize(func() (adapter.DNSTransport, error) {
-		return local.NewTransport(
+		return dnsTransportRegistry.CreateDNSTransport(
 			ctxClone,
 			logFactory.NewLogger("dns_Lookup/local"),
 			"local",
-			option.LocalDNSServerOptions{},
+			C.DNSTypeLocal,
+			&option.LocalDNSServerOptions{},
 		)
 	})
 	transport, ok := dnsTransportManager.Transport(req.Tag)
