@@ -301,6 +301,45 @@ func (e *Endpoint) start() error {
 	wgDevice.FakePacketsNoModify = e.fakePacketsNoModify                                                                                                                 //hiddify
 
 	e.tunDevice.SetDevice(wgDevice)
+	domainPeers := make(map[device.NoisePublicKey]*peerConfig)
+	for peerIndex, peer := range e.peers {
+		if !peer.destination.IsDomain() {
+			continue
+		}
+		var publicKey device.NoisePublicKey
+		err = publicKey.FromHex(peer.publicKeyHex)
+		if err != nil {
+			wgDevice.Close()
+			return E.Cause(err, "decode public key for peer ", peerIndex)
+		}
+		domainPeers[publicKey] = &e.peers[peerIndex]
+	}
+	if len(domainPeers) > 0 {
+		wgDevice.SetEndpointResolverFunc(func(publicKey device.NoisePublicKey) ([]conn.Endpoint, error) {
+			peer, found := domainPeers[publicKey]
+			if !found {
+				return nil, nil
+			}
+			addresses, lookupErr := e.options.ResolvePeer(peer.destination.Fqdn)
+			if lookupErr != nil {
+				return nil, lookupErr
+			}
+			endpoints := make([]conn.Endpoint, 0, len(addresses))
+			for _, address := range addresses {
+				destination := netip.AddrPortFrom(address, peer.destination.Port)
+				if peer.reserved != ([3]uint8{}) {
+					bind.SetReservedForEndpoint(destination, peer.reserved)
+				}
+				endpoint, parseErr := bind.ParseEndpoint(destination.String())
+				if parseErr != nil {
+					e.parseErr = E.Cause(parseErr, "setup wireguard endpoint: \n", destination.String()) //karing
+					return nil, parseErr
+				}
+				endpoints = append(endpoints, endpoint)
+			}
+			return endpoints, nil
+		})
+	}
 	var ipcConf strings.Builder
 	ipcConf.WriteString(e.ipcConf)
 	if e.options.Amnezia != nil { // https://github.com/shtorm-7/sing-box-extended
@@ -385,55 +424,6 @@ func (e *Endpoint) start() error {
 	if err != nil {
 		wgDevice.Close()
 		e.parseErr = E.Cause(err, "setup wireguard: \n", ipcConf) //karing
-		return E.Cause(err, "setup wireguard: \n", ipcConf.String())
-	}
-	domainPeers := make(map[device.NoisePublicKey]*peerConfig)
-	for peerIndex, peer := range e.peers {
-		if !peer.destination.IsDomain() {
-			continue
-		}
-		var publicKey device.NoisePublicKey
-		err = publicKey.FromHex(peer.publicKeyHex)
-		if err != nil {
-			wgDevice.Close()
-			return E.Cause(err, "decode public key for peer ", peerIndex)
-		}
-		domainPeers[publicKey] = &e.peers[peerIndex]
-	}
-	if len(domainPeers) > 0 {
-		wgDevice.SetEndpointResolverFunc(func(publicKey device.NoisePublicKey) ([]conn.Endpoint, error) {
-			peer, found := domainPeers[publicKey]
-			if !found {
-				return nil, nil
-			}
-			addresses, lookupErr := e.options.ResolvePeer(peer.destination.Fqdn)
-			if lookupErr != nil {
-				return nil, lookupErr
-			}
-			endpoints := make([]conn.Endpoint, 0, len(addresses))
-			for _, address := range addresses {
-				destination := netip.AddrPortFrom(address, peer.destination.Port)
-				if peer.reserved != ([3]uint8{}) {
-					bind.SetReservedForEndpoint(destination, peer.reserved)
-				}
-				endpoint, parseErr := bind.ParseEndpoint(destination.String())
-				if parseErr != nil {
-					e.parseErr = E.Cause(parseErr, "setup wireguard endpoint: \n", destination.String()) //karing
-					return nil, parseErr
-				}
-				endpoints = append(endpoints, endpoint)
-			}
-			return endpoints, nil
-		})
-	}
-	var ipcConf strings.Builder
-	ipcConf.WriteString(e.ipcConf)
-	for _, peer := range e.peers {
-		ipcConf.WriteString(peer.GenerateIpcLines())
-	}
-	err = wgDevice.IpcSet(ipcConf.String())
-	if err != nil {
-		wgDevice.Close()
 		return E.Cause(err, "setup wireguard: \n", ipcConf.String())
 	}
 	e.device = wgDevice
