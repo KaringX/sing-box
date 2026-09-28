@@ -7,18 +7,20 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"sync/atomic"
 	"time"
 
 	"github.com/sagernet/sing-box/adapter"
+	"github.com/sagernet/sing-box/common/badhttp"
 	"github.com/sagernet/sing-box/common/tls"
+	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing/common"
 	E "github.com/sagernet/sing/common/exceptions"
 	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
-	sHTTP "github.com/sagernet/sing/protocol/http"
 
 	"golang.org/x/net/http2"
 )
@@ -70,7 +72,7 @@ func NewClient(ctx context.Context, dialer N.Dialer, serverAddr M.Socksaddr, opt
 	}
 	requestURL.Host = serverAddr.String()
 	requestURL.Path = options.Path
-	err := sHTTP.URLSetPath(&requestURL, options.Path)
+	err := badhttp.URLSetPath(&requestURL, options.Path)
 	if err != nil {
 		return nil, E.Cause(err, "parse path")
 	}
@@ -124,13 +126,14 @@ func (c *Client) dialHTTP(ctx context.Context) (net.Conn, error) {
 
 func (c *Client) dialHTTP2(ctx context.Context) (net.Conn, error) {
 	pipeInReader, pipeInWriter := io.Pipe()
+	requestCtx, cancel := context.WithCancel(context.WithoutCancel(ctx))
 	request := &http.Request{
 		Method: c.method,
 		Body:   pipeInReader,
 		URL:    &c.requestURL,
 		Header: c.headers.Clone(),
 	}
-	request = request.WithContext(ctx)
+	request = request.WithContext(requestCtx)
 	switch hostLen := len(c.host); hostLen {
 	case 0:
 		// https://github.com/v2fly/v2ray-core/blob/master/transport/internet/http/config.go#L13
@@ -140,16 +143,29 @@ func (c *Client) dialHTTP2(ctx context.Context) (net.Conn, error) {
 	default:
 		request.Host = c.host[rand.Intn(hostLen)]
 	}
-	conn := NewLateHTTPConn(pipeInWriter)
+	conn := NewLateHTTPConn(pipeInWriter, cancel)
 	keepSession := adapter.KeepSessionFromContext(ctx)
 	conn.onClose = func() {
 		if c.closeIdle.Load() && !keepSession {
 			CloseIdleConnections(c.transport.Load())
 		}
 	}
+	handshakeTimeout := C.TCPTimeout
+	if deadline, hasDeadline := ctx.Deadline(); hasDeadline {
+		handshakeTimeout = time.Until(deadline)
+	}
+	var handshakeTimedOut atomic.Bool
+	handshakeTimer := time.AfterFunc(handshakeTimeout, func() {
+		handshakeTimedOut.Store(true)
+		cancel()
+	})
 	go func() {
 		response, err := c.transport.Load().RoundTrip(request)
+		handshakeTimer.Stop()
 		if err != nil {
+			if handshakeTimedOut.Load() {
+				err = os.ErrDeadlineExceeded
+			}
 			conn.Setup(nil, err)
 		} else if response.StatusCode != 200 {
 			response.Body.Close()

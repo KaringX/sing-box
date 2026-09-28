@@ -73,7 +73,10 @@ func NewEndpoint(options EndpointOptions) (*Endpoint, error) {
 		if err != nil {
 			return nil, E.Cause(err, "decode public key for peer ", peerIndex)
 		}
-		peer.publicKeyHex = hex.EncodeToString(publicKeyBytes)
+		if len(publicKeyBytes) != device.NoisePublicKeySize {
+			return nil, E.New("invalid public key for peer ", peerIndex, ", required ", device.NoisePublicKeySize, " bytes, got ", len(publicKeyBytes))
+		}
+		peer.publicKey = device.NoisePublicKey(publicKeyBytes)
 		if rawPeer.PreSharedKey != "" {
 			preSharedKeyBytes, err := base64.StdEncoding.DecodeString(rawPeer.PreSharedKey)
 			if err != nil {
@@ -106,6 +109,16 @@ func NewEndpoint(options EndpointOptions) (*Endpoint, error) {
 	if options.MTU == 0 {
 		options.MTU = 1408
 	}
+	return &Endpoint{
+		options:        options,
+		peers:          peers,
+		ipcConf:        ipcConf,
+		allowedAddress: allowedAddresses,
+	}, nil
+}
+
+func (e *Endpoint) Initialize(memoryPressure func() tun.MemoryPressure) error {
+	options := e.options
 	deviceOptions := DeviceOptions{
 		Context:         options.Context,
 		Logger:          options.Logger,
@@ -117,24 +130,20 @@ func NewEndpoint(options EndpointOptions) (*Endpoint, error) {
 		UDPFiltering:    options.UDPFiltering,
 		UDPNATMax:       options.UDPNATMax,
 		InterfaceFinder: options.InterfaceFinder,
+		MemoryPressure:  memoryPressure,
 		CreateDialer:    options.CreateDialer,
 		Name:            options.Name,
 		MTU:             options.MTU,
 		Address:         options.Address,
-		AllowedAddress:  allowedAddresses,
+		AllowedAddress:  e.allowedAddress,
 	}
 	tunDevice, err := NewDevice(deviceOptions)
 	if err != nil {
-		return nil, E.Cause(err, "create WireGuard device")
+		return E.Cause(err, "create WireGuard device")
 	}
-	return &Endpoint{
-		options:        options,
-		peers:          peers,
-		ipcConf:        ipcConf,
-		allowedAddress: allowedAddresses,
-		tunDevice:      tunDevice,
-		returnDevice:   &returnDeviceWrapper{Device: tunDevice},
-	}, nil
+	e.tunDevice = tunDevice
+	e.returnDevice = &returnDeviceWrapper{Device: tunDevice}
+	return nil
 }
 
 func (e *Endpoint) Start(postStart bool) error {
@@ -209,29 +218,18 @@ func (e *Endpoint) Start(postStart bool) error {
 		},
 	}
 	wgDevice := device.NewDevice(e.options.Context, e.returnDevice, bind, logger, e.options.Workers)
-	e.tunDevice.SetDevice(wgDevice)
-	var ipcConf strings.Builder
-	ipcConf.WriteString(e.ipcConf)
-	for _, peer := range e.peers {
-		ipcConf.WriteString(peer.GenerateIpcLines())
-	}
-	err = wgDevice.IpcSet(ipcConf.String())
-	if err != nil {
-		wgDevice.Close()
-		return E.Cause(err, "setup wireguard: \n", ipcConf.String())
-	}
-	for _, peer := range e.peers {
-		if !peer.destination.IsDomain() {
-			continue
+	domainPeers := make(map[device.NoisePublicKey]*peerConfig)
+	for peerIndex, peer := range e.peers {
+		if peer.destination.IsDomain() {
+			domainPeers[peer.publicKey] = &e.peers[peerIndex]
 		}
-		var publicKey device.NoisePublicKey
-		common.Must(publicKey.FromHex(peer.publicKeyHex))
-		wgPeer, found := wgDevice.LookupActivePeer(publicKey)
-		if !found {
-			wgDevice.Close()
-			return E.New("missing configured peer: ", peer.destination)
-		}
-		wgPeer.SetEndpointResolver(func() ([]conn.Endpoint, error) {
+	}
+	if len(domainPeers) > 0 {
+		wgDevice.SetEndpointResolverFunc(func(publicKey device.NoisePublicKey) ([]conn.Endpoint, error) {
+			peer, found := domainPeers[publicKey]
+			if !found {
+				return nil, nil
+			}
 			addresses, lookupErr := e.options.ResolvePeer(peer.destination.Fqdn)
 			if lookupErr != nil {
 				return nil, lookupErr
@@ -251,6 +249,24 @@ func (e *Endpoint) Start(postStart bool) error {
 			return endpoints, nil
 		})
 	}
+	var ipcConf strings.Builder
+	ipcConf.WriteString(e.ipcConf)
+	for _, peer := range e.peers {
+		ipcConf.WriteString(peer.GenerateIpcLines())
+	}
+	err = wgDevice.IpcSet(ipcConf.String())
+	if err != nil {
+		wgDevice.Close()
+		return E.Cause(err, "setup wireguard: \n", ipcConf.String())
+	}
+	wgPeers := make([]*device.Peer, 0, len(e.peers))
+	for _, peer := range e.peers {
+		wgPeer, loaded := wgDevice.LookupActivePeer(peer.publicKey)
+		if loaded {
+			wgPeers = append(wgPeers, wgPeer)
+		}
+	}
+	e.tunDevice.SetDevice(wgDevice, wgPeers)
 	e.device.Store(wgDevice)
 	e.pause = service.FromContext[pause.Manager](e.options.Context)
 	if e.pause != nil {
@@ -289,7 +305,7 @@ func (e *Endpoint) SetIdle(idle bool) {
 		}
 		e.suspended.Store(true)
 		wgDevice.Down()
-	} else if e.options.System {
+	} else {
 		e.resumeLocked(wgDevice)
 	}
 }
@@ -336,7 +352,7 @@ func (e *Endpoint) Close() error {
 	if wgDevice != nil {
 		return nil
 	}
-	return e.tunDevice.Close()
+	return common.Close(e.tunDevice)
 }
 
 func (e *Endpoint) Lookup(address netip.Addr) *device.Peer {
@@ -376,7 +392,7 @@ func (e *Endpoint) onPauseUpdated(event int) {
 type peerConfig struct {
 	destination     M.Socksaddr
 	endpoint        netip.AddrPort
-	publicKeyHex    string
+	publicKey       device.NoisePublicKey
 	preSharedKeyHex string
 	allowedIPs      []netip.Prefix
 	keepalive       uint16
@@ -385,7 +401,7 @@ type peerConfig struct {
 
 func (c peerConfig) GenerateIpcLines() string {
 	var ipcLines strings.Builder
-	ipcLines.WriteString("\npublic_key=" + c.publicKeyHex)
+	ipcLines.WriteString("\npublic_key=" + hex.EncodeToString(c.publicKey[:]))
 	if c.endpoint.IsValid() {
 		ipcLines.WriteString("\nendpoint=" + c.endpoint.String())
 	}

@@ -47,7 +47,6 @@ type Outbound struct {
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.Hysteria2OutboundOptions) (adapter.Outbound, error) {
-	options.UDPFragmentDefault = true
 	if options.TLS == nil || !options.TLS.Enabled {
 		return nil, C.ErrTLSRequired
 	}
@@ -77,21 +76,25 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 			return nil, E.New("unknown obfs type: ", options.Obfs.Type)
 		}
 	}
+	realmSTUNServersIsDomain := options.Realm != nil && options.Realm.STUNServersIsDomain()
 	outboundDialer, err := dialer.NewWithOptions(dialer.Options{
-		Context:        ctx,
-		Options:        options.DialerOptions,
-		RemoteIsDomain: options.ServerIsDomain(),
+		Context:          ctx,
+		Options:          options.DialerOptions,
+		RemoteIsDomain:   options.ServerIsDomain() || realmSTUNServersIsDomain,
+		ResolverOnDetour: realmSTUNServersIsDomain,
+		NewDialer:        realmSTUNServersIsDomain,
 	})
 	if err != nil {
 		return nil, err
 	}
 	var realmOptions *realm.Options
 	if options.Realm != nil {
-		queryOptions, err := adapter.DNSQueryOptionsFrom(ctx, options.DialerOptions.DomainResolver)
-		if err != nil {
-			return nil, err
+		var queryOptions adapter.DNSQueryOptions
+		if realmSTUNServersIsDomain {
+			queryOptions = outboundDialer.(dialer.ResolveDialer).QueryOptions()
 		}
-		httpClientTransport, err := service.FromContext[adapter.HTTPClientManager](ctx).ResolveTransport(ctx, logger, common.PtrValueOrDefault(options.Realm.HTTPClient))
+		var httpClientTransport adapter.HTTPTransport
+		httpClientTransport, err = service.FromContext[adapter.HTTPClientManager](ctx).ResolveTransport(ctx, logger, common.PtrValueOrDefault(options.Realm.HTTPClient))
 		if err != nil {
 			return nil, E.Cause(err, "create realm http client")
 		}

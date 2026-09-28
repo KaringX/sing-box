@@ -2,6 +2,11 @@
 icon: material/alert-decagram
 ---
 
+!!! quote "sing-box 1.15.0 中的更改"
+
+    :material-plus: [dns_server_address](#dns_server_address)  
+    :material-plus: [dns_search_domain](#dns_search_domain)
+
 !!! quote "sing-box 1.14.0 中的更改"
 
     :material-plus: [source_mac_address](#source_mac_address)  
@@ -178,6 +183,16 @@ icon: material/alert-decagram
           "local",
           "ts-dns"
         ],
+        "dns_server_address": {
+          "local": [
+            "192.168.1.1/32"
+          ]
+        },
+        "dns_search_domain": {
+          "ts-dns": [
+            "example.ts.net"
+          ]
+        },
         "wifi_ssid": [
           "My WIFI"
         ],
@@ -260,8 +275,7 @@ icon: material/alert-decagram
 !!! quote "sing-box 1.14.0 中的更改"
 
     此字段现在也会在 DNS 规则被未指定具体 DNS 服务器的内部域名解析匹配时生效，
-    例如未设置 `server` 的 [`resolve`](../../route/rule_action/#resolve) 路由规则动作。
-    此前只有来自客户端的 DNS 查询才会评估此字段。完整列表参阅
+    例如未设置 `server` 的 [`resolve`](../../route/rule_action/#resolve) 路由规则动作。参阅
     [迁移指南](/zh/migration/#dns-规则中的-ip_version-和-query_type-行为更改)。
 
     在 DNS 规则中设置此字段后，该 DNS 规则在同一 DNS 配置中不能与
@@ -279,8 +293,7 @@ icon: material/alert-decagram
 !!! quote "sing-box 1.14.0 中的更改"
 
     此字段现在也会在 DNS 规则被未指定具体 DNS 服务器的内部域名解析匹配时生效，
-    例如未设置 `server` 的 [`resolve`](../../route/rule_action/#resolve) 路由规则动作。
-    此前只有来自客户端的 DNS 查询才会评估此字段。完整列表参阅
+    例如未设置 `server` 的 [`resolve`](../../route/rule_action/#resolve) 路由规则动作。参阅
     [迁移指南](/zh/migration/#dns-规则中的-ip_version-和-query_type-行为更改)。
 
     在 DNS 规则中设置此字段后，该 DNS 规则在同一 DNS 配置中不能与
@@ -530,6 +543,36 @@ Available values: `wifi`, `cellular`, `ethernet` and `other`.
 | `tailscale`   | 匹配 MagicDNS 主机和 DNS 路由后缀                                    |
 | `openconnect` | 匹配 VPN 服务器推送的分流 DNS 和搜索域                                  |
 | `resolved`    | 匹配 systemd-resolved 链路中的分流域名和搜索域                            |
+
+#### dns_server_address
+
+!!! question "自 sing-box 1.15.0 起"
+
+匹配指定 DNS 服务器的服务器地址。
+
+| 类型            | 匹配                               |
+|---------------|----------------------------------|
+| `local`       | 匹配系统 DNS 服务器                     |
+| `dhcp`        | 匹配通过 DHCP 获取的 DNS 服务器             |
+| `resolved`    | 匹配 systemd-resolved 链路中的 DNS 服务器  |
+| `tailscale`   | 匹配 tailnet 的 DNS 解析器              |
+| `openvpn`     | 匹配 VPN 服务器推送的 DNS 服务器             |
+| `openconnect` | 匹配 VPN 服务器推送的 DNS 服务器             |
+
+#### dns_search_domain
+
+!!! question "自 sing-box 1.15.0 起"
+
+匹配指定 DNS 服务器的搜索域。
+
+| 类型            | 匹配                            |
+|---------------|-------------------------------|
+| `local`       | 匹配系统搜索域                       |
+| `dhcp`        | 匹配通过 DHCP 获取的搜索域              |
+| `resolved`    | 匹配 systemd-resolved 链路中的搜索域    |
+| `tailscale`   | 匹配 tailnet 的搜索域                |
+| `openvpn`     | 匹配 VPN 服务器推送的搜索域              |
+| `openconnect` | 匹配 VPN 服务器推送的搜索域              |
 
 #### wifi_ssid
 

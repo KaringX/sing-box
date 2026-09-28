@@ -191,7 +191,10 @@ func NewDefault(ctx context.Context, options option.DialerOptions) (*DefaultDial
 	} else {
 		udpFragment = options.UDPFragmentDefault
 	}
-	if !udpFragment {
+	if udpFragment {
+		dialer.Control = control.Append(dialer.Control, control.EnableUDPFragment())
+		listenConfig.Control = control.Append(listenConfig.Control, control.EnableUDPFragment())
+	} else {
 		dialer.Control = control.Append(dialer.Control, control.DisableUDPFragment())
 		listenConfig.Control = control.Append(listenConfig.Control, control.DisableUDPFragment())
 	}
@@ -516,15 +519,14 @@ func (d *DefaultDialer) dialAttribution(ctx context.Context, destination M.Socks
 	}
 	attribution.Rule = metadata.RouteRule
 	attribution.Outbound = metadata.Outbound
+	attribution.Chain = common.Map(metadata.OutboundChain, adapter.Outbound.Tag)
+	slices.Reverse(attribution.Chain)
 	if d.outboundManager != nil {
 		if metadata.Outbound != "" {
 			outbound, loaded := d.outboundManager.Outbound(metadata.Outbound)
 			if loaded {
 				attribution.OutboundType = outbound.Type()
 			}
-		}
-		if metadata.RouteOutbound != "" {
-			attribution.Chain = d.outboundChain(metadata.RouteOutbound)
 		}
 	}
 	if metadata.Destination.IsValid() {
@@ -536,23 +538,4 @@ func (d *DefaultDialer) dialAttribution(ctx context.Context, destination M.Socks
 		attribution.Destination = destination.String()
 	}
 	return attribution
-}
-
-func (d *DefaultDialer) outboundChain(head string) []string {
-	var chain []string
-	next := head
-	for {
-		detour, loaded := d.outboundManager.Outbound(next)
-		if !loaded {
-			break
-		}
-		chain = append(chain, next)
-		outboundGroup, isGroup := detour.(adapter.OutboundGroup)
-		if !isGroup {
-			break
-		}
-		next = outboundGroup.Now()
-	}
-	slices.Reverse(chain)
-	return chain
 }

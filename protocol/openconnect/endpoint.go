@@ -4,7 +4,6 @@ import (
 	"context"
 	"net"
 	"net/netip"
-	"slices"
 	"strings"
 
 	"github.com/sagernet/sing-box/adapter"
@@ -31,10 +30,6 @@ type endpointBase struct {
 	endpoint.Adapter
 	router adapter.Router
 	logger log.ContextLogger
-}
-
-func (e *endpointBase) SupportsFlow(network string) bool {
-	return slices.Contains(e.Network(), network)
 }
 
 func (e *endpointBase) newConnection(ctx context.Context, endpoint adapter.Endpoint, localAddresses []netip.Prefix, conn net.Conn, source M.Socksaddr, destination M.Socksaddr, onClose N.CloseHandlerFunc) {
@@ -102,7 +97,7 @@ func judgeOpenConnectFlow(router adapter.Router, tag string, endpointType string
 			return tun.FlowVerdict{Action: tun.ActionAccept}
 		}
 	}
-	return adapter.JudgeFlow(router, tag, endpointType, network, source, destination, firstPacket)
+	return adapter.JudgeFlow(router, adapter.InboundContext{Inbound: tag, InboundType: endpointType}, network, source, destination, firstPacket)
 }
 
 func materialSource(name string, inlineValues []string, path string) (openconnect.Material, error) {

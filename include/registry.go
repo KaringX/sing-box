@@ -25,6 +25,7 @@ import (
 	"github.com/sagernet/sing-box/protocol/direct"
 	"github.com/sagernet/sing-box/protocol/group"
 	"github.com/sagernet/sing-box/protocol/http"
+	"github.com/sagernet/sing-box/protocol/masque"
 	"github.com/sagernet/sing-box/protocol/mixed"
 	"github.com/sagernet/sing-box/protocol/naive"
 	"github.com/sagernet/sing-box/protocol/redirect"
@@ -72,6 +73,7 @@ func InboundRegistry() *inbound.Registry {
 
 	registerQUICInbounds(registry)
 	registerCloudflaredInbound(registry)
+	registerTailcatInbound(registry)
 	registerStubForRemovedInbounds(registry)
 
 	return registry
@@ -102,6 +104,7 @@ func OutboundRegistry() *outbound.Registry {
 	anytls.RegisterOutbound(registry)
 
 	registerQUICOutbounds(registry)
+	registerTailcatOutbound(registry)
 	registerStubForRemovedOutbounds(registry)
 
 	return registry
@@ -113,6 +116,7 @@ func EndpointRegistry() *endpoint.Registry {
 	registerWireGuardEndpoint(registry)
 	registerOpenConnectEndpoint(registry)
 	registerOpenVPNEndpoints(registry)
+	masque.RegisterEndpoint(registry)
 	registerTailscaleEndpoint(registry)
 
 	return registry

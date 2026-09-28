@@ -2,6 +2,11 @@
 icon: material/new-box
 ---
 
+!!! quote "sing-box 1.15.0 中的更改"
+
+    :material-plus: [certificate_sha256](#certificate_sha256)  
+    :material-plus: [client_certificate_sha256](#client_certificate_sha256)
+
 !!! quote "sing-box 1.14.0 中的更改"
 
     :material-plus: [certificate_provider](#certificate_provider)  
@@ -53,6 +58,7 @@ icon: material/new-box
   "client_authentication": "",
   "client_certificate": [],
   "client_certificate_path": [],
+  "client_certificate_sha256": [],
   "client_certificate_public_key_sha256": [],
   "key": [],
   "key_path": "",
@@ -122,6 +128,7 @@ icon: material/new-box
   "curve_preferences": [],
   "certificate": "",
   "certificate_path": "",
+  "certificate_sha256": [],
   "certificate_public_key_sha256": [],
   "client_certificate": [],
   "client_certificate_path": "",
@@ -216,6 +223,7 @@ TLS 版本值：
 * `min_version`
 * `max_version`
 * `certificate` / `certificate_path`
+* `certificate_sha256`
 * `certificate_public_key_sha256`
 * `handshake_timeout`
 
@@ -237,32 +245,9 @@ TLS 版本值：
 
 !!! note ""
 
-    TLS 1.3 仅在 Windows 11 或 Windows Server 2022 及后续版本上协商。在更早的 Windows 版本上，即使 `max_version` 设为 `1.3`，Schannel 也会把连接上限固定在 TLS 1.2。
+    TLS 1.3 仅在 Windows 11 或 Windows Server 2022 及后续版本上协商。
 
-默认版本范围为 TLS 1.2 到 TLS 1.3，与 `go` 引擎一致。证书验证在 Go 侧基于 Schannel 返回的证书链执行，默认使用系统证书存储。当设置了 `certificate` 或 `certificate_path` 时，这些根证书会替代系统存储。
-
-支持的字段：
-
-* `server_name`
-* `insecure`
-* `alpn`
-* `min_version`
-* `max_version`
-* `certificate` / `certificate_path`
-* `certificate_public_key_sha256`
-* `handshake_timeout`
-
-不支持的字段：
-
-* `disable_sni`
-* `cipher_suites`
-* `curve_preferences`
-* `client_certificate` / `client_certificate_path` / `client_key` / `client_key_path`
-* `fragment` / `record_fragment`
-* `kernel_tx` / `kernel_rx`
-* `ech`
-* `utls`
-* `reality`
+默认版本范围为 TLS 1.2 到 TLS 1.3，与 `go` 引擎一致。
 
 #### disable_sni
 
@@ -294,7 +279,7 @@ TLS 版本值：
 
 可接受的最低 TLS 版本。
 
-默认情况下，当前使用 TLS 1.2 作为客户端的最低要求。作为服务器时使用 TLS 1.0。
+默认使用 TLS 1.2。
 
 #### max_version
 
@@ -333,6 +318,26 @@ TLS 版本值：
     文件更改时将自动重新加载。
 
 服务器证书链路径，PEM 格式。
+
+#### certificate_sha256
+
+!!! question "自 sing-box 1.15.0 起"
+
+==仅客户端==
+
+服务器证书的 SHA-256 哈希列表，base64 格式。
+
+哈希基于整个 DER 编码的证书计算。如果只需要固定公钥，请使用 `certificate_public_key_sha256`。
+
+要生成证书的 SHA-256 哈希，请使用以下命令：
+
+```bash
+# 对于证书文件
+openssl x509 -in certificate.pem -outform der | openssl dgst -sha256 -binary | openssl enc -base64
+
+# 对于远程服务器的证书
+echo | openssl s_client -servername example.com -connect example.com:443 2>/dev/null | openssl x509 -outform der | openssl dgst -sha256 -binary | openssl enc -base64
+```
 
 #### certificate_public_key_sha256
 
@@ -421,7 +426,7 @@ echo | openssl s_client -servername example.com -connect example.com:443 2>/dev/
 * `require-and-verify`
 
 如果此选项设置为 `verify-if-given` 或 `require-and-verify`，
-则需要 `client_certificate`、`client_certificate_path` 或 `client_certificate_public_key_sha256` 中的一个。
+则需要 `client_certificate`、`client_certificate_path`、`client_certificate_sha256` 或 `client_certificate_public_key_sha256` 中的一个。
 
 #### client_certificate
 
@@ -442,6 +447,16 @@ echo | openssl s_client -servername example.com -connect example.com:443 2>/dev/
     文件更改时将自动重新加载。
 
 客户端证书链路径列表，PEM 格式。
+
+#### client_certificate_sha256
+
+!!! question "自 sing-box 1.15.0 起"
+
+==仅服务器==
+
+客户端证书的 SHA-256 哈希列表，base64 格式。
+
+哈希基于整个 DER 编码的证书计算，参阅 [certificate_sha256](#certificate_sha256)。
 
 #### client_certificate_public_key_sha256
 
@@ -682,13 +697,7 @@ ECH 配置路径，PEM 格式。
 在真实 ClientHello 之前注入一个伪造的、携带白名单 SNI 的 TLS ClientHello，
 以欺骗基于 SNI 过滤的中间盒放行连接。
 
-伪造报文是真实 ClientHello 的副本，仅将 SNI 值替换为本字段的值，
-因此 TLS 指纹无法区分伪造与真实报文。真实服务器会丢弃伪造报文（见 `spoof_method`），
-而中间盒将该连接视为合法会话。
-
-需要原始套接字权限（Linux 上需 `CAP_NET_RAW`，macOS 上需 root）；
-在 Linux 上还需 `CAP_NET_ADMIN`，因为需要通过 `TCP_REPAIR` 读取发送序列号。
-Windows 上首次使用时需要 Administrator 以安装内嵌的 WinDivert 内核驱动，
+Linux 上需要 `CAP_NET_RAW` 和 `CAP_NET_ADMIN`，macOS 上需要 root，Windows 上需要 Administrator。
 不支持 Windows ARM64。
 
 #### spoof_method
@@ -704,8 +713,8 @@ Windows 上首次使用时需要 Administrator 以安装内嵌的 WinDivert 内�
 | `wrong-sequence`（默认） | 伪造报文的 TCP 序列号位于服务器接收窗口之前。                     |
 | `wrong-checksum`         | 伪造报文的 TCP 校验和被故意设为无效。                             |
 | `wrong-ack`              | 伪造报文的 TCP 确认号位于服务器发送窗口之前。                     |
-| `wrong-md5`              | 伪造报文携带 TCP-MD5 签名选项，未协商 MD5 密钥的服务器将拒绝。    |
-| `wrong-timestamp`        | 伪造报文携带回退的 TCP 时间戳，服务器按 PAWS 规则视为重放并拒绝。仅支持 Linux/Windows，不支持 macOS。 |
+| `wrong-md5`              | 伪造报文携带 TCP-MD5 签名选项。                                   |
+| `wrong-timestamp`        | 伪造报文携带回退的 TCP 时间戳。仅支持 Linux/Windows，不支持 macOS。 |
 
 ### ACME 字段
 

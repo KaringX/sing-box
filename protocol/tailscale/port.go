@@ -1,4 +1,4 @@
-//go:build with_gvisor
+//go:build with_tailscale
 
 package tailscale
 
@@ -68,7 +68,7 @@ func (t *Endpoint) JudgeFlow(network uint8, source netip.AddrPort, destination n
 			}
 		}
 	}
-	return adapter.JudgeFlow(t.router, t.Tag(), t.Type(), network, source, destination, firstPacket)
+	return adapter.JudgeFlow(t.router, adapter.InboundContext{Inbound: t.Tag(), InboundType: t.Type()}, network, source, destination, firstPacket)
 }
 
 func (t *Endpoint) NewDNSPacket(payload []byte, source M.Socksaddr, destination M.Socksaddr, writer N.PacketWriter) {
@@ -133,7 +133,7 @@ func (t *Endpoint) WritePackets(packets [][]byte) error {
 		if header.IPVersion(packet) == header.IPv6Version {
 			source = inet6Address
 		}
-		reply, replyOk := tun.BuildUnreachable(packet, source, headroom)
+		reply, replyOk := tun.BuildICMPError(packet, tun.ICMPErrorNoRoute, source, 0, headroom)
 		if replyOk {
 			replies = append(replies, reply)
 		}

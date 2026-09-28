@@ -355,7 +355,7 @@ func (t *Inbound) Start(stage adapter.StartStage) error {
 			outboundManager := service.FromContext[adapter.OutboundManager](t.ctx)
 			endpointManager := service.FromContext[adapter.EndpointManager](t.ctx)
 			for _, outbound := range outboundManager.Outbounds() {
-				if _, isFlowOutbound := outbound.(adapter.FlowOutbound); isFlowOutbound && common.Contains(outbound.Network(), N.NetworkTCP) {
+				if flowOutbound, isFlowOutbound := outbound.(adapter.FlowOutbound); isFlowOutbound && flowOutbound.PreMatchFlow(N.NetworkTCP, netip.Addr{}) == adapter.PreMatchFlow {
 					if C.IsLinux {
 						t.tunOptions.GSO = true
 					} else {
@@ -365,7 +365,7 @@ func (t *Inbound) Start(stage adapter.StartStage) error {
 				}
 			}
 			for _, endpoint := range endpointManager.Endpoints() {
-				if _, isFlowOutbound := endpoint.(adapter.FlowOutbound); isFlowOutbound && common.Contains(endpoint.Network(), N.NetworkTCP) {
+				if flowOutbound, isFlowOutbound := endpoint.(adapter.FlowOutbound); isFlowOutbound && flowOutbound.PreMatchFlow(N.NetworkTCP, netip.Addr{}) == adapter.PreMatchFlow {
 					if C.IsLinux {
 						t.tunOptions.GSO = true
 					} else {
@@ -381,6 +381,7 @@ func (t *Inbound) Start(stage adapter.StartStage) error {
 		if t.tunOptions.Name == "" {
 			t.tunOptions.Name = tun.CalculateInterfaceName("")
 		}
+		t.tunOptions.BridgeInterface = t.networkManager.BridgeInterfaces()
 		if t.tunOptions.NetNs != "" {
 			manager := service.FromContext[adapter.NetworkNamespaceManager](t.ctx)
 			if manager != nil {
@@ -542,6 +543,9 @@ func (t *Inbound) routeAddressSetPrefixes() (include []netip.Prefix, exclude []n
 	t.routeAddressSetAccess.RLock()
 	defer t.routeAddressSetAccess.RUnlock()
 	include = common.FlatMap(t.routeAddressSet, (*netipx.IPSet).Prefixes)
+	if len(t.routeAddressSet) > 0 && len(include) == 0 {
+		include = []netip.Prefix{netip.PrefixFrom(netip.IPv4Unspecified(), 32), netip.PrefixFrom(netip.IPv6Unspecified(), 128)}
+	}
 	exclude = common.FlatMap(t.routeExcludeAddressSet, (*netipx.IPSet).Prefixes)
 	return
 }
@@ -590,7 +594,7 @@ func (t *Inbound) JudgeFlow(network uint8, source netip.AddrPort, destination ne
 		}
 		return tun.FlowVerdict{Action: tun.ActionAccept}
 	}
-	return adapter.JudgeFlow(t.router, t.tag, C.TypeTun, network, source, destination, firstPacket)
+	return adapter.JudgeFlow(t.router, adapter.InboundContext{Inbound: t.tag, InboundType: C.TypeTun}, network, source, destination, firstPacket)
 }
 
 func (t *Inbound) isDNSHijackDestination(destination M.Socksaddr) bool {

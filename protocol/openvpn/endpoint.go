@@ -38,10 +38,6 @@ type endpointBase struct {
 	logger log.ContextLogger
 }
 
-func (e *endpointBase) SupportsFlow(network string) bool {
-	return slices.Contains(e.Network(), network)
-}
-
 func (e *endpointBase) newConnection(ctx context.Context, endpoint adapter.Endpoint, localAddresses []netip.Prefix, conn net.Conn, source M.Socksaddr, destination M.Socksaddr, onClose N.CloseHandlerFunc) {
 	var metadata adapter.InboundContext
 	metadata.Inbound = endpoint.Tag()
@@ -107,7 +103,7 @@ func judgeOpenVPNFlow(router adapter.Router, tag string, endpointType string, lo
 			return tun.FlowVerdict{Action: tun.ActionAccept}
 		}
 	}
-	return adapter.JudgeFlow(router, tag, endpointType, network, source, destination, firstPacket)
+	return adapter.JudgeFlow(router, adapter.InboundContext{Inbound: tag, InboundType: endpointType}, network, source, destination, firstPacket)
 }
 
 func keyDirectionValue(direction string) (int, error) {
