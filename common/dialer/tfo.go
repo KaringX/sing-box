@@ -21,6 +21,7 @@ import (
 type slowOpenConn struct {
 	dialer      *tfo.Dialer
 	ctx         context.Context
+	cancel      context.CancelFunc
 	network     string
 	destination M.Socksaddr
 	conn        atomic.Pointer[net.TCPConn]
@@ -40,9 +41,11 @@ func DialSlowContext(dialer *tcpDialer, ctx context.Context, network string, des
 			return dialer.DialContext(ctx, network, destination) //hiddify
 		}
 	}
+	dialCtx, cancel := context.WithCancel(context.WithoutCancel(ctx))
 	return &slowOpenConn{
 		dialer:      &tfo.Dialer{Dialer: dialer.Dialer, DisableTFO: dialer.DisableTFO}, //hiddify
-		ctx:         ctx,
+		ctx:         dialCtx,
+		cancel:      cancel,
 		network:     network,
 		destination: destination,
 		create:      make(chan struct{}),
@@ -87,7 +90,14 @@ func (c *slowOpenConn) Write(b []byte) (n int, err error) {
 	if err != nil {
 		c.err = err
 	} else {
-		c.conn.Store(conn.(*net.TCPConn))
+		select {
+		case <-c.done:
+			conn.Close()
+			err = os.ErrClosed
+			c.err = err
+		default:
+			c.conn.Store(conn.(*net.TCPConn))
+		}
 	}
 	n = len(b)
 	close(c.create)
@@ -97,6 +107,7 @@ func (c *slowOpenConn) Write(b []byte) (n int, err error) {
 func (c *slowOpenConn) Close() error {
 	c.closeOnce.Do(func() {
 		close(c.done)
+		c.cancel()
 		conn := c.conn.Load()
 		if conn != nil {
 			conn.Close()

@@ -33,8 +33,8 @@ require (
 	github.com/openai/openai-go/v3 v3.26.0
 	github.com/oschwald/maxminddb-golang v1.13.1
 	github.com/pkg/sftp v1.13.10
-	github.com/sagernet/asc-go v0.0.0-20260827085112-8f8226245b0d
-	github.com/sagernet/bbolt v0.0.0-20260823094646-e24805439c9c
+	github.com/sagernet/asc-go v0.0.0-20260914163356-9e3d45a797c1
+	github.com/sagernet/bbolt v0.0.0-20260915102804-500ee1e84832
 	github.com/sagernet/cors v1.2.1
 	github.com/sagernet/cronet-go v0.0.0-20260807162344-ec9a39c5ba3b
 	github.com/sagernet/cronet-go/all v0.0.0-20260807162344-ec9a39c5ba3b
@@ -45,22 +45,22 @@ require (
 	github.com/sagernet/netlink v0.0.0-20260814022025-64455d367bbf
 	github.com/sagernet/nftables v0.3.0-mod.4
 	github.com/sagernet/quic-go v0.61.0-sing-box-mod.7
-	github.com/sagernet/sing v0.9.4
+	github.com/sagernet/sing v0.9.6-0.20260922013354-87c33f17688f
 	github.com/sagernet/sing-cloudflared v0.1.3-0.20260706062323-d9787e794aa3
-	github.com/sagernet/sing-mux v0.3.6
+	github.com/sagernet/sing-mux v0.3.8
 	github.com/sagernet/sing-openconnect v0.0.0-20260810065514-53aa8058f8df
 	github.com/sagernet/sing-openvpn v0.0.0-20260729104525-103eb5fe5eb6
-	github.com/sagernet/sing-quic v0.7.0
+	github.com/sagernet/sing-quic v0.7.1-0.20260924092235-6a3a24d65b99
 	github.com/sagernet/sing-shadowsocks v0.2.8
 	github.com/sagernet/sing-shadowsocks2 v0.2.1
 	github.com/sagernet/sing-shadowtls v0.2.1
 	github.com/sagernet/sing-snell v0.0.0-20260829071736-20f2eaec77c3
-	github.com/sagernet/sing-tun v0.9.3
+	github.com/sagernet/sing-tun v0.9.6-0.20260924001923-ddaa4ca25e3b
 	github.com/sagernet/sing-usbip v0.0.0-20260817040617-28bd42667eca
 	github.com/sagernet/sing-vmess v0.2.8
 	github.com/sagernet/smux v1.5.50-sing-box-mod.1
 	github.com/sagernet/tailscale v1.102.1-sing-box-1.14-mod.5
-	github.com/sagernet/wireguard-go v0.0.6
+	github.com/sagernet/wireguard-go v0.0.7
 	github.com/sagernet/ws v0.0.0-20231204124109-acfe8907c854
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.12.0
@@ -115,33 +115,33 @@ replace github.com/Diniboy1123/connect-ip-go => github.com/shtorm-7/connect-ip-g
 //replace github.com/metacubex/mihomo => github.com/KaringX/clash v0.0.0-20241101044429-f71df89d4091
 
 //go get github.com/KaringX/sing@a5ccca51fe8a39390591cf9480ffebb9f0c3fc61
-replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20260918015505-de2a582527b4 //karing_v0.9.4
+//replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20260918015505-de2a582527b4 //karing_v0.9.6
 
-//replace github.com/sagernet/sing => ../../KaringX/sing
+replace github.com/sagernet/sing => ../../KaringX/sing
 
 //replace github.com/sagernet/sing-dns => github.com/KaringX/sing-dns v0.3.0-beta.14.0.20250530212309-a733af0f5878 //karing_v0.4.5
 
 //replace github.com/sagernet/sing-dns => ../../KaringX/sing-dns
 
-replace github.com/sagernet/sing-quic => github.com/KaringX/sing-quic v0.2.0-beta.12.0.20260904081836-f20454677399 //karing_v0.7.0
+//replace github.com/sagernet/sing-quic => github.com/KaringX/sing-quic v0.2.0-beta.12.0.20260904081836-f20454677399 //karing_v0.7.1
 
-//replace github.com/sagernet/sing-quic => ../../KaringX/sing-quic
+replace github.com/sagernet/sing-quic => ../../KaringX/sing-quic
 
 replace github.com/sagernet/quic-go => github.com/KaringX/quic-go v0.49.0-beta.1.0.20260921083033-b3290357f9e2 //karing_v0.61.0-sing-box-mod.7
 
 //replace github.com/sagernet/quic-go => ../../KaringX/quic-go
 
-replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.20260918020451-6a1b522c9d05 //karing_v0.9.3
+//replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.20260918020451-6a1b522c9d05 //karing_v0.9.6
 
-//replace github.com/sagernet/sing-tun => ../../KaringX/sing-tun
+replace github.com/sagernet/sing-tun => ../../KaringX/sing-tun
 
 replace github.com/sagernet/ws => github.com/KaringX/ws v0.0.0-20250301004503-082f57b5c845 //karing_fork
 
 //replace github.com/sagernet/ws => ../../KaringX/ws
 
-replace github.com/sagernet/wireguard-go => github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20260918021340-a967f11998ec //karing_v0.0.6
+//replace github.com/sagernet/wireguard-go => github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20260918021340-a967f11998ec //karing_v0.0.7
 
-//replace github.com/sagernet/wireguard-go => ../../KaringX/wireguard-go
+replace github.com/sagernet/wireguard-go => ../../KaringX/wireguard-go
 
 replace github.com/sagernet/tailscale => github.com/KaringX/tailscale v1.80.3-mod.5.0.20260918021142-cc1239fc955a //karing_v1.102.1-sing-box-1.14-mod.5
 
