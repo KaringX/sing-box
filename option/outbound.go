@@ -53,7 +53,7 @@ func (h *Outbound) UnmarshalJSONContext(ctx context.Context, content []byte) err
 	if err != nil {
 		//return err  //karing
 		if len(h.Type) == 0 || len(h.Tag) == 0 { //karing
-			return err
+			return E.Cause(err, string(content)) //karing
 		}
 		h.ParseErr = err //karing
 	}

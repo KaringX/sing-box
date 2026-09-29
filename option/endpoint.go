@@ -16,10 +16,10 @@ type EndpointOptionsRegistry interface {
 }
 
 type _Endpoint struct {
-	Type    string `json:"type"`
-	Tag     string `json:"tag,omitempty"`
-	Options any    `json:"-"`
-	ParseErr error //karing
+	Type     string `json:"type"`
+	Tag      string `json:"tag,omitempty"`
+	Options  any    `json:"-"`
+	ParseErr error  //karing
 }
 
 type Endpoint _Endpoint
@@ -44,8 +44,8 @@ func (h *Endpoint) UnmarshalJSONContext(ctx context.Context, content []byte) err
 	err = badjson.UnmarshallExcludedContext(ctx, content, (*_Endpoint)(h), options)
 	if err != nil {
 		//return err  //karing
-		if len(h.Type) == 0 || len(h.Tag) == 0 {  //karing
-			return err
+		if len(h.Type) == 0 || len(h.Tag) == 0 { //karing
+			return E.Cause(err, string(content)) //karing
 		}
 		h.ParseErr = err //karing
 	}
