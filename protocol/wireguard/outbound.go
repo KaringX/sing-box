@@ -12,6 +12,7 @@ import (
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing-box/transport/wireguard"
+	tun "github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/logger"
@@ -97,11 +98,22 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 			Reserved:     options.Reserved,
 		}}
 	}
+	networkManager := service.FromContext[adapter.NetworkManager](ctx)
 	wgEndpoint, err := wireguard.NewEndpoint(wireguard.EndpointOptions{
-		Context: ctx,
-		Logger:  logger,
-		System:  options.SystemInterface,
-		Dialer:  outboundDialer,
+		Context:         ctx,
+		Logger:          logger,
+		System:          options.SystemInterface,
+		InterfaceFinder: networkManager.InterfaceFinder(),
+		EgressPoolOptions: tun.UDPEgressPoolOptions{
+			Logger:           logger,
+			InterfaceFinder:  networkManager.InterfaceFinder(),
+			InterfaceMonitor: networkManager.InterfaceMonitor(),
+			ExcludeInterface: options.InterfaceName,
+			IsExempt: func() bool {
+				return networkManager.AutoRedirectOutputMark() != 0
+			},
+		},
+		Dialer: outboundDialer,
 		CreateDialer: func(interfaceName string) N.Dialer {
 			return common.Must1(dialer.NewDefault(ctx, option.DialerOptions{
 				AbstractDialerOptions: option.AbstractDialerOptions{
