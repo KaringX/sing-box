@@ -18,7 +18,6 @@ const (
 	TypeTrustTunnel        = "trusttunnel" // https://github.com/shtorm-7/sing-box-extended
 	TypeNaive              = "naive"
 	TypeWireGuard          = "wireguard"
-	TypeWARP               = "warp"   // https://github.com/shtorm-7/sing-box-extended
 	TypeMASQUE             = "masque" // https://github.com/shtorm-7/sing-box-extended
 	TypeHysteria           = "hysteria"
 	TypeTor                = "tor"
@@ -93,8 +92,6 @@ func ProxyDisplayName(proxyType string) string {
 		return "Naive"
 	case TypeWireGuard:
 		return "WireGuard"
-	case TypeWARP: // https://github.com/shtorm-7/sing-box-extended
-		return "WARP"
 	case TypeMASQUE: // https://github.com/shtorm-7/sing-box-extended
 		return "MASQUE"
 	case TypeHysteria:
