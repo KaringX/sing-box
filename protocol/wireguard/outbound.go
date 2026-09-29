@@ -53,17 +53,17 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 			return empty, E.New("invalid local address")
 		}
 	}
-	hforwarder, err := houtbound.ApplyTurnRelay(houtbound.CommonTurnRelayOptions{ServerOptions: options.ServerOptions, TurnRelayOptions: options.TurnRelay}) //hiddify
+	/*hforwarder, err := houtbound.ApplyTurnRelay(houtbound.CommonTurnRelayOptions{ServerOptions: options.ServerOptions, TurnRelayOptions: options.TurnRelay}) //hiddify
 	if err != nil {                                                                                                                                          //karing
 		return empty, err
-	}
+	}*/
 	outbound := &Outbound{
 		Adapter:        outbound.NewAdapterWithDialerOptions(C.TypeWireGuard, tag, []string{N.NetworkTCP, N.NetworkUDP}, options.DialerOptions),
 		ctx:            ctx,
 		dnsRouter:      service.FromContext[adapter.DNSRouter](ctx),
 		logger:         logger,
 		localAddresses: options.LocalAddress,
-		hforwarder:     hforwarder, //hiddify
+		//hforwarder:     hforwarder, //hiddify
 	}
 	if options.Detour != "" && options.GSO {
 		return nil, E.New("gso is conflict with detour")

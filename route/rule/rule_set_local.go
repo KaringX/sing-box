@@ -57,9 +57,9 @@ func NewLocalRuleSet(ctx context.Context, logger logger.Logger, tag string, opti
 		}
 	} else {
 		/* karing
-			filePath := filemanager.BasePath(ctx, strings.ReplaceAll(options.LocalOptions.Path, C.RuleSetTagPlaceholder, tag))
-			filePath, _ = filepath.Abs(filePath)
-			err := ruleSet.reloadFile(filePath)
+		filePath := filemanager.BasePath(ctx, strings.ReplaceAll(options.LocalOptions.Path, C.RuleSetTagPlaceholder, tag))
+		filePath, _ = filepath.Abs(filePath)
+		err := ruleSet.reloadFile(filePath)
 		*/
 
 		filePath := filemanager.WorkPath(ctx, options.LocalOptions.Path)  //karing
@@ -112,6 +112,9 @@ func (s *LocalRuleSet) reloadFile(path string, isAsset bool) error { //karing
 		var err error      //karing
 		if isAsset {       //karing
 			router := service.FromContext[adapter.Router](s.ctx) //karing
+			if router == nil {
+				return E.New("router is nil")
+			}
 			content, err = router.GetAssetContent(path)
 		} else { //karing
 			content, err = filemanager.ReadFile(s.ctx, path)
@@ -127,6 +130,9 @@ func (s *LocalRuleSet) reloadFile(path string, isAsset bool) error { //karing
 	case C.RuleSetFormatBinary:
 		if isAsset { //karing
 			router := service.FromContext[adapter.Router](s.ctx) //karing
+			if router == nil {
+				return E.New("router is nil")
+			}
 			content, err := router.GetAssetContent(path)
 			if err != nil {
 				return err

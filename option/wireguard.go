@@ -8,26 +8,26 @@ import (
 )
 
 type WireGuardEndpointOptions struct {
-	System                     bool                             `json:"system,omitempty"`
-	Name                       string                           `json:"name,omitempty"`
-	MTU                        uint32                           `json:"mtu,omitempty"`
-	Address                    badoption.Listable[netip.Prefix] `json:"address"`
-	PrivateKey                 string                           `json:"private_key"`
-	ListenPort                 uint16                           `json:"listen_port,omitempty"`
-	Peers                      []WireGuardPeer                  `json:"peers,omitempty"`
-	UDPTimeout                 badoption.Duration               `json:"udp_timeout,omitempty"`
-	UDPMapping                 UDPNATBehavior                   `json:"udp_mapping,omitempty"`
-	UDPFiltering               UDPNATBehavior                   `json:"udp_filtering,omitempty"`
-	UDPNATMax                  uint32                           `json:"udp_nat_max,omitempty"`
-	Workers                    int                              `json:"workers,omitempty"`
-	PreallocatedBuffersPerPool uint32                           `json:"preallocated_buffers_per_pool,omitempty"` // https://github.com/shtorm-7/sing-box-extended
-	DisablePauses              bool                             `json:"disable_pauses,omitempty"`                // https://github.com/shtorm-7/sing-box-extended
-	Amnezia                    *WireGuardAmnezia                `json:"amnezia,omitempty"`                       // https://github.com/shtorm-7/sing-box-extended
+	System       bool                             `json:"system,omitempty"`
+	Name         string                           `json:"name,omitempty"`
+	MTU          uint32                           `json:"mtu,omitempty"`
+	Address      badoption.Listable[netip.Prefix] `json:"address"`
+	PrivateKey   string                           `json:"private_key"`
+	ListenPort   uint16                           `json:"listen_port,omitempty"`
+	Peers        []WireGuardPeer                  `json:"peers,omitempty"`
+	UDPTimeout   badoption.Duration               `json:"udp_timeout,omitempty"`
+	UDPMapping   UDPNATBehavior                   `json:"udp_mapping,omitempty"`
+	UDPFiltering UDPNATBehavior                   `json:"udp_filtering,omitempty"`
+	UDPNATMax    uint32                           `json:"udp_nat_max,omitempty"`
+	Workers      int                              `json:"workers,omitempty"`
 	DialerOptions
-	FakePackets      string `json:"fake_packets,omitempty"`       //hiddify
-	FakePacketsSize  string `json:"fake_packets_size,omitempty"`  //hiddify
-	FakePacketsDelay string `json:"fake_packets_delay,omitempty"` //hiddify
-	FakePacketsMode  string `json:"fake_packets_mode,omitempty"`  //hiddify
+	PreallocatedBuffersPerPool uint32            `json:"preallocated_buffers_per_pool,omitempty"` // https://github.com/shtorm-7/sing-box-extended
+	DisablePauses              bool              `json:"disable_pauses,omitempty"`                // https://github.com/shtorm-7/sing-box-extended
+	Amnezia                    *WireGuardAmnezia `json:"amnezia,omitempty"`                       // https://github.com/shtorm-7/sing-box-extended
+	FakePackets                string            `json:"fake_packets,omitempty"`                  //hiddify
+	FakePacketsSize            string            `json:"fake_packets_size,omitempty"`             //hiddify
+	FakePacketsDelay           string            `json:"fake_packets_delay,omitempty"`            //hiddify
+	FakePacketsMode            string            `json:"fake_packets_mode,omitempty"`             //hiddify
 }
 
 type WireGuardPeer struct {
@@ -75,17 +75,20 @@ type LegacyWireGuardOutboundOptions struct {
 	PrivateKey      string                           `json:"private_key"`
 	Peers           []LegacyWireGuardPeer            `json:"peers,omitempty"`
 	ServerOptions
-	PeerPublicKey    string            `json:"peer_public_key"`
-	PreSharedKey     string            `json:"pre_shared_key,omitempty"`
-	Reserved         []uint8           `json:"reserved,omitempty"`
-	Workers          int               `json:"workers,omitempty"`
-	MTU              uint32            `json:"mtu,omitempty"`
-	Network          NetworkList       `json:"network,omitempty"`
-	TurnRelay        *TurnRelayOptions `json:"turn_relay,omitempty"`         //hiddify
-	FakePackets      string            `json:"fake_packets,omitempty"`       //hiddify
-	FakePacketsSize  string            `json:"fake_packets_size,omitempty"`  //hiddify
-	FakePacketsDelay string            `json:"fake_packets_delay,omitempty"` //hiddify
-	FakePacketsMode  string            `json:"fake_packets_mode,omitempty"`  //hiddify
+	PeerPublicKey              string            `json:"peer_public_key"`
+	PreSharedKey               string            `json:"pre_shared_key,omitempty"`
+	Reserved                   []uint8           `json:"reserved,omitempty"`
+	Workers                    int               `json:"workers,omitempty"`
+	MTU                        uint32            `json:"mtu,omitempty"`
+	Network                    NetworkList       `json:"network,omitempty"`
+	PreallocatedBuffersPerPool uint32            `json:"preallocated_buffers_per_pool,omitempty"` // https://github.com/shtorm-7/sing-box-extended
+	DisablePauses              bool              `json:"disable_pauses,omitempty"`                // https://github.com/shtorm-7/sing-box-extended
+	Amnezia                    *WireGuardAmnezia `json:"amnezia,omitempty"`                       // https://github.com/shtorm-7/sing-box-extended
+	//TurnRelay                  *TurnRelayOptions `json:"turn_relay,omitempty"`                    //hiddify
+	FakePackets      string `json:"fake_packets,omitempty"`       //hiddify
+	FakePacketsSize  string `json:"fake_packets_size,omitempty"`  //hiddify
+	FakePacketsDelay string `json:"fake_packets_delay,omitempty"` //hiddify
+	FakePacketsMode  string `json:"fake_packets_mode,omitempty"`  //hiddify
 }
 
 type LegacyWireGuardPeer struct {

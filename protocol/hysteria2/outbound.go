@@ -16,8 +16,7 @@ import (
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
-	"github.com/sagernet/sing-box/protocol/tuic"
-	"github.com/sagernet/sing-box/protocol/wireguard/houtbound" //hiddify
+	"github.com/sagernet/sing-box/protocol/tuic" //hiddify
 	qtls "github.com/sagernet/sing-quic"
 	"github.com/sagernet/sing-quic/hysteria"
 	"github.com/sagernet/sing-quic/hysteria2"
@@ -42,9 +41,9 @@ var (
 
 type Outbound struct {
 	outbound.Adapter
-	logger     logger.ContextLogger
-	client     *hysteria2.Client
-	hforwarder *houtbound.Forwarder //hiddify
+	logger logger.ContextLogger
+	client *hysteria2.Client
+	//hforwarder *houtbound.Forwarder //hiddify
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.Hysteria2OutboundOptions) (adapter.Outbound, error) {
@@ -56,10 +55,10 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 	if options.TLS == nil || !options.TLS.Enabled {
 		return empty, C.ErrTLSRequired //karing
 	}
-	hforwarder, err := houtbound.ApplyTurnRelay(houtbound.CommonTurnRelayOptions{ServerOptions: options.ServerOptions, TurnRelayOptions: options.TurnRelay}) //hiddify
+	/*hforwarder, err := houtbound.ApplyTurnRelay(houtbound.CommonTurnRelayOptions{ServerOptions: options.ServerOptions, TurnRelayOptions: options.TurnRelay}) //hiddify
 	if err != nil {                                                                                                                                          //karing
 		return empty, err
-	}
+	}*/
 	tlsServerAddress, tlsOptions, err := outboundTLSOptions(options)
 	if err != nil {
 		return nil, err
@@ -171,10 +170,10 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		return empty, err //karing
 	}
 	return &Outbound{
-		Adapter:    outbound.NewAdapterWithDialerOptions(C.TypeHysteria2, tag, networkList, options.DialerOptions),
-		logger:     logger,
-		client:     client,
-		hforwarder: hforwarder, //hiddify
+		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeHysteria2, tag, networkList, options.DialerOptions),
+		logger:  logger,
+		client:  client,
+		//hforwarder: hforwarder, //hiddify
 	}, nil
 }
 
@@ -252,9 +251,9 @@ func (h *Outbound) InterfaceUpdated(ctx context.Context) {
 }
 
 func (h *Outbound) Close() error {
-	if h.hforwarder != nil { //hiddify
+	/*if h.hforwarder != nil { //hiddify
 		h.hforwarder.Close()
-	}
+	}*/
 	if h.client == nil { //karing
 		return nil
 	}

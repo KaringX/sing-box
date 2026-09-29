@@ -24,7 +24,7 @@ import (
 	"github.com/sagernet/sing/common/uot"
 
 	"github.com/gofrs/uuid/v5"
-	"github.com/sagernet/sing-box/protocol/wireguard/houtbound" //hiddify
+	//hiddify
 )
 
 func RegisterOutbound(registry *outbound.Registry) {
@@ -35,10 +35,10 @@ var _ adapter.InterfaceUpdateListener = (*Outbound)(nil)
 
 type Outbound struct {
 	outbound.Adapter
-	logger     logger.ContextLogger
-	client     *tuic.Client
-	udpStream  bool
-	hforwarder *houtbound.Forwarder //hiddify
+	logger    logger.ContextLogger
+	client    *tuic.Client
+	udpStream bool
+	//hforwarder *houtbound.Forwarder //hiddify
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.TUICOutboundOptions) (adapter.Outbound, error) {
@@ -50,10 +50,10 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 	if options.TLS == nil || !options.TLS.Enabled {
 		return empty, C.ErrTLSRequired //karing
 	}
-	hforwarder, err := houtbound.ApplyTurnRelay(houtbound.CommonTurnRelayOptions{ServerOptions: options.ServerOptions, TurnRelayOptions: options.TurnRelay}) //hiddify
+	/*hforwarder, err := houtbound.ApplyTurnRelay(houtbound.CommonTurnRelayOptions{ServerOptions: options.ServerOptions, TurnRelayOptions: options.TurnRelay}) //hiddify
 	if err != nil {
 		return empty, err //karing
-	}
+	}*/
 	tlsConfig, err := tls.NewClient(ctx, logger, options.Server, common.PtrValueOrDefault(options.TLS))
 	if err != nil {
 		return empty, err //karing
@@ -100,11 +100,11 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		return empty, err //karing
 	}
 	return &Outbound{
-		Adapter:    outbound.NewAdapterWithDialerOptions(C.TypeTUIC, tag, options.Network.Build(), options.DialerOptions),
-		logger:     logger,
-		client:     client,
-		udpStream:  options.UDPOverStream,
-		hforwarder: hforwarder, //hiddify
+		Adapter:   outbound.NewAdapterWithDialerOptions(C.TypeTUIC, tag, options.Network.Build(), options.DialerOptions),
+		logger:    logger,
+		client:    client,
+		udpStream: options.UDPOverStream,
+		//hforwarder: hforwarder, //hiddify
 	}, nil
 }
 
@@ -187,9 +187,9 @@ func (h *Outbound) InterfaceUpdated(ctx context.Context) {
 }
 
 func (h *Outbound) Close() error {
-	if h.hforwarder != nil { //hiddify
+	/*if h.hforwarder != nil { //hiddify
 		h.hforwarder.Close()
-	}
+	}*/
 	if h.client == nil { //karing
 		return nil
 	}

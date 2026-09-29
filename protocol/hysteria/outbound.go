@@ -13,8 +13,7 @@ import (
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
-	"github.com/sagernet/sing-box/protocol/tuic"
-	"github.com/sagernet/sing-box/protocol/wireguard/houtbound" //hiddify
+	"github.com/sagernet/sing-box/protocol/tuic" //hiddify
 	"github.com/sagernet/sing-quic/hysteria"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/bufio"
@@ -35,9 +34,9 @@ var (
 
 type Outbound struct {
 	outbound.Adapter
-	logger     logger.ContextLogger
-	client     *hysteria.Client
-	hforwarder *houtbound.Forwarder //hiddify
+	logger logger.ContextLogger
+	client *hysteria.Client
+	//hforwarder *houtbound.Forwarder //hiddify
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.HysteriaOutboundOptions) (adapter.Outbound, error) {
@@ -49,10 +48,10 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 	if options.TLS == nil || !options.TLS.Enabled {
 		return empty, C.ErrTLSRequired //karing
 	}
-	hforwarder, err := houtbound.ApplyTurnRelay(houtbound.CommonTurnRelayOptions{ServerOptions: options.ServerOptions, TurnRelayOptions: options.TurnRelay}) //hiddify
+	/*hforwarder, err := houtbound.ApplyTurnRelay(houtbound.CommonTurnRelayOptions{ServerOptions: options.ServerOptions, TurnRelayOptions: options.TurnRelay}) //hiddify
 	if err != nil {                                                                                                                                          //karing
 		return empty, err
-	}
+	}*/
 	tlsConfig, err := tls.NewClient(ctx, logger, options.Server, common.PtrValueOrDefault(options.TLS))
 	if err != nil {
 		return empty, err //karing
@@ -98,10 +97,10 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		return empty, err //karing
 	}
 	return &Outbound{
-		Adapter:    outbound.NewAdapterWithDialerOptions(C.TypeHysteria, tag, networkList, options.DialerOptions),
-		logger:     logger,
-		client:     client,
-		hforwarder: hforwarder, //hiddify
+		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeHysteria, tag, networkList, options.DialerOptions),
+		logger:  logger,
+		client:  client,
+		//hforwarder: hforwarder, //hiddify
 	}, nil
 }
 
