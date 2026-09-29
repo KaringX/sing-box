@@ -41,6 +41,10 @@ func New(options Options) (Factory, error) {
 	case "stdout":
 		logWriter = os.Stdout
 	default:
+		/* karing
+		logWriter = io.Discard
+		logFilePath = logOptions.Output
+		*/
 		logFilePath = filemanager.BasePath(options.Context, logOptions.Output) //karing
 	}
 	logFormatter := Formatter{

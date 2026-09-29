@@ -156,7 +156,10 @@ func (s *BoxService) NeedWIFIState() bool {
 		return false
 	}
 	instance := s.instance.Instance()
-	if instance == nil || instance.Box() == nil || instance.Box().Network() == nil { //karing
+	if instance == nil || instance.Box() == nil {
+		return false
+	}
+	if instance.Box().Network() == nil { //karing
 		return false
 	}
 	return instance.Box().Network().NeedWIFIState()
@@ -221,7 +224,10 @@ func (s *BoxService) UpdateWIFIState() {
 		return
 	}
 	instance := s.instance.Instance()
-	if instance == nil || instance.Box() == nil || instance.Box().Network() == nil { //karing
+	if instance == nil || instance.Box() == nil {
+		return
+	}
+	if instance.Box().Network() == nil { //karing
 		return
 	}
 	instance.Box().Network().UpdateWIFIState(context.Background())

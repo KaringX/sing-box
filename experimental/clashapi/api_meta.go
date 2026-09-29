@@ -69,11 +69,8 @@ func memory(ctx context.Context, server *Server, trafficManager *trafficcontrol.
 		server.AddTick(tick, func() { //karing
 			closed = true
 		})
-		defer func() { //karing
-			server.RemoveTick(tick)
-			tick.Stop()
-		}()
-
+		defer server.RemoveTick(tick) //karing
+		defer tick.Stop()
 		buf := &bytes.Buffer{}
 		var err error
 		first := true
@@ -84,7 +81,6 @@ func memory(ctx context.Context, server *Server, trafficManager *trafficcontrol.
 			case <-tick.C:
 			}
 			buf.Reset()
-
 			if closed { //karing
 				break
 			}

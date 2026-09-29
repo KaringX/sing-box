@@ -179,9 +179,8 @@ func (h *Outbound) InterfaceUpdated(ctx context.Context) {
 	if h.client == nil { //karing
 		return
 	}
-	defer func() { //karing
-		h.Adapter.ConnectionsIn.Store(0)
-	}()
+	defer h.Adapter.ConnectionsIn.Store(0) //karing
+
 	_ = h.client.CloseWithError(E.New("network changed"))
 }
 
@@ -192,8 +191,7 @@ func (h *Outbound) Close() error {
 	if h.client == nil { //karing
 		return nil
 	}
-	defer func() { //karing
-		h.Adapter.ConnectionsIn.Store(0)
-	}()
+	defer h.Adapter.ConnectionsIn.Store(0) //karing
+
 	return h.client.CloseWithError(os.ErrClosed)
 }

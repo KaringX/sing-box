@@ -280,10 +280,8 @@ func traffic(ctx context.Context, server *Server, trafficManager *trafficcontrol
 		server.AddTick(tick, func() { //karing
 			closed = true
 		})
-		defer func() { //karing
-			server.RemoveTick(tick)
-			tick.Stop()
-		}()
+		defer server.RemoveTick(tick) //karing
+		defer tick.Stop()
 		buf := &bytes.Buffer{}
 		uploadTotal, downloadTotal := trafficManager.Total()
 		for {

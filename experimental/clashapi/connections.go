@@ -154,10 +154,8 @@ func getConnections(ctx context.Context, server *Server, trafficManager *traffic
 		server.AddTick(tick, func() { //karing
 			closed = true
 		})
-		defer func() { //karing
-			server.RemoveTick(tick)
-			tick.Stop()
-		}()
+		server.RemoveTick(tick) //karing
+		defer tick.Stop()
 
 		for range tick.C { //karing
 			if closed { //karing
