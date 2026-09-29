@@ -24,7 +24,6 @@ import (
 	"github.com/sagernet/sing/common/uot"
 
 	"github.com/gofrs/uuid/v5"
-	//hiddify
 )
 
 func RegisterOutbound(registry *outbound.Registry) {

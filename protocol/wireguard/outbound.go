@@ -10,8 +10,7 @@ import (
 	"github.com/sagernet/sing-box/common/dialer"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/log"
-	"github.com/sagernet/sing-box/option" //hiddify
-	"github.com/sagernet/sing-box/protocol/wireguard/houtbound"
+	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing-box/transport/wireguard"
 	"github.com/sagernet/sing/common"
 	E "github.com/sagernet/sing/common/exceptions"
@@ -32,7 +31,7 @@ type Outbound struct {
 	logger         logger.ContextLogger
 	localAddresses []netip.Prefix
 	endpoint       *wireguard.Endpoint
-	hforwarder     *houtbound.Forwarder //hiddify
+	//hforwarder     *houtbound.Forwarder //hiddify
 
 }
 
@@ -149,6 +148,9 @@ func (o *Outbound) Start(stage adapter.StartStage) error {
 }
 
 func (o *Outbound) Close() error {
+	/*if h.hforwarder != nil { //hiddify
+		h.hforwarder.Close()
+	}*/
 	if o.endpoint == nil { //karing
 		return nil
 	}
