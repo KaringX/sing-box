@@ -126,11 +126,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		Address:    options.LocalAddress,
 		PrivateKey: options.PrivateKey,
 		ResolvePeer: func(domain string) ([]netip.Addr, error) {
-			endpointAddresses, lookupErr := outbound.dnsRouter.Lookup(ctx, domain, outboundDialer.(dialer.ResolveDialer).QueryOptions())
-			if lookupErr != nil {
-				return nil, lookupErr
-			}
-			return endpointAddresses, nil
+			return outbound.dnsRouter.Lookup(ctx, domain, outboundDialer.(dialer.ResolveDialer).QueryOptions())
 		},
 		Peers:            peers,
 		Workers:          options.Workers,
