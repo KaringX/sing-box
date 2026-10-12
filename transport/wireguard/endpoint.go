@@ -423,7 +423,7 @@ func (e *Endpoint) start() error {
 	err = wgDevice.IpcSet(ipcConf.String())
 	if err != nil {
 		wgDevice.Close()
-		e.parseErr = E.Cause(err, "setup wireguard: \n", ipcConf) //karing
+		e.parseErr = E.Cause(err, "setup wireguard: \n", ipcConf.String()) //karing
 		return E.Cause(err, "setup wireguard: \n", ipcConf.String())
 	}
 	e.device = wgDevice
