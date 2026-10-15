@@ -212,22 +212,21 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 	return outbound, nil
 }
 
-func (w *Outbound) Start(stage adapter.StartStage) error {
+func (w *Outbound) Start(stage adapter.StartStage, scope *adapter.Scope) error {
 	if w.GetParseErr() != nil { //karing
 		return nil
 	}
-	if stage != adapter.StartStatePostStart {
+	if stage != adapter.StartStateInitialize {
 		return nil
 	}
 	go w.startHandler()
-	return nil
-}
-
-func (w *Outbound) Close() error {
-	if err := w.isTunnelInitialized(w.ctx); err != nil {
-		return err
+	if w.tunnel != nil {
+		scope.Add(func() error {
+			return w.tunnel.Close()
+		})
 	}
-	return w.tunnel.Close()
+
+	return nil
 }
 
 func (w *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {

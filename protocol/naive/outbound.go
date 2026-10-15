@@ -226,7 +226,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 	}, nil
 }
 
-func (h *Outbound) Start(stage adapter.StartStage) error {
+func (h *Outbound) Start(stage adapter.StartStage, scope *adapter.Scope) error {
 	if h.GetParseErr() != nil { //karing
 		return nil
 	}
@@ -237,6 +237,7 @@ func (h *Outbound) Start(stage adapter.StartStage) error {
 	if err != nil {
 		return err
 	}
+	scope.Add(h.client.Close)
 	h.logger.Info("NaiveProxy started, version: ", h.client.Engine().Version())
 	return nil
 }
@@ -277,13 +278,6 @@ func (h *Outbound) InterfaceUpdated(ctx context.Context) {
 	//karing //github.com/sagernet/cronet-go v0.0.0-20260912104727-0d28acc44093 naive does not work
 	h.client.Engine().CloseAllConnections() //karing
 	//h.client.CloseAllConnections() //karing
-}
-
-func (h *Outbound) Close() error {
-	if h.client == nil { //karing
-		return nil
-	}
-	return h.client.Close()
 }
 
 func (h *Outbound) Client() *cronet.NaiveClient {

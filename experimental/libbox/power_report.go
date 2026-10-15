@@ -17,13 +17,14 @@ type powerReportMetadata struct {
 }
 
 func PowerReportOptions(startedService *daemon.StartedService) powerreport.Options {
+	metadata := powerReportMetadata{
+		reportMetadata: baseReportMetadata(),
+		StartedAt:      time.Now().UTC().Format(time.RFC3339),
+	}
 	return powerreport.Options{
-		BasePath: sBasePath, //karing
-		Logger:   log.StdLogger(),
-		Metadata: powerReportMetadata{
-			reportMetadata: baseReportMetadata(),
-			StartedAt:      time.Now().UTC().Format(time.RFC3339),
-		},
+		BasePath:      sBasePath, //karing
+		Logger:        log.StdLogger(),
+		Metadata:      metadata,
 		OwnerCallback: chownReport,
 		LogCallback: func() []byte {
 			return formatLogEntries(startedService.SavedLog())
@@ -36,6 +37,6 @@ func PowerReportOptions(startedService *daemon.StartedService) powerreport.Optio
 	}
 }
 
-func PromotePowerReportDraft() {
-	powerreport.PromoteDraft(sBasePath) //karing
+func DiscardPowerReportDraft() {
+	powerreport.DiscardDraft(sBasePath) //karing
 }

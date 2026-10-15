@@ -15,7 +15,6 @@ import (
 	tun "github.com/sagernet/sing-tun"
 
 	"github.com/sagernet/sing-box/common/dialer"
-
 	"github.com/sagernet/sing-box/service/powerreport"
 
 	"github.com/sagernet/sing/common"
@@ -250,9 +249,12 @@ func (e *Endpoint) start() error {
 			recorder := powerManager.Recorder()
 			if recorder != nil {
 				attribution := &powerreport.Attribution{Endpoint: e.options.Tag}
+				counter := recorder.TrafficCounter(powerreport.TrafficEndpoint, e.options.Tag)
 				standardBind.SetIOActivityFuncs(func(size int) {
+					counter.CountIn(int64(size))
 					recorder.Touch(powerreport.DirectionInbound, size, attribution)
 				}, func(size int) {
+					counter.CountOut(int64(size))
 					recorder.Touch(powerreport.DirectionOutbound, size, attribution)
 				})
 			}

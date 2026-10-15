@@ -14,7 +14,6 @@ import (
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing-box/transport/sudoku"
-	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/bufio"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/logger"
@@ -157,11 +156,20 @@ func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
 	return bufio.NewBindPacketConn(sudoku.NewUoTPacketConn(conn), destination), nil
 }
 
-func (h *Outbound) Close() error {
-	h.client.Close()
-	return common.Close(h.tlsConfig)
+func (h *Outbound) Start(stage adapter.StartStage, scope *adapter.Scope) error {
+	if h.GetParseErr() != nil { //karing
+		return nil
+	}
+	if stage != adapter.StartStateInitialize {
+		return nil
+	}
+	scope.Add(h.client.Close)
+	return nil
 }
 
 func (h *Outbound) InterfaceUpdated() {
+	if h.client == nil { //karing
+		return
+	}
 	h.client.Close()
 }

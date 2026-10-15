@@ -869,7 +869,6 @@ func (r *Router) actionSniff(
 			}
 			goto finally
 		}
-		packetBuffers = inputPacketBuffers
 		for {
 			var (
 				sniffBuffer = buf.NewPacket()

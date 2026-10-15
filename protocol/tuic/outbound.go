@@ -30,7 +30,11 @@ func RegisterOutbound(registry *outbound.Registry) {
 	outbound.Register[option.TUICOutboundOptions](registry, C.TypeTUIC, NewOutbound)
 }
 
-var _ adapter.InterfaceUpdateListener = (*Outbound)(nil)
+var (
+	_ adapter.InterfaceUpdateListener = (*Outbound)(nil)
+	_ adapter.IdleConnectionKeeper    = (*Outbound)(nil)
+	_ adapter.OutboundWithMultiplex   = (*Outbound)(nil)
+)
 
 type Outbound struct {
 	outbound.Adapter
@@ -45,7 +49,6 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeTUIC, tag, []string{}, options.DialerOptions),
 		logger:  logger,
 	}
-	options.UDPFragmentDefault = true
 	if options.TLS == nil || !options.TLS.Enabled {
 		return empty, C.ErrTLSRequired //karing
 	}
@@ -184,14 +187,34 @@ func (h *Outbound) InterfaceUpdated(ctx context.Context) {
 	_ = h.client.CloseWithError(E.New("network changed"))
 }
 
-func (h *Outbound) Close() error {
-	/*if h.hforwarder != nil { //hiddify
-		h.hforwarder.Close()
-	}*/
+func (h *Outbound) MultiplexEnabled() bool {
+	return true
+}
+
+func (h *Outbound) SetKeepIdleConnections(keep bool) {
 	if h.client == nil { //karing
+		return
+	}
+	h.client.SetKeepIdleConnections(keep)
+}
+
+func (h *Outbound) CloseIdleConnections() {
+	if h.client == nil { //karing
+		return
+	}
+	h.client.CloseIdleConnections()
+}
+
+func (h *Outbound) Start(stage adapter.StartStage, scope *adapter.Scope) error {
+	if h.GetParseErr() != nil { //karing
 		return nil
 	}
-	defer h.Adapter.ConnectionsIn.Store(0) //karing
-
-	return h.client.CloseWithError(os.ErrClosed)
+	if stage != adapter.StartStateInitialize {
+		return nil
+	}
+	scope.Add(func() error {
+		defer h.Adapter.ConnectionsIn.Store(0) //karing
+		return h.client.CloseWithError(os.ErrClosed)
+	})
+	return nil
 }

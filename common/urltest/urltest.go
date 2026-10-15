@@ -84,7 +84,11 @@ func (s *HistoryStorage) Close() error {
 func URLTest(ctx context.Context, link string, detour N.Dialer) (t uint16, t2 uint16, err error) { //karing
 	multiplexOutbound, isMultiplexOutbound := common.Cast[adapter.OutboundWithMultiplex](detour)
 	if isMultiplexOutbound && multiplexOutbound.MultiplexEnabled() {
-		_, _, err := urlTest(ctx, link, detour)
+		warmContext := adapter.ContextWithKeepSession(ctx)
+		warmContext = mux.ContextWithKeepSession(warmContext)
+		warmContext = contextWithQUICKeepSession(warmContext)
+		warmContext = snell.ContextWithKeepSession(warmContext)
+		_, err := urlTest(warmContext, link, detour)
 		if err != nil {
 			return 0, 0, err
 		}

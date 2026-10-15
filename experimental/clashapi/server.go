@@ -23,7 +23,6 @@ import (
 	"github.com/sagernet/sing-box/experimental/clashmode"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
-	"github.com/sagernet/sing/common"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/json"
 	"github.com/sagernet/sing/service"
@@ -159,7 +158,7 @@ func (s *Server) Name() string {
 	return "clash server"
 }
 
-func (s *Server) Start(stage adapter.StartStage) error {
+func (s *Server) Start(stage adapter.StartStage, scope *adapter.Scope) error {
 	if stage != adapter.StartStateStarted {
 		return nil
 	}
@@ -180,6 +179,8 @@ func (s *Server) Start(stage adapter.StartStage) error {
 		if err != nil {
 			return E.Cause(err, "external controller listen error")
 		}
+		scope.Add(s.RemoveTicks()) //karing
+		scope.Add(s.httpServer.Close)
 		s.logger.Info("restful api listening at ", listener.Addr())
 		go func() {
 			err = s.httpServer.Serve(listener)
@@ -189,21 +190,6 @@ func (s *Server) Start(stage adapter.StartStage) error {
 		}()
 	}
 	return nil
-}
-
-func (s *Server) Close() error {
-	s.RemoveTicks()      //karing
-	err := common.Close( //karing
-		common.PtrOrNil(s.httpServer),
-	)
-
-	s.router = nil         //karing
-	s.outbound = nil       //karing
-	s.endpoint = nil       //karing
-	s.httpServer = nil     //karing
-	s.trafficManager = nil //karing
-
-	return err //karing
 }
 
 func authentication(serverSecret string) func(next http.Handler) http.Handler {

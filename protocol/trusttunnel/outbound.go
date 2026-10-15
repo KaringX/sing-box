@@ -108,6 +108,13 @@ func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
 	return h.client.ListenPacket(ctx)
 }
 
-func (h *Outbound) Close() error {
-	return h.client.Close()
+func (h *Outbound) Start(stage adapter.StartStage, scope *adapter.Scope) error {
+	if h.GetParseErr() != nil { //karing
+		return nil
+	}
+	if stage != adapter.StartStateInitialize {
+		return nil
+	}
+	scope.Add(h.client.Close)
+	return nil
 }

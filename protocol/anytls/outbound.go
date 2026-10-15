@@ -36,7 +36,6 @@ type Outbound struct {
 	tlsConfig      tls.Config
 	clientOptions  anytls.ClientConfig
 	clientMetadata string
-	client         *anytls.Client
 	sessionClient  *session.Client
 	uotClient      *uot.Client
 	logger         log.ContextLogger
@@ -94,7 +93,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 	return outbound, nil
 }
 
-func (h *Outbound) Start(stage adapter.StartStage) error {
+func (h *Outbound) Start(stage adapter.StartStage, scope *adapter.Scope) error {
 	if h.GetParseErr() != nil { //karing
 		return nil
 	}
@@ -105,7 +104,7 @@ func (h *Outbound) Start(stage adapter.StartStage) error {
 	if err != nil {
 		return err
 	}
-	h.client = client
+	scope.Add(client.Close)
 	h.sessionClient = sessionClientOf(client)
 	h.uotClient = &uot.Client{
 		Dialer:  anytlsDialer(h.createProxy),
@@ -139,7 +138,7 @@ func (d anytlsDialer) ListenPacket(ctx context.Context, destination M.Socksaddr)
 }
 
 func (h *Outbound) dialOut(ctx context.Context) (net.Conn, error) {
-	return h.dialer.DialTLSContext(ctx, h.server)
+	return h.dialer.DialTLSContext(adapter.ContextForMultiplexSession(ctx), h.server)
 }
 
 func (h *Outbound) MultiplexEnabled() bool {
@@ -173,11 +172,4 @@ func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
 	metadata.Destination = destination
 	h.logger.InfoContext(ctx, "outbound UoT packet connection to ", destination)
 	return h.uotClient.ListenPacket(ctx, destination)
-}
-
-func (h *Outbound) Close() error {
-	if h.client == nil { //karing
-		return nil
-	}
-	return common.Close(common.PtrOrNil(h.client))
 }

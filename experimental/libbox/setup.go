@@ -1,6 +1,7 @@
 package libbox
 
 import (
+	"encoding/json"
 	"math"
 	"os"
 	"runtime"
@@ -36,6 +37,7 @@ var (
 	sOOMKillerDisabled       bool
 	sOOMMemoryLimit          int64
 	sPowerReportEnabled      bool
+	sPlatformMetadata        []byte
 )
 
 func init() {
@@ -59,6 +61,7 @@ type SetupOptions struct {
 	OomKillerDisabled       bool
 	OomMemoryLimit          int64
 	PowerReportEnabled      bool
+	PlatformMetadata        string
 	TimeZone                string //karing
 	TimeZoneOffset          int    //karing
 }
@@ -93,6 +96,11 @@ func ReloadSetupOptions(options *SetupOptions) {
 	sOOMKillerDisabled = options.OomKillerDisabled
 	sOOMMemoryLimit = options.OomMemoryLimit
 	sPowerReportEnabled = options.PowerReportEnabled
+	if json.Valid([]byte(options.PlatformMetadata)) {
+		sPlatformMetadata = []byte(options.PlatformMetadata)
+	} else {
+		sPlatformMetadata = nil
+	}
 	if sOOMKillerEnabled {
 		if sOOMMemoryLimit == 0 && C.IsIos {
 			sOOMMemoryLimit = oomkiller.DefaultAppleNetworkExtensionMemoryLimit
@@ -110,10 +118,20 @@ func ReloadSetupOptions(options *SetupOptions) {
 
 func Setup(options *SetupOptions) error {
 	applySetupOptions(options)
+	return setup(options)
+	/* //karing
+	os.MkdirAll(sWorkingPath, 0o777)
+	os.MkdirAll(sTempPath, 0o777)
+	err := redirectStderr(filepath.Join(sWorkingPath, "CrashReport-"+sCrashReportSource+".log"))
+	savePlatformSnapshot()
+	return err
+	*/
+}
+
+func setup(options *SetupOptions) error { //karing
 	os.MkdirAll(sBasePath, 0o777) //karing
 	os.MkdirAll(sTempPath, 0o777)
-	//return redirectStderr(filepath.Join(sBasePath, "CrashReport-"+sCrashReportSource+".log")) //karing
-	return nil //karing
+	return nil
 }
 
 func SetLocale(localeID string) error {

@@ -14,7 +14,6 @@ import (
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/common/dialer"
 	"github.com/sagernet/sing-box/common/sniff"
-	"github.com/sagernet/sing-box/common/tlsfragment"
 	"github.com/sagernet/sing-box/common/tlsspoof"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing/common"
@@ -42,7 +41,14 @@ func NewConnectionManager(logger logger.ContextLogger) *ConnectionManager {
 	}
 }
 
-func (m *ConnectionManager) Start(stage adapter.StartStage) error {
+func (m *ConnectionManager) Start(stage adapter.StartStage, scope *adapter.Scope) error {
+	if stage != adapter.StartStateInitialize {
+		return nil
+	}
+	scope.Add(func() error {
+		m.CloseAll()
+		return nil
+	})
 	return nil
 }
 
@@ -65,11 +71,6 @@ func (m *ConnectionManager) CloseAll() {
 	for _, closer := range closers {
 		common.Close(closer)
 	}
-}
-
-func (m *ConnectionManager) Close() error {
-	m.CloseAll()
-	return nil
 }
 
 func (m *ConnectionManager) TrackConn(ctx context.Context, conn net.Conn, destination M.Socksaddr) net.Conn { //karing
@@ -96,6 +97,7 @@ func (m *ConnectionManager) TrackConn(ctx context.Context, conn net.Conn, destin
 		Fqdn:        Fqdn,
 		Outbound:    Outbound,
 	}
+
 	m.access.Lock()
 	element := m.connections.PushBack(outbound) //karing
 	m.access.Unlock()

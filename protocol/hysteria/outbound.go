@@ -13,7 +13,6 @@ import (
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
-	"github.com/sagernet/sing-box/protocol/tuic"
 	"github.com/sagernet/sing-quic/hysteria"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/bufio"
@@ -28,8 +27,10 @@ func RegisterOutbound(registry *outbound.Registry) {
 }
 
 var (
-	_ adapter.Outbound                = (*tuic.Outbound)(nil)
-	_ adapter.InterfaceUpdateListener = (*tuic.Outbound)(nil)
+	_ adapter.Outbound                = (*Outbound)(nil)
+	_ adapter.InterfaceUpdateListener = (*Outbound)(nil)
+	_ adapter.IdleConnectionKeeper    = (*Outbound)(nil)
+	_ adapter.OutboundWithMultiplex   = (*Outbound)(nil)
 )
 
 type Outbound struct {
@@ -44,7 +45,6 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeHysteria, tag, []string{}, options.DialerOptions),
 		logger:  logger,
 	}
-	options.UDPFragmentDefault = true
 	if options.TLS == nil || !options.TLS.Enabled {
 		return empty, C.ErrTLSRequired //karing
 	}
@@ -105,8 +105,8 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 }
 
 func (h *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (conn net.Conn, err error) { //karing
-	if h == nil {
-		return nil, E.New("hysteria outbound is nil") //karing
+	if h == nil { //karing
+		return nil, E.New("hysteria outbound is nil")
 	}
 	defer func() { //karing
 		if err == nil {
@@ -157,11 +157,34 @@ func (h *Outbound) InterfaceUpdated(ctx context.Context) {
 	h.client.CloseWithError(E.New("network changed"))
 }
 
-func (h *Outbound) Close() error {
+func (h *Outbound) MultiplexEnabled() bool {
+	return true
+}
+
+func (h *Outbound) SetKeepIdleConnections(keep bool) {
 	if h.client == nil { //karing
+		return
+	}
+	h.client.SetKeepIdleConnections(keep)
+}
+
+func (h *Outbound) CloseIdleConnections() {
+	if h.client == nil { //karing
+		return
+	}
+	h.client.CloseIdleConnections()
+}
+
+func (h *Outbound) Start(stage adapter.StartStage, scope *adapter.Scope) error {
+	if h.GetParseErr() != nil { //karing
 		return nil
 	}
-	defer h.Adapter.ConnectionsIn.Store(0) //karing
-
-	return h.client.CloseWithError(os.ErrClosed)
+	if stage != adapter.StartStateInitialize {
+		return nil
+	}
+	scope.Add(func() error {
+		defer h.Adapter.ConnectionsIn.Store(0) //karing
+		return h.client.CloseWithError(os.ErrClosed)
+	})
+	return nil
 }

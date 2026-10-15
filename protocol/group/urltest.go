@@ -35,6 +35,7 @@ func RegisterURLTest(registry *outbound.Registry) {
 var (
 	_ adapter.OutboundGroup           = (*URLTest)(nil)
 	_ adapter.InterfaceUpdateListener = (*URLTest)(nil)
+	_ adapter.Referrer                = (*URLTest)(nil)
 )
 
 type URLTest struct {
@@ -84,44 +85,30 @@ func NewURLTest(ctx context.Context, router adapter.Router, logger log.ContextLo
 	return outbound, nil
 }
 
-func (s *URLTest) Start() error {
+func (s *URLTest) Start(stage adapter.StartStage, scope *adapter.Scope) error {
 	if s.GetParseErr() != nil { //karing
 		return s.GetParseErr()
 	}
-	outbounds := make([]adapter.Outbound, 0, len(s.tags))
-	for i, tag := range s.tags {
-		detour, loaded := s.outbound.Outbound(tag)
-		if !loaded {
-			return E.New("outbound ", i, " not found: ", tag)
+	switch stage {
+	case adapter.StartStateStart:
+		outbounds := make([]adapter.Outbound, 0, len(s.tags))
+		for i, tag := range s.tags {
+			detour, loaded := s.outbound.Outbound(tag)
+			if !loaded {
+				return E.New("outbound ", i, " not found: ", tag)
+			}
+			outbounds = append(outbounds, detour)
 		}
-		outbounds = append(outbounds, detour)
+		group, err := NewURLTestGroup(s.ctx, s.outbound, s.logger, outbounds, s.link, s.interval, s.tolerance, s.idleTimeout, s.interruptExternalConnections)
+		if err != nil {
+			return err
+		}
+		s.group = group
+	case adapter.StartStateStarted:
+		s.group.PostStart()
+		scope.Add(s.group.Close)
 	}
-	group, err := NewURLTestGroup(s.ctx, s.outbound, s.logger, outbounds, s.link, s.interval, s.tolerance, s.idleTimeout, s.interruptExternalConnections, s.defaultTag, s.selectedHealthCheckInterval, s.skipTest) //karing
-	if err != nil {
-		return err
-	}
-	s.group = group
 	return nil
-}
-
-func (s *URLTest) PostStart() error {
-	if s.GetParseErr() != nil { //karing
-		return s.GetParseErr()
-	}
-	if s.interval < 0 { //karing
-		return nil
-	}
-	s.group.PostStart()
-	return nil
-}
-
-func (s *URLTest) Close() error {
-	if s.GetParseErr() != nil { //karing
-		return nil
-	}
-	return common.Close(
-		common.PtrOrNil(s.group),
-	)
 }
 
 func (s *URLTest) Now() string {
@@ -135,6 +122,21 @@ func (s *URLTest) Now() string {
 
 func (s *URLTest) All() []string {
 	return s.tags
+}
+
+func (s *URLTest) References() []string {
+	group := s.group
+	if group == nil {
+		return nil
+	}
+	var references []string
+	if group.selectedOutboundTCP != nil {
+		references = append(references, group.selectedOutboundTCP.Tag())
+	}
+	if group.selectedOutboundUDP != nil && group.selectedOutboundUDP != group.selectedOutboundTCP {
+		references = append(references, group.selectedOutboundUDP.Tag())
+	}
+	return references
 }
 
 func (s *URLTest) URLTest(ctx context.Context, force bool) (map[string]adapter.URLTestResult, error) { //karing
@@ -610,13 +612,17 @@ func (b *urlTestBatch) test(outbounds []adapter.Outbound, link string, interval 
 func (g *URLTestGroup) performUpdateCheck(retestGroupIfAllFailed bool) { //karing
 	g.updateAccess.Lock()
 	defer g.updateAccess.Unlock()
-	var updated bool
-	var retest bool //karing
+	var (
+		updated  bool
+		selected bool
+		retest   bool //karing
+	)
 	if outbound, exists := g.Select(N.NetworkTCP); outbound != nil && (g.selectedOutboundTCP == nil || (exists && outbound != g.selectedOutboundTCP)) {
 		if g.selectedOutboundTCP != nil {
 			updated = true
 		}
 		g.selectedOutboundTCP = outbound
+		selected = true
 		retest = !exists //karing
 	}
 	if outbound, exists := g.Select(N.NetworkUDP); outbound != nil && (g.selectedOutboundUDP == nil || (exists && outbound != g.selectedOutboundUDP)) {
@@ -624,6 +630,7 @@ func (g *URLTestGroup) performUpdateCheck(retestGroupIfAllFailed bool) { //karin
 			updated = true
 		}
 		g.selectedOutboundUDP = outbound
+		selected = true
 		if !retest { //karing
 			retest = !exists
 		}
@@ -641,5 +648,8 @@ func (g *URLTestGroup) performUpdateCheck(retestGroupIfAllFailed bool) { //karin
 			g.logger.WarnContext(g.ctx, "URLTest performUpdateCheck need retest")
 			go g.CheckOutbounds(g.ctx, true)
 		}
+	}
+	if selected {
+		g.history.NotifyUpdated()
 	}
 }

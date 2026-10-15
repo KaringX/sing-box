@@ -121,8 +121,19 @@ func (o *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
 	return mierucommon.NewUDPAssociateWrapper(mierucommon.NewPacketOverStreamTunnel(streamConn)), nil
 }
 
-func (o *Outbound) Close() error {
-	return common.Close(o.client)
+func (o *Outbound) Start(stage adapter.StartStage, scope *adapter.Scope) error {
+	if o.GetParseErr() != nil { //karing
+		return nil
+	}
+	if stage != adapter.StartStateInitialize {
+		return nil
+	}
+	scope.Add(func() error {
+		common.Close(o.client)
+		return nil
+	})
+
+	return nil
 }
 
 // mieruDialer is an adapter to mieru dialer interface.
