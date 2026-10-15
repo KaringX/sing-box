@@ -719,6 +719,13 @@ func (s *Box) start() error {
 }
 
 func (s *Box) Close() error {
+	s.logger.Info("box close") //karing
+	select {
+	case <-s.done: //karing
+		return nil
+	default:
+		break
+	}
 	return s.scope.Close()
 }
 
