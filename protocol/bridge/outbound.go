@@ -57,12 +57,8 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 	}, nil
 }
 
-func (o *Outbound) Start(stage adapter.StartStage) error {
-	return o.backend.Start(stage)
-}
-
-func (o *Outbound) Close() error {
-	return o.backend.Close()
+func (o *Outbound) Start(stage adapter.StartStage, scope *adapter.Scope) error {
+	return o.backend.Start(stage, scope)
 }
 
 func (o *Outbound) PreferredDomain(metadata *adapter.InboundContext, domain string) bool {
@@ -110,11 +106,8 @@ func (o *Outbound) PortMTU() uint32 {
 	return o.backend.PortMTU()
 }
 
-func (o *Outbound) PortSelectorRange() (uint16, uint16) {
-	if rangedBackend, isRanged := o.backend.(tun.PortWithSelectorRange); isRanged {
-		return rangedBackend.PortSelectorRange()
-	}
-	return 0, 0
+func (o *Outbound) UpstreamPort() any {
+	return o.backend
 }
 
 func (o *Outbound) AttachReturn(returnPath tun.Return) error {

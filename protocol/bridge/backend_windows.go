@@ -14,8 +14,10 @@ import (
 	"time"
 
 	"github.com/sagernet/sing-box/adapter"
+	"github.com/sagernet/sing-box/common/kernelports"
 	"github.com/sagernet/sing-box/common/windivert"
 	"github.com/sagernet/sing-box/option"
+	"github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing-tun/gtcpip"
 	"github.com/sagernet/sing-tun/gtcpip/header"
 	"github.com/sagernet/sing/common/control"
@@ -26,8 +28,6 @@ import (
 )
 
 const (
-	bridgeReservedPortCount uint16 = 1024
-
 	bridgeICMPFlowTimeout = time.Minute
 
 	bridgeDivertPriority int16 = 0
@@ -123,8 +123,9 @@ type backendWindows struct {
 
 	egress atomic.Pointer[egressState]
 
-	reservation   *portReservation
-	reservedStart uint16
+	ports     *kernelports.Pool
+	tcpRanges atomic.Pointer[[]tun.SelectorRange]
+	udpRanges atomic.Pointer[[]tun.SelectorRange]
 
 	icmp4, icmp6 *icmpTable
 
@@ -133,40 +134,45 @@ type backendWindows struct {
 
 func newBackend(ctx context.Context, logger logger.ContextLogger, networkManager adapter.NetworkManager, tag string, options option.BridgeOutboundOptions) (Backend, error) {
 	instance := &backendWindows{}
-	err := instance.init(ctx, logger, networkManager, tag, options)
-	if err != nil {
-		return nil, err
-	}
+	instance.init(ctx, logger, networkManager, tag, options)
 	return instance, nil
 }
 
-func (b *backendWindows) Start(stage adapter.StartStage) error {
-	if stage != adapter.StartStateStart {
-		return nil
-	}
-	err := b.start()
-	if err != nil {
-		b.Close()
-		return err
+func (b *backendWindows) Start(stage adapter.StartStage, scope *adapter.Scope) error {
+	switch stage {
+	case adapter.StartStateInitialize:
+		return b.allocateIndex(scope)
+	case adapter.StartStateStart:
+		return b.start(scope)
 	}
 	return nil
 }
 
-func (b *backendWindows) start() error {
-	b.closed = make(chan struct{})
+func (b *backendWindows) start(scope *adapter.Scope) error {
+	b.closed = scope.Context().Done()
 
 	state := b.currentEgressState()
 	b.egress.Store(state)
 
-	err := b.acquireReservations()
+	ports, err := kernelports.New()
 	if err != nil {
-		return err
+		return E.Cause(err, "bridge: reserve ports")
 	}
+	b.ports = ports
+	scope.Add(ports.Close)
+	for _, protocol := range []uint8{uint8(header.TCPProtocolNumber), uint8(header.UDPProtocolNumber)} {
+		for _, block := range ports.PortSelectorRanges(protocol) {
+			b.publishRange(protocol, block)
+		}
+	}
+	b.icmp4 = newICMPTable(bridgeICMPFlowTimeout)
+	b.icmp6 = newICMPTable(bridgeICMPFlowTimeout)
 
 	injectHandle, err := windivert.Open(nil, windivert.LayerNetwork, windivert.PriorityHighest, windivert.FlagSendOnly)
 	if err != nil {
 		return E.Cause(err, "bridge: open injection handle (Administrator required)")
 	}
+	scope.Add(injectHandle.Close)
 	b.injectHandle = injectHandle
 	b.sendBuffer = make([]byte, 0, bridgeBatchBufferSize)
 	b.sendAddrs = make([]windivert.Address, 0, windivert.BatchMax)
@@ -177,8 +183,14 @@ func (b *backendWindows) start() error {
 	if err != nil {
 		return err
 	}
+	scope.Add(func() error {
+		b.egressAccess.Lock()
+		b.closeDivertersLocked()
+		b.egressAccess.Unlock()
+		return nil
+	})
 
-	b.registerMonitors(b.syncEgress)
+	b.registerMonitors(scope, b.syncEgress)
 	b.syncEgress()
 	state = b.egress.Load()
 	if !state.inet4.IsValid() && !state.inet6.IsValid() {
@@ -195,20 +207,62 @@ func (b *backendWindows) egressLabel() string {
 	return "auto"
 }
 
-func (b *backendWindows) acquireReservations() error {
-	reservation, err := acquirePortReservation(windows.AF_INET, windows.SOCK_STREAM, windows.IPPROTO_TCP, bridgeReservedPortCount)
-	if err != nil {
-		return E.Cause(err, "bridge: reserve ports")
+func (b *backendWindows) selectorRanges(protocol uint8) *atomic.Pointer[[]tun.SelectorRange] {
+	if protocol == uint8(header.UDPProtocolNumber) {
+		return &b.udpRanges
 	}
-	b.reservation = reservation
-	b.reservedStart = reservation.startPort
-	b.icmp4 = newICMPTable(bridgeICMPFlowTimeout)
-	b.icmp6 = newICMPTable(bridgeICMPFlowTimeout)
-	return nil
+	return &b.tcpRanges
 }
 
-func (b *backendWindows) PortSelectorRange() (uint16, uint16) {
-	return b.reservedStart, bridgeReservedPortCount
+func (b *backendWindows) PortSelectorRanges(protocol uint8) []tun.SelectorRange {
+	ranges := b.selectorRanges(protocol).Load()
+	if ranges == nil {
+		return nil
+	}
+	return *ranges
+}
+
+func (b *backendWindows) publishRange(protocol uint8, block tun.SelectorRange) {
+	ranges := b.selectorRanges(protocol)
+	var updated []tun.SelectorRange
+	current := ranges.Load()
+	if current != nil {
+		updated = append(updated, *current...)
+	}
+	updated = append(updated, block)
+	ranges.Store(&updated)
+}
+
+func (b *backendWindows) ExpandSelectorRanges(protocol uint8) bool {
+	b.egressAccess.Lock()
+	defer b.egressAccess.Unlock()
+	block, err := b.ports.Acquire(protocol)
+	if err != nil {
+		b.logger.Debug(E.Cause(err, "bridge: expand selector range"))
+		return false
+	}
+	state := b.egress.Load()
+	for _, isV6 := range []bool{false, true} {
+		addresses := state.divertAddresses(isV6)
+		if len(addresses) == 0 {
+			continue
+		}
+		err = b.openTransportDiverter(addresses, isV6, protocol, block)
+		if err != nil {
+			b.logger.Warn(E.Cause(err, "bridge: divert expanded selector range"))
+			return false
+		}
+	}
+	b.publishRange(protocol, block)
+	b.logger.Info("bridge: reserved ", block.Count, " more ", transportName(protocol), " ports")
+	return true
+}
+
+func transportName(protocol uint8) string {
+	if protocol == uint8(header.UDPProtocolNumber) {
+		return "UDP"
+	}
+	return "TCP"
 }
 
 func (b *backendWindows) rebuildDivertersLocked(state *egressState) error {
@@ -239,19 +293,37 @@ func (b *backendWindows) closeDivertersLocked() {
 	b.diverters = nil
 }
 
+func (b *backendWindows) openTransportDiverter(addresses []netip.Addr, isV6 bool, protocol uint8, block tun.SelectorRange) error {
+	portHigh := uint16(uint32(block.Start) + uint32(block.Count) - 1)
+	var (
+		filter *windivert.Filter
+		err    error
+	)
+	if protocol == uint8(header.UDPProtocolNumber) {
+		filter, err = windivert.InboundUDPPortRange(addresses, block.Start, portHigh)
+	} else {
+		filter, err = windivert.InboundTCPPortRange(addresses, block.Start, portHigh)
+	}
+	if err != nil {
+		return E.Cause(err, "bridge: build ", transportName(protocol), " divert filter")
+	}
+	return b.openDiverter(filter, divertTransport, isV6)
+}
+
 func (b *backendWindows) openFamilyDiverters(addresses []netip.Addr, isV6 bool) error {
-	portHigh := uint16(uint32(b.reservedStart) + uint32(bridgeReservedPortCount) - 1)
+	for _, protocol := range []uint8{uint8(header.TCPProtocolNumber), uint8(header.UDPProtocolNumber)} {
+		for _, block := range b.PortSelectorRanges(protocol) {
+			err := b.openTransportDiverter(addresses, isV6, protocol, block)
+			if err != nil {
+				return err
+			}
+		}
+	}
 	entries := []struct {
 		what  string
 		kind  divertKind
 		build func() (*windivert.Filter, error)
 	}{
-		{"TCP", divertTransport, func() (*windivert.Filter, error) {
-			return windivert.InboundTCPPortRange(addresses, b.reservedStart, portHigh)
-		}},
-		{"UDP", divertTransport, func() (*windivert.Filter, error) {
-			return windivert.InboundUDPPortRange(addresses, b.reservedStart, portHigh)
-		}},
 		{"ICMP echo", divertICMPEcho, func() (*windivert.Filter, error) {
 			return windivert.InboundICMPEchoReply(addresses)
 		}},
@@ -468,7 +540,7 @@ func (b *backendWindows) embeddedFlowActive(protocol tcpip.TransportProtocolNumb
 		if len(transport) < 4 {
 			return false
 		}
-		return b.portReserved(binary.BigEndian.Uint16(transport[0:2]))
+		return b.selectorReserved(uint8(protocol), binary.BigEndian.Uint16(transport[0:2]))
 	case header.ICMPv4ProtocolNumber:
 		if isV6 || len(transport) < header.ICMPv4MinimumSize {
 			return false
@@ -494,8 +566,10 @@ func (b *backendWindows) embeddedFlowActive(protocol tcpip.TransportProtocolNumb
 	}
 }
 
-func (b *backendWindows) portReserved(port uint16) bool {
-	return port >= b.reservedStart && uint32(port) < uint32(b.reservedStart)+uint32(bridgeReservedPortCount)
+func (b *backendWindows) selectorReserved(protocol uint8, port uint16) bool {
+	return slices.ContainsFunc(b.PortSelectorRanges(protocol), func(block tun.SelectorRange) bool {
+		return port >= block.Start && port-block.Start < block.Count
+	})
 }
 
 func (b *backendWindows) deliver(packets [][]byte) {
@@ -653,7 +727,7 @@ func (b *backendWindows) prepareOutbound(packet []byte, state *egressState) bool
 			if len(info.transport) < 4 {
 				return false
 			}
-			if !b.portReserved(binary.BigEndian.Uint16(info.transport[0:2])) {
+			if !b.selectorReserved(uint8(info.protocol), binary.BigEndian.Uint16(info.transport[0:2])) {
 				b.logger.Debug("bridge: dropping outbound packet with source port outside the reserved block")
 				return false
 			}
@@ -797,27 +871,6 @@ func sortSegments(segments []localSegment) {
 		}
 		return a.address.Compare(b.address)
 	})
-}
-
-func (b *backendWindows) Close() error {
-	b.closeOnce.Do(func() {
-		if b.closed != nil {
-			close(b.closed)
-		}
-		if b.unregister != nil {
-			b.unregister()
-		}
-		b.egressAccess.Lock()
-		b.closeDivertersLocked()
-		b.egressAccess.Unlock()
-		if b.injectHandle != nil {
-			b.injectHandle.Close()
-		}
-		b.reservation.Close()
-		b.reservation = nil
-		releaseBridgeIndex(b.index)
-	})
-	return nil
 }
 
 type transportInfo struct {

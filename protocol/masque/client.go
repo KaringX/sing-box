@@ -148,7 +148,7 @@ func NewClientEndpoint(ctx context.Context, router adapter.Router, logger log.Co
 	return clientEndpoint, nil
 }
 
-func (c *ClientEndpoint) Start(stage adapter.StartStage) error {
+func (c *ClientEndpoint) Start(stage adapter.StartStage, scope *adapter.Scope) error {
 	switch stage {
 	case adapter.StartStateInitialize:
 		c.deviceOptions.MemoryPressure = oomkiller.MemoryPressure(c.ctx)
@@ -156,17 +156,15 @@ func (c *ClientEndpoint) Start(stage adapter.StartStage) error {
 		if err != nil {
 			return err
 		}
+		scope.Add(tunnelDevice.Close)
 		tunnelDevice.SetPacketWriter(c.writePacketBuffers)
 		c.device = tunnelDevice
 		c.deviceOptions = nil
+		scope.Add(c.client.Close)
 	case adapter.StartStatePostStart:
 		c.client.Start()
 	}
 	return nil
-}
-
-func (c *ClientEndpoint) Close() error {
-	return common.Close(c.client, c.device)
 }
 
 func (c *ClientEndpoint) UpdateConfiguration(configuration masque.Configuration) error {
@@ -250,6 +248,10 @@ func (c *ClientEndpoint) PortAddresses() (netip.Addr, netip.Addr) {
 
 func (c *ClientEndpoint) PortMTU() uint32 {
 	return c.device.PortMTU()
+}
+
+func (c *ClientEndpoint) UpstreamPort() any {
+	return c.device
 }
 
 func (c *ClientEndpoint) AttachReturn(returnPath tun.Return) error {
