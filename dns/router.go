@@ -135,7 +135,17 @@ func (r *Router) Start(stage adapter.StartStage, scope *adapter.Scope) error {
 	case adapter.StartStateStart:
 		scope.Add(func() error {
 			r.rulesAccess.Lock()
+			if r.closing { //karing
+				r.rulesAccess.Unlock()
+				return nil
+			}
 			r.closing = true
+			if r.client != nil { //karing
+				r.client.Close()
+			}
+			r.transport = nil         //karing
+			r.outbound = nil          //karing
+			r.dnsReverseMapping = nil //karing
 			runtimeRules := r.rules
 			r.rules = nil
 			r.rulesAccess.Unlock()
@@ -358,6 +368,10 @@ func (r *Router) matchDNS(ctx context.Context, rules []adapter.DNSRule, allowFak
 				return nil, currentRule, currentRuleIndex
 			}
 		}
+	}
+
+	if r.transport == nil { //karing
+		return nil, nil, -1
 	}
 	transport := r.transport.Default()
 	return transport, nil, -1
@@ -1188,6 +1202,9 @@ func (r *Router) exchangeLegacy(ctx context.Context, exchangeCtx *dnsExchangeCon
 }
 
 func (r *Router) Exchange(ctx context.Context, message *mDNS.Msg, options adapter.DNSQueryOptions) (*mDNS.Msg, error) {
+	if r.transport == nil { //karing
+		return nil, E.New("router closed")
+	}
 	exchangeCtx, earlyResponse, err := r.prepareExchange(ctx, message)
 	if exchangeCtx == nil {
 		return earlyResponse, err
@@ -1247,6 +1264,9 @@ func (r *Router) finishExchangeAsync(message *mDNS.Msg, transport adapter.DNSTra
 }
 
 func (r *Router) Lookup(ctx context.Context, domain string, options adapter.DNSQueryOptions) ([]netip.Addr, error) {
+	if r.transport == nil { //karing
+		return nil, E.New("router closed")
+	}
 	r.rulesAccess.RLock()
 	if r.closing {
 		r.rulesAccess.RUnlock()
@@ -1401,6 +1421,9 @@ func (r *Router) LookupReverseMapping(ip netip.Addr) (string, bool) {
 
 func (r *Router) ResetNetwork() {
 	r.ClearCache()
+	if r.transport == nil { //karing
+		return
+	}
 	for _, transport := range r.transport.Transports() {
 		transport.Reset()
 	}

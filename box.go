@@ -61,6 +61,7 @@ type Box struct {
 	internalService     []adapter.LifecycleService
 	ntpService          *ntp.Service
 	scope               *adapter.Scope
+	done                chan struct{} //karing
 }
 
 type Options struct {
@@ -542,7 +543,8 @@ func New(options Options) (box *Box, err error) { //karing
 		logger:              logFactory.Logger(),
 		internalService:     internalServices,
 		ntpService:          ntpService,
-		scope:               scope, //karing
+		scope:               scope,               //karing
+		done:                make(chan struct{}), //karing
 	}, nil
 }
 

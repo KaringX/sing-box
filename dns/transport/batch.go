@@ -48,11 +48,15 @@ func NewBatch(ctx context.Context, logger log.ContextLogger, tag string, options
 	}, nil
 }
 
-func (t *BatchTransport) Start(stage adapter.StartStage) error {
+func (t *BatchTransport) Start(stage adapter.StartStage, scope *adapter.Scope) error {
+	if stage != adapter.StartStateStart {
+		return nil
+	}
+	scope.Add(t.close)
 	return nil
 }
 
-func (t *BatchTransport) Close() error {
+func (t *BatchTransport) close() error {
 	for _, server := range t.servers {
 		transport, _ := t.transport.Transport(server)
 		if transport != nil {
@@ -63,12 +67,7 @@ func (t *BatchTransport) Close() error {
 }
 
 func (t *BatchTransport) Reset() {
-	for _, server := range t.servers {
-		transport, _ := t.transport.Transport(server)
-		if transport != nil {
-			batchTransportExchangingByTag.Delete(transport.Tag())
-		}
-	}
+	t.close()
 }
 
 func (t *BatchTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS.Msg, error) {
