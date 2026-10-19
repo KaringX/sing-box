@@ -63,7 +63,7 @@ require (
 	github.com/sagernet/wireguard-go v0.0.8-0.20260929150556-6731c7387c81
 	github.com/sagernet/ws v0.0.0-20231204124109-acfe8907c854
 	github.com/spf13/cobra v1.10.2
-	github.com/stretchr/testify v1.12.0
+	github.com/stretchr/testify v1.12.1
 	github.com/tailscale/go-winio v0.0.0-20231025203758-c4f33415bf55
 	github.com/vishvananda/netns v0.0.5
 	go.uber.org/zap v1.27.1
@@ -97,7 +97,7 @@ require ( // https://github.com/shtorm-7/sing-box-extended
 
 require ( //karing
 	github.com/alitto/pond v1.9.2
-	github.com/enfein/mieru/v3 v3.36.0
+	github.com/enfein/mieru/v3 v3.37.0
 	github.com/getsentry/sentry-go v0.49.0
 	github.com/klauspost/compress v1.20.0
 	github.com/klauspost/cpuid/v2 v2.4.0
@@ -115,23 +115,19 @@ replace github.com/Diniboy1123/connect-ip-go => github.com/shtorm-7/connect-ip-g
 //replace github.com/metacubex/mihomo => github.com/KaringX/clash v0.0.0-20241101044429-f71df89d4091
 
 //go get github.com/KaringX/sing@a5ccca51fe8a39390591cf9480ffebb9f0c3fc61
-replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20260928040504-a69c19456c87 //karing_v0.9.6
+replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20261019075004-81acab83a73b //karing_v0.9.7
 
 //replace github.com/sagernet/sing => ../../KaringX/sing
 
-//replace github.com/sagernet/sing-dns => github.com/KaringX/sing-dns v0.3.0-beta.14.0.20250530212309-a733af0f5878 //karing_v0.4.5
-
-//replace github.com/sagernet/sing-dns => ../../KaringX/sing-dns
-
-replace github.com/sagernet/sing-quic => github.com/KaringX/sing-quic v0.2.0-beta.12.0.20260928040907-f4637ff9e4a9 //karing_v0.7.1
+replace github.com/sagernet/sing-quic => github.com/KaringX/sing-quic v0.2.0-beta.12.0.20261019071558-5fd76bcdbe11 //karing_v0.7.2
 
 //replace github.com/sagernet/sing-quic => ../../KaringX/sing-quic
 
-replace github.com/sagernet/quic-go => github.com/KaringX/quic-go v0.49.0-beta.1.0.20260921083033-b3290357f9e2 //karing_v0.61.0-sing-box-mod.7
+replace github.com/sagernet/quic-go => github.com/KaringX/quic-go v0.49.0-beta.1.0.20261019070926-f8490cba1660 //karing_v0.61.0-sing-box-mod.9
 
 //replace github.com/sagernet/quic-go => ../../KaringX/quic-go
 
-replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.20260928041314-1b309b356d90 //karing_v0.9.6
+replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.20261019072137-2490293aa76b //karing_v0.9.7
 
 //replace github.com/sagernet/sing-tun => ../../KaringX/sing-tun
 
@@ -139,7 +135,7 @@ replace github.com/sagernet/ws => github.com/KaringX/ws v0.0.0-20250301004503-08
 
 //replace github.com/sagernet/ws => ../../KaringX/ws
 
-replace github.com/sagernet/wireguard-go => github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20260928041502-ad2c62ce7a98 //karing_v0.0.7
+replace github.com/sagernet/wireguard-go => github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20261019073044-fa24d9775fb5 //karing_v0.0.8
 
 //replace github.com/sagernet/wireguard-go => ../../KaringX/wireguard-go
 
@@ -147,7 +143,7 @@ replace github.com/sagernet/tailscale => github.com/KaringX/tailscale v1.80.3-mo
 
 //replace github.com/sagernet/tailscale => ../../KaringX/tailscale
 
-replace github.com/sagernet/sing-vmess => github.com/KaringX/sing-vmess v0.2.8-0.20260918020936-d32e82694d9c //v0.2.8
+replace github.com/sagernet/sing-vmess => github.com/KaringX/sing-vmess v0.2.8-0.20261019072745-0e94b492b7ed //v0.2.9
 
 //replace github.com/sagernet/sing-vmess => ../../KaringX/sing-vmess
 
@@ -275,6 +271,7 @@ require (
 	gitlab.com/go-extension/aes-ccm v0.0.0-20230221065045-e58665ef23c7 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap/exp v0.3.0 // indirect
+	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	go4.org/mem v0.0.0-20240501181205-ae6ca9944745 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
@@ -282,6 +279,5 @@ require (
 	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2 // indirect
 	golang.zx2c4.com/wireguard/windows v0.5.3 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	zombiezen.com/go/capnproto2 v2.18.2+incompatible // indirect
 )
