@@ -207,7 +207,7 @@ func New(options Options) (box *Box, err error) { //karing
 	scope := adapter.NewScope(ctx, logFactory.Logger()) //karing
 
 	if needCacheFile { //karing
-		cacheFile := cachefile.New(ctx, logFactory.Logger(), common.PtrValueOrDefault(experimentalOptions.CacheFile))
+		cacheFile := cachefile.New(ctx, logFactory.NewLogger("cache-file"), common.PtrValueOrDefault(experimentalOptions.CacheFile))
 		service.MustRegister[adapter.CacheFile](ctx, cacheFile)
 		var internalServicesPre []adapter.LifecycleService
 		internalServicesPre = append(internalServicesPre, cacheFile)
@@ -671,7 +671,7 @@ func (s *Box) start() error {
 	err = s.startComponents(adapter.StartStateStart,
 		boxComponent{"endpoint", s.endpoint},
 		boxComponent{"certificate-provider", s.certificateProvider},
-		boxComponent{"inbound", s.inbound},
+		//boxComponent{"inbound", s.inbound},//karing
 		boxComponent{"service", s.service},
 	)
 	if err != nil {
@@ -686,7 +686,7 @@ func (s *Box) start() error {
 		boxComponent{"router", s.router},
 		boxComponent{"endpoint", s.endpoint},
 		boxComponent{"certificate-provider", s.certificateProvider},
-		boxComponent{"inbound", s.inbound},
+		//boxComponent{"inbound", s.inbound},//karing
 		boxComponent{"service", s.service},
 	)
 	if err != nil {
@@ -705,12 +705,32 @@ func (s *Box) start() error {
 		boxComponent{"outbound", s.outbound},
 		boxComponent{"endpoint", s.endpoint},
 		boxComponent{"certificate-provider", s.certificateProvider},
-		boxComponent{"inbound", s.inbound},
+		//boxComponent{"inbound", s.inbound},//karing
 		boxComponent{"service", s.service},
 	)
 	if err != nil {
 		return err
 	}
+	// karing start
+	err = s.startComponents(adapter.StartStateStart,
+		boxComponent{"inbound", s.inbound},
+	)
+	if err != nil {
+		return err
+	}
+	err = s.startComponents(adapter.StartStatePostStart,
+		boxComponent{"inbound", s.inbound},
+	)
+	if err != nil {
+		return err
+	}
+	err = s.startComponents(adapter.StartStateStarted,
+		boxComponent{"inbound", s.inbound},
+	)
+	if err != nil {
+		return err
+	}
+	// karing end
 	err = s.startInternalServices(adapter.StartStateStarted)
 	if err != nil {
 		return err
