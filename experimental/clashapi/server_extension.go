@@ -16,8 +16,9 @@ func (s *Server) RemoveTick(tick *time.Ticker) {
 	s.ticks.Delete(tick)
 }
 
-func (s *Server) RemoveTicks() {
+func (s *Server) RemoveTicks() error {
 	s.ticks.Clear()
+	return nil
 }
 
 func (s *Server) TrafficManager() *trafficcontrol.Manager {

@@ -69,9 +69,9 @@ func Lookup(ctx context.Context, router adapter.Router, logFactory log.Factory, 
 	defer cancel()
 	outboundManager := service.FromContext[adapter.OutboundManager](ctxClone)
 	dnsTransportRegistry := service.FromContext[adapter.DNSTransportRegistry](ctxClone)
-	dnsTransportManager := dns.NewTransportManager(logFactory.NewLogger("dns_Lookup/transport"), dnsTransportRegistry, outboundManager, "")
+	dnsTransportManager := dns.NewTransportManager(dnsTransportRegistry, outboundManager, "")
 	service.MustRegister[adapter.DNSTransportManager](ctxClone, dnsTransportManager)
-	defer dnsTransportManager.Close()
+	//defer dnsTransportManager.Close()
 	for i, transportOptions := range req.Servers {
 		var tag string
 		if transportOptions.Tag != "" {
@@ -274,7 +274,7 @@ func resetOutboundConnections(ctx context.Context) func(w http.ResponseWriter, r
 	return func(w http.ResponseWriter, r *http.Request) {
 		connectionManager := service.FromContext[adapter.ConnectionManager](ctx)
 		if connectionManager != nil {
-			connectionManager.Close()
+			//connectionManager.Close()
 		}
 		go func() {
 			runtime.GC()

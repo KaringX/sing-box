@@ -36,7 +36,7 @@ func (c *Statistics) Name() string {
 	return "statistics"
 }
 
-func (c *Statistics) Start(stage adapter.StartStage) error {
+func (c *Statistics) Start(stage adapter.StartStage, scope *adapter.Scope) error {
 	return nil
 }
 

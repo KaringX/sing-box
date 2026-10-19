@@ -163,13 +163,18 @@ func (h *Outbound) Start(stage adapter.StartStage, scope *adapter.Scope) error {
 	if stage != adapter.StartStateInitialize {
 		return nil
 	}
-	scope.Add(h.client.Close)
+	scope.Add(h.close)
 	return nil
 }
 
 func (h *Outbound) InterfaceUpdated() {
-	if h.client == nil { //karing
-		return
+	_ = h.close() //karing
+}
+
+func (h *Outbound) close() error { //karing
+	if h.client == nil {
+		return nil
 	}
 	h.client.Close()
+	return nil
 }

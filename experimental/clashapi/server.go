@@ -179,7 +179,7 @@ func (s *Server) Start(stage adapter.StartStage, scope *adapter.Scope) error {
 		if err != nil {
 			return E.Cause(err, "external controller listen error")
 		}
-		scope.Add(s.RemoveTicks()) //karing
+		scope.Add(s.RemoveTicks) //karing
 		scope.Add(s.httpServer.Close)
 		s.logger.Info("restful api listening at ", listener.Addr())
 		go func() {
