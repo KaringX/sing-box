@@ -28,10 +28,9 @@ import (
 	"unsafe"
 
 	"github.com/sagernet/sing-box/adapter"
-	"github.com/sagernet/sing-box/log"
 	C "github.com/sagernet/sing-box/constant"
+	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
-	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/debug"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/logger"
@@ -149,6 +148,7 @@ func (e *RealityClientConfig) ClientHandshake(ctx context.Context, conn net.Conn
 	if err != nil {
 		return nil, err
 	}
+	/* karing https://github.com/KaringX/karing/issues/2034
 	for _, extension := range uConn.Extensions {
 		if ce, ok := extension.(*utls.SupportedCurvesExtension); ok {
 			ce.Curves = common.Filter(ce.Curves, func(curveID utls.CurveID) bool {
@@ -165,7 +165,7 @@ func (e *RealityClientConfig) ClientHandshake(ctx context.Context, conn net.Conn
 	if err != nil {
 		return nil, err
 	}
-
+	*/
 	if len(uConfig.NextProtos) > 0 {
 		for _, extension := range uConn.Extensions {
 			if alpnExtension, isALPN := extension.(*utls.ALPNExtension); isALPN {
