@@ -171,7 +171,7 @@ func (m *Manager) Default() adapter.Outbound {
 
 func (m *Manager) Create(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, inboundType string, options any, parseErr error) error { //karing
 	if tag == "" {
-		m.logger.Error("create outbound failed: empty tag") //karing
+		log.Error("create outbound failed: empty tag") //karing
 		return os.ErrInvalid
 	}
 	outbound, err := m.registry.CreateOutbound(ctx, router, logger, tag, inboundType, options)
@@ -182,8 +182,8 @@ func (m *Manager) Create(ctx context.Context, router adapter.Router, logger log.
 		err = parseErr
 	}
 	if err != nil {
-		outbound.SetParseErr(err)                                               //karing
-		m.logger.Error("create outbound failed: ", outbound.Tag(), " -> ", err) //karing
+		outbound.SetParseErr(err)                                          //karing
+		log.Error("create outbound failed: ", outbound.Tag(), " -> ", err) //karing
 	}
 
 	m.access.Lock()

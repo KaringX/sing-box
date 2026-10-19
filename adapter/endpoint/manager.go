@@ -2,6 +2,7 @@ package endpoint
 
 import (
 	"context"
+	"os"
 	"sync"
 
 	"github.com/sagernet/sing-box/adapter"
@@ -35,8 +36,8 @@ func (m *Manager) Start(stage adapter.StartStage, scope *adapter.Scope) error {
 	if stage == adapter.StartStateStart {
 		return nil
 	}
-	endpoints := m.endpoints //karing
-	m.access.Unlock()        //karing
+	endpoints := m.endpoints             //karing
+	m.access.Unlock()                    //karing
 	for _, endpoint := range endpoints { //karing
 		name := "endpoint/" + endpoint.Type() + "[" + endpoint.Tag() + "]"
 		err := scope.Start(name, endpoint, stage)
@@ -65,7 +66,7 @@ func (m *Manager) Get(tag string) (adapter.Endpoint, bool) {
 }
 func (m *Manager) Create(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, outboundType string, options any, parseErr error) error { //karing
 	if tag == "" { //karing
-		m.logger.Error("create endpoint failed: empty tag")
+		log.Error("create endpoint failed: empty tag")
 		return os.ErrInvalid
 	}
 	endpoint, err := m.registry.Create(ctx, router, logger, tag, outboundType, options)
@@ -76,8 +77,7 @@ func (m *Manager) Create(ctx context.Context, router adapter.Router, logger log.
 		err = parseErr
 	}
 	if err != nil {
-		endpoint.SetParseErr(err)                                               //karing
-		m.logger.Error("create endpoint failed: ", endpoint.Tag(), " -> ", err) //karing
+		endpoint.SetParseErr(err) //karing
 		//return err //karing
 	}
 	m.access.Lock()
