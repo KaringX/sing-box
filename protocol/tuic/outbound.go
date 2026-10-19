@@ -117,7 +117,8 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 	defer func() { //karing
 		if err == nil {
 			conn = h.OnNewConnection(conn, func() {
-				h.Close()
+				defer h.Adapter.ConnectionsIn.Store(0)
+				h.client.CloseWithError(os.ErrClosed)
 			})
 		}
 	}()
@@ -155,7 +156,8 @@ func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (c
 	defer func() { //karing
 		if err == nil {
 			conn = h.OnNewPacketConnection(conn, func() {
-				h.Close()
+				defer h.Adapter.ConnectionsIn.Store(0)
+				h.client.CloseWithError(os.ErrClosed)
 			})
 		}
 	}()
