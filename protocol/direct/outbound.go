@@ -103,12 +103,19 @@ func (h *Outbound) Start(stage adapter.StartStage, scope *adapter.Scope) error {
 }
 
 func (h *Outbound) fetchMyAddresses() {
+	tunAddresses := h.fetchConfiguredTUNAddresses() //karing
 	interfaceMonitor := h.network.InterfaceMonitor()
 	if interfaceMonitor == nil {
+		if len(tunAddresses) > 0 { //karing
+			h.myAddresses.Store(tunAddresses)
+		}
 		return
 	}
 	myInterfaceNames := interfaceMonitor.MyInterfaces()
 	if len(myInterfaceNames) == 0 {
+		if len(tunAddresses) > 0 { //karing
+			h.myAddresses.Store(tunAddresses)
+		}
 		return
 	}
 	var (
@@ -124,7 +131,14 @@ func (h *Outbound) fetchMyAddresses() {
 		myAddresses = append(myAddresses, myInterface.Addresses...)
 	}
 	if !found {
+		if len(tunAddresses) > 0 { //karing
+			h.myAddresses.Store(tunAddresses)
+		}
 		return
+	}
+
+	if len(tunAddresses) > 0 { //karing
+		myAddresses = append(myAddresses, tunAddresses...)
 	}
 	h.myAddresses.Store(myAddresses)
 }
@@ -260,4 +274,12 @@ func (h *Outbound) ListenSerialNetworkPacket(ctx context.Context, destination M.
 
 func (h *Outbound) IsEmpty() bool {
 	return h.isEmpty
+}
+
+func (h *Outbound) fetchConfiguredTUNAddresses() []netip.Prefix { //karing
+	inboundManager := service.FromContext[adapter.InboundManager](h.ctx)
+	if inboundManager == nil {
+		return nil
+	}
+	return inboundManager.GetTunAddressPrefix()
 }
