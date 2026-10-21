@@ -151,6 +151,9 @@ func (c *CacheFile) SetDisableExpire(disableExpire bool) {
 func (c *CacheFile) Start(stage adapter.StartStage, scope *adapter.Scope) error {
 	switch stage {
 	case adapter.StartStateInitialize:
+		if c.DB != nil { //karing
+			return nil
+		}
 		err := c.start()
 		if err != nil {
 			return err

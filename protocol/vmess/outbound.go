@@ -153,9 +153,6 @@ func (h *Outbound) CloseIdleConnections() {
 }
 
 func (h *Outbound) Start(stage adapter.StartStage, scope *adapter.Scope) error {
-	if h.GetParseErr() != nil { //karing
-		return nil
-	}
 	if stage != adapter.StartStateInitialize {
 		return nil
 	}

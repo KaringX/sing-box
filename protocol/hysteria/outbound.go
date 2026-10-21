@@ -154,9 +154,8 @@ func (h *Outbound) InterfaceUpdated(ctx context.Context) {
 	if h.client == nil { //karing
 		return
 	}
-
-	h.client.CloseWithError(E.New("network changed"))
 	h.Adapter.ConnectionsIn.Store(0) //karing
+	h.client.CloseWithError(E.New("network changed"))
 }
 
 func (h *Outbound) MultiplexEnabled() bool {
@@ -185,7 +184,7 @@ func (h *Outbound) Start(stage adapter.StartStage, scope *adapter.Scope) error {
 		return nil
 	}
 	scope.Add(func() error {
-		defer h.Adapter.ConnectionsIn.Store(0) //karing
+		h.Adapter.ConnectionsIn.Store(0) //karing
 		return h.client.CloseWithError(os.ErrClosed)
 	})
 	return nil
