@@ -39,6 +39,14 @@ func (m *Manager) Initialize(defaultOutboundFallback func() (adapter.Outbound, e
 }
 
 func (m *Manager) Start(stage adapter.StartStage, scope *adapter.Scope) error {
+	scope.Add(func() error { //karing
+		m.access.Lock()
+		m.endpoint = nil
+		m.outbounds = nil
+		m.outboundByTag = make(map[string]adapter.Outbound)
+		m.access.Unlock()
+		return nil
+	})
 	m.access.Lock()
 	if stage == adapter.StartStateInitialize {
 		if m.defaultTag != "" && m.defaultOutbound == nil {

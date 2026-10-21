@@ -34,6 +34,14 @@ func (m *Manager) Start(stage adapter.StartStage, scope *adapter.Scope) error {
 	m.access.Lock()
 	inbounds := m.inbounds
 	m.access.Unlock()
+	scope.Add(func() error { //karing
+		m.access.Lock()
+		m.endpoint = nil
+		m.inbounds = nil
+		m.inboundByTag = make(map[string]adapter.Inbound)
+		m.access.Unlock()
+		return nil
+	})
 	for _, inbound := range inbounds {
 		name := "inbound/" + inbound.Type() + "[" + inbound.Tag() + "]"
 		err := scope.Start(name, inbound, stage)

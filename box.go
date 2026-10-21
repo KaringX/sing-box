@@ -754,9 +754,26 @@ func (s *Box) Close() error {
 	default:
 		break
 	}
-	err := s.scope.Close()      //karing
-	s.logger.Info("box closed") //karing
-	return err
+	err := s.scope.Close() //karing
+	//karing begin
+	s.logger.Info("box closed")
+	s.network = nil
+	s.endpoint = nil
+	s.inbound = nil
+	s.outbound = nil
+	s.service = nil
+	s.certificateProvider = nil
+	s.dnsTransport = nil
+	s.dnsRouter = nil
+	s.connection = nil
+	s.router = nil
+	s.referenceManager = nil
+	s.httpClientService = nil
+	s.ntpService = nil
+	s.internalService = nil
+	s.logger.Info("box closed")
+	//karing end
+	return err //karing
 }
 
 func (s *Box) Network() adapter.NetworkManager {
