@@ -549,6 +549,7 @@ func New(options Options) (box *Box, err error) { //karing
 }
 
 func (s *Box) PreStart() error {
+	s.logger.Info("box prestart") //karing
 	err := s.preStart()
 	if err != nil {
 		s.Close()
@@ -595,8 +596,7 @@ func (s *Box) startInternalServices(stage adapter.StartStage) error {
 }
 
 func (s *Box) preStart() error {
-	s.logger.Info("box prestart") //karing
-	var err error                 //karing
+	var err error //karing
 	/* //karing
 	monitor := taskmonitor.New(s.logger, C.StartTimeout)
 	monitor.Start("start logger")
@@ -629,7 +629,7 @@ func (s *Box) preStart() error {
 		boxComponent{"outbound", s.outbound},
 		boxComponent{"endpoint", s.endpoint},
 		boxComponent{"certificate-provider", s.certificateProvider},
-		boxComponent{"inbound", s.inbound},
+		//boxComponent{"inbound", s.inbound},//karing
 		boxComponent{"service", s.service},
 	)
 	if err != nil {
@@ -647,6 +647,14 @@ func (s *Box) preStart() error {
 	if err != nil {
 		return err
 	}
+	//karing start
+	err = s.startComponents(adapter.StartStateInitialize,
+		boxComponent{"inbound", s.inbound},
+	)
+	if err != nil {
+		return err
+	}
+	//karing end
 	return nil
 }
 
@@ -711,6 +719,10 @@ func (s *Box) start() error {
 	if err != nil {
 		return err
 	}
+	err = s.startInternalServices(adapter.StartStateStarted)
+	if err != nil {
+		return err
+	}
 	// karing start
 	err = s.startComponents(adapter.StartStateStart,
 		boxComponent{"inbound", s.inbound},
@@ -731,10 +743,6 @@ func (s *Box) start() error {
 		return err
 	}
 	// karing end
-	err = s.startInternalServices(adapter.StartStateStarted)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -746,7 +754,9 @@ func (s *Box) Close() error {
 	default:
 		break
 	}
-	return s.scope.Close()
+	err := s.scope.Close()      //karing
+	s.logger.Info("box closed") //karing
+	return err
 }
 
 func (s *Box) Network() adapter.NetworkManager {

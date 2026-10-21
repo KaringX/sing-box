@@ -89,18 +89,8 @@ func (h *Inbound) Start(stage adapter.StartStage, scope *adapter.Scope) error {
 	}
 
 	h.logger.Info("mieru server is started")
-	scope.Add(h.Close)
+	scope.Add(h.server.Stop)
 	go h.acceptLoop()
-	return nil
-}
-
-func (h *Inbound) Close() error {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	if h.server.IsRunning() {
-		return h.server.Stop()
-	}
 	return nil
 }
 

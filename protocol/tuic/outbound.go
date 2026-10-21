@@ -117,8 +117,8 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 	defer func() { //karing
 		if err == nil {
 			conn = h.OnNewConnection(conn, func() {
-				defer h.Adapter.ConnectionsIn.Store(0)
 				h.client.CloseWithError(os.ErrClosed)
+				h.Adapter.ConnectionsIn.Store(0)
 			})
 		}
 	}()
@@ -156,8 +156,8 @@ func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (c
 	defer func() { //karing
 		if err == nil {
 			conn = h.OnNewPacketConnection(conn, func() {
-				defer h.Adapter.ConnectionsIn.Store(0)
 				h.client.CloseWithError(os.ErrClosed)
+				h.Adapter.ConnectionsIn.Store(0)
 			})
 		}
 	}()
@@ -184,9 +184,9 @@ func (h *Outbound) InterfaceUpdated(ctx context.Context) {
 	if h.client == nil { //karing
 		return
 	}
-	defer h.Adapter.ConnectionsIn.Store(0) //karing
 
 	_ = h.client.CloseWithError(E.New("network changed"))
+	h.Adapter.ConnectionsIn.Store(0) //karing
 }
 
 func (h *Outbound) MultiplexEnabled() bool {

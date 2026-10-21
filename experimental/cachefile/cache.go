@@ -184,9 +184,6 @@ func (c *CacheFile) startCacheCleanup() {
 }
 
 func (c *CacheFile) start() error {
-	if c.DB != nil { //karing
-		return nil
-	}
 	const fileMode = 0o666
 	cacheFile, err := filemanager.OpenFile(c.ctx, c.path, os.O_RDWR|os.O_CREATE, fileMode)
 	if err != nil {
@@ -290,9 +287,6 @@ func (c *CacheFile) view(fn func(tx *bbolt.Tx) error) (err error) {
 
 func (c *CacheFile) batch(fn func(tx *bbolt.Tx) error) (err error) {
 	db := c.database()
-	if db == nil { //karing
-		return nil
-	}
 	defer func() {
 		r := recover()
 		if r != nil {
@@ -311,9 +305,6 @@ func (c *CacheFile) batch(fn func(tx *bbolt.Tx) error) (err error) {
 
 func (c *CacheFile) update(fn func(tx *bbolt.Tx) error) (err error) {
 	db := c.database()
-	if db == nil { //karing
-		return nil
-	}
 	defer func() {
 		r := recover()
 		if r != nil {
