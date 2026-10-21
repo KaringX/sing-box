@@ -150,6 +150,9 @@ func (r *NetworkManager) Start(stage adapter.StartStage, scope *adapter.Scope) e
 	case adapter.StartStateInitialize:
 		r.router = service.FromContext[adapter.Router](r.ctx)
 		scope.Add(func() error {
+			r.endpoint = nil //karing
+			r.inbound = nil  //karing
+			r.outbound = nil //karing
 			r.environmentUpdateAccess.Lock()
 			if r.environmentUpdateTimer != nil {
 				r.environmentUpdateTimer.Stop()
