@@ -69,6 +69,11 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		cacheFile := service.FromContext[adapter.CacheFile](ctx)
 		var appConfig *Config
 		var err error
+		defer func() {
+			if err != nil {
+				outbound.SetParseErr(err) //karing
+			}
+		}()
 		if !options.Profile.Recreate && cacheFile != nil && cacheFile.StoreMASQUEConfig() {
 			savedProfile := cacheFile.LoadMASQUEConfig(tag)
 			if savedProfile != nil {
@@ -326,6 +331,9 @@ func (w *Outbound) isTunnelInitialized(ctx context.Context) error {
 		return ctx.Err()
 	}
 	if w.client == nil {
+		if w.GetParseErr() != nil { //karing
+			return w.GetParseErr()
+		}
 		return E.New("tunnel not initialized")
 	}
 	return nil
