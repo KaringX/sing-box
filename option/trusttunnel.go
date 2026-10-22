@@ -4,10 +4,11 @@ package option
 type TrustTunnelInboundOptions struct {
 	ListenOptions
 	InboundTLSOptionsContainer
-	Users                []TrustTunnelUser `json:"users,omitempty"`
-	Network              NetworkList       `json:"network,omitempty"`
-	CongestionController string            `json:"congestion_controller,omitempty"`
-	CWND                 int               `json:"cwnd,omitempty"`
+	Users                   []TrustTunnelUser `json:"users,omitempty"`
+	Network                 NetworkList       `json:"network,omitempty"`
+	CongestionController    string            `json:"congestion_controller,omitempty"`
+	CWND                    int               `json:"cwnd,omitempty"`
+	DisablePathMTUDiscovery bool              `json:"disable_path_mtu_discovery,omitempty"`
 }
 
 type TrustTunnelUser struct {
@@ -26,12 +27,13 @@ type TrustTunnelOutboundOptions struct {
 	DialerOptions
 	ServerOptions
 	OutboundTLSOptionsContainer
-	Username             string                       `json:"username,omitempty"`
-	Password             string                       `json:"password,omitempty"`
-	Network              NetworkList                  `json:"network,omitempty"`
-	HealthCheck          bool                         `json:"health_check,omitempty"`
-	QUIC                 bool                         `json:"quic,omitempty"`
-	CongestionController string                       `json:"congestion_controller,omitempty"`
-	CWND                 int                          `json:"cwnd,omitempty"`
-	Multiplex            *TrustTunnelMultiplexOptions `json:"multiplex,omitempty"`
+	Username                string                       `json:"username,omitempty"`
+	Password                string                       `json:"password,omitempty"`
+	Network                 NetworkList                  `json:"network,omitempty"`
+	HealthCheck             bool                         `json:"health_check,omitempty"`
+	QUIC                    bool                         `json:"quic,omitempty"`
+	CongestionController    string                       `json:"congestion_controller,omitempty"`
+	CWND                    int                          `json:"cwnd,omitempty"`
+	DisablePathMTUDiscovery bool                         `json:"disable_path_mtu_discovery,omitempty"`
+	Multiplex               *TrustTunnelMultiplexOptions `json:"multiplex,omitempty"`
 }

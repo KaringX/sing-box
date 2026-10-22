@@ -79,4 +79,6 @@ type AmneziaOptions struct { // https://github.com/shtorm-7/sing-box-extended
 	RejectAfterTime        *Xbadoption.Range
 	KeepaliveTimeout       *Xbadoption.Range
 	MaxHandshakeAttempts   *Xbadoption.Range
+	RandomTrailers         bool
+	DisableCookies         bool
 }

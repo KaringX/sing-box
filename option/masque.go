@@ -13,6 +13,7 @@ type MASQUEOutboundOptions struct {
 	Name                 string                           `json:"name,omitempty"`
 	AllowedIPs           badoption.Listable[netip.Prefix] `json:"allowed_ips,omitempty"`
 	UseHTTP2             bool                             `json:"use_http2,omitempty"`
+	UseL4Proxy           bool                             `json:"use_l4_proxy,omitempty"`
 	UseIPv6              bool                             `json:"use_ipv6,omitempty"`
 	Profile              CloudflareProfile                `json:"profile,omitempty"`
 	Address              string                           `json:"address,omitempty"`
@@ -21,6 +22,7 @@ type MASQUEOutboundOptions struct {
 	UDPKeepalivePeriod   badoption.Duration               `json:"udp_keepalive_period,omitempty"`
 	UDPInitialPacketSize uint16                           `json:"udp_initial_packet_size,omitempty"`
 	ReconnectDelay       badoption.Duration               `json:"reconnect_delay,omitempty"`
+	HandshakeTimeout     badoption.Duration               `json:"handshake_timeout,omitempty"`
 	CongestionController string                           `json:"congestion_controller,omitempty"`
 	CWND                 int                              `json:"cwnd,omitempty"`
 	MASQUEOutboundTLSOptionsContainer
