@@ -1,11 +1,11 @@
-// karing https://github.com/enfein/mbox
+// https://github.com/shtorm-7/sing-box-extended
 package mieru
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"net"
+	"net/netip"
 	"os"
 
 	"github.com/sagernet/sing-box/adapter"
@@ -15,10 +15,10 @@ import (
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing/common"
-	"github.com/sagernet/sing/common/buf"
 	E "github.com/sagernet/sing/common/exceptions"
 	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
+	"github.com/sagernet/sing/service"
 
 	mieruclient "github.com/enfein/mieru/v3/apis/client"
 	mierucommon "github.com/enfein/mieru/v3/apis/common"
@@ -30,9 +30,12 @@ import (
 
 type Outbound struct {
 	outbound.Adapter
-	dialer N.Dialer
-	logger log.ContextLogger
-	client mieruclient.Client
+	ctx       context.Context
+	dnsRouter adapter.DNSRouter
+	dialer    N.Dialer
+	logger    log.ContextLogger
+	options   option.MieruOutboundOptions
+	client    mieruclient.Client
 }
 
 func RegisterOutbound(registry *outbound.Registry) {
@@ -44,30 +47,52 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeMieru, tag, []string{}, options.DialerOptions),
 		logger:  logger,
 	}
-	outboundDialer, err := dialer.New(ctx, options.DialerOptions, M.IsDomainName(options.Server))
+	outboundDialer, err := dialer.NewWithOptions(dialer.Options{
+		Context:          ctx,
+		Options:          options.DialerOptions,
+		RemoteIsDomain:   M.IsDomainName(options.Server),
+		ResolverOnDetour: true,
+	})
 	if err != nil {
 		return empty, err //karing
 	}
+	return &Outbound{
+		Adapter:   outbound.NewAdapterWithDialerOptions(C.TypeMieru, tag, []string{N.NetworkTCP, N.NetworkUDP}, options.DialerOptions),
+		ctx:       ctx,
+		dnsRouter: service.FromContext[adapter.DNSRouter](ctx),
+		dialer:    outboundDialer,
+		logger:    logger,
+		options:   options,
+	}, nil
+}
 
-	config, err := buildMieruClientConfig(options, mieruDialer{dialer: outboundDialer})
+func (o *Outbound) Start(stage adapter.StartStage, scope *adapter.Scope) error {
+	if stage != adapter.StartStatePostStart {
+		return nil
+	}
+	config, err := buildMieruClientConfig(o.options, mieruDialer{dialer: o.dialer})
 	if err != nil {
-		return empty, fmt.Errorf("failed to build mieru client config: %w", err) //karing
+		return fmt.Errorf("failed to build mieru client config: %w", err)
+	}
+	if M.IsDomainName(o.options.Server) {
+		config.Resolver = mieruResolver{
+			dnsRouter:    o.dnsRouter,
+			queryOptions: o.dialer.(dialer.ResolveDialer).QueryOptions(),
+		}
 	}
 	c := mieruclient.NewClient()
 	if err := c.Store(config); err != nil {
-		return empty, fmt.Errorf("failed to store mieru client config: %w", err) //karing
+		return fmt.Errorf("failed to store mieru client config: %w", err)
 	}
 	if err := c.Start(); err != nil {
-		return empty, fmt.Errorf("failed to start mieru client: %w", err) //karing
+		return fmt.Errorf("failed to start mieru client: %w", err)
 	}
-	logger.InfoContext(ctx, "mieru client is started")
-
-	return &Outbound{
-		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeMieru, tag, []string{N.NetworkTCP, N.NetworkUDP}, options.DialerOptions),
-		dialer:  outboundDialer,
-		logger:  logger,
-		client:  c,
-	}, nil
+	o.logger.NoticeContext(o.ctx, "mieru client is started")
+	o.client = c
+	scope.Add(func() error {
+		return common.Close(o.client)
+	})
+	return nil
 }
 
 func (o *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
@@ -96,7 +121,7 @@ func (o *Outbound) DialContext(ctx context.Context, network string, destination 
 			return nil, err
 		}
 		return &streamer{
-			PacketConn: newUDPAssociatePacketConn(streamConn),
+			PacketConn: mierucommon.NewUDPAssociateWrapper(mierucommon.NewPacketOverStreamTunnel(streamConn)),
 			Remote:     destination,
 		}, nil
 	default:
@@ -120,22 +145,7 @@ func (o *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
 	if err != nil {
 		return nil, err
 	}
-	return newUDPAssociatePacketConn(streamConn), nil
-}
-
-func (o *Outbound) Start(stage adapter.StartStage, scope *adapter.Scope) error {
-	if o.GetParseErr() != nil { //karing
-		return nil
-	}
-	if stage != adapter.StartStateInitialize {
-		return nil
-	}
-	scope.Add(func() error {
-		common.Close(o.client)
-		return nil
-	})
-
-	return nil
+	return mierucommon.NewUDPAssociateWrapper(mierucommon.NewPacketOverStreamTunnel(streamConn)), nil
 }
 
 // mieruDialer is an adapter to mieru dialer interface.
@@ -153,9 +163,32 @@ func (md mieruDialer) ListenPacket(ctx context.Context, network, laddr, raddr st
 	return md.dialer.ListenPacket(ctx, addr)
 }
 
+type mieruResolver struct {
+	dnsRouter    adapter.DNSRouter
+	queryOptions adapter.DNSQueryOptions
+}
+
+func (r mieruResolver) LookupIP(ctx context.Context, network, host string) ([]net.IP, error) {
+	queryOptions := r.queryOptions
+	switch network {
+	case "ip4":
+		queryOptions.Strategy = C.DomainStrategyIPv4Only
+	case "ip6":
+		queryOptions.Strategy = C.DomainStrategyIPv6Only
+	}
+	addresses, err := r.dnsRouter.Lookup(ctx, host, queryOptions)
+	if err != nil {
+		return nil, err
+	}
+	return common.Map(addresses, func(it netip.Addr) net.IP {
+		return it.AsSlice()
+	}), nil
+}
+
 var (
 	_ mierucommon.Dialer       = (*mieruDialer)(nil)
 	_ mierucommon.PacketDialer = (*mieruDialer)(nil)
+	_ mierucommon.DNSResolver  = (*mieruResolver)(nil)
 )
 
 // streamer converts a net.PacketConn to a net.Conn.
@@ -177,61 +210,6 @@ func (s *streamer) Write(b []byte) (n int, err error) {
 
 func (s *streamer) RemoteAddr() net.Addr {
 	return s.Remote
-}
-
-// Preserve domain addresses instead of converting them to IP-only UDPAddr values.
-type udpAssociatePacketConn struct {
-	*mierucommon.UDPAssociateWrapper
-}
-
-var _ N.NetPacketConn = (*udpAssociatePacketConn)(nil)
-
-func newUDPAssociatePacketConn(conn net.Conn) *udpAssociatePacketConn {
-	return &udpAssociatePacketConn{mierucommon.NewUDPAssociateWrapper(mierucommon.NewPacketOverStreamTunnel(conn))}
-}
-
-func (c *udpAssociatePacketConn) ReadPacket(buffer *buf.Buffer) (M.Socksaddr, error) {
-	n, address, err := c.ReadFrom(buffer.FreeBytes())
-	if err != nil {
-		return M.Socksaddr{}, err
-	}
-	buffer.Truncate(n)
-	return M.SocksaddrFromNet(address).Unwrap(), nil
-}
-
-// Mieru's wrapper rejects domain replies; parse its header without resolving them.
-func (c *udpAssociatePacketConn) ReadFrom(p []byte) (int, net.Addr, error) {
-	packet := make([]byte, len(p)+3+M.MaxSocksaddrLength)
-	n, _, err := c.PacketConn.ReadFrom(packet)
-	if err != nil {
-		return 0, nil, err
-	}
-	if n < 4 || packet[0] != 0 || packet[1] != 0 || packet[2] != 0 {
-		return 0, nil, os.ErrInvalid
-	}
-	reader := bytes.NewReader(packet[3:n])
-	var address mierumodel.NetAddrSpec
-	if err := address.ReadFromSocks5(reader); err != nil {
-		return 0, nil, err
-	}
-	if len(address.IP) == 0 && address.FQDN == "" {
-		return 0, nil, os.ErrInvalid
-	}
-	n = copy(p, packet[n-reader.Len():n])
-	if address.FQDN != "" {
-		return n, M.Socksaddr{Fqdn: address.FQDN, Port: uint16(address.Port)}, nil
-	}
-	return n, &net.UDPAddr{IP: address.IP, Port: address.Port}, nil
-}
-
-func (c *udpAssociatePacketConn) WritePacket(buffer *buf.Buffer, destination M.Socksaddr) error {
-	defer buffer.Release()
-	// Mieru ignores serialization errors for an empty destination.
-	if !destination.IsValid() {
-		return os.ErrInvalid
-	}
-	_, err := c.WriteTo(buffer.Bytes(), destination)
-	return err
 }
 
 // socksAddrToNetAddrSpec converts a Socksaddr object to NetAddrSpec, and overrides the network.
@@ -294,10 +272,10 @@ func buildMieruClientConfig(options option.MieruOutboundOptions, dialer mieruDia
 			Level: mierupb.MultiplexingLevel(multiplexing).Enum(),
 		}
 	}
-	if options.MTU != 0 { // https://github.com/shtorm-7/sing-box-extended
+	if options.MTU != 0 {
 		config.Profile.Mtu = proto.Int32(int32(options.MTU))
 	}
-	if handshakeMode, ok := mierupb.HandshakeMode_value[options.HandshakeMode]; ok { // https://github.com/shtorm-7/sing-box-extended
+	if handshakeMode, ok := mierupb.HandshakeMode_value[options.HandshakeMode]; ok {
 		config.Profile.HandshakeMode = mierupb.HandshakeMode(handshakeMode).Enum()
 	}
 	if options.TrafficPattern != "" {
@@ -343,7 +321,7 @@ func validateMieruOptions(options option.MieruOutboundOptions) error {
 			return fmt.Errorf("invalid multiplexing level: %s", options.Multiplexing)
 		}
 	}
-	if options.HandshakeMode != "" { // https://github.com/shtorm-7/sing-box-extended
+	if options.HandshakeMode != "" {
 		if _, ok := mierupb.HandshakeMode_value[options.HandshakeMode]; !ok {
 			return fmt.Errorf("invalid handshake mode: %s", options.HandshakeMode)
 		}

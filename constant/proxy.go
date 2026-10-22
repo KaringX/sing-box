@@ -23,7 +23,7 @@ const (
 	TypeTor                = "tor"
 	TypeSSH                = "ssh"
 	TypeShadowTLS          = "shadowtls"
-	TypeMieru              = "mieru" //karing https://github.com/enfein/mbox
+	TypeMieru              = "mieru" // https://github.com/shtorm-7/sing-box-extended
 	TypeAnyTLS             = "anytls"
 	TypeSudoku             = "sudoku" // https://github.com/shtorm-7/sing-box-extended
 	TypeShadowsocksR       = "shadowsocksr"
@@ -110,7 +110,7 @@ func ProxyDisplayName(proxyType string) string {
 		return "TUIC"
 	case TypeHysteria2:
 		return "Hysteria2"
-	case TypeMieru: //karing https://github.com/enfein/mbox
+	case TypeMieru: // https://github.com/shtorm-7/sing-box-extended
 		return "Mieru"
 	case TypeAnyTLS:
 		return "AnyTLS"

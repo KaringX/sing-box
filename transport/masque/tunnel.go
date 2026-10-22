@@ -174,13 +174,20 @@ func (e *Tunnel) getIpConn() (IpConn, error) {
 	if e.ipConn != nil {
 		return e.ipConn, nil
 	}
-	e.logger.Info(e.ctx, "Establishing MASQUE connection to ", e.options.Endpoint) //karing
+	e.logger.NoticeContext(e.ctx, "Establishing MASQUE connection to ", e.options.Endpoint)
 	timer := time.NewTimer(0)
 	defer timer.Stop()
 	for {
-		e.logger.Info(e.ctx, fmt.Errorf("Establishing MASQUE connection to %s", e.options.Endpoint)) //karing
+		e.logger.NoticeContext(e.ctx, fmt.Errorf("Establishing MASQUE connection to %s", e.options.Endpoint))
+		var connectCtx context.Context
+		var cancel context.CancelFunc
+		if e.options.HandshakeTimeout > 0 {
+			connectCtx, cancel = context.WithTimeout(e.ctx, e.options.HandshakeTimeout)
+		} else {
+			connectCtx, cancel = context.WithCancel(e.ctx)
+		}
 		closer, ipConn, rsp, err := ConnectTunnel(
-			e.ctx,
+			connectCtx,
 			e.options.Dialer,
 			e.options.TLSConfig,
 			DefaultQuicConfig(e.options.UDPKeepalivePeriod, e.options.UDPInitialPacketSize),
@@ -189,6 +196,7 @@ func (e *Tunnel) getIpConn() (IpConn, error) {
 			e.options.UseHTTP2,
 			e.options.CongestionControl,
 		)
+		cancel()
 		if err != nil {
 			e.logger.ErrorContext(e.ctx, fmt.Errorf("Failed to connect tunnel: %v", err))
 			timer.Reset(e.options.ReconnectDelay)
@@ -215,7 +223,7 @@ func (e *Tunnel) getIpConn() (IpConn, error) {
 		}
 		e.closer = closer
 		e.ipConn = ipConn
-		e.logger.Info(e.ctx, "Connected to MASQUE server ", e.options.Endpoint) //karing
+		e.logger.NoticeContext(e.ctx, "Connected to MASQUE server ", e.options.Endpoint)
 		return ipConn, nil
 	}
 }

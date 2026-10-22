@@ -34,21 +34,30 @@ func RegisterOutbound(registry *outbound.Registry) {
 	outbound.Register[option.MASQUEOutboundOptions](registry, C.TypeMASQUE, NewOutbound)
 }
 
+type tunnelClient interface {
+	N.Dialer
+	Close() error
+}
+
 type Outbound struct {
 	outbound.Adapter
 	ctx          context.Context
 	dnsRouter    adapter.DNSRouter
 	logger       logger.ContextLogger
 	options      option.MASQUEOutboundOptions
-	tunnel       *masque.Tunnel
+	client       tunnelClient
 	startHandler func()
 
 	await chan struct{}
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.MASQUEOutboundOptions) (adapter.Outbound, error) {
+	networks := []string{N.NetworkTCP, N.NetworkUDP}
+	if options.UseL4Proxy {
+		networks = []string{N.NetworkTCP}
+	}
 	outbound := &Outbound{
-		Adapter:   outbound.NewAdapterWithDialerOptions(C.TypeMASQUE, tag, []string{N.NetworkTCP, N.NetworkUDP}, options.DialerOptions),
+		Adapter:   outbound.NewAdapterWithDialerOptions(C.TypeMASQUE, tag, networks, options.DialerOptions),
 		ctx:       ctx,
 		dnsRouter: service.FromContext[adapter.DNSRouter](ctx),
 		logger:    logger,
@@ -104,6 +113,9 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 			return
 		}
 		serverName := cloudflare.ConnectSNI
+		if options.UseL4Proxy {
+			serverName = cloudflare.L4ConnectSNI
+		}
 		if options.TLS != nil && options.TLS.ServerName != "" {
 			serverName = options.TLS.ServerName
 		}
@@ -112,6 +124,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 			logger.ErrorContext(ctx, E.New("failed to prepare TLS config: ", err))
 			return
 		}
+		useHTTP2 := options.UseHTTP2 && !options.UseL4Proxy
 		var endpoint net.Addr
 		if options.Address != "" {
 			endpointPort := options.Port
@@ -123,13 +136,13 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 				logger.ErrorContext(ctx, E.New("invalid endpoint address: ", options.Address))
 				return
 			}
-			if options.UseHTTP2 {
+			if useHTTP2 {
 				endpoint = &net.TCPAddr{IP: endpointIP, Port: int(endpointPort)}
 			} else {
 				endpoint = &net.UDPAddr{IP: endpointIP, Port: int(endpointPort)}
 			}
 		} else {
-			endpoint, err = appConfig.SelectEndpointFromConfig(options.UseHTTP2, options.UseIPv6, 443)
+			endpoint, err = appConfig.SelectEndpointFromConfig(useHTTP2, options.UseIPv6, 443)
 			if err != nil {
 				logger.ErrorContext(ctx, E.New("failed to select endpoint: ", err))
 				return
@@ -166,6 +179,18 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 			logger.ErrorContext(ctx, err)
 			return
 		}
+		if options.UseL4Proxy {
+			outbound.client = masque.NewL4Client(logger, masque.L4ClientOptions{
+				Dialer:               outboundDialer,
+				TLSConfig:            tlsConfig,
+				Endpoint:             endpoint,
+				UDPKeepalivePeriod:   udpKeepalivePeriod,
+				UDPInitialPacketSize: options.UDPInitialPacketSize,
+				HandshakeTimeout:     time.Duration(options.HandshakeTimeout),
+				CongestionControl:    congestionControl,
+			})
+			return
+		}
 		tunnel, err := masque.NewTunnel(
 			ctx,
 			logger,
@@ -192,6 +217,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 				UDPKeepalivePeriod:   udpKeepalivePeriod,
 				UDPInitialPacketSize: options.UDPInitialPacketSize,
 				ReconnectDelay:       options.ReconnectDelay.Build(),
+				HandshakeTimeout:     time.Duration(options.HandshakeTimeout),
 				CongestionControl:    congestionControl,
 			},
 		)
@@ -199,12 +225,12 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 			logger.ErrorContext(ctx, err)
 			return
 		}
-		outbound.tunnel = tunnel
-		if err = outbound.tunnel.Start(false); err != nil {
+		outbound.client = tunnel
+		if err = tunnel.Start(false); err != nil {
 			logger.ErrorContext(ctx, err)
 			return
 		}
-		if err = outbound.tunnel.Start(true); err != nil {
+		if err = tunnel.Start(true); err != nil {
 			logger.ErrorContext(ctx, err)
 			return
 		}
@@ -216,16 +242,16 @@ func (w *Outbound) Start(stage adapter.StartStage, scope *adapter.Scope) error {
 	if w.GetParseErr() != nil { //karing
 		return nil
 	}
-	if stage != adapter.StartStateInitialize {
+	if stage != adapter.StartStatePostStart {
 		return nil
 	}
+	scope.Add(func() error {
+		if err := w.isTunnelInitialized(w.ctx); err != nil {
+			return err
+		}
+		return w.client.Close()
+	})
 	go w.startHandler()
-	if w.tunnel != nil {
-		scope.Add(func() error {
-			return w.tunnel.Close()
-		})
-	}
-
 	return nil
 }
 
@@ -247,11 +273,11 @@ func (w *Outbound) DialContext(ctx context.Context, network string, destination 
 		if err != nil {
 			return nil, err
 		}
-		return N.DialSerial(ctx, w.tunnel, network, destination, destinationAddresses)
+		return N.DialSerial(ctx, w.client, network, destination, destinationAddresses)
 	} else if !destination.Addr.IsValid() {
 		return nil, E.New("invalid destination: ", destination)
 	}
-	return w.tunnel.DialContext(ctx, network, destination)
+	return w.client.DialContext(ctx, network, destination)
 }
 
 func (w *Outbound) ListenPacketWithDestination(ctx context.Context, destination M.Socksaddr) (net.PacketConn, netip.Addr, error) {
@@ -267,9 +293,9 @@ func (w *Outbound) ListenPacketWithDestination(ctx context.Context, destination 
 		if err != nil {
 			return nil, netip.Addr{}, err
 		}
-		return N.ListenSerial(ctx, w.tunnel, destination, destinationAddresses)
+		return N.ListenSerial(ctx, w.client, destination, destinationAddresses)
 	}
-	packetConn, err := w.tunnel.ListenPacket(ctx, destination)
+	packetConn, err := w.client.ListenPacket(ctx, destination)
 	if err != nil {
 		return nil, netip.Addr{}, err
 	}
@@ -299,7 +325,7 @@ func (w *Outbound) isTunnelInitialized(ctx context.Context) error {
 	case <-ctx.Done():
 		return ctx.Err()
 	}
-	if w.tunnel == nil {
+	if w.client == nil {
 		return E.New("tunnel not initialized")
 	}
 	return nil

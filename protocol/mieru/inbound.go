@@ -1,4 +1,4 @@
-// karing https://github.com/enfein/mbox
+// https://github.com/shtorm-7/sing-box-extended
 package mieru
 
 import (
@@ -87,9 +87,16 @@ func (h *Inbound) Start(stage adapter.StartStage, scope *adapter.Scope) error {
 	if err := h.server.Start(); err != nil {
 		return fmt.Errorf("failed to start mieru server: %w", err)
 	}
+	scope.Add(func() error {
+		h.mu.Lock()
+		defer h.mu.Unlock()
+		if h.server.IsRunning() {
+			return h.server.Stop()
+		}
+		return nil
+	})
 
-	h.logger.Info("mieru server is started")
-	scope.Add(h.server.Stop)
+	h.logger.Notice("mieru server is started")
 	go h.acceptLoop()
 	return nil
 }
@@ -267,14 +274,21 @@ func buildMieruServerConfig(_ context.Context, options option.MieruInboundOption
 		transportProtocol = mierupb.TransportProtocol_UDP.Enum()
 	}
 
-	if options.ListenOptions.ListenPort == 0 {
-		return nil, nil, E.New("listen_port must be set")
+	if options.ListenOptions.ListenPort == 0 && len(options.ListenPorts) == 0 {
+		return nil, nil, E.New("either listen_port or listen_ports must be set")
 	}
-	portBindings := []*mierupb.PortBinding{
-		{
+	var portBindings []*mierupb.PortBinding
+	if options.ListenOptions.ListenPort != 0 {
+		portBindings = append(portBindings, &mierupb.PortBinding{
 			Port:     proto.Int32(int32(options.ListenOptions.ListenPort)),
 			Protocol: transportProtocol,
-		},
+		})
+	}
+	for _, pr := range options.ListenPorts {
+		portBindings = append(portBindings, &mierupb.PortBinding{
+			PortRange: proto.String(pr),
+			Protocol:  transportProtocol,
+		})
 	}
 
 	var users []*mierupb.User
@@ -294,13 +308,17 @@ func buildMieruServerConfig(_ context.Context, options option.MieruInboundOption
 			UserHintIsMandatory: proto.Bool(true),
 		}
 	}
+	config := &mierupb.ServerConfig{
+		PortBindings:     portBindings,
+		Users:            users,
+		TrafficPattern:   trafficPattern,
+		AdvancedSettings: advancedSettings,
+	}
+	if options.MTU != 0 {
+		config.Mtu = proto.Int32(int32(options.MTU))
+	}
 	return &mieruserver.ServerConfig{
-		Config: &mierupb.ServerConfig{
-			PortBindings:     portBindings,
-			Users:            users,
-			TrafficPattern:   trafficPattern,
-			AdvancedSettings: advancedSettings,
-		},
+		Config: config,
 	}, userNames, nil
 }
 

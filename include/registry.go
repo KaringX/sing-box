@@ -104,7 +104,7 @@ func OutboundRegistry() *outbound.Registry {
 	ssh.RegisterOutbound(registry)
 	shadowtls.RegisterOutbound(registry)
 	vless.RegisterOutbound(registry)
-	mieru.RegisterOutbound(registry) //karing https://github.com/enfein/mbox
+	mieru.RegisterOutbound(registry) // https://github.com/shtorm-7/sing-box-extended
 	anytls.RegisterOutbound(registry)
 
 	registerQUICOutbounds(registry)
