@@ -1,11 +1,19 @@
 package box
 
 import (
+	"runtime"
 	"runtime/debug"
 
 	"github.com/sagernet/sing-box/option"
 	E "github.com/sagernet/sing/common/exceptions"
 )
+
+func init() { //karing
+	num := runtime.GOMAXPROCS(0)
+	if num > 16 {
+		runtime.GOMAXPROCS(16)
+	}
+}
 
 func checkDebugOptions(options option.DebugOptions) error {
 	if options.OOMKiller != nil {
