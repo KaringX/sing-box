@@ -339,10 +339,21 @@ func (w *Outbound) Start(stage adapter.StartStage, scope *adapter.Scope) error {
 	return nil
 }
 
-func (w *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
+func (w *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (conn net.Conn, err error) { //karing
 	if w.GetParseErr() != nil { //karing
 		return nil, w.GetParseErr()
 	}
+	/*defer func() { //karing
+		if err == nil {
+			conn = w.OnNewConnection(conn, func() {
+				w.Adapter.ConnectionsIn.Store(0)
+				if err := w.isTunnelInitialized(w.ctx); err != nil {
+					return
+				}
+				w.client.Close()
+			})
+		}
+	}()*/
 	if err := w.isTunnelInitialized(ctx); err != nil {
 		return nil, err
 	}
@@ -364,10 +375,21 @@ func (w *Outbound) DialContext(ctx context.Context, network string, destination 
 	return w.client.DialContext(ctx, network, destination)
 }
 
-func (w *Outbound) ListenPacketWithDestination(ctx context.Context, destination M.Socksaddr) (net.PacketConn, netip.Addr, error) {
+func (w *Outbound) ListenPacketWithDestination(ctx context.Context, destination M.Socksaddr) (conn net.PacketConn, addr netip.Addr, err error) { //karing
 	if w.GetParseErr() != nil { //karing
 		return nil, netip.Addr{}, w.GetParseErr()
 	}
+	/*defer func() { //karing
+		if err == nil {
+			conn = w.OnNewPacketConnection(conn, func() {
+				w.Adapter.ConnectionsIn.Store(0)
+				if err := w.isTunnelInitialized(w.ctx); err != nil {
+					return
+				}
+				w.client.Close()
+			})
+		}
+	}()*/
 	if err := w.isTunnelInitialized(ctx); err != nil {
 		return nil, netip.Addr{}, err
 	}
