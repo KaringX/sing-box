@@ -10,8 +10,8 @@ import (
 
 func init() { //karing
 	num := runtime.GOMAXPROCS(0)
-	if num > 16 {
-		runtime.GOMAXPROCS(16)
+	if num > 8 {
+		runtime.GOMAXPROCS(8)
 	}
 }
 
