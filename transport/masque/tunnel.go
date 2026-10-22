@@ -99,6 +99,9 @@ func (e *Tunnel) maintainTunnel() {
 			_, err := e.device.Read(bufs, sizes, 0)
 			if err != nil {
 				e.logger.ErrorContext(e.ctx, fmt.Errorf("failed to read from TUN device: %v", err))
+				if E.IsClosed(err) { //karing
+					return
+				}
 				continue
 			}
 			packet := bufs[0][:sizes[0]]
@@ -166,14 +169,17 @@ func (e *Tunnel) maintainTunnel() {
 }
 
 func (e *Tunnel) getIpConn() (IpConn, error) {
-	e.mtx.Lock()
-	defer e.mtx.Unlock()
+	//e.mtx.Lock() //karing
+	//defer e.mtx.Unlock() //karing
 	if e.ctx.Err() != nil {
 		return nil, e.ctx.Err()
 	}
+	e.mtx.Lock() //karing
 	if e.ipConn != nil {
+		e.mtx.Unlock() //karing
 		return e.ipConn, nil
 	}
+	e.mtx.Unlock() //karing
 	e.logger.InfoContext(e.ctx, "Establishing MASQUE connection to ", e.options.Endpoint)
 	timer := time.NewTimer(0)
 	defer timer.Stop()
@@ -198,7 +204,7 @@ func (e *Tunnel) getIpConn() (IpConn, error) {
 		)
 		cancel()
 		if err != nil {
-			e.logger.ErrorContext(e.ctx, fmt.Errorf("Failed to connect tunnel: %v", err))
+			e.logger.WarnContext(e.ctx, fmt.Errorf("Failed to connect tunnel: %v", err)) //karing
 			timer.Reset(e.options.ReconnectDelay)
 			select {
 			case <-e.ctx.Done():
@@ -221,8 +227,10 @@ func (e *Tunnel) getIpConn() (IpConn, error) {
 			}
 			continue
 		}
+		e.mtx.Lock() //karing
 		e.closer = closer
 		e.ipConn = ipConn
+		e.mtx.Unlock() //karing
 		e.logger.InfoContext(e.ctx, "Connected to MASQUE server ", e.options.Endpoint)
 		return ipConn, nil
 	}
