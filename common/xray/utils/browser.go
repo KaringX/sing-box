@@ -46,6 +46,7 @@ func CurlVersion() string {
 	var minorValue int = int(timeDiff / 57) // The release cadence is actually 56.67 days.
 	return "8." + strconv.Itoa(minorValue) + ".0"
 }
+
 func FirefoxVersion() int {
 	// Firefox 128 ESR was released on 09/07/2023.
 	var timeCurrent int64 = time.Now().Unix() / 86400
@@ -53,6 +54,7 @@ func FirefoxVersion() int {
 	timeDiff := timeCurrent - timeStart - 25 - int64(math.Floor(math.Pow(globalRng.Float64(), 2)*50))
 	return int(timeDiff/30) + 128
 }
+
 func SafariVersion() string {
 	var anchoredTime time.Time = time.Now()
 	var releaseYear int = anchoredTime.Year()
@@ -104,6 +106,7 @@ var (
 func getGreasedChInvalidBrand(seed int) string {
 	return "\"Not" + clientHintGreaseNA[seed%len(clientHintGreaseNA)] + "A" + clientHintGreaseNA[(seed+1)%len(clientHintGreaseNA)] + "Brand\";v=\"" + clientHintVersionNA[seed%len(clientHintVersionNA)] + "\""
 }
+
 func getGreasedChOrder(brandLength int, seed int) []int {
 	switch brandLength {
 	case 1:
@@ -117,6 +120,7 @@ func getGreasedChOrder(brandLength int, seed int) []int {
 	}
 	//return []int{}
 }
+
 func getUngreasedChUa(majorVersion int, forkName string) []string {
 	// Set the capacity to 4, the maximum allowed brand size, so Go will never allocate memory twice
 	baseChUa := make([]string, 0, 4)
@@ -130,6 +134,7 @@ func getUngreasedChUa(majorVersion int, forkName string) []string {
 	}
 	return baseChUa
 }
+
 func getGreasedChUa(majorVersion int, forkName string) string {
 	ungreasedCh := getUngreasedChUa(majorVersion, forkName)
 	shuffleMap := getGreasedChOrder(len(ungreasedCh), majorVersion)

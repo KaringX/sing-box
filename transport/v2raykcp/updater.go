@@ -42,7 +42,7 @@ func (u *Updater) run() {
 	}
 	ticker := time.NewTicker(u.Interval())
 	defer ticker.Stop()
-	
+
 	for u.shouldContinue() {
 		u.updateFunc()
 		<-ticker.C

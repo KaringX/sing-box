@@ -96,7 +96,7 @@ func (h *Inbound) Start(stage adapter.StartStage, scope *adapter.Scope) error {
 		return nil
 	})
 
-	h.logger.Notice("mieru server is started")
+	h.logger.Info("mieru server is started")
 	go h.acceptLoop()
 	return nil
 }

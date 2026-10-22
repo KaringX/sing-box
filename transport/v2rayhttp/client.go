@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/sagernet/sing-box/adapter"
+	"github.com/sagernet/sing-box/common/force_close"
 	"github.com/sagernet/sing-box/common/tls"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/option"
@@ -193,6 +194,6 @@ func (c *Client) CloseIdleConnections() {
 }
 
 func (c *Client) Close() error {
-	c.transport.Store(ResetTransport(c.transport.Load()))
+	c.transport.Store(force_close.ResetTransport(c.transport.Load())) // https://github.com/shtorm-7/sing-box-extended
 	return nil
 }

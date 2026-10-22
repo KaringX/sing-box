@@ -17,6 +17,7 @@ import (
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
+	"github.com/sagernet/sing-box/protocol/vless/encryption"
 	"github.com/sagernet/sing-box/transport/v2ray"
 	"github.com/sagernet/sing-vmess/packetaddr"
 	"github.com/sagernet/sing-vmess/vless"
@@ -46,6 +47,7 @@ type Inbound struct {
 	service    *vless.Service[int]
 	tlsConfig  tls.ServerConfig
 	transport  adapter.V2RayServerTransport
+	decryption *encryption.ServerInstance // https://github.com/shtorm-7/sing-box-extended
 	references []string
 }
 
@@ -95,6 +97,20 @@ func NewInbound(ctx context.Context, router adapter.Router, logger log.ContextLo
 			return nil, E.Cause(err, "create server transport: ", options.Transport.Type)
 		}
 	}
+	// https://github.com/shtorm-7/sing-box-extended begin
+	// Parse decryption configuration
+	if options.Decryption != "" && options.Decryption != "none" {
+		decryptionConfig, err := parseServerDecryption(options.Decryption)
+		if err != nil {
+			return nil, E.Cause(err, "parse decryption")
+		}
+		inbound.decryption = &encryption.ServerInstance{}
+		if err := inbound.decryption.Init(decryptionConfig.keys, decryptionConfig.xorMode, decryptionConfig.secondsFrom, decryptionConfig.secondsTo, decryptionConfig.padding); err != nil {
+			return nil, E.Cause(err, "initialize decryption")
+		}
+		logger.Debug("decryption initialized with ", len(decryptionConfig.keys), " keys xorMode=", decryptionConfig.xorMode, " secondsFrom=", decryptionConfig.secondsFrom, " secondsTo=", decryptionConfig.secondsTo, " padding=", decryptionConfig.padding)
+	}
+	// https://github.com/shtorm-7/sing-box-extended end
 	inbound.listener = listener.New(listener.Options{
 		Context:           ctx,
 		Logger:            logger,

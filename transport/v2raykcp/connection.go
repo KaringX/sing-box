@@ -176,19 +176,21 @@ func NewConnection(meta ConnMetadata, writer PacketWriter, closer io.Closer, con
 	isTerminated := func() bool {
 		return conn.State() == StateTerminated
 	}
-	
+
 	conn.dataUpdater = NewUpdater(
 		config.GetTTIValue(),
 		func() bool {
 			return !isTerminating() && (conn.sendingWorker.UpdateNecessary() || conn.receivingWorker.UpdateNecessary())
 		},
 		isTerminating,
-		conn.updateTask)
+		conn.updateTask,
+	)
 	conn.pingUpdater = NewUpdater(
 		5000,
 		func() bool { return !isTerminated() },
 		isTerminated,
-		conn.updateTask)
+		conn.updateTask,
+	)
 	conn.pingUpdater.WakeUp()
 
 	return conn
@@ -359,7 +361,7 @@ func (c *Connection) Read(b []byte) (int, error) {
 		if c.State().Is(StateReadyToClose, StateTerminating, StateTerminated) {
 			return 0, io.EOF
 		}
-		
+
 		nBytes := c.receivingWorker.Read(b)
 		if nBytes > 0 {
 			c.dataUpdater.WakeUp()

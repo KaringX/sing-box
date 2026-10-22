@@ -11,8 +11,8 @@ import (
 )
 
 type Range struct {
-	From int32 `json:"from"`
-	To   int32 `json:"to"`
+	From int `json:"from"`
+	To   int `json:"to"`
 }
 
 func (c *Range) Build() *Range {
@@ -28,35 +28,35 @@ func (c *Range) MarshalJSON() ([]byte, error) {
 
 func (c *Range) UnmarshalJSON(content []byte) error {
 	var rangeValue struct {
-		From int32 `json:"from"`
-		To   int32 `json:"to"`
+		From int `json:"from"`
+		To   int `json:"to"`
 	}
 	var stringValue string
 	err := json.Unmarshal(content, &stringValue)
 	if err == nil {
 		parts := strings.Split(stringValue, "-")
 		if len(parts) != 2 {
-			from, err := strconv.ParseInt(parts[0], 10, 32)
+			from, err := strconv.Atoi(parts[0])
 			if err != nil {
 				return err
 			}
-			rangeValue.From, rangeValue.To = int32(from), int32(from)
+			rangeValue.From, rangeValue.To = from, from
 		} else {
-			from, err := strconv.ParseInt(parts[0], 10, 32)
+			from, err := strconv.Atoi(parts[0])
 			if err != nil {
 				return err
 			}
-			to, err := strconv.ParseInt(parts[1], 10, 32)
+			to, err := strconv.Atoi(parts[1])
 			if err != nil {
 				return err
 			}
-			rangeValue.From, rangeValue.To = int32(from), int32(to)
+			rangeValue.From, rangeValue.To = from, to
 		}
 	} else {
-		var int32Value int32
-		err := json.Unmarshal(content, &int32Value)
+		var intValue int
+		err := json.Unmarshal(content, &intValue)
 		if err == nil {
-			rangeValue.From, rangeValue.To = int32Value, int32Value
+			rangeValue.From, rangeValue.To = intValue, intValue
 		} else {
 			err := json.Unmarshal(content, &rangeValue)
 			if err != nil {
@@ -77,6 +77,6 @@ func (c *Range) String() string {
 	}
 	return fmt.Sprintf("%d-%d", c.From, c.To)
 }
-func (c Range) Rand() int32 {
-	return int32(crypto.RandBetween(int64(c.From), int64(c.To)))
+func (c Range) Rand() int {
+	return int(crypto.RandBetween(int64(c.From), int64(c.To)))
 }

@@ -200,4 +200,3 @@ func randomUint32() uint32 {
 	}
 	return binary.BigEndian.Uint32(b[:])
 }
-

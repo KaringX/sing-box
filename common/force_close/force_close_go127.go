@@ -1,6 +1,6 @@
 //go:build go1.27 && badlinkname
 
-package v2rayhttp
+package force_close
 
 import (
 	"net/http"
@@ -16,20 +16,7 @@ import (
 // -checklinkname does not inspect. This declaration must precede the linkname declarations.
 var _ *http.Transport
 
-// net/http/internal/http2.Transport
-type internalTransport struct {
-	t1       [2]uintptr // TransportConfig
-	connPool *clientConnPool
-}
-
-// net/http/internal/http2.clientConnPool
-type clientConnPool struct {
-	t     *internalTransport
-	mu    sync.Mutex
-	conns map[string][]unsafe.Pointer // key is host:port, value is []*ClientConn
-}
-
-func closeHTTP2Connections(transport *http2.Transport) {
+func CloseHTTP2Connections(transport *http2.Transport) {
 	h2Transport := transportFromH1Transport(transportInit(transport))
 	t := (*internalTransport)((*efaceWords)(unsafe.Pointer(&h2Transport)).data)
 	if t == nil {
@@ -43,6 +30,19 @@ func closeHTTP2Connections(transport *http2.Transport) {
 			clientConnClose(cc)
 		}
 	}
+}
+
+// net/http/internal/http2.Transport
+type internalTransport struct {
+	t1       [2]uintptr // TransportConfig
+	connPool *clientConnPool
+}
+
+// net/http/internal/http2.clientConnPool
+type clientConnPool struct {
+	t     *internalTransport
+	mu    sync.Mutex
+	conns map[string][]unsafe.Pointer // key is host:port, value is []*ClientConn
 }
 
 //go:linkname transportInit golang.org/x/net/http2.(*Transport).init

@@ -321,21 +321,6 @@ func (m *ConnectionManager) NewPacketConnection(ctx context.Context, this N.Dial
 	go m.packetConnectionCopy(ctx, destination, conn, true, &done, onClose)
 }
 
-// isNormalHTTP2Close checks if the error is a normal HTTP/2 connection close  //https://github.com/starifly/sing-box
-func isNormalHTTP2Close(err error) bool {
-	if err == nil {
-		return false
-	}
-	errMsg := err.Error()
-	// HTTP/2 and HTTP/3 normal close patterns
-	// NO_ERROR: explicit normal close (RFC 7540)
-	// response body closed: normal completion of HTTP/2 response
-	// INTERNAL_ERROR; received from peer: server-side stream cleanup (common with xhttp/Xray-core)
-	return strings.Contains(errMsg, "NO_ERROR") ||
-		strings.Contains(errMsg, "http2: response body closed") ||
-		strings.Contains(errMsg, "INTERNAL_ERROR; received from peer")
-}
-
 func (m *ConnectionManager) connectionCopy(ctx context.Context, source net.Conn, destination net.Conn, direction bool, done *atomic.Bool, onClose N.CloseHandlerFunc) {
 	_, err := bufio.CopyWithIncreateBuffer(destination, source, bufio.DefaultIncreaseBufferAfter, bufio.DefaultBatchSize)
 	if err != nil {
@@ -361,7 +346,7 @@ func (m *ConnectionManager) connectionCopy(ctx context.Context, source net.Conn,
 	if !direction {
 		if err == nil {
 			m.logger.DebugContext(ctx, "connection upload finished")
-		} else if !E.IsClosedOrCanceled(err) && !isNormalHTTP2Close(err) { //https://github.com/starifly/sing-box
+		} else if !E.IsClosedOrCanceled(err) && !strings.Contains(err.Error(), "NO_ERROR") && !strings.Contains(err.Error(), "CANCEL") && !strings.Contains(err.Error(), "body closed") { // https://github.com/shtorm-7/sing-box-extended
 			m.logger.ErrorContext(ctx, "connection upload closed: ", err)
 		} else {
 			m.logger.TraceContext(ctx, "connection upload closed")
@@ -369,7 +354,7 @@ func (m *ConnectionManager) connectionCopy(ctx context.Context, source net.Conn,
 	} else {
 		if err == nil {
 			m.logger.DebugContext(ctx, "connection download finished")
-		} else if !E.IsClosedOrCanceled(err) && !isNormalHTTP2Close(err) { //https://github.com/starifly/sing-box
+		} else if !E.IsClosedOrCanceled(err) && !strings.Contains(err.Error(), "NO_ERROR") && !strings.Contains(err.Error(), "response body closed") { // https://github.com/shtorm-7/sing-box-extended
 			m.logger.ErrorContext(ctx, "connection download closed: ", err)
 		} else {
 			m.logger.TraceContext(ctx, "connection download closed")

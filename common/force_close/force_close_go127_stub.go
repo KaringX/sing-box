@@ -1,9 +1,9 @@
 //go:build go1.27 && !badlinkname
 
-package v2rayhttp
+package force_close
 
 import "golang.org/x/net/http2"
 
-func closeHTTP2Connections(transport *http2.Transport) {
+func CloseHTTP2Connections(transport *http2.Transport) {
 	transport.CloseIdleConnections()
 }

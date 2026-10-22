@@ -42,9 +42,9 @@ func NewServerTransport(ctx context.Context, logger logger.ContextLogger, option
 		return NewGRPCServer(ctx, logger, options.GRPCOptions, tlsConfig, handler)
 	case C.V2RayTransportTypeHTTPUpgrade:
 		return v2rayhttpupgrade.NewServer(ctx, logger, options.HTTPUpgradeOptions, tlsConfig, handler)
-	case C.V2RayTransportTypeXHTTP: //https://github.com/starifly/sing-box
+	case C.V2RayTransportTypeXHTTP: // https://github.com/shtorm-7/sing-box-extended
 		return xhttp.NewServer(ctx, logger, options.XHTTPOptions, tlsConfig, handler)
-	case C.V2RayTransportTypeKCP: //https://github.com/starifly/sing-box
+	case C.V2RayTransportTypeKCP: // https://github.com/shtorm-7/sing-box-extended
 		return v2raykcp.NewServer(ctx, logger, options.KCPOptions, tlsConfig, handler)
 	default:
 		return nil, E.New("unknown transport type: " + options.Type)
@@ -69,9 +69,9 @@ func NewClientTransport(ctx context.Context, logger log.ContextLogger, dialer N.
 		return NewQUICClient(ctx, dialer, serverAddr, options.QUICOptions, tlsConfig)
 	case C.V2RayTransportTypeHTTPUpgrade:
 		return v2rayhttpupgrade.NewClient(ctx, dialer, serverAddr, options.HTTPUpgradeOptions, tlsConfig)
-	case C.V2RayTransportTypeXHTTP: //https://github.com/starifly/sing-box
+	case C.V2RayTransportTypeXHTTP: // https://github.com/shtorm-7/sing-box-extended
 		return xhttp.NewClient(ctx, logger, dialer, serverAddr, options.XHTTPOptions, tlsConfig) //karing
-	case C.V2RayTransportTypeKCP: //https://github.com/starifly/sing-box
+	case C.V2RayTransportTypeKCP: // https://github.com/shtorm-7/sing-box-extended
 		return v2raykcp.NewClient(ctx, dialer, serverAddr, options.KCPOptions, tlsConfig)
 	default:
 		return nil, E.New("unknown transport type: " + options.Type)

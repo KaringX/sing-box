@@ -11,8 +11,6 @@ import (
 	"github.com/sagernet/sing-box/common/xray/signal/done"
 )
 
-var _ net.Conn = (*splitConn)(nil) //karing
-
 type splitConn struct {
 	writer     io.WriteCloser
 	reader     io.ReadCloser
@@ -41,7 +39,7 @@ func (c *splitConn) Close() error {
 	}
 
 	if err2 != nil {
-		return err
+		return err2
 	}
 
 	return nil

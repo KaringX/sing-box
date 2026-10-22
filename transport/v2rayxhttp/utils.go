@@ -1,19 +1,39 @@
 package xhttp
 
 import (
+	"bytes"
 	"encoding/base64"
 	"fmt"
 	"io"
+	"math/rand/v2"
 	"net/http"
 
 	"github.com/sagernet/sing-box/common/xray/buf"
 	"github.com/sagernet/sing-box/common/xray/utils"
+	"github.com/sagernet/sing-box/common/xray/uuid"
 	"github.com/sagernet/sing-box/option"
 )
 
+func GenerateSessionID(options *option.V2RayXHTTPBaseOptions) string {
+	length := options.SessionIDLength.Rand()
+	table := options.SessionIDTable
+	if predefined, ok := option.V2RayXHTTPPredefinedSessionIDTable[table]; ok {
+		table = predefined
+	}
+	if table != "" && length > 0 {
+		id := make([]byte, length)
+		for i := range id {
+			id[i] = table[rand.N(len(table))]
+		}
+		return string(id)
+	}
+	newUUID := uuid.New()
+	return newUUID.String()
+}
+
 func FillStreamRequest(request *http.Request, sessionId string, seqStr string, options *option.V2RayXHTTPBaseOptions) {
 	request.Header = options.GetRequestHeader()
-	length := int(options.GetNormalizedXPaddingBytes().Rand())
+	length := options.GetNormalizedXPaddingBytes().Rand()
 	config := XPaddingConfig{Length: length}
 	if options.XPaddingObfsMode {
 		config.Placement = XPaddingPlacement{
@@ -40,14 +60,17 @@ func FillStreamRequest(request *http.Request, sessionId string, seqStr string, o
 
 func FillPacketRequest(request *http.Request, sessionId string, seqStr string, payload buf.MultiBuffer, options *option.V2RayXHTTPBaseOptions) error {
 	dataPlacement := options.GetNormalizedUplinkDataPlacement()
+	data := make([]byte, payload.Len())
+	payload.Copy(data)
+	buf.ReleaseMulti(payload)
 	if dataPlacement == option.PlacementBody || dataPlacement == option.PlacementAuto {
 		request.Header = options.GetRequestHeader()
-		request.Body = io.NopCloser(&buf.MultiBufferContainer{MultiBuffer: payload})
-		request.ContentLength = int64(payload.Len())
+		request.Body = io.NopCloser(bytes.NewReader(data))
+		request.ContentLength = int64(len(data))
+		request.GetBody = func() (io.ReadCloser, error) {
+			return io.NopCloser(bytes.NewReader(data)), nil
+		}
 	} else {
-		data := make([]byte, payload.Len())
-		payload.Copy(data)
-		buf.ReleaseMulti(payload)
 		switch dataPlacement {
 		case option.PlacementHeader:
 			request.Header = GetRequestHeaderWithPayload(data, options)
@@ -58,7 +81,7 @@ func FillPacketRequest(request *http.Request, sessionId string, seqStr string, p
 			}
 		}
 	}
-	length := int(options.GetNormalizedXPaddingBytes().Rand())
+	length := options.GetNormalizedXPaddingBytes().Rand()
 	config := XPaddingConfig{Length: length}
 	if options.XPaddingObfsMode {
 		config.Placement = XPaddingPlacement{
@@ -125,7 +148,7 @@ func GetRequestHeaderWithPayload(payload []byte, options *option.V2RayXHTTPBaseO
 	key := options.UplinkDataKey
 	encodedData := base64.RawURLEncoding.EncodeToString(payload)
 	for i := 0; len(encodedData) > 0; i++ {
-		chunkSize := min(int(options.GetNormalizedUplinkChunkSize().Rand()), len(encodedData))
+		chunkSize := min(options.GetNormalizedUplinkChunkSize().Rand(), len(encodedData))
 		chunk := encodedData[:chunkSize]
 		encodedData = encodedData[chunkSize:]
 		headerKey := fmt.Sprintf("%s-%d", key, i)
@@ -140,7 +163,7 @@ func GetRequestCookiesWithPayload(payload []byte, options *option.V2RayXHTTPBase
 	key := options.UplinkDataKey
 	encodedData := base64.RawURLEncoding.EncodeToString(payload)
 	for i := 0; len(encodedData) > 0; i++ {
-		chunkSize := min(int(options.GetNormalizedUplinkChunkSize().Rand()), len(encodedData))
+		chunkSize := min(options.GetNormalizedUplinkChunkSize().Rand(), len(encodedData))
 		chunk := encodedData[:chunkSize]
 		encodedData = encodedData[chunkSize:]
 		cookieName := fmt.Sprintf("%s_%d", key, i)

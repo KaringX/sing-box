@@ -2,7 +2,8 @@ package option
 
 type VLESSInboundOptions struct {
 	ListenOptions
-	Users []VLESSUser `json:"users,omitempty"`
+	Users      []VLESSUser `json:"users,omitempty"`
+	Decryption string      `json:"decryption,omitempty"` // https://github.com/shtorm-7/sing-box-extended
 	InboundTLSOptionsContainer
 	Multiplex *InboundMultiplexOptions `json:"multiplex,omitempty"`
 	Transport *V2RayTransportOptions   `json:"transport,omitempty"`
@@ -19,7 +20,7 @@ type VLESSOutboundOptions struct {
 	ServerOptions
 	UUID       string      `json:"uuid"`
 	Flow       string      `json:"flow,omitempty"`
-	Encryption string      `json:"encryption,omitempty"` // https://github.com/starifly/sing-box
+	Encryption string      `json:"encryption,omitempty"` // https://github.com/shtorm-7/sing-box-extended
 	Network    NetworkList `json:"network,omitempty"`
 	OutboundTLSOptionsContainer
 	Multiplex      *OutboundMultiplexOptions `json:"multiplex,omitempty"`

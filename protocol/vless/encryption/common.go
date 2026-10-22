@@ -164,6 +164,13 @@ func (c *CommonConn) IsEncryptionLayer() bool {
 	return true
 }
 
+func (c *CommonConn) Close() error {
+	if c == nil || c.Conn == nil {
+		return nil
+	}
+	return c.Conn.Close()
+}
+
 type AEAD struct {
 	cipher.AEAD
 	Nonce [12]byte

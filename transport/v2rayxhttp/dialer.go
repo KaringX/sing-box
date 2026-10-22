@@ -3,24 +3,22 @@ package xhttp
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"net/http/httptrace"
-	"reflect"
 	"strings"
 	"sync"
-	"unsafe"
+	"sync/atomic"
 
-	"github.com/sagernet/quic-go/http3"
-	"github.com/sagernet/sing-box/common/vision"
+	"github.com/sagernet/sing-box/common/force_close"
 	common "github.com/sagernet/sing-box/common/xray"
 	"github.com/sagernet/sing-box/common/xray/buf"
 	"github.com/sagernet/sing-box/common/xray/signal/done"
 	"github.com/sagernet/sing-box/option"
 	E "github.com/sagernet/sing/common/exceptions"
-	"golang.org/x/net/http2"
 )
 
 // interface to abstract between use of browser dialer, vs net/http
@@ -28,7 +26,10 @@ type DialerClient interface {
 	IsClosed() bool
 	Close()
 
+	// ctx, url, sessionId, body, uploadOnly
 	OpenStream(context.Context, string, string, io.Reader, bool) (io.ReadCloser, net.Addr, net.Addr, error)
+
+	// ctx, url, sessionId, seqStr, payload
 	PostPacket(context.Context, string, string, string, buf.MultiBuffer) error
 }
 
@@ -45,20 +46,6 @@ type DefaultDialerClient struct {
 	mtx sync.RWMutex
 }
 
-type clientConnPool struct {
-	t     *http2.Transport
-	mu    sync.Mutex
-	conns map[string][]*http2.ClientConn
-}
-
-type efaceWords struct {
-	typ  unsafe.Pointer
-	data unsafe.Pointer
-}
-
-//go:linkname transportConnPool golang.org/x/net/http2.(*Transport).connPool
-func transportConnPool(t *http2.Transport) http2.ClientConnPool
-
 func (c *DefaultDialerClient) Close() {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
@@ -66,24 +53,7 @@ func (c *DefaultDialerClient) Close() {
 		return
 	}
 	c.closed = true
-	switch transport := c.client.Transport.(type) {
-	case *http.Transport:
-		transport.CloseIdleConnections()
-	case *http2.Transport:
-		connPool := transportConnPool(transport)
-		p := (*clientConnPool)((*efaceWords)(unsafe.Pointer(&connPool)).data)
-		p.mu.Lock()
-		defer p.mu.Unlock()
-		for _, vv := range p.conns {
-			for _, cc := range vv {
-				cc.Close()
-			}
-		}
-	case *http3.Transport:
-		transport.Close()
-	default:
-		panic(E.New("unknown transport type: ", reflect.TypeOf(transport)))
-	}
+	c.client.Transport = force_close.ResetTransport(c.client.Transport)
 }
 
 func (c *DefaultDialerClient) IsClosed() bool {
@@ -93,45 +63,47 @@ func (c *DefaultDialerClient) IsClosed() bool {
 }
 
 func (c *DefaultDialerClient) OpenStream(ctx context.Context, url string, sessionId string, body io.Reader, uploadOnly bool) (wrc io.ReadCloser, remoteAddr, localAddr net.Addr, err error) {
+	// this is done when the TCP/UDP connection to the server was established,
+	// and we can unblock the Dial function and print correct net addresses in
+	// logs
 	gotConn := done.New()
 	ctx = httptrace.WithClientTrace(ctx, &httptrace.ClientTrace{
 		GotConn: func(connInfo httptrace.GotConnInfo) {
 			remoteAddr = connInfo.Conn.RemoteAddr()
 			localAddr = connInfo.Conn.LocalAddr()
-			if hook, ok := vision.HookFromContext(ctx); ok {
-				hook(connInfo.Conn)
-			}
 			gotConn.Close()
 		},
 	})
-	method := "GET"
+	method := "GET" // stream-down
 	if body != nil {
-		method = c.options.GetNormalizedUplinkHTTPMethod()
+		method = c.options.GetNormalizedUplinkHTTPMethod() // stream-up/one
 	}
-	req, err := http.NewRequestWithContext(context.WithoutCancel(ctx), method, url, body) //karing
-	if err != nil {                                                                       //karing
-		return
+	reqCtx, cancel := context.WithCancel(context.WithoutCancel(ctx))
+	req, err := http.NewRequestWithContext(reqCtx, method, url, body)
+	if err != nil {
+		cancel()
+		return nil, nil, nil, err
 	}
 	FillStreamRequest(req, sessionId, "", c.options)
-	wrc = &WaitReadCloser{Wait: make(chan struct{})}
+	wrc = &WaitReadCloser{wait: done.New(), Cancel: cancel}
 	go func() {
-		resp, err := c.client.Do(req)
+		var resp *http.Response
+		resp, err = c.client.Do(req)
 		if err != nil {
-			if !uploadOnly {
+			if !uploadOnly && !errors.Is(err, context.Canceled) { // stream-down is enough
 				c.Close()
 			}
+			cancel()
 			gotConn.Close()
 			common.Close(body)
 			wrc.Close()
 			return
 		}
-		if resp.StatusCode != 200 || uploadOnly {
-			if resp.StatusCode != 200 {
-				c.Close()
-			}
+		if resp.StatusCode != 200 || uploadOnly { // stream-up
 			io.Copy(io.Discard, resp.Body)
-			resp.Body.Close()
+			resp.Body.Close() // if it is called immediately, the upload will be interrupted also
 			common.Close(body)
+			cancel()
 			wrc.Close()
 			return
 		}
@@ -154,25 +126,16 @@ func (c *DefaultDialerClient) PostPacket(ctx context.Context, url string, sessio
 			c.Close()
 			return err
 		}
-		_, copyErr := io.Copy(io.Discard, resp.Body)
-		closeErr := resp.Body.Close()
+		io.Copy(io.Discard, resp.Body)
+		defer resp.Body.Close()
 		if resp.StatusCode != 200 {
-			c.Close()
-			if copyErr != nil {
-				return copyErr
-			}
-			if closeErr != nil {
-				return closeErr
-			}
 			return E.New("bad status code: ", resp.Status)
 		}
-		if copyErr != nil {
-			return copyErr
-		}
-		if closeErr != nil {
-			return closeErr
-		}
 	} else {
+		// stringify the entire HTTP/1.1 request so it can be
+		// safely retried. if instead req.Write is called multiple
+		// times, the body is already drained after the first
+		// request
 		requestBuff := new(bytes.Buffer)
 		requestBuff.Grow(512 + int(req.ContentLength))
 		common.Must(req.Write(requestBuff))
@@ -190,27 +153,27 @@ func (c *DefaultDialerClient) PostPacket(ctx context.Context, url string, sessio
 				uploadConn = h1UploadConn
 			} else {
 				h1UploadConn = uploadConn.(*H1Conn)
+
+				// TODO: Replace 0 here with a config value later
+				// Or add some other condition for optimization purposes
 				if h1UploadConn.UnreadedResponsesCount > 0 {
 					resp, err := http.ReadResponse(h1UploadConn.RespBufReader, req)
 					if err != nil {
 						c.Close()
 						return fmt.Errorf("error while reading response: %s", err.Error())
 					}
-					_, copyErr := io.Copy(io.Discard, resp.Body)
-					closeErr := resp.Body.Close()
+					io.Copy(io.Discard, resp.Body)
+					defer resp.Body.Close()
 					if resp.StatusCode != 200 {
-						c.Close()
 						return fmt.Errorf("got non-200 error response code: %d", resp.StatusCode)
-					}
-					if copyErr != nil {
-						return copyErr
-					}
-					if closeErr != nil {
-						return closeErr
 					}
 				}
 			}
 			_, err := h1UploadConn.Write(requestBuff.Bytes())
+			// if the write failed, we try another connection from
+			// the pool, until the write on a new connection fails.
+			// failed writes to a pooled connection are normal when
+			// the connection has been closed in the meantime.
 			if err == nil {
 				break
 			} else if newConnection {
@@ -223,64 +186,40 @@ func (c *DefaultDialerClient) PostPacket(ctx context.Context, url string, sessio
 }
 
 type WaitReadCloser struct {
-	Wait chan struct{}
-	io.ReadCloser
-	mu     sync.Mutex
-	once   sync.Once
-	closed bool
-}
-
-func (w *WaitReadCloser) notify() {
-	w.once.Do(func() {
-		close(w.Wait)
-	})
+	wait   *done.Instance
+	Cancel context.CancelFunc
+	reader atomic.Pointer[io.ReadCloser]
 }
 
 func (w *WaitReadCloser) Set(rc io.ReadCloser) {
-	w.mu.Lock()
-	if w.closed || w.ReadCloser != nil {
-		w.mu.Unlock()
-		rc.Close()
-		return
+	w.reader.Store(&rc)
+	if w.wait.Done() {
+		if p := w.reader.Swap(nil); p != nil {
+			(*p).Close()
+		}
 	}
-	w.ReadCloser = rc
-	w.mu.Unlock()
-	w.notify()
+	w.wait.Close()
 }
 
 func (w *WaitReadCloser) Read(b []byte) (int, error) {
-	w.mu.Lock()
-	rc := w.ReadCloser
-	w.mu.Unlock()
-
+	rc := w.reader.Load()
 	if rc == nil {
-		<-w.Wait
-		w.mu.Lock()
-		rc = w.ReadCloser
-		w.mu.Unlock()
-		if rc == nil {
+		<-w.wait.Wait()
+		if rc = w.reader.Load(); rc == nil {
 			return 0, io.ErrClosedPipe
 		}
 	}
-	return rc.Read(b)
+	return (*rc).Read(b)
 }
 
 func (w *WaitReadCloser) Close() error {
-	w.mu.Lock()
-	if w.closed {
-		w.mu.Unlock()
-		return nil
+	if w.Cancel != nil {
+		w.Cancel()
 	}
-	w.closed = true
-	rc := w.ReadCloser
-	w.ReadCloser = nil
-	w.mu.Unlock()
-
-	if rc != nil {
-		return rc.Close()
+	w.wait.Close()
+	if p := w.reader.Swap(nil); p != nil {
+		return (*p).Close()
 	}
-
-	w.notify()
 	return nil
 }
 

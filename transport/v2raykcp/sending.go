@@ -1,14 +1,14 @@
 package v2raykcp
 
 import (
-	"container/list"
 	"sync"
 
+	"github.com/sagernet/sing-box/common/list"
 	"github.com/sagernet/sing/common/buf"
 )
 
 type SendingWindow struct {
-	cache             *list.List
+	cache             *list.List[*DataSegment]
 	totalInFlightSize uint32
 	writer            SegmentWriter
 	onPacketLoss      func(uint32)
@@ -16,7 +16,7 @@ type SendingWindow struct {
 
 func NewSendingWindow(writer SegmentWriter, onPacketLoss func(uint32)) *SendingWindow {
 	return &SendingWindow{
-		cache:        list.New(),
+		cache:        list.New[*DataSegment](),
 		writer:       writer,
 		onPacketLoss: onPacketLoss,
 	}
@@ -27,9 +27,9 @@ func (sw *SendingWindow) Release() {
 		return
 	}
 	for sw.cache.Len() > 0 {
-		seg := sw.cache.Front().Value.(*DataSegment)
+		seg := sw.cache.Front().Value
 		seg.Release()
-		sw.cache.Remove(sw.cache.Front())
+		sw.cache.Front().Remove()
 	}
 }
 
@@ -50,17 +50,17 @@ func (sw *SendingWindow) Push(number uint32, b *buf.Buffer) {
 }
 
 func (sw *SendingWindow) FirstNumber() uint32 {
-	return sw.cache.Front().Value.(*DataSegment).Number
+	return sw.cache.Front().Value.Number
 }
 
 func (sw *SendingWindow) Clear(una uint32) {
 	for !sw.IsEmpty() {
-		seg := sw.cache.Front().Value.(*DataSegment)
+		seg := sw.cache.Front().Value
 		if seg.Number >= una {
 			break
 		}
 		seg.Release()
-		sw.cache.Remove(sw.cache.Front())
+		sw.cache.Front().Remove()
 	}
 }
 
@@ -87,8 +87,7 @@ func (sw *SendingWindow) Visit(visitor func(seg *DataSegment) bool) {
 	}
 
 	for e := sw.cache.Front(); e != nil; e = e.Next() {
-		seg := e.Value.(*DataSegment)
-		if !visitor(seg) {
+		if !visitor(e.Value) {
 			break
 		}
 	}
@@ -132,7 +131,7 @@ func (sw *SendingWindow) Remove(number uint32) bool {
 	}
 
 	for e := sw.cache.Front(); e != nil; e = e.Next() {
-		seg := e.Value.(*DataSegment)
+		seg := e.Value
 		if seg.Number > number {
 			return false
 		} else if seg.Number == number {
@@ -140,7 +139,7 @@ func (sw *SendingWindow) Remove(number uint32) bool {
 				sw.totalInFlightSize--
 			}
 			seg.Release()
-			sw.cache.Remove(e)
+			e.Remove()
 			return true
 		}
 	}
@@ -285,22 +284,20 @@ func (w *SendingWorker) Write(seg Segment) error {
 }
 
 func (w *SendingWorker) OnPacketLoss(lossRate uint32) {
-	if w.conn.roundTrip.Timeout() == 0 {
+	if !w.conn.Config.Congestion || w.conn.roundTrip.Timeout() == 0 {
 		return
 	}
 
 	if lossRate >= 15 {
 		w.controlWindow = 3 * w.controlWindow / 4
-	}
-	if lossRate <= 5 {
+	} else if lossRate <= 5 {
 		w.controlWindow += w.controlWindow / 4
 	}
 	if w.controlWindow < 16 {
 		w.controlWindow = 16
 	}
-	cwnd := w.conn.Config.GetSendingInFlightSize()
-	if w.controlWindow > cwnd {
-		w.controlWindow = cwnd
+	if w.controlWindow > 2*w.conn.Config.GetSendingInFlightSize() {
+		w.controlWindow = 2 * w.conn.Config.GetSendingInFlightSize()
 	}
 }
 
@@ -316,11 +313,11 @@ func (w *SendingWorker) Flush(current uint32) {
 	if cwnd > w.remoteNextNumber-w.firstUnacknowledged {
 		cwnd = w.remoteNextNumber - w.firstUnacknowledged
 	}
-	if cwnd > w.controlWindow {
+	if w.conn.Config.Congestion && cwnd > w.controlWindow {
 		cwnd = w.controlWindow
 	}
 
-	cwnd *= w.conn.Config.GetCwndMultiplier()
+	cwnd *= 20
 
 	if !w.window.IsEmpty() {
 		w.window.Flush(current, w.conn.roundTrip.Timeout(), cwnd)

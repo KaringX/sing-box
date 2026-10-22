@@ -50,4 +50,3 @@ func (mb MultiBuffer) IsEmpty() bool {
 	}
 	return true
 }
-

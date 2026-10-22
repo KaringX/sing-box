@@ -5,7 +5,6 @@ import (
 	stdtls "crypto/tls"
 	"encoding/base64"
 	"net"
-	"reflect"
 	"strings"
 	"sync"
 
@@ -52,8 +51,8 @@ type Outbound struct {
 	transport       adapter.V2RayClientTransport
 	packetAddr      bool
 	xudp            bool
-	encryption      *encryption.ClientInstance // https://github.com/starifly/sing-box
-	vision          bool                       // https://github.com/starifly/sing-box
+	encryption      *encryption.ClientInstance // https://github.com/shtorm-7/sing-box-extended
+	vision          bool                       // https://github.com/shtorm-7/sing-box-extended
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.VLESSOutboundOptions) (adapter.Outbound, error) {
@@ -70,7 +69,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		logger:     logger,
 		dialer:     outboundDialer,
 		serverAddr: options.ServerOptions.Build(),
-		vision:     strings.HasPrefix(options.Flow, "xtls-rprx-vision"), // https://github.com/starifly/sing-box
+		vision:     strings.HasPrefix(options.Flow, "xtls-rprx-vision"), // https://github.com/shtorm-7/sing-box-extended
 	}
 	if options.TLS != nil {
 		outbound.tlsConfig, err = tls.NewClientWithOptions(tls.ClientOptions{
@@ -106,8 +105,11 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 			return empty, E.New("unknown packet encoding: ", *options.PacketEncoding) //karing
 		}
 	}
-	// https://github.com/starifly/sing-box begin
-	// Parse encryption configuration
+	// https://github.com/shtorm-7/sing-box-extended begin
+	muxOpts := common.PtrValueOrDefault(options.Multiplex)
+	if muxOpts.Enabled {
+		options.Flow = ""
+	}
 	if options.Encryption != "" && options.Encryption != "none" {
 		encryptionConfig, err := parseClientEncryption(options.Encryption)
 		if err != nil {
@@ -119,11 +121,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		}
 		logger.Debug("encryption initialized: keys=", len(encryptionConfig.keys), " xorMode=", encryptionConfig.xorMode, " seconds=", encryptionConfig.seconds, " padding=", encryptionConfig.padding)
 	}
-	muxOpts := common.PtrValueOrDefault(options.Multiplex)
-	if muxOpts.Enabled {
-		options.Flow = ""
-	}
-	// https://github.com/starifly/sing-box end
+
 	outbound.client, err = vless.NewClient(options.UUID, options.Flow, logger)
 	if err != nil {
 		return empty, err //karing
@@ -231,8 +229,8 @@ func (h *vlessDialer) DialContext(ctx context.Context, network string, destinati
 	metadata.Outbound = h.Tag()
 	metadata.Destination = destination
 	var conn net.Conn
+	// https://github.com/shtorm-7/sing-box-extended begin
 	var baseConn net.Conn
-	// https://github.com/starifly/sing-box begin
 	var hookOnce sync.Once
 	if h.vision {
 		ctx = vision.WithHook(ctx, func(tlsConn net.Conn) {
@@ -244,88 +242,55 @@ func (h *vlessDialer) DialContext(ctx context.Context, network string, destinati
 			})
 		})
 	}
-	// https://github.com/starifly/sing-box end
+	// https://github.com/shtorm-7/sing-box-extended end
 	var err error
 	if h.transport != nil {
 		conn, err = h.transport.DialContext(ctx)
-		// https://github.com/starifly/sing-box begin
+		// https://github.com/shtorm-7/sing-box-extended begin
 		if err == nil && h.vision {
 			if baseConn == nil {
-				// Only set baseConn if the transport delivered a TLS-capable connection
 				if isVisionTLSConn(conn) {
 					h.logger.Warn("Vision enabled but hook was not called by transport, using fallback")
 					baseConn = conn
 				}
 			}
 		}
-		// https://github.com/starifly/sing-box end
+		// https://github.com/shtorm-7/sing-box-extended end
 	} else if h.tlsDialer != nil {
 		conn, err = h.tlsDialer.DialTLSContext(ctx, h.serverAddr)
-		if err == nil && h.tlsConfig != nil { // https://github.com/starifly/sing-box
-			if h.vision && baseConn == nil {
-				baseConn = conn
-			}
+		if err == nil && h.vision && baseConn == nil { // https://github.com/shtorm-7/sing-box-extended
+			baseConn = conn
 		}
 	} else {
 		conn, err = h.dialer.DialContext(ctx, N.NetworkTCP, h.serverAddr)
-		if err == nil && h.tlsConfig != nil { // https://github.com/starifly/sing-box
-			conn, err = tls.ClientHandshake(ctx, conn, h.tlsConfig)
-			if err == nil && h.vision && baseConn == nil {
-				baseConn = conn
-			}
-		}
 	}
 	if err != nil {
 		return nil, err
 	}
-	// https://github.com/starifly/sing-box begin
-	// Apply encryption if configured
+	// https://github.com/shtorm-7/sing-box-extended begin
 	if h.encryption != nil {
-		conn, err = h.encryption.Handshake(conn)
+		var encConn net.Conn
+		encConn, err = h.encryption.Handshake(conn)
 		if err != nil {
+			common.Close(conn)
 			return nil, E.Cause(err, "encryption handshake")
 		}
+		conn = encConn
 	}
 
-	// For Vision: wrap the connection to expose the TLS/encryption connection for vless client
-	var visionBaseConn net.Conn // The connection to pass to Vision (TLS or encryption layer)
+	var visionBaseConn net.Conn
 	var visionCanSplice bool
 	if h.vision {
-		isRAWTransport := h.transport == nil
-
-		if baseConn != nil && !isVisionTLSConn(baseConn) {
-			baseConn = nil
-		}
-		if baseConn != nil {
-			// Has TLS/Reality: use baseConn (TLS connection)
-			visionBaseConn = baseConn
-			visionCanSplice = isRAWTransport
-			conn = newVisionConnWrapper(conn, baseConn)
-		} else if h.encryption != nil {
-			// Only has encryption (no TLS/Reality): use encryption layer itself
-			encConn := findEncryptionLayer(conn)
-			if encConn != nil {
-				visionBaseConn = encConn
-				if h.encryption.IsFullRandomXorMode() {
-					visionCanSplice = false
-				} else {
-					visionCanSplice = isRAWTransport
-				}
-				conn = newVisionConnWrapper(conn, encConn)
-			} else {
-				return nil, E.New("Vision: failed to find encryption layer")
-			}
-		} else {
-			return nil, E.New("Vision requires either TLS/Reality or Encryption")
+		conn, visionBaseConn, visionCanSplice, err = h.setupVision(conn, baseConn)
+		if err != nil {
+			return nil, err
 		}
 	}
-	// https://github.com/starifly/sing-box end
+	// https://github.com/shtorm-7/sing-box-extended end
 	switch N.NetworkName(network) {
 	case N.NetworkTCP:
 		h.logger.InfoContext(ctx, "outbound connection to ", destination)
-		if h.vision && visionBaseConn != nil { // https://github.com/starifly/sing-box
-			// For Vision, we need to pass the base connection (TLS or encryption layer)
-			// to prepareConn so it can properly initialize VisionConn
+		if h.vision && visionBaseConn != nil { // https://github.com/shtorm-7/sing-box-extended
 			return h.client.DialEarlyConnWithOptions(conn, visionBaseConn, destination, visionCanSplice)
 		}
 		return h.client.DialEarlyConn(conn, destination)
@@ -350,6 +315,29 @@ func (h *vlessDialer) DialContext(ctx context.Context, network string, destinati
 	}
 }
 
+func (h *vlessDialer) setupVision(conn net.Conn, baseConn net.Conn) (net.Conn, net.Conn, bool, error) { // https://github.com/shtorm-7/sing-box-extended
+	isRAWTransport := h.transport == nil
+
+	if baseConn != nil && !isVisionTLSConn(baseConn) {
+		baseConn = nil
+	}
+
+	if baseConn != nil {
+		return newVisionConnWrapper(conn, baseConn), baseConn, isRAWTransport, nil
+	}
+
+	if h.encryption != nil {
+		encConn := findEncryptionLayer(conn)
+		if encConn == nil {
+			return nil, nil, false, E.New("Vision: failed to find encryption layer")
+		}
+		canSplice := isRAWTransport && !h.encryption.IsFullRandomXorMode()
+		return newVisionConnWrapper(conn, encConn), encConn, canSplice, nil
+	}
+
+	return nil, nil, false, E.New("Vision requires either TLS/Reality or Encryption")
+}
+
 func (h *vlessDialer) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
 	h.logger.InfoContext(ctx, "outbound packet connection to ", destination)
 	ctx, metadata := adapter.ExtendContext(ctx)
@@ -363,24 +351,22 @@ func (h *vlessDialer) ListenPacket(ctx context.Context, destination M.Socksaddr)
 		conn, err = h.tlsDialer.DialTLSContext(ctx, h.serverAddr)
 	} else {
 		conn, err = h.dialer.DialContext(ctx, N.NetworkTCP, h.serverAddr)
-		if err == nil && h.tlsConfig != nil { // https://github.com/starifly/sing-box
-			conn, err = tls.ClientHandshake(ctx, conn, h.tlsConfig)
-		}
 	}
 	if err != nil {
 		common.Close(conn)
 		return nil, err
 	}
-	// https://github.com/starifly/sing-box begin
-	// Apply encryption if configured
+	// https://github.com/shtorm-7/sing-box-extended begin
 	if h.encryption != nil {
-		conn, err = h.encryption.Handshake(conn)
+		var encConn net.Conn
+		encConn, err = h.encryption.Handshake(conn)
 		if err != nil {
 			common.Close(conn)
 			return nil, E.Cause(err, "encryption handshake")
 		}
+		conn = encConn
 	}
-	// https://github.com/starifly/sing-box end
+	// https://github.com/shtorm-7/sing-box-extended end
 	if h.xudp {
 		return h.client.DialEarlyXUDPPacketConn(conn, destination)
 	} else if h.packetAddr {
@@ -397,7 +383,7 @@ func (h *vlessDialer) ListenPacket(ctx context.Context, destination M.Socksaddr)
 	}
 }
 
-// https://github.com/starifly/sing-box begin
+// https://github.com/shtorm-7/sing-box-extended begin
 type visionConnWrapper struct {
 	net.Conn
 	upstream net.Conn
@@ -437,7 +423,6 @@ func (c *visionConnWrapper) WriterReplaceable() bool {
 	return true
 }
 
-// isVisionTLSConn returns true when the provided connection exposes TLS semantics Vision expects.
 func isVisionTLSConn(conn net.Conn) bool {
 	if conn == nil {
 		return false
@@ -447,16 +432,6 @@ func isVisionTLSConn(conn net.Conn) bool {
 	}
 	if _, ok := conn.(interface{ Handshake() error }); ok {
 		return true
-	}
-	connType := reflect.TypeOf(conn)
-	if connType == nil {
-		return false
-	}
-	if connType.Kind() == reflect.Ptr {
-		pkgPath := connType.Elem().PkgPath()
-		if pkgPath == "crypto/tls" || strings.Contains(pkgPath, "utls") || strings.Contains(pkgPath, "shadowtls") {
-			return true
-		}
 	}
 	return false
 }
@@ -524,10 +499,6 @@ func parseClientEncryption(raw string) (clientEncryptionConfig, error) {
 		if segment == "" {
 			return cfg, E.New("invalid empty segment in encryption string")
 		}
-		if paddingPhase && len(segment) < 20 {
-			paddingParts = append(paddingParts, segment)
-			continue
-		}
 		if data, err := base64.RawURLEncoding.DecodeString(segment); err == nil {
 			if len(data) == 32 || len(data) == 1184 {
 				cfg.keys = append(cfg.keys, data)
@@ -535,6 +506,10 @@ func parseClientEncryption(raw string) (clientEncryptionConfig, error) {
 				continue
 			}
 			return cfg, E.New("invalid encryption key length: ", len(data))
+		}
+		if paddingPhase {
+			paddingParts = append(paddingParts, segment)
+			continue
 		}
 		return cfg, E.New("invalid encryption key: ", segment)
 	}
@@ -547,4 +522,4 @@ func parseClientEncryption(raw string) (clientEncryptionConfig, error) {
 	return cfg, nil
 }
 
-// https://github.com/starifly/sing-box end
+// https://github.com/shtorm-7/sing-box-extended end

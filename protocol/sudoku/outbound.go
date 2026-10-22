@@ -10,6 +10,7 @@ import (
 	"github.com/sagernet/sing-box/adapter/outbound"
 	"github.com/sagernet/sing-box/common/dialer"
 	"github.com/sagernet/sing-box/common/tls"
+	common "github.com/sagernet/sing-box/common/xray"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
@@ -56,7 +57,10 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 	httpMaskMode := defaultConf.HTTPMaskMode
 	var httpMaskHost string
 	var pathRoot string
-	httpMaskMultiplex := defaultConf.HTTPMaskMultiplex
+	multiplex := defaultConf.Multiplex
+	if mode := strings.TrimSpace(options.Multiplex); mode != "" {
+		multiplex = mode
+	}
 
 	if hm := options.HTTPMask; hm != nil {
 		disableHTTPMask = !hm.Enabled
@@ -65,8 +69,8 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		}
 		httpMaskHost = hm.Host
 		pathRoot = strings.TrimSpace(hm.PathRoot)
-		if hm.Multiplex != "" {
-			httpMaskMultiplex = hm.Multiplex
+		if mode := strings.TrimSpace(hm.Multiplex); mode != "" {
+			multiplex = mode
 		}
 	}
 
@@ -82,7 +86,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		HTTPMaskMode:            httpMaskMode,
 		HTTPMaskHost:            httpMaskHost,
 		HTTPMaskPathRoot:        pathRoot,
-		HTTPMaskMultiplex:       httpMaskMultiplex,
+		Multiplex:               multiplex,
 	}
 	if options.AEADMethod != "" {
 		baseConf.AEADMethod = options.AEADMethod
@@ -96,6 +100,9 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		baseConf.Table = tables[0]
 	} else {
 		baseConf.Tables = tables
+	}
+	if err = baseConf.Validate(); err != nil {
+		return empty, err //karing
 	}
 
 	var tlsConfig tls.Config
@@ -111,11 +118,14 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		}
 	}
 
-	client := sudoku.NewClient(sudoku.ClientOptions{
+	client, err := sudoku.NewClient(sudoku.ClientOptions{
 		Dialer:    outboundDialer,
 		TLSConfig: tlsConfig,
 		Config:    baseConf,
 	})
+	if err != nil {
+		return empty, err //karing
+	}
 
 	return &Outbound{
 		Adapter:   outbound.NewAdapterWithDialerOptions(C.TypeSudoku, tag, []string{N.NetworkTCP, N.NetworkUDP}, options.DialerOptions),
@@ -163,18 +173,16 @@ func (h *Outbound) Start(stage adapter.StartStage, scope *adapter.Scope) error {
 	if stage != adapter.StartStateInitialize {
 		return nil
 	}
-	scope.Add(h.close)
+	scope.Add(func() error {
+		h.client.Close()
+		return common.Close(h.tlsConfig)
+	})
 	return nil
 }
 
-func (h *Outbound) InterfaceUpdated(ctx context.Context) {
-	_ = h.close() //karing
-}
-
-func (h *Outbound) close() error { //karing
-	if h.client == nil {
-		return nil
+func (h *Outbound) InterfaceUpdated() {
+	err := h.client.ResetConnections()
+	if err != nil {
+		h.logger.Error(E.Cause(err, "reset connections"))
 	}
-	h.client.Close()
-	return nil
 }

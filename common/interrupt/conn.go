@@ -61,3 +61,33 @@ func (c *PacketConn) WriterReplaceable() bool {
 func (c *PacketConn) Upstream() any {
 	return c.NetPacketConn
 }
+// https://github.com/shtorm-7/sing-box-extended begin
+type SingPacketConn struct {
+	N.PacketConn
+	group   *Group
+	element *list.Element[*groupConnItem]
+}
+
+/*func (c *SingPacketConn) MarkAsInternal() {
+	c.element.Value.internal = true
+}*/
+
+func (c *SingPacketConn) Close() error {
+	c.group.access.Lock()
+	c.group.connections.Remove(c.element)
+	c.group.access.Unlock()
+	return c.PacketConn.Close()
+}
+
+func (c *SingPacketConn) ReaderReplaceable() bool {
+	return true
+}
+
+func (c *SingPacketConn) WriterReplaceable() bool {
+	return true
+}
+
+func (c *SingPacketConn) Upstream() any {
+	return c.PacketConn
+}
+// https://github.com/shtorm-7/sing-box-extended end

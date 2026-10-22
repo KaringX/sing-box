@@ -19,7 +19,10 @@ const (
 )
 
 const charsetBase62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+
+// Huffman encoding gives ~20% size reduction for base62 sequences
 const avgHuffmanBytesPerCharBase62 = 0.8
+
 const validationTolerance = 2
 
 type XPaddingPlacement struct {
@@ -80,20 +83,25 @@ func GenerateTokenishPaddingBase62(targetHuffmanBytes int) string {
 	}
 	const maxIter = 150
 	adjustChar := byte('X')
+	// Adjust until close enough
 	for iter := 0; iter < maxIter; iter++ {
 		currentLength := int(hpack.HuffmanEncodeLength(randBase62Str))
 		diff := currentLength - targetHuffmanBytes
+
 		if absInt(diff) <= validationTolerance {
 			return randBase62Str
 		}
 		if diff < 0 {
+			// Too small -> append padding char(s)
 			randBase62Str += string(adjustChar)
+			// Avoid a long run of identical chars
 			if adjustChar == 'X' {
 				adjustChar = 'Z'
 			} else {
 				adjustChar = 'X'
 			}
 		} else {
+			// Too big -> remove from the end
 			if len(randBase62Str) <= 1 {
 				return randBase62Str
 			}
@@ -107,6 +115,11 @@ func GeneratePadding(method PaddingMethod, length int) string {
 	if length <= 0 {
 		return ""
 	}
+	// https://www.rfc-editor.org/rfc/rfc7541.html#appendix-B
+	// h2's HPACK Header Compression feature employs a huffman encoding using a static table.
+	// 'X' and 'Z' are assigned an 8 bit code, so HPACK compression won't change actual padding length on the wire.
+	// https://www.rfc-editor.org/rfc/rfc9204.html#section-4.1.2-2
+	// h3's similar QPACK feature uses the same huffman table.
 	switch method {
 	case PaddingMethodRepeatX:
 		return strings.Repeat("X", length)
@@ -125,7 +138,11 @@ func ApplyPaddingToCookie(req *http.Request, name, value string) {
 	if req == nil || name == "" || value == "" {
 		return
 	}
-	req.AddCookie(&http.Cookie{Name: name, Value: value, Path: "/"})
+	req.AddCookie(&http.Cookie{
+		Name:  name,
+		Value: value,
+		Path:  "/",
+	})
 }
 
 func ApplyPaddingToResponseCookie(writer http.ResponseWriter, name, value string) {
@@ -232,8 +249,10 @@ func ExtractXPaddingFromRequest(options *option.V2RayXHTTPBaseOptions, req *http
 			paddingPlacement := option.PlacementHeader + "=" + header
 			return headerValue, paddingPlacement
 		}
+
 		if parsedURL, err := url.Parse(headerValue); err == nil {
 			paddingPlacement := option.PlacementQueryInHeader + "=" + header + ", key=" + key
+
 			return parsedURL.Query().Get(key), paddingPlacement
 		}
 	}
@@ -245,7 +264,7 @@ func ExtractXPaddingFromRequest(options *option.V2RayXHTTPBaseOptions, req *http
 	return "", ""
 }
 
-func IsPaddingValid(options *option.V2RayXHTTPBaseOptions, paddingValue string, from, to int32, method PaddingMethod) bool {
+func IsPaddingValid(options *option.V2RayXHTTPBaseOptions, paddingValue string, from, to int, method PaddingMethod) bool {
 	if paddingValue == "" {
 		return false
 	}
@@ -255,11 +274,11 @@ func IsPaddingValid(options *option.V2RayXHTTPBaseOptions, paddingValue string, 
 	}
 	switch method {
 	case PaddingMethodRepeatX:
-		n := int32(len(paddingValue))
+		n := len(paddingValue)
 		return n >= from && n <= to
 	case PaddingMethodTokenish:
-		const tolerance = int32(validationTolerance)
-		n := int32(hpack.HuffmanEncodeLength(paddingValue))
+		const tolerance = validationTolerance
+		n := int(hpack.HuffmanEncodeLength(paddingValue))
 		f := from - tolerance
 		t := to + tolerance
 		if f < 0 {
@@ -267,7 +286,7 @@ func IsPaddingValid(options *option.V2RayXHTTPBaseOptions, paddingValue string, 
 		}
 		return n >= f && n <= t
 	default:
-		n := int32(len(paddingValue))
+		n := len(paddingValue)
 		return n >= from && n <= to
 	}
 }

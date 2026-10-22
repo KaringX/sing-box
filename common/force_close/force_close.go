@@ -1,19 +1,15 @@
-package v2rayhttp
+package force_close
 
 import (
 	"net/http"
 	"reflect"
 	"unsafe"
 
+	"github.com/sagernet/quic-go/http3"
 	E "github.com/sagernet/sing/common/exceptions"
 
 	"golang.org/x/net/http2"
 )
-
-type efaceWords struct {
-	typ  unsafe.Pointer
-	data unsafe.Pointer
-}
 
 func ResetTransport(rawTransport http.RoundTripper) http.RoundTripper {
 	switch transport := rawTransport.(type) {
@@ -21,9 +17,17 @@ func ResetTransport(rawTransport http.RoundTripper) http.RoundTripper {
 		transport.CloseIdleConnections()
 		return transport.Clone()
 	case *http2.Transport:
-		closeHTTP2Connections(transport)
+		CloseHTTP2Connections(transport)
+		return transport
+	case *http3.Transport:
+		transport.Close()
 		return transport
 	default:
 		panic(E.New("unknown transport type: ", reflect.TypeOf(transport)))
 	}
+}
+
+type efaceWords struct {
+	typ  unsafe.Pointer
+	data unsafe.Pointer
 }

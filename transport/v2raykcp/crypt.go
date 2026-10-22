@@ -93,17 +93,17 @@ func xorbkd(b []byte) {
 func NewAEADAESGCMBasedOnSeed(seed string) cipher.AEAD {
 	// Use SHA256 to hash the seed
 	hashedSeed := sha256.Sum256([]byte(seed))
-	
+
 	// Use first 16 bytes as AES-128 key
 	block, err := aes.NewCipher(hashedSeed[:16])
 	if err != nil {
 		panic(err)
 	}
-	
+
 	gcm, err := cipher.NewGCM(block)
 	if err != nil {
 		panic(err)
 	}
-	
+
 	return gcm
 }

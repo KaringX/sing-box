@@ -1,7 +1,7 @@
 package xhttp
 
 import (
-	xray "github.com/sagernet/sing-box/common/xray"
+	common "github.com/sagernet/sing-box/common/xray"
 	"github.com/sagernet/sing-box/common/xray/buf"
 	"github.com/sagernet/sing-box/common/xray/pipe"
 )
@@ -25,15 +25,18 @@ func (w uploadWriter) Write(b []byte) (int, error) {
 			b = b[:capacity]
 		}
 	*/
+
 	buffer := buf.MultiBufferContainer{}
-	xray.Must2(buffer.Write(b))
+	common.Must2(buffer.Write(b))
 
 	var writed int
 	for _, buff := range buffer.MultiBuffer {
-		if err := w.WriteMultiBuffer(buf.MultiBuffer{buff}); err != nil {
+		n := int(buff.Len())
+		err := w.WriteMultiBuffer(buf.MultiBuffer{buff})
+		if err != nil {
 			return writed, err
 		}
-		writed += int(buff.Len())
+		writed += n
 	}
 	return writed, nil
 }
