@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net"
 	"net/netip"
 	"time"
@@ -69,6 +70,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 	outbound.startHandler = func() {
 		defer close(outbound.await)
 		cacheFile := service.FromContext[adapter.CacheFile](ctx)
+		var appConfig *Config
 		var err error
 		defer func() {
 			if err != nil {
@@ -79,7 +81,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		var peerPubKey *ecdsa.PublicKey            //karing
 		ipv4Address := options.Profile.IPv4Address //karing
 		ipv6Address := options.Profile.IPv6Address //karing
-		var appConfig *Config                      //karing
+
 		if len(options.Profile.PrivateKey) == 0 || len(options.Profile.PublicKey) == 0 {
 			if !options.Profile.Recreate && cacheFile != nil && cacheFile.StoreMASQUEConfig() {
 				savedProfile := cacheFile.LoadMASQUEConfig(tag)
@@ -97,8 +99,9 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 					return
 				}
 				if cacheFile != nil && cacheFile.StoreMASQUEConfig() {
-					content, err := json.Marshal(appConfig)
-					if err != nil {
+					content, err1 := json.Marshal(appConfig) //karing
+					if err1 != nil {                         //karing
+						err = err1 //karing
 						logger.ErrorContext(ctx, err)
 						return
 					}
@@ -122,35 +125,41 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 				return
 			}
 		} else { //karing
-			privKeyBytes, err := base64.StdEncoding.DecodeString(options.Profile.PrivateKey)
-			if err != nil {
+			privKeyBytes, err1 := base64.StdEncoding.DecodeString(options.Profile.PrivateKey)
+			if err1 != nil {
+				err = err1
 				logger.ErrorContext(ctx, E.New("failed to decode private key: ", err))
 				return
 			}
-			privKey, err = x509.ParseECPrivateKey(privKeyBytes)
-			if err != nil {
+			privKey, err1 = x509.ParseECPrivateKey(privKeyBytes)
+			if err1 != nil {
+				err = err1
 				logger.ErrorContext(ctx, E.New("failed to parse private key: ", err))
 				return
 			}
-			peerPubKeyBytes, err := base64.StdEncoding.DecodeString(options.Profile.PublicKey)
-			if err != nil {
+			peerPubKeyBytes, err1 := base64.StdEncoding.DecodeString(options.Profile.PublicKey)
+			if err1 != nil {
+				err = err1
 				logger.ErrorContext(ctx, E.New("failed to decode public key: ", err))
 				return
 			}
-			pubKey, err := x509.ParsePKIXPublicKey(peerPubKeyBytes)
-			if err != nil {
+			pubKey, err1 := x509.ParsePKIXPublicKey(peerPubKeyBytes)
+			if err1 != nil {
+				err = err1
 				logger.ErrorContext(ctx, E.New("failed to parse public key: ", err))
 				return
 			}
 			var ok bool
 			peerPubKey, ok = pubKey.(*ecdsa.PublicKey)
 			if !ok {
+				err = fmt.Errorf("public key is not ECDSA")
 				logger.ErrorContext(ctx, E.New("public key is not ECDSA"))
 				return
 			}
 		}
-		cert, err := masque.GenerateCert(privKey, &privKey.PublicKey)
-		if err != nil {
+		cert, err1 := masque.GenerateCert(privKey, &privKey.PublicKey) //karing
+		if err1 != nil {                                               //karing
+			err = err1 //karing
 			logger.ErrorContext(ctx, E.New("failed to generate cert: ", err))
 			return
 		}
@@ -161,8 +170,9 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		if options.TLS != nil && options.TLS.ServerName != "" {
 			serverName = options.TLS.ServerName
 		}
-		tlsConfig, err := tls.NewMASQUEClient(ctx, logger, serverName, cert, privKey, peerPubKey, common.PtrValueOrDefault(options.TLS))
-		if err != nil {
+		tlsConfig, err1 := tls.NewMASQUEClient(ctx, logger, serverName, cert, privKey, peerPubKey, common.PtrValueOrDefault(options.TLS)) //karing
+		if err1 != nil {                                                                                                                  //karing                                                                                                     //karing
+			err = err1 //karing
 			logger.ErrorContext(ctx, E.New("failed to prepare TLS config: ", err))
 			return
 		}
@@ -173,8 +183,27 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 			if endpointPort == 0 {
 				endpointPort = 443
 			}
-			endpointIP := net.ParseIP(options.Address)
+			address := M.ParseSocksaddr(options.Address) //karing
+			var endpointIP net.IP                        //karing
+			if address.IsDomain() {                      //karing
+				destinationAddresses, err1 := outbound.dnsRouter.Lookup(ctx, address.Fqdn, adapter.DNSQueryOptions{})
+				if err1 != nil {
+					err = err1
+					logger.ErrorContext(ctx, E.New("failed to lookup destination addresses: ", err))
+					return
+				}
+				if len(destinationAddresses) == 0 {
+					err = E.New("no addresses found for: ", address.Fqdn)
+					logger.ErrorContext(ctx, err)
+					return
+				}
+				endpointIP = net.IP(destinationAddresses[0].AsSlice())
+			} else {
+				endpointIP = net.ParseIP(options.Address)
+			}
+
 			if endpointIP == nil {
+				err = E.New("invalid endpoint address: ", options.Address)
 				logger.ErrorContext(ctx, E.New("invalid endpoint address: ", options.Address))
 				return
 			}
@@ -185,11 +214,13 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 			}
 		} else {
 			if appConfig == nil {
+				err = fmt.Errorf("app config is not initialized")
 				logger.ErrorContext(ctx, E.New("app config is not initialized"))
 				return
 			}
-			endpoint, err = appConfig.SelectEndpointFromConfig(useHTTP2, options.UseIPv6, 443)
-			if err != nil {
+			endpoint, err1 = appConfig.SelectEndpointFromConfig(useHTTP2, options.UseIPv6, 443) //karing
+			if err1 != nil {                                                                    //karing
+				err = err1 //karing
 				logger.ErrorContext(ctx, E.New("failed to select endpoint: ", err))
 				return
 			}
@@ -206,22 +237,24 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		} else {
 			udpKeepalivePeriod = time.Second * 30
 		}
-		outboundDialer, err := dialer.NewWithOptions(dialer.Options{
+		outboundDialer, err1 := dialer.NewWithOptions(dialer.Options{ //karing
 			Context:          ctx,
 			Options:          options.DialerOptions,
 			RemoteIsDomain:   false,
 			ResolverOnDetour: true,
 		})
-		if err != nil {
+		if err1 != nil { //karing
+			err = err1 //karing
 			logger.ErrorContext(ctx, err)
 			return
 		}
-		congestionControl, err := congestion.NewCongestionControl(
+		congestionControl, err1 := congestion.NewCongestionControl( //karing
 			options.CongestionController,
 			options.CWND,
 			ntp.TimeFuncFromContext(ctx),
 		)
-		if err != nil {
+		if err1 != nil { //karing
+			err = err1 //karing
 			logger.ErrorContext(ctx, err)
 			return
 		}
@@ -237,7 +270,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 			})
 			return
 		}
-		tunnel, err := masque.NewTunnel(
+		tunnel, err1 := masque.NewTunnel( //karing
 			ctx,
 			logger,
 			masque.TunnelOptions{
@@ -267,7 +300,8 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 				CongestionControl:    congestionControl,
 			},
 		)
-		if err != nil {
+		if err1 != nil { //karing
+			err = err1 //karing
 			logger.ErrorContext(ctx, err)
 			return
 		}
