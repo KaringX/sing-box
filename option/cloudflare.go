@@ -8,4 +8,8 @@ type CloudflareProfile struct {
 	LicenseKey string `json:"license_key,omitempty"`
 	Recreate   bool   `json:"recreate,omitempty"`
 	Detour     string `json:"detour,omitempty"`
+
+	PublicKey   string `json:"public_key,omitempty"` // karing
+	IPv4Address string `json:"ipv4_address"`         // karing
+	IPv6Address string `json:"ipv6_address"`         // karing
 }

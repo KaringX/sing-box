@@ -3,6 +3,8 @@ package masque
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"net"
@@ -67,50 +69,85 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 	outbound.startHandler = func() {
 		defer close(outbound.await)
 		cacheFile := service.FromContext[adapter.CacheFile](ctx)
-		var appConfig *Config
 		var err error
 		defer func() {
 			if err != nil {
 				outbound.SetParseErr(err) //karing
 			}
 		}()
-		if !options.Profile.Recreate && cacheFile != nil && cacheFile.StoreMASQUEConfig() {
-			savedProfile := cacheFile.LoadMASQUEConfig(tag)
-			if savedProfile != nil {
-				if err = json.Unmarshal(savedProfile.Content, &appConfig); err != nil {
-					logger.ErrorContext(ctx, err)
-					return
+		var privKey *ecdsa.PrivateKey              //karing
+		var peerPubKey *ecdsa.PublicKey            //karing
+		ipv4Address := options.Profile.IPv4Address //karing
+		ipv6Address := options.Profile.IPv6Address //karing
+		var appConfig *Config                      //karing
+		if len(options.Profile.PrivateKey) == 0 || len(options.Profile.PublicKey) == 0 {
+			if !options.Profile.Recreate && cacheFile != nil && cacheFile.StoreMASQUEConfig() {
+				savedProfile := cacheFile.LoadMASQUEConfig(tag)
+				if savedProfile != nil {
+					if err = json.Unmarshal(savedProfile.Content, &appConfig); err != nil {
+						logger.ErrorContext(ctx, err)
+						return
+					}
 				}
 			}
-		}
-		if appConfig == nil {
-			appConfig, err = outbound.createConfig()
-			if err != nil {
-				logger.ErrorContext(ctx, err)
-				return
-			}
-			if cacheFile != nil && cacheFile.StoreMASQUEConfig() {
-				content, err := json.Marshal(appConfig)
+			if appConfig == nil {
+				appConfig, err = outbound.createConfig()
 				if err != nil {
 					logger.ErrorContext(ctx, err)
 					return
 				}
-				cacheFile.SaveMASQUEConfig(tag, &adapter.SavedBinary{
-					LastUpdated: time.Now(),
-					Content:     content,
-					LastEtag:    "",
-				})
+				if cacheFile != nil && cacheFile.StoreMASQUEConfig() {
+					content, err := json.Marshal(appConfig)
+					if err != nil {
+						logger.ErrorContext(ctx, err)
+						return
+					}
+					cacheFile.SaveMASQUEConfig(tag, &adapter.SavedBinary{
+						LastUpdated: time.Now(),
+						Content:     content,
+						LastEtag:    "",
+					})
+				}
+				ipv4Address = appConfig.IPv4 + "/32"  //karing
+				ipv6Address = appConfig.IPv6 + "/128" //karing
 			}
-		}
-		privKey, err := appConfig.GetEcPrivateKey()
-		if err != nil {
-			logger.ErrorContext(ctx, E.New("failed to get private key: ", err))
-			return
-		}
-		peerPubKey, err := appConfig.GetEcEndpointPublicKey()
-		if err != nil {
-			logger.ErrorContext(ctx, E.New("failed to get public key: ", err))
-			return
+			privKey, err = appConfig.GetEcPrivateKey()
+			if err != nil {
+				logger.ErrorContext(ctx, E.New("failed to get private key: ", err))
+				return
+			}
+			peerPubKey, err = appConfig.GetEcEndpointPublicKey()
+			if err != nil {
+				logger.ErrorContext(ctx, E.New("failed to get public key: ", err))
+				return
+			}
+		} else { //karing
+			privKeyBytes, err := base64.StdEncoding.DecodeString(options.Profile.PrivateKey)
+			if err != nil {
+				logger.ErrorContext(ctx, E.New("failed to decode private key: ", err))
+				return
+			}
+			privKey, err = x509.ParseECPrivateKey(privKeyBytes)
+			if err != nil {
+				logger.ErrorContext(ctx, E.New("failed to parse private key: ", err))
+				return
+			}
+			peerPubKeyBytes, err := base64.StdEncoding.DecodeString(options.Profile.PublicKey)
+			if err != nil {
+				logger.ErrorContext(ctx, E.New("failed to decode public key: ", err))
+				return
+			}
+			pubKey, err := x509.ParsePKIXPublicKey(peerPubKeyBytes)
+			if err != nil {
+				logger.ErrorContext(ctx, E.New("failed to parse public key: ", err))
+				return
+			}
+			var ok bool
+			peerPubKey, ok = pubKey.(*ecdsa.PublicKey)
+			if !ok {
+				logger.ErrorContext(ctx, E.New("public key is not ECDSA"))
+				return
+			}
 		}
 		cert, err := masque.GenerateCert(privKey, &privKey.PublicKey)
 		if err != nil {
@@ -147,6 +184,10 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 				endpoint = &net.UDPAddr{IP: endpointIP, Port: int(endpointPort)}
 			}
 		} else {
+			if appConfig == nil {
+				logger.ErrorContext(ctx, E.New("app config is not initialized"))
+				return
+			}
 			endpoint, err = appConfig.SelectEndpointFromConfig(useHTTP2, options.UseIPv6, 443)
 			if err != nil {
 				logger.ErrorContext(ctx, E.New("failed to select endpoint: ", err))
@@ -211,8 +252,8 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 				},
 				Dialer: outboundDialer,
 				Address: []netip.Prefix{
-					netip.MustParsePrefix(appConfig.IPv4 + "/32"),
-					netip.MustParsePrefix(appConfig.IPv6 + "/128"),
+					netip.MustParsePrefix(ipv4Address), //karing
+					netip.MustParsePrefix(ipv6Address), //karing
 				},
 				AllowedAddress:       options.AllowedIPs,
 				Endpoint:             endpoint,
