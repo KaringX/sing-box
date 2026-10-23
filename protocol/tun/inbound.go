@@ -524,16 +524,6 @@ func (t *Inbound) InterfaceUpdated(ctx context.Context) {
 	if tunStack != nil {
 		tunStack.ResetNetwork()
 	}
-	if runtime.GOOS == "windows" && t.tunIf != nil { // karing
-		// Windows drops the manually configured TUN route table entries across
-		// a sleep/resume cycle, which silently breaks split routing until the
-		// TUN interface is recreated. Re-apply the route configuration here so
-		// routing keeps working after the system wakes up.
-		err := t.tunIf.UpdateRouteOptions(t.tunOptions)
-		if err != nil {
-			t.logger.Warn(E.Cause(err, "update route options"))
-		}
-	}
 }
 
 func (t *Inbound) JudgeFlow(network uint8, source netip.AddrPort, destination netip.AddrPort, firstPacket []byte) tun.FlowVerdict {
