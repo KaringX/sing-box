@@ -242,7 +242,9 @@ func checkV2RayXHTTPBaseOptions(mode string, options *V2RayXHTTPBaseOptions) err
 			return E.New(`"headers" can't contain "host"`)
 		}
 	}
-
+	if options.XPaddingBytes.To == 0 { // https://github.com/starifly/sing-box
+		options.XPaddingBytes = options.GetNormalizedXPaddingBytes()
+	}
 	if options.XPaddingBytes.From <= 0 || options.XPaddingBytes.To <= 0 {
 		return E.New("x_padding_bytes cannot be disabled")
 	}
@@ -560,7 +562,14 @@ type V2RayXHTTPXmuxOptions struct {
 	HKeepAlivePeriod int64            `json:"h_keep_alive_period"`
 }
 
+func (m V2RayXHTTPXmuxOptions) isZero() bool { // https://github.com/starifly/sing-box
+	return m == (V2RayXHTTPXmuxOptions{})
+}
+
 func (m *V2RayXHTTPXmuxOptions) GetNormalizedMaxConcurrency() Xbadoption.Range {
+	if m.isZero() { // https://github.com/starifly/sing-box
+		return Xbadoption.Range{From: 1, To: 1}
+	}
 	return m.MaxConcurrency
 }
 
@@ -573,10 +582,16 @@ func (m *V2RayXHTTPXmuxOptions) GetNormalizedCMaxReuseTimes() Xbadoption.Range {
 }
 
 func (m *V2RayXHTTPXmuxOptions) GetNormalizedHMaxRequestTimes() Xbadoption.Range {
+	if m.isZero() && m.HMaxRequestTimes.From == 0 && m.HMaxRequestTimes.To == 0 {
+		return Xbadoption.Range{From: 600, To: 900}
+	}
 	return m.HMaxRequestTimes
 }
 
 func (m *V2RayXHTTPXmuxOptions) GetNormalizedHMaxReusableSecs() Xbadoption.Range {
+	if m.isZero() && m.HMaxReusableSecs.From == 0 && m.HMaxReusableSecs.To == 0 {
+		return Xbadoption.Range{From: 1800, To: 3000}
+	}
 	return m.HMaxReusableSecs
 }
 
