@@ -17,7 +17,6 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
-	"fmt"
 	"io"
 	mRand "math/rand"
 	"net"
@@ -29,7 +28,6 @@ import (
 
 	"github.com/sagernet/sing-box/adapter"
 	C "github.com/sagernet/sing-box/constant"
-	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/debug"
@@ -47,6 +45,7 @@ var _ ConfigCompat = (*RealityClientConfig)(nil)
 
 type RealityClientConfig struct {
 	ctx       context.Context
+	logger    logger.ContextLogger //karing
 	uClient   *UTLSClientConfig
 	publicKey []byte
 	shortID   [8]byte
@@ -88,7 +87,7 @@ func newRealityClient(ctx context.Context, logger logger.ContextLogger, serverAd
 	}
 	copy(shortID[:], maxShortID[:decodedLen]) //karing
 
-	var config Config = &RealityClientConfig{ctx, uClient.(*UTLSClientConfig), publicKey, shortID}
+	var config Config = &RealityClientConfig{ctx, logger, uClient.(*UTLSClientConfig), publicKey, shortID} //karing
 	if options.KernelRx || options.KernelTx {
 		if !C.IsLinux {
 			return nil, E.New("kTLS is only supported on Linux")
@@ -193,7 +192,7 @@ func (e *RealityClientConfig) ClientHandshake(ctx context.Context, conn net.Conn
 	binary.BigEndian.PutUint32(hello.SessionId[4:], uint32(time.Now().Unix()))
 	copy(hello.SessionId[8:], e.shortID[:])
 	if debug.Enabled {
-		fmt.Printf("REALITY hello.sessionId[:16]: %v\n", hello.SessionId[:16])
+		e.logger.DebugContext(ctx, "REALITY hello.sessionId[:16]: %v\n", hello.SessionId[:16]) //karing
 	}
 	publicKey, err := ecdh.X25519().NewPublicKey(e.publicKey)
 	if err != nil {
@@ -224,8 +223,8 @@ func (e *RealityClientConfig) ClientHandshake(ctx context.Context, conn net.Conn
 	aesGcmCipher.Seal(hello.SessionId[:0], hello.Random[20:], hello.SessionId[:16], hello.Raw)
 	copy(hello.Raw[39:], hello.SessionId)
 	if debug.Enabled {
-		fmt.Printf("REALITY hello.sessionId: %v\n", hello.SessionId)
-		fmt.Printf("REALITY uConn.AuthKey: %v\n", authKey)
+		e.logger.DebugContext(ctx, "REALITY hello.sessionId: %v\n", hello.SessionId) //karing
+		e.logger.DebugContext(ctx, "REALITY uConn.AuthKey: %v\n", authKey)           //karing
 	}
 
 	err = uConn.HandshakeContext(ctx)
@@ -234,18 +233,18 @@ func (e *RealityClientConfig) ClientHandshake(ctx context.Context, conn net.Conn
 	}
 
 	if debug.Enabled {
-		fmt.Printf("REALITY Conn.Verified: %v\n", verifier.verified)
+		e.logger.DebugContext(ctx, "REALITY Conn.Verified: %v\n", verifier.verified) //karing
 	}
 
 	if !verifier.verified {
-		go realityClientFallback(e.ctx, uConn, e.uClient.ServerName(), e.uClient.id)
+		go realityClientFallback(e.ctx, e.logger, uConn, e.uClient.ServerName(), e.uClient.id)
 		return nil, E.New("reality verification failed")
 	}
 
 	return &realityClientConnWrapper{uConn}, nil
 }
 
-func realityClientFallback(ctx context.Context, uConn net.Conn, serverName string, fingerprint utls.ClientHelloID) {
+func realityClientFallback(ctx context.Context, logger logger.ContextLogger, uConn net.Conn, serverName string, fingerprint utls.ClientHelloID) { //karing
 	defer uConn.Close()
 	client := &http.Client{
 		Transport: &http2.Transport{
@@ -260,14 +259,14 @@ func realityClientFallback(ctx context.Context, uConn net.Conn, serverName strin
 	}
 	request, err := http.NewRequest("GET", "https://"+serverName, nil) //karing
 	if err != nil || request == nil {                                  //karing
-		log.Warn("realityClientFallback request creation failed:%s, %v", serverName, err) //karing
+		logger.WarnContext(ctx, "realityClientFallback request creation failed:%s, %v", serverName, err) //karing
 		return
 	}
 	request.Header.Set("User-Agent", fingerprint.Client)
 	request.AddCookie(&http.Cookie{Name: "padding", Value: strings.Repeat("0", mRand.Intn(32)+30)})
 	response, err := client.Do(request)
 	if err != nil || response == nil { //karing
-		log.Warn("realityClientFallback response failed:%s, %v", serverName, err) //karing
+		logger.WarnContext(ctx, "realityClientFallback response failed:%s, %v", serverName, err) //karing
 		return
 	}
 	if response.Body != nil { //karing
@@ -279,6 +278,7 @@ func realityClientFallback(ctx context.Context, uConn net.Conn, serverName strin
 func (e *RealityClientConfig) Clone() Config {
 	return &RealityClientConfig{
 		e.ctx,
+		e.logger, //karing
 		e.uClient.Clone().(*UTLSClientConfig),
 		e.publicKey,
 		e.shortID,

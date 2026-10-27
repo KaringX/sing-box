@@ -67,7 +67,7 @@ func (m *Manager) Get(tag string) (adapter.Endpoint, bool) {
 }
 func (m *Manager) Create(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, outboundType string, options any, parseErr error) error { //karing
 	if tag == "" { //karing
-		log.Error("create endpoint failed: empty tag")
+		logger.ErrorContext(ctx, "create endpoint failed: empty tag")
 		return os.ErrInvalid
 	}
 	endpoint, err := m.registry.Create(ctx, router, logger, tag, outboundType, options)
