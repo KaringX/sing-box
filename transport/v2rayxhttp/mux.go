@@ -64,8 +64,8 @@ type XmuxManager struct {
 func NewXmuxManager(options option.V2RayXHTTPXmuxOptions, newConnFunc func() XmuxConn) *XmuxManager {
 	return &XmuxManager{
 		options:     options,
-		concurrency: int(options.GetNormalizedMaxConcurrency().Rand()), //karing
-		connections: int(options.GetNormalizedMaxConnections().Rand()), //karing
+		concurrency: options.GetNormalizedMaxConcurrency().Rand(),
+		connections: options.GetNormalizedMaxConnections().Rand(),
 		newConnFunc: newConnFunc,
 		xmuxClients: make([]*XmuxClient, 0),
 	}
@@ -86,7 +86,7 @@ func (m *XmuxManager) newXmuxClient() *XmuxClient {
 		leftUsage: -1,
 	}
 	if x := m.options.GetNormalizedCMaxReuseTimes().Rand(); x > 0 {
-		xmuxClient.leftUsage = int(x) - 1 //karing
+		xmuxClient.leftUsage = x - 1
 	}
 	xmuxClient.LeftRequests.Store(math.MaxInt32)
 	if x := m.options.GetNormalizedHMaxRequestTimes().Rand(); x > 0 {

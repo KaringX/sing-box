@@ -87,7 +87,7 @@ func (o *Outbound) Start(stage adapter.StartStage, scope *adapter.Scope) error {
 	if err := c.Start(); err != nil {
 		return fmt.Errorf("failed to start mieru client: %w", err)
 	}
-	o.logger.InfoContext(o.ctx, "mieru client is started")
+	o.logger.InfoContext(o.ctx, "mieru client is started") //karing
 	o.client = c
 	scope.Add(func() error {
 		return common.Close(o.client)

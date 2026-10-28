@@ -582,14 +582,14 @@ func (m *V2RayXHTTPXmuxOptions) GetNormalizedCMaxReuseTimes() Xbadoption.Range {
 }
 
 func (m *V2RayXHTTPXmuxOptions) GetNormalizedHMaxRequestTimes() Xbadoption.Range {
-	if m.isZero() && m.HMaxRequestTimes.From == 0 && m.HMaxRequestTimes.To == 0 {
+	if m.isZero() && m.HMaxRequestTimes.From == 0 && m.HMaxRequestTimes.To == 0 { // https://github.com/starifly/sing-box
 		return Xbadoption.Range{From: 600, To: 900}
 	}
 	return m.HMaxRequestTimes
 }
 
 func (m *V2RayXHTTPXmuxOptions) GetNormalizedHMaxReusableSecs() Xbadoption.Range {
-	if m.isZero() && m.HMaxReusableSecs.From == 0 && m.HMaxReusableSecs.To == 0 {
+	if m.isZero() && m.HMaxReusableSecs.From == 0 && m.HMaxReusableSecs.To == 0 { // https://github.com/starifly/sing-box
 		return Xbadoption.Range{From: 1800, To: 3000}
 	}
 	return m.HMaxReusableSecs

@@ -35,7 +35,7 @@ func NewTunnel(ctx context.Context, logger logger.ContextLogger, options TunnelO
 		UDPTimeout:     options.UDPTimeout,
 		CreateDialer:   options.CreateDialer,
 		Name:           options.Name,
-		MTU:            options.MTU,
+		MTU:            options.MTU, //karing
 		Address:        options.Address,
 		AllowedAddress: options.AllowedAddress,
 	}
@@ -180,11 +180,11 @@ func (e *Tunnel) getIpConn() (IpConn, error) {
 		return e.ipConn, nil
 	}
 	e.mtx.Unlock() //karing
-	e.logger.InfoContext(e.ctx, "Establishing MASQUE connection to ", e.options.Endpoint)
+	e.logger.InfoContext(e.ctx, "Establishing MASQUE connection to ", e.options.Endpoint) //karing
 	timer := time.NewTimer(0)
 	defer timer.Stop()
 	for {
-		e.logger.InfoContext(e.ctx, fmt.Errorf("Establishing MASQUE connection to %s", e.options.Endpoint))
+		e.logger.InfoContext(e.ctx, fmt.Errorf("Establishing MASQUE connection to %s", e.options.Endpoint)) //karing
 		var connectCtx context.Context
 		var cancel context.CancelFunc
 		if e.options.HandshakeTimeout > 0 {
@@ -231,7 +231,7 @@ func (e *Tunnel) getIpConn() (IpConn, error) {
 		e.closer = closer
 		e.ipConn = ipConn
 		e.mtx.Unlock() //karing
-		e.logger.InfoContext(e.ctx, "Connected to MASQUE server ", e.options.Endpoint)
+		e.logger.InfoContext(e.ctx, "Connected to MASQUE server ", e.options.Endpoint) //karing
 		return ipConn, nil
 	}
 }
