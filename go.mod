@@ -83,8 +83,7 @@ require (
 )
 
 require ( //hiddify
-	github.com/pion/logging v0.2.4
-	github.com/pion/turn/v3 v3.0.3
+	github.com/pion/logging v0.2.4 // indirect
 	github.com/pires/go-proxyproto v0.15.0
 )
 
@@ -208,12 +207,7 @@ require (
 	github.com/mitchellh/go-ps v1.0.0 // indirect
 	github.com/philhofer/fwd v1.2.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.27 // indirect
-	github.com/pion/dtls/v2 v2.2.7 // indirect
 	github.com/pion/dtls/v3 v3.1.5 // indirect
-	github.com/pion/randutil v0.1.0 // indirect
-	github.com/pion/stun/v2 v2.0.0 // indirect
-	github.com/pion/transport/v2 v2.2.1 // indirect
-	github.com/pion/transport/v3 v3.0.2 // indirect
 	github.com/pion/transport/v4 v4.0.2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/quic-go/qpack v0.6.0 // indirect

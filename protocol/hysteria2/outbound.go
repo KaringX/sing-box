@@ -44,7 +44,6 @@ type Outbound struct {
 	outbound.Adapter
 	logger logger.ContextLogger
 	client *hysteria2.Client
-	//hforwarder *houtbound.Forwarder //hiddify
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.Hysteria2OutboundOptions) (adapter.Outbound, error) {
@@ -55,10 +54,6 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 	if options.TLS == nil || !options.TLS.Enabled {
 		return empty, C.ErrTLSRequired //karing
 	}
-	/*hforwarder, err := houtbound.ApplyTurnRelay(houtbound.CommonTurnRelayOptions{ServerOptions: options.ServerOptions, TurnRelayOptions: options.TurnRelay}) //hiddify
-	if err != nil {                                                                                                                                          //karing
-		return empty, err
-	}*/
 	tlsServerAddress, tlsOptions, err := outboundTLSOptions(options)
 	if err != nil {
 		return nil, err
@@ -173,7 +168,6 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeHysteria2, tag, networkList, options.DialerOptions),
 		logger:  logger,
 		client:  client,
-		//hforwarder: hforwarder, //hiddify
 	}, nil
 }
 

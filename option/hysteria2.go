@@ -224,7 +224,6 @@ type Hysteria2OutboundOptions struct {
 	BrutalDebug         bool            `json:"brutal_debug,omitempty"`
 	DisableChromeParrot bool            `json:"disable_chrome_parrot,omitempty"`
 	Realm               *Hysteria2Realm `json:"realm,omitempty"`
-	//TurnRelay           *TurnRelayOptions `json:"turn_relay,omitempty"` //hiddify
 }
 
 type HysteriaRealmUser struct {
