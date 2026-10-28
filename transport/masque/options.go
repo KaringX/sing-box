@@ -27,4 +27,5 @@ type TunnelOptions struct {
 	ReconnectDelay       time.Duration
 	HandshakeTimeout     time.Duration
 	CongestionControl    func(conn *quic.Conn) congestion.CongestionControl
+	MTU                  uint32 //karing
 }

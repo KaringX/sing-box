@@ -40,10 +40,6 @@ type EndpointOptions struct {
 	PreallocatedBuffersPerPool uint32          // https://github.com/shtorm-7/sing-box-extended
 	DisablePauses              bool            // https://github.com/shtorm-7/sing-box-extended
 	Amnezia                    *AmneziaOptions // https://github.com/shtorm-7/sing-box-extended
-	FakePackets                string          //hiddify
-	FakePacketsSize            string          //hiddify
-	FakePacketsDelay           string          //hiddify
-	FakePacketsMode            string          //hiddify
 }
 
 type PeerOptions struct {

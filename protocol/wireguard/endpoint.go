@@ -157,10 +157,6 @@ func NewEndpoint(ctx context.Context, router adapter.Router, logger log.ContextL
 		PreallocatedBuffersPerPool: options.PreallocatedBuffersPerPool, // https://github.com/shtorm-7/sing-box-extended
 		DisablePauses:              options.DisablePauses,              // https://github.com/shtorm-7/sing-box-extended
 		Amnezia:                    amnezia,                            // https://github.com/shtorm-7/sing-box-extended
-		FakePackets:                options.FakePackets,                //hiddify
-		FakePacketsSize:            options.FakePacketsSize,            //hiddify
-		FakePacketsDelay:           options.FakePacketsDelay,           //hiddify
-		FakePacketsMode:            options.FakePacketsMode,            //hiddify
 	})
 	if err != nil {
 		return ep, err //karing

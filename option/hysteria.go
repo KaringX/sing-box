@@ -52,5 +52,4 @@ type HysteriaOutboundOptions struct {
 	Network             NetworkList `json:"network,omitempty"`
 	OutboundTLSOptionsContainer
 	QUICOptions
-	//TurnRelay *TurnRelayOptions `json:"turn_relay,omitempty"` //hiddify
 }

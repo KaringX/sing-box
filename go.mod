@@ -1,6 +1,6 @@
 module github.com/sagernet/sing-box
 
-go 1.25.5
+go 1.25.11
 
 require (
 	filippo.io/age v1.3.1
@@ -77,7 +77,7 @@ require (
 	golang.org/x/term v0.45.0
 	golang.org/x/text v0.40.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20241231184526-a9ab2273dd10
-	google.golang.org/grpc v1.79.1
+	google.golang.org/grpc v1.82.0
 	google.golang.org/protobuf v1.36.11
 	howett.net/plist v1.0.1
 )
@@ -99,6 +99,7 @@ require ( //karing
 	github.com/alitto/pond v1.9.2
 	github.com/enfein/mieru/v3 v3.37.0
 	github.com/getsentry/sentry-go v0.49.0
+	github.com/golang-migrate/migrate/v4 v4.20.1
 	github.com/klauspost/compress v1.20.0
 	github.com/klauspost/cpuid/v2 v2.4.0
 	github.com/mattn/go-sqlite3 v1.14.50
@@ -135,17 +136,17 @@ replace github.com/sagernet/ws => github.com/KaringX/ws v0.0.0-20250301004503-08
 
 //replace github.com/sagernet/ws => ../../KaringX/ws
 
-replace github.com/sagernet/wireguard-go => github.com/KaringX/wireguard-go v0.0.1-beta.5.0.20261019073044-fa24d9775fb5 //karing_v0.0.8
-
-//replace github.com/sagernet/wireguard-go => ../../KaringX/wireguard-go
-
-replace github.com/sagernet/tailscale => github.com/KaringX/tailscale v1.80.3-mod.5.0.20260918021142-cc1239fc955a //karing_v1.102.1-sing-box-1.14-mod.5
+replace github.com/sagernet/tailscale => github.com/KaringX/tailscale v1.80.3-mod.5.0.20261028024706-009750783da6 //karing_v1.102.1-sing-box-1.14-mod.5
 
 //replace github.com/sagernet/tailscale => ../../KaringX/tailscale
 
 replace github.com/sagernet/sing-vmess => github.com/KaringX/sing-vmess v0.2.8-0.20261019072745-0e94b492b7ed //v0.2.9
 
 //replace github.com/sagernet/sing-vmess => ../../KaringX/sing-vmess
+
+replace github.com/sagernet/wireguard-go => github.com/shtorm-7/wireguard-go v0.0.8-extended-1.6.2
+
+//replace github.com/sagernet/wireguard-go => ../../KaringX/wireguard-go
 
 //github.com/sagernet/cronet-go v0.0.0-20260912104727-0d28acc44093 naive does not work
 replace github.com/sagernet/cronet-go => github.com/sagernet/cronet-go v0.0.0-20260807162344-ec9a39c5ba3b
@@ -178,7 +179,7 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
 	github.com/gaissmai/bart v0.26.1 // indirect
-	github.com/go-jose/go-jose/v4 v4.1.3 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/go4org/hashtriemap v0.0.0-20251130024219-545ba229f689 // indirect
 	github.com/gobwas/httphead v0.1.0 // indirect
@@ -278,6 +279,6 @@ require (
 	golang.org/x/tools v0.47.0 // indirect
 	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2 // indirect
 	golang.zx2c4.com/wireguard/windows v0.5.3 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260630182238-925bb5da69e7 // indirect
 	zombiezen.com/go/capnproto2 v2.18.2+incompatible // indirect
 )

@@ -11,7 +11,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/sagernet/sing-box/option"
 	tun "github.com/sagernet/sing-tun"
 
 	"github.com/sagernet/sing-box/common/dialer"
@@ -42,79 +41,10 @@ type Endpoint struct {
 	egressPool     *tun.UDPEgressPool
 	pause          pause.Manager
 	pauseCallback  *list.Element[pause.Callback]
-
-	fakePackets         []int  //hiddify
-	fakePacketsSize     []int  //hiddify
-	fakePacketsDelay    []int  //hiddify
-	fakePacketsHeader   []byte //hiddify
-	fakePacketsNoModify bool   //hiddify
-	parseErr            error  //karing
+	parseErr       error //karing
 }
 
 func NewEndpoint(options EndpointOptions) (*Endpoint, error) {
-	//hiddify begin
-	fakePackets := []int{0, 0}
-	fakePacketsSize := []int{0, 0}
-	fakePacketsDelay := []int{0, 0}
-	fakePacketsHeader := []byte{}
-	fakePacketsNoModify := false
-	if options.FakePackets != "" {
-		var err error
-		fakePackets, err = option.ParseIntRange(options.FakePackets)
-		if err != nil {
-			return nil, err
-		}
-		fakePacketsSize = []int{40, 100}
-		fakePacketsDelay = []int{10, 50}
-
-		if options.FakePacketsSize != "" {
-			var err error
-			fakePacketsSize, err = option.ParseIntRange(options.FakePacketsSize)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		if options.FakePacketsDelay != "" {
-			var err error
-			fakePacketsDelay, err = option.ParseIntRange(options.FakePacketsDelay)
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	mode := strings.ToLower(options.FakePacketsMode)
-	if mode == "" || mode == "m1" {
-		fakePacketsHeader = []byte{}
-		fakePacketsNoModify = false
-	} else if mode == "m2" {
-		fakePacketsHeader = []byte{}
-		fakePacketsNoModify = true
-	} else if mode == "m3" {
-		// clist := []byte{0xC0, 0xC2, 0xC3, 0xC4, 0xC9, 0xCB, 0xCC, 0xCD, 0xCE, 0xCF}
-		fakePacketsHeader = []byte{0xDC, 0xDE, 0xD3, 0xD9, 0xD0, 0xEC, 0xEE, 0xE3}
-		fakePacketsNoModify = false
-	} else if mode == "m4" {
-		fakePacketsHeader = []byte{0xDC, 0xDE, 0xD3, 0xD9, 0xD0, 0xEC, 0xEE, 0xE3}
-		fakePacketsNoModify = true
-	} else if mode == "m5" {
-		fakePacketsHeader = []byte{0xC0, 0xC2, 0xC3, 0xC4, 0xC9, 0xCB, 0xCC, 0xCD, 0xCE, 0xCF}
-		fakePacketsNoModify = false
-	} else if mode == "m6" {
-		fakePacketsHeader = []byte{0x40, 0x42, 0x43, 0x44, 0x49, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F}
-		fakePacketsNoModify = true
-	} else if strings.HasPrefix(mode, "h") || strings.HasPrefix(mode, "g") {
-		clist, err := hex.DecodeString(strings.ReplaceAll(mode[1:], "_", ""))
-		if err != nil {
-			return nil, E.Cause(err, "decode FakePacketsMode")
-		}
-		fakePacketsHeader = clist
-		fakePacketsNoModify = strings.HasPrefix(mode, "h")
-	} else {
-		return nil, fmt.Errorf("incorrect packet mode: %s", mode)
-	}
-	//hiddify end
 	if options.PrivateKey == "" {
 		return nil, E.New("missing private key")
 	}
@@ -197,17 +127,12 @@ func NewEndpoint(options EndpointOptions) (*Endpoint, error) {
 		return nil, E.Cause(err, "create WireGuard device")
 	}
 	return &Endpoint{
-		options:             options,
-		peers:               peers,
-		ipcConf:             ipcConf,
-		allowedAddress:      allowedAddresses,
-		tunDevice:           tunDevice,
-		returnDevice:        &returnDeviceWrapper{Device: tunDevice},
-		fakePackets:         fakePackets,         //hiddify
-		fakePacketsSize:     fakePacketsSize,     //hiddify
-		fakePacketsDelay:    fakePacketsDelay,    //hiddify
-		fakePacketsHeader:   fakePacketsHeader,   //hiddify
-		fakePacketsNoModify: fakePacketsNoModify, //hiddify
+		options:        options,
+		peers:          peers,
+		ipcConf:        ipcConf,
+		allowedAddress: allowedAddresses,
+		tunDevice:      tunDevice,
+		returnDevice:   &returnDeviceWrapper{Device: tunDevice},
 	}, nil
 }
 
@@ -278,7 +203,7 @@ func (e *Endpoint) start() error {
 	if isUDPListener || len(e.peers) > 1 {
 		for _, peer := range e.peers {
 			if peer.endpoint.IsValid() && peer.reserved != [3]uint8{} {
-				bind.SetReservedForEndpoint(peer.endpoint, peer.reserved)
+				//bind.SetReservedForEndpoint(peer.endpoint, peer.reserved)  // https://github.com/shtorm-7/sing-box-extended
 			}
 		}
 	}
@@ -295,12 +220,7 @@ func (e *Endpoint) start() error {
 			e.options.Logger.Error(fmt.Sprintf(strings.ToLower(format), args...))
 		},
 	}
-	wgDevice := device.NewDevice(e.options.Context, e.returnDevice, bind, logger, e.options.Workers /*, e.options.PreallocatedBuffersPerPool, e.options.DisablePauses*/) // https://github.com/shtorm-7/sing-box-extended todo
-	wgDevice.FakePackets = e.fakePackets                                                                                                                                 //hiddify
-	wgDevice.FakePacketsSize = e.fakePacketsSize                                                                                                                         //hiddify
-	wgDevice.FakePacketsDelays = e.fakePacketsDelay                                                                                                                      //hiddify
-	wgDevice.FakePacketsHeader = e.fakePacketsHeader                                                                                                                     //hiddify
-	wgDevice.FakePacketsNoModify = e.fakePacketsNoModify                                                                                                                 //hiddify
+	wgDevice := device.NewDevice(e.options.Context, e.returnDevice, bind, logger, e.options.Workers, e.options.PreallocatedBuffersPerPool, e.options.DisablePauses) // https://github.com/shtorm-7/sing-box-extended todo
 
 	e.tunDevice.SetDevice(wgDevice)
 	domainPeers := make(map[device.NoisePublicKey]*peerConfig)
@@ -330,7 +250,7 @@ func (e *Endpoint) start() error {
 			for _, address := range addresses {
 				destination := netip.AddrPortFrom(address, peer.destination.Port)
 				if peer.reserved != ([3]uint8{}) {
-					bind.SetReservedForEndpoint(destination, peer.reserved)
+					//bind.SetReservedForEndpoint(destination, peer.reserved) // https://github.com/shtorm-7/sing-box-extended
 				}
 				endpoint, parseErr := bind.ParseEndpoint(destination.String())
 				if parseErr != nil {
@@ -431,8 +351,8 @@ func (e *Endpoint) start() error {
 	err = wgDevice.IpcSet(ipcConf.String())
 	if err != nil {
 		wgDevice.Close()
-		e.parseErr = E.Cause(err, "setup wireguard: \n", ipcConf.String()) //karing
-		return E.Cause(err, "setup wireguard: \n", ipcConf.String())
+		e.parseErr = E.Cause(err, "setup wireguard") //karing
+		return E.Cause(err, "setup wireguard")       //karing
 	}
 	e.device = wgDevice
 	e.pause = service.FromContext[pause.Manager](e.options.Context)

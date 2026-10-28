@@ -35,7 +35,7 @@ func NewTunnel(ctx context.Context, logger logger.ContextLogger, options TunnelO
 		UDPTimeout:     options.UDPTimeout,
 		CreateDialer:   options.CreateDialer,
 		Name:           options.Name,
-		MTU:            1280,
+		MTU:            options.MTU,
 		Address:        options.Address,
 		AllowedAddress: options.AllowedAddress,
 	}

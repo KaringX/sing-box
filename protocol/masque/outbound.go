@@ -274,6 +274,9 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		if options.ReconnectDelay == 0 { //karing
 			options.ReconnectDelay = badoption.Duration(time.Duration(3 * time.Second))
 		}
+		if options.MTU == 0 { //karing
+			options.MTU = 1280
+		}
 		tunnel, err1 := masque.NewTunnel( //karing
 			ctx,
 			logger,
@@ -302,6 +305,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 				ReconnectDelay:       options.ReconnectDelay.Build(),
 				HandshakeTimeout:     time.Duration(options.HandshakeTimeout),
 				CongestionControl:    congestionControl,
+				MTU:                  options.MTU, //karing
 			},
 		)
 		if err1 != nil { //karing

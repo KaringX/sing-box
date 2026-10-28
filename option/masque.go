@@ -25,6 +25,7 @@ type MASQUEOutboundOptions struct {
 	HandshakeTimeout     badoption.Duration               `json:"handshake_timeout,omitempty"`
 	CongestionController string                           `json:"congestion_controller,omitempty"`
 	CWND                 int                              `json:"cwnd,omitempty"`
+	MTU                  uint32                           `json:"mtu,omitempty"` //karing
 	MASQUEOutboundTLSOptionsContainer
 }
 

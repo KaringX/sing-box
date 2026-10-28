@@ -24,10 +24,6 @@ type WireGuardEndpointOptions struct {
 	PreallocatedBuffersPerPool uint32            `json:"preallocated_buffers_per_pool,omitempty"` // https://github.com/shtorm-7/sing-box-extended
 	DisablePauses              bool              `json:"disable_pauses,omitempty"`                // https://github.com/shtorm-7/sing-box-extended
 	Amnezia                    *WireGuardAmnezia `json:"amnezia,omitempty"`                       // https://github.com/shtorm-7/sing-box-extended
-	FakePackets                string            `json:"fake_packets,omitempty"`                  //hiddify
-	FakePacketsSize            string            `json:"fake_packets_size,omitempty"`             //hiddify
-	FakePacketsDelay           string            `json:"fake_packets_delay,omitempty"`            //hiddify
-	FakePacketsMode            string            `json:"fake_packets_mode,omitempty"`             //hiddify
 }
 
 type WireGuardPeer struct {
