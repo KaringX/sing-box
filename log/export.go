@@ -3,6 +3,7 @@ package log
 import (
 	"context"
 	"os"
+	"runtime/debug"
 	"time"
 
 	"github.com/sagernet/sing/common"
@@ -52,7 +53,8 @@ func Error(args ...any) {
 }
 
 func Fatal(args ...any) {
-	std.Fatal(args...)
+	stack := "\n" + string(debug.Stack()) //karing
+	std.Fatal(append(args, stack)...)
 }
 
 func Panic(args ...any) {
