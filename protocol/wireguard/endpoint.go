@@ -50,15 +50,19 @@ type Endpoint struct {
 
 func NewEndpoint(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.WireGuardEndpointOptions) (adapter.Endpoint, error) {
 	ep := &Endpoint{
-		Adapter:        endpoint.NewAdapterWithDialerOptions(C.TypeWireGuard, tag, []string{N.NetworkTCP, N.NetworkUDP, N.NetworkICMP}, options.DialerOptions),
-		ctx:            ctx,
-		router:         router,
-		dnsRouter:      service.FromContext[adapter.DNSRouter](ctx),
-		logger:         logger,
-		localAddresses: options.Address,
+		Adapter:   endpoint.NewAdapterWithDialerOptions(C.TypeWireGuard, tag, []string{N.NetworkTCP, N.NetworkUDP, N.NetworkICMP}, options.DialerOptions),
+		ctx:       ctx,
+		router:    router,
+		dnsRouter: service.FromContext[adapter.DNSRouter](ctx),
+		logger:    logger,
 	}
 	if options.Detour != "" && options.ListenPort != 0 {
-		return nil, E.New("`listen_port` is conflict with `detour`")
+		return ep, E.New("`listen_port` is conflict with `detour`") //karing
+	}
+	for _, address := range options.Address { //karing
+		if !address.IsValid() {
+			return ep, E.New("invalid address bits: " + address.String())
+		}
 	}
 	outboundDialer, err := dialer.NewWithOptions(dialer.Options{
 		Context: ctx,

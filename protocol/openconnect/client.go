@@ -72,21 +72,21 @@ type clientState struct {
 }
 
 func NewEndpoint(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.OpenConnectEndpointOptions) (adapter.Endpoint, error) {
-	tcpKeepAliveEnabled := options.TCPKeepAliveEnabled || options.TCPKeepAlive != 0 || options.TCPKeepAliveInterval != 0
-	if tcpKeepAliveEnabled && options.DisableTCPKeepAlive {
-		return nil, E.New("tcp_keep_alive_enabled conflicts with disable_tcp_keep_alive")
-	}
-	if !tcpKeepAliveEnabled {
-		options.DisableTCPKeepAlive = true
-	} else if options.TCPKeepAlive == 0 && options.TCPKeepAliveInterval == 0 {
-		options.TCPKeepAliveSystemDefaults = true
-	}
 	empty := &Endpoint{ //karing
 		endpointBase: endpointBase{
 			Adapter: endpoint.NewAdapterWithDialerOptions(C.TypeOpenConnect, tag, []string{N.NetworkTCP, N.NetworkUDP, N.NetworkICMP}, options.DialerOptions),
 			router:  router,
 			logger:  logger,
 		},
+	}
+	tcpKeepAliveEnabled := options.TCPKeepAliveEnabled || options.TCPKeepAlive != 0 || options.TCPKeepAliveInterval != 0
+	if tcpKeepAliveEnabled && options.DisableTCPKeepAlive {
+		return empty, E.New("tcp_keep_alive_enabled conflicts with disable_tcp_keep_alive") //karing
+	}
+	if !tcpKeepAliveEnabled {
+		options.DisableTCPKeepAlive = true
+	} else if options.TCPKeepAlive == 0 && options.TCPKeepAliveInterval == 0 {
+		options.TCPKeepAliveSystemDefaults = true
 	}
 	if options.CSD != nil && options.CSD.WrapperPath != "" {
 		err := adapter.CheckSecurityFeature(ctx, "OpenConnect `csd.wrapper_path`")

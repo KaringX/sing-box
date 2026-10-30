@@ -56,7 +56,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 	}
 	tlsServerAddress, tlsOptions, err := outboundTLSOptions(options)
 	if err != nil {
-		return nil, err
+		return empty, err //karing
 	}
 	tlsConfig, err := tls.NewClient(ctx, logger, tlsServerAddress, tlsOptions)
 	if err != nil {
@@ -100,7 +100,7 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 		var httpClientTransport adapter.HTTPTransport
 		httpClientTransport, err = service.FromContext[adapter.HTTPClientManager](ctx).ResolveTransport(ctx, logger, common.PtrValueOrDefault(options.Realm.HTTPClient))
 		if err != nil {
-			return nil, E.Cause(err, "create realm http client")
+			return empty, E.Cause(err, "create realm http client") //karing
 		}
 		dnsRouter := service.FromContext[adapter.DNSRouter](ctx)
 		realmOptions = &realm.Options{
