@@ -156,8 +156,8 @@ func (m *Manager) Snapshot(includeConnections bool) *Snapshot {
 			return TrackerMetadataOut{
 				CreatedAt:   t.CreatedAt,
 				Network:     t.Network,
-				Source:      safe.SafeSocksaddrString(t.Source),
-				Destination: safe.SafeSocksaddrString(t.Destination),
+				Source:      t.Source,
+				Destination: t.Destination,
 				Fqdn:        t.Fqdn,
 				Outbound:    t.Outbound,
 			}

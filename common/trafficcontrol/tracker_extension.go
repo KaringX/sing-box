@@ -41,6 +41,13 @@ func GetMatchRuleChain(outboundManager adapter.OutboundManager, matchOutboundTag
 	return chain, outbound, outboundType
 }
 
+func GetMatchRuleChainOutboundType(OutboundChain []adapter.Outbound) string {
+	if len(OutboundChain) == 0 {
+		return ""
+	}
+	return OutboundChain[len(OutboundChain)-1].Type()
+}
+
 func (t TrackerMetadata) MarshalJSON() ([]byte, error) {
 	var inbound string
 	if t.Metadata.Inbound != "" {

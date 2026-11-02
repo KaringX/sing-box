@@ -3,6 +3,7 @@ package trafficcontrol
 import (
 	"context"
 	"net"
+	"slices"
 	"sync/atomic"
 	"time"
 
@@ -46,12 +47,12 @@ type Tracker interface {
 func (m *Manager) RoutedConnection(ctx context.Context, conn net.Conn, metadata adapter.InboundContext, matchedRule adapter.Rule, matchOutbound adapter.Outbound) net.Conn {
 	upload := new(atomic.Int64)
 	download := new(atomic.Int64)
-	uploadBlip := new(atomic.Int64)                                          //karing
-	downloadBlip := new(atomic.Int64)                                        //karing
-	uploadLast := new(time.Time)                                             //karing
-	downloadLast := new(time.Time)                                           //karing
-	dirty := new(atomic.Bool)                                                //karing
-	_, _, outboundType := GetMatchRuleChain(m.outbound, matchOutbound.Tag()) //karing
+	uploadBlip := new(atomic.Int64)                                       //karing
+	downloadBlip := new(atomic.Int64)                                     //karing
+	uploadLast := new(time.Time)                                          //karing
+	downloadLast := new(time.Time)                                        //karing
+	dirty := new(atomic.Bool)                                             //karing
+	outboundType := GetMatchRuleChainOutboundType(metadata.OutboundChain) //karing
 	tracker := &connTracker{
 		ExtendedConn: bufio.NewCounterConn(conn, []N.CountFunc{func(n int64) { //karing
 			upload.Add(n)
@@ -76,12 +77,12 @@ func (m *Manager) RoutedConnection(ctx context.Context, conn net.Conn, metadata 
 func (m *Manager) RoutedPacketConnection(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext, matchedRule adapter.Rule, matchOutbound adapter.Outbound) N.PacketConn {
 	upload := new(atomic.Int64)
 	download := new(atomic.Int64)
-	uploadBlip := new(atomic.Int64)                                          //karing
-	downloadBlip := new(atomic.Int64)                                        //karing
-	uploadLast := new(time.Time)                                             //karing
-	downloadLast := new(time.Time)                                           //karing
-	dirty := new(atomic.Bool)                                                //karing
-	_, _, outboundType := GetMatchRuleChain(m.outbound, matchOutbound.Tag()) //karing
+	uploadBlip := new(atomic.Int64)                                       //karing
+	downloadBlip := new(atomic.Int64)                                     //karing
+	uploadLast := new(time.Time)                                          //karing
+	downloadLast := new(time.Time)                                        //karing
+	dirty := new(atomic.Bool)                                             //karing
+	outboundType := GetMatchRuleChainOutboundType(metadata.OutboundChain) //karing
 	tracker := &packetConnTracker{
 		PacketConn: bufio.NewCounterPacketConn(conn, []N.CountFunc{func(n int64) {
 			upload.Add(n)
@@ -112,34 +113,10 @@ func (m *Manager) RoutedFlow(ctx context.Context, metadata adapter.InboundContex
 
 func (m *Manager) newTrackerMetadata(metadata adapter.InboundContext, matchedRule adapter.Rule, matchOutbound adapter.Outbound, upload *atomic.Int64, download *atomic.Int64, uploadBlip *atomic.Int64, downloadBlip *atomic.Int64, uploadLast *time.Time, downloadLast *time.Time, dirty *atomic.Bool) TrackerMetadata { //karing
 	id, _ := uuid.NewV4()
-	chain, outbound, outboundType := GetMatchRuleChain(m.outbound, matchOutbound.Tag()) //karing
-	/* //karing
-	var (
-		chain        []string
-		next         string
-		outbound     string
-		outboundType string
-	)
-	if matchOutbound != nil {
-		next = matchOutbound.Tag()
-	} else {
-		next = m.outbound.Default().Tag()
-	}
-	for {
-		detour, loaded := m.outbound.Outbound(next)
-		if !loaded {
-			break
-		}
-		chain = append(chain, next)
-		outbound = detour.Tag()
-		outboundType = detour.Type()
-		outboundGroup, isGroup := detour.(adapter.OutboundGroup)
-		if !isGroup {
-			break
-		}
-		next = outboundGroup.Now()
-	}
-	*/
+	//chain, outbound, outboundType := GetMatchRuleChain(m.outbound, adapter.Outbound.Tag) //karing
+	chain := common.Map(metadata.OutboundChain, adapter.Outbound.Tag)
+	slices.Reverse(chain)
+	outbound := metadata.OutboundChain[len(metadata.OutboundChain)-1]
 	return TrackerMetadata{
 		ID:            id,
 		Metadata:      metadata,

@@ -33,6 +33,7 @@ import (
 	"github.com/sagernet/sing/common/debug"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/logger"
+	M "github.com/sagernet/sing/common/metadata"
 	"github.com/sagernet/sing/common/ntp"
 	aTLS "github.com/sagernet/sing/common/tls"
 
@@ -257,8 +258,14 @@ func realityClientFallback(ctx context.Context, logger logger.ContextLogger, uCo
 			},
 		},
 	}
-	request, err := http.NewRequest("GET", "https://"+serverName, nil) //karing
-	if err != nil || request == nil {                                  //karing
+	serverAddress := M.ParseSocksaddrHostPort(serverName, 0)
+	host := serverAddress.AddrString()
+	if serverAddress.IsIPv6() {
+		host = "[" + host + "]"
+	}
+	request, err := http.NewRequest("GET", "https://"+host, nil)
+
+	if err != nil || request == nil { //karing
 		logger.WarnContext(ctx, "realityClientFallback request creation failed:%s, %v", serverName, err) //karing
 		return
 	}

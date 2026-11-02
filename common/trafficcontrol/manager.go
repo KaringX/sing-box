@@ -39,7 +39,6 @@ var (
 
 type Manager struct {
 	ManagerExtension //karing
-	outbound         adapter.OutboundManager
 
 	connections             compatible.Map[uuid.UUID, Tracker]
 	closedConnectionsAccess sync.Mutex
@@ -54,12 +53,10 @@ type Manager struct {
 func NewManager(ctx context.Context, logger log.ContextLogger, outbound adapter.OutboundManager) *Manager { //karing
 	/*karing
 	return &Manager{
-		outbound:        outbound,
 		eventSubscriber: observable.NewSubscriber[ConnectionEvent](256),
 	}
 	*/
 	manager := newManagerWithExtension(ctx, logger)                          //karing
-	manager.outbound = outbound                                              //karing
 	manager.eventSubscriber = observable.NewSubscriber[ConnectionEvent](256) //karing
 	return manager                                                           //karing
 }

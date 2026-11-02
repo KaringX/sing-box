@@ -6,7 +6,6 @@ import (
 	"context"
 	"net"
 
-	safe "github.com/sagernet/sing-box/common/fix"
 	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
 )
@@ -14,8 +13,8 @@ import (
 func DialSlowContext(dialer *tcpDialer, ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
 	switch N.NetworkName(network) {
 	case N.NetworkTCP, N.NetworkUDP:
-		return dialer.DialContext(ctx, network, safe.SafeSocksaddrString(destination)) //karing
+		return dialer.DialContext(ctx, network, destination)
 	default:
-		return dialer.DialContext(ctx, network, safe.SafeSocksaddrAddrString(destination)) //karing
+		return dialer.DialContext(ctx, network, destination)
 	}
 }

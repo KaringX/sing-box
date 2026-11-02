@@ -32,6 +32,7 @@ type Router interface {
 	GetRemoteRuleSetRulesCount() map[string]int                                                            //karing
 	FindProcessInfo(ctx context.Context, network string, source netip.AddrPort) (*ConnectionOwner, error)  //karing
 	GetMatchRuleChain(outboundManager OutboundManager, matchOutboundTag string) ([]string, string, string) //karing
+	GetMatchRuleChainOutboundType(OutboundChain []Outbound) string                                         //karing
 	GetMatchRule(ctx context.Context, metadata *InboundContext) (Rule, error)                              //karing
 	GetAssetContent(path string) ([]byte, error)                                                           //karing
 }

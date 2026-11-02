@@ -1406,6 +1406,7 @@ func (r *Router) ClearCache() {
 	if r.platformInterface != nil {
 		r.platformInterface.ClearDNSCache()
 	}
+	service.FromContext[adapter.NetworkManager](r.ctx).FlushSystemDNSCache()
 	if r.dnsReverseMapping != nil {
 		r.dnsReverseMapping.Purge()
 	}

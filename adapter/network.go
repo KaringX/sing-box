@@ -35,6 +35,7 @@ type NetworkManager interface {
 	WIFIState() WIFIState
 	UpdateWIFIState(ctx context.Context)
 	ResetNetwork(ctx context.Context)
+	FlushSystemDNSCache()
 	ResetOutboundNetwork(ctx context.Context, tags []string) //karing
 }
 
@@ -51,6 +52,10 @@ type NetworkOptions struct {
 
 type InterfaceUpdateListener interface {
 	InterfaceUpdated(ctx context.Context)
+}
+
+type SystemDNSCacheFlusher interface {
+	FlushSystemDNSCache()
 }
 
 type WIFIState struct {
