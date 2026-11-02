@@ -115,19 +115,19 @@ replace github.com/Diniboy1123/connect-ip-go => github.com/shtorm-7/connect-ip-g
 //replace github.com/metacubex/mihomo => github.com/KaringX/clash v0.0.0-20241101044429-f71df89d4091
 
 //go get github.com/KaringX/sing@a5ccca51fe8a39390591cf9480ffebb9f0c3fc61
-replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20261019075004-81acab83a73b //karing_v0.9.7
+replace github.com/sagernet/sing => github.com/KaringX/sing v0.5.0-alpha.11.0.20261102045409-46acdd4cb0c2 //karing_v0.9.7
 
 //replace github.com/sagernet/sing => ../../KaringX/sing
 
-replace github.com/sagernet/sing-quic => github.com/KaringX/sing-quic v0.2.0-beta.12.0.20261019071558-5fd76bcdbe11 //karing_v0.7.2
+//replace github.com/sagernet/sing-quic => github.com/KaringX/sing-quic v0.49.0-beta.1.0.20261102035308-ce5a1a9e1f73 //karing_v0.7.2
 
 //replace github.com/sagernet/sing-quic => ../../KaringX/sing-quic
 
-replace github.com/sagernet/quic-go => github.com/KaringX/quic-go v0.49.0-beta.1.0.20261019070926-f8490cba1660 //karing_v0.61.0-sing-box-mod.9
+replace github.com/sagernet/quic-go => github.com/KaringX/quic-go v0.49.0-beta.1.0.20261019070926-f8490cba1660 //karing_v0.61.0-sing-box-mod.12
 
 //replace github.com/sagernet/quic-go => ../../KaringX/quic-go
 
-replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.20261019072137-2490293aa76b //karing_v0.9.7
+replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.20261102035939-ec5cb5a009cc //karing_v0.9.7
 
 //replace github.com/sagernet/sing-tun => ../../KaringX/sing-tun
 
@@ -135,11 +135,11 @@ replace github.com/sagernet/ws => github.com/KaringX/ws v0.0.0-20250301004503-08
 
 //replace github.com/sagernet/ws => ../../KaringX/ws
 
-replace github.com/sagernet/tailscale => github.com/KaringX/tailscale v1.80.3-mod.5.0.20261028024706-009750783da6 //karing_v1.102.1-sing-box-1.14-mod.5
+replace github.com/sagernet/tailscale => github.com/KaringX/tailscale v1.80.3-mod.5.0.20261102041519-a0a222d06d2b //karing_v1.102.1-sing-box-1.14-mod.5
 
 //replace github.com/sagernet/tailscale => ../../KaringX/tailscale
 
-replace github.com/sagernet/sing-vmess => github.com/KaringX/sing-vmess v0.2.8-0.20261019072745-0e94b492b7ed //v0.2.9
+replace github.com/sagernet/sing-vmess => github.com/KaringX/sing-vmess v0.2.8-0.20261102042037-df828c433087 //v0.2.9
 
 //replace github.com/sagernet/sing-vmess => ../../KaringX/sing-vmess
 

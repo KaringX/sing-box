@@ -17,22 +17,22 @@ import (
 	mDNS "github.com/miekg/dns"
 )
 
-func (r *Router) LookupTag(ctx context.Context, domain string, options adapter.DNSQueryOptions) ([]netip.Addr, string, error) {
+func (r *Router) LookupTag(ctx context.Context, domain string, options adapter.DNSQueryOptions) (string, []netip.Addr, error) {
 	if r.transport == nil { //karing
-		return nil, "", E.New("router closed") //karing
+		return "", nil, E.New("router closed") //karing
 	}
 	r.rulesAccess.RLock()
 	if r.closing {
 		r.rulesAccess.RUnlock()
-		return nil, "", E.New("dns router closed") //karing
+		return "", nil, E.New("dns router closed") //karing
 	}
 	rules := r.rules
 	legacyDNSMode := r.legacyDNSMode
 	r.rulesAccess.RUnlock()
 	var (
+		transportTag  string //karing
 		responseAddrs []netip.Addr
 		err           error
-		transportTag  string //karing
 	)
 	printResult := func() {
 		if err == nil && len(responseAddrs) == 0 {
@@ -70,7 +70,7 @@ func (r *Router) LookupTag(ctx context.Context, domain string, options adapter.D
 		}
 		responseAddrs, err = r.client.Lookup(ctx, transport, domain, options, nil)
 	} else if !legacyDNSMode {
-		responseAddrs, err = r.lookupWithRules(ctx, rules, domain, options)
+		transportTag, responseAddrs, err = r.lookupWithRules(ctx, rules, domain, options) //karing
 	} else {
 		var (
 			transport adapter.DNSTransport
@@ -85,7 +85,7 @@ func (r *Router) LookupTag(ctx context.Context, domain string, options adapter.D
 			if rule != nil {
 				switch action := rule.Action().(type) {
 				case *R.RuleActionReject:
-					return nil, "", &R.RejectedError{Cause: action.Error(ctx)}
+					return "", nil, &R.RejectedError{Cause: action.Error(ctx)}
 				case *R.RuleActionPredefined:
 					responseAddrs = nil
 					if action.Rcode != mDNS.RcodeSuccess {
@@ -135,5 +135,5 @@ response:
 		})
 		r.logger.InfoContext(ctx, "lookup succeed for ", domain, ": ", laterString) //karing
 	}
-	return responseAddrs, transportTag, err
+	return transportTag, responseAddrs, err
 }

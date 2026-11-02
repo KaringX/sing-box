@@ -21,7 +21,7 @@ type DNSRouter interface {
 	ClearCache()
 	LookupReverseMapping(ip netip.Addr) (string, bool)
 	ResetNetwork()
-	LookupTag(ctx context.Context, domain string, options DNSQueryOptions) ([]netip.Addr, string, error) //karing
+	LookupTag(ctx context.Context, domain string, options DNSQueryOptions) (string, []netip.Addr, error) //karing
 }
 
 type DNSClient interface {

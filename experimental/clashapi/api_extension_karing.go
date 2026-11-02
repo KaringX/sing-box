@@ -51,7 +51,7 @@ func LookupWithDefaultRouter(ctx context.Context, logFactory log.Factory, domain
 	defer cancel()
 	dnsRouter := service.FromContext[adapter.DNSRouter](ctx)
 	start := time.Now()
-	addr, tag, err := dnsRouter.LookupTag(ctx, domain, adapter.DNSQueryOptions{
+	tag, addr, err := dnsRouter.LookupTag(ctx, domain, adapter.DNSQueryOptions{
 		Strategy: strategy,
 	})
 	if err != nil {
