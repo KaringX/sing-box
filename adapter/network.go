@@ -30,6 +30,8 @@ type NetworkManager interface {
 	AutoRedirectOutputMarkFunc() control.Func
 	RegisterBridgeInterface(interfaceName string)
 	BridgeInterfaces() []string
+	RegisterHostPort(port tun.RoutedPort)
+	HostPort() tun.RoutedPort
 	NetworkMonitor() tun.NetworkUpdateMonitor
 	InterfaceMonitor() tun.DefaultInterfaceMonitor
 	PackageManager() tun.PackageManager
@@ -37,6 +39,7 @@ type NetworkManager interface {
 	WIFIState() WIFIState
 	UpdateWIFIState(ctx context.Context)
 	ResetNetwork(ctx context.Context)
+	FlushSystemDNSCache()
 	ReleaseMemory(ctx context.Context)
 }
 
@@ -53,6 +56,10 @@ type NetworkOptions struct {
 
 type InterfaceUpdateListener interface {
 	InterfaceUpdated(ctx context.Context)
+}
+
+type SystemDNSCacheFlusher interface {
+	FlushSystemDNSCache()
 }
 
 type WIFIState struct {
