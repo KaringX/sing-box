@@ -10,6 +10,7 @@ import (
 	"github.com/sagernet/sing-box/adapter/outbound"
 	"github.com/sagernet/sing-box/common/urltest"
 	C "github.com/sagernet/sing-box/constant"
+	N "github.com/sagernet/sing/common/network"
 	"github.com/sagernet/sing/service"
 	"github.com/sagernet/sing/service/pause"
 )
@@ -141,10 +142,10 @@ func (g *URLTestGroup) HealthCheckSelected() {
 	selectedOutboundTCP := g.selectedOutboundTCP
 	selectedOutboundUDP := g.selectedOutboundUDP
 	if selectedOutboundTCP != nil && g.isProxyOutbound(selectedOutboundTCP.Type()) {
-		tags[RealTag(g.outbound, selectedOutboundTCP)] = true
+		tags[RealTag(selectedOutboundTCP, N.NetworkTCP)] = true
 	}
 	if selectedOutboundUDP != nil && g.isProxyOutbound(selectedOutboundUDP.Type()) {
-		tags[RealTag(g.outbound, selectedOutboundUDP)] = true
+		tags[RealTag(selectedOutboundUDP, N.NetworkUDP)] = true
 	}
 	for tag := range tags {
 		g.HealthCheck(tag, false)
@@ -211,8 +212,15 @@ func (b *urlTestBatch) batchTest(outbounds []adapter.Outbound, link string, inte
 	var resultAccess sync.Mutex
 	for _, detour := range outbounds {
 		tag := detour.Tag()
-		realTag := RealTag(b.outbound, detour)
+		realTag := detour.Tag()
 		if b.checked[realTag] {
+			continue
+		}
+		detourType := detour.Type()
+		if detourType == C.TypeURLTest {
+			continue
+		}
+		if detourType == C.TypeSelector {
 			continue
 		}
 		history := b.history.LoadURLTestHistory(realTag)

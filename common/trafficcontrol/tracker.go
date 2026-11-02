@@ -129,8 +129,8 @@ func (m *Manager) newTrackerMetadata(metadata adapter.InboundContext, matchedRul
 		DownloadSpeed: 0,            //karing
 		Chain:         common.Reverse(chain),
 		Rule:          matchedRule,
-		Outbound:      outbound,
-		OutboundType:  outboundType,
+		Outbound:      outbound.Tag(),
+		OutboundType:  outbound.Type(),
 		User:          metadata.User,     //karing
 		Protocol:      metadata.Protocol, //karing
 		UploadLast:    uploadLast,        //karing

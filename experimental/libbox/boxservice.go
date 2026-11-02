@@ -59,12 +59,10 @@ func NewService(handler BoxServiceHandler, platformInterface PlatformInterface) 
 	if platformInterface != nil {                 //karing
 		platformWrapper = &platformInterfaceWrapper{ //karing
 			iif:          platformInterface,
-			useProcFS:    platformInterface.UseProcFS(),
 			powerManager: powerManager,
 		}
 		service.MustRegister[adapter.PlatformInterface](ctx, platformWrapper)
 	}
-
 	server := &BoxService{
 		ctx:               ctx,
 		handler:           handler,

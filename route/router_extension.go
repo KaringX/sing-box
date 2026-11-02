@@ -42,6 +42,10 @@ func (r *Router) GetMatchRuleChain(outboundManager adapter.OutboundManager, matc
 	return trafficcontrol.GetMatchRuleChain(outboundManager, matchOutboundTag)
 }
 
+func (r *Router) GetMatchRuleChainOutboundType(OutboundChain []adapter.Outbound) string {
+	return trafficcontrol.GetMatchRuleChainOutboundType(OutboundChain)
+}
+
 func (r *Router) GetMatchRule(ctx context.Context, metadata *adapter.InboundContext) (adapter.Rule, error) {
 	rule, _, _, _, err := r.matchRule(ctx, metadata, nil, nil)
 	if err != nil {

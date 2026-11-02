@@ -4,6 +4,8 @@ package trafficcontrol
 import (
 	"encoding/json"
 
+	N "github.com/sagernet/sing/common/network"
+
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing/common"
 	F "github.com/sagernet/sing/common/format"
@@ -36,7 +38,9 @@ func GetMatchRuleChain(outboundManager adapter.OutboundManager, matchOutboundTag
 		if !isGroup || group == nil {
 			break
 		}
-		next = group.Now()
+		if selected := group.Selected(N.NetworkTCP); selected != nil {
+			next = selected.Tag()
+		}
 	}
 	return chain, outbound, outboundType
 }

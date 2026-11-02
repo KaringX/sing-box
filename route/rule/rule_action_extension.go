@@ -22,10 +22,6 @@ func (r *RuleActionDNSRouteOptions) Target() string {
 	return ""
 }
 
-func (r *RuleActionDirect) Target() string {
-	return ""
-}
-
 func (r *RuleActionReject) Target() string {
 	return ""
 }

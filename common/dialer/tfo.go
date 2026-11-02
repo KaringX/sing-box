@@ -37,7 +37,7 @@ func DialSlowContext(dialer *tcpDialer, ctx context.Context, netns string, netwo
 	if dialer.DisableTFO || N.NetworkName(network) != N.NetworkTCP {
 		switch N.NetworkName(network) {
 		case N.NetworkTCP, N.NetworkUDP:
-			return dialer.DialContext(ctx, netns, network, destination) //hiddify
+			return dialer.DialContext(ctx, network, destination) //hiddify
 		default:
 			return dialer.DialContext(ctx, network, destination) //hiddify
 		}

@@ -58,7 +58,7 @@ func NewSelector(ctx context.Context, router adapter.Router, logger log.ContextL
 		interruptExternalConnections: options.InterruptExistConnections,
 	}
 	if len(outbound.tags) == 0 {
-		return outbound, E.New("missing tags") //karing
+		return nil, E.New("missing tags")
 	}
 	for i, tag := range outbound.tags {
 		if slices.Contains(outbound.tags[:i], tag) {
@@ -160,9 +160,6 @@ func (s *Selector) SelectOutbound(tag string) bool {
 }
 
 func (s *Selector) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
-	if s.GetParseErr() != nil { //karing
-		return nil, s.GetParseErr()
-	}
 	conn, err := s.selected.Load().DialContext(ctx, network, destination)
 	if err != nil {
 		return nil, err
@@ -171,40 +168,11 @@ func (s *Selector) DialContext(ctx context.Context, network string, destination 
 }
 
 func (s *Selector) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
-	if s.GetParseErr() != nil { //karing
-		return nil, s.GetParseErr()
-	}
 	conn, err := s.selected.Load().ListenPacket(ctx, destination)
 	if err != nil {
 		return nil, err
 	}
 	return s.interruptGroup.NewPacketConn(conn, interrupt.IsExternalConnectionFromContext(ctx)), nil
-}
-
-func (s *Selector) NewConnection(ctx context.Context, conn net.Conn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) {
-	if s.GetParseErr() != nil { //karing
-		return
-	}
-	ctx = interrupt.ContextWithIsExternalConnection(ctx)
-	selected := s.selected.Load()
-	if outboundHandler, isHandler := selected.(adapter.ConnectionHandler); isHandler {
-		outboundHandler.NewConnection(ctx, conn, metadata, onClose)
-	} else {
-		s.connection.NewConnection(ctx, s, conn, metadata, onClose)
-	}
-}
-
-func (s *Selector) NewPacketConnection(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) {
-	if s.GetParseErr() != nil { //karing
-		return
-	}
-	ctx = interrupt.ContextWithIsExternalConnection(ctx)
-	selected := s.selected.Load()
-	if outboundHandler, isHandler := selected.(adapter.PacketConnectionHandler); isHandler {
-		outboundHandler.NewPacketConnection(ctx, conn, metadata, onClose)
-	} else {
-		s.connection.NewPacketConnection(ctx, s, conn, metadata, onClose)
-	}
 }
 
 func RealTag(detour adapter.Outbound, network string) string {

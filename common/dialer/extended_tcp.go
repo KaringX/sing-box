@@ -23,9 +23,9 @@ func (d *ExtendedTCPDialer) DialContext(ctx context.Context, network string, des
 	if (d.DisableTFO && !(d.TLSFragment != nil && d.TLSFragment.Enabled)) || N.NetworkName(network) != N.NetworkTCP {
 		switch N.NetworkName(network) {
 		case N.NetworkTCP, N.NetworkUDP:
-			return d.Dialer.DialContext(ctx, network, destination)
+			return d.Dialer.DialContext(ctx, network, destination.String())
 		default:
-			return d.Dialer.DialContext(ctx, network, destination) //karing
+			return d.Dialer.DialContext(ctx, network, destination.AddrString()) //karing
 		}
 	}
 	// Create a TLS-Fragmented dialer
@@ -36,7 +36,7 @@ func (d *ExtendedTCPDialer) DialContext(ctx context.Context, network string, des
 			network:     network,
 			destination: destination,
 		}
-		conn, err := d.Dialer.DialContext(ctx, network, destination) //karing
+		conn, err := d.Dialer.DialContext(ctx, network, destination.String()) //karing
 		if err != nil {
 			fragmentConn.err = err
 			return nil, err

@@ -76,10 +76,10 @@ func NewURLTest(ctx context.Context, router adapter.Router, logger log.ContextLo
 		skipTest:                     options.SkipTest,                                   //karing
 	}
 	if len(outbound.tags) == 0 {
-		return outbound, E.New("missing tags") //karing
+		return nil, E.New("missing tags")
 	}
 	if len(options.Default) > 0 && !slices.Contains(outbound.tags, options.Default) { //karing
-		return outbound, E.New("default tag not found")
+		return nil, E.New("default tag not found")
 	}
 	for i, tag := range outbound.tags {
 		if slices.Contains(outbound.tags[:i], tag) {
@@ -90,9 +90,6 @@ func NewURLTest(ctx context.Context, router adapter.Router, logger log.ContextLo
 }
 
 func (s *URLTest) Start(stage adapter.StartStage, scope *adapter.Scope) error {
-	if s.GetParseErr() != nil { //karing
-		return s.GetParseErr()
-	}
 	switch stage {
 	case adapter.StartStateStart:
 		outbounds := make([]adapter.Outbound, 0, len(s.tags))
@@ -186,9 +183,6 @@ func (s *URLTest) InterfaceUpdated(ctx context.Context) {
 }
 
 func (s *URLTest) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
-	if s.GetParseErr() != nil { //karing
-		return nil, s.GetParseErr()
-	}
 	s.group.Touch()
 	var outbound adapter.Outbound
 	switch N.NetworkName(network) {
@@ -206,7 +200,7 @@ func (s *URLTest) DialContext(ctx context.Context, network string, destination M
 		return nil, E.New("missing supported outbound")
 	}
 	conn, err := outbound.DialContext(ctx, network, destination)
-	realTag := RealTag(s.outbound, outbound) //karing
+	realTag := RealTag(outbound, N.NetworkName(network)) //karing
 	if err == nil {
 		s.updateHistory(outbound.Type(), realTag) //karing
 		return s.group.interruptGroup.NewConn(conn, interrupt.IsExternalConnectionFromContext(ctx)), nil
@@ -238,7 +232,7 @@ func (s *URLTest) ListenPacket(ctx context.Context, destination M.Socksaddr) (ne
 		return nil, E.New("missing supported outbound")
 	}
 	conn, err := outbound.ListenPacket(ctx, destination)
-	realTag := RealTag(s.outbound, outbound) //karing
+	realTag := RealTag(outbound, N.NetworkUDP) //karing
 	if err == nil {
 		s.updateHistory(outbound.Type(), realTag) //karing
 		return s.group.interruptGroup.NewPacketConn(conn, interrupt.IsExternalConnectionFromContext(ctx)), nil

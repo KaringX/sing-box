@@ -11,7 +11,6 @@ import (
 
 	"github.com/gofrs/uuid/v5"
 	"github.com/sagernet/sing-box/adapter"
-	safe "github.com/sagernet/sing-box/common/fix"
 	"github.com/sagernet/sing-box/common/gofree"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing/common"
@@ -156,8 +155,8 @@ func (m *Manager) Snapshot(includeConnections bool) *Snapshot {
 			return TrackerMetadataOut{
 				CreatedAt:   t.CreatedAt,
 				Network:     t.Network,
-				Source:      t.Source,
-				Destination: t.Destination,
+				Source:      t.Source.AddrString(),
+				Destination: t.Destination.AddrString(),
 				Fqdn:        t.Fqdn,
 				Outbound:    t.Outbound,
 			}
@@ -494,11 +493,11 @@ func (m *Manager) persistConnectionsToDB(connections []TrackerMetadata, persistT
 			var source_ip string
 			var destination_ip string
 			if t.Metadata.Source.Addr.IsValid() {
-				source_ip = safe.SafeAddrString(t.Metadata.Source.Addr) //karing
+				source_ip = t.Metadata.Source.Addr.String() //karing
 			}
 			if !statistics.DataDesensitize() {
 				if t.Metadata.Destination.Addr.IsValid() {
-					destination_ip = safe.SafeAddrString(t.Metadata.Destination.Addr) //karing
+					destination_ip = t.Metadata.Destination.Addr.String() //karing
 				}
 			} else {
 				destination_ip = "*"
