@@ -60,4 +60,6 @@ type WireGuardAmnezia struct { // https://github.com/shtorm-7/sing-box-extended
 	RejectAfterTime        *Xbadoption.Range `json:"reject_after_time,omitempty"`
 	KeepaliveTimeout       *Xbadoption.Range `json:"keepalive_timeout,omitempty"`
 	MaxHandshakeAttempts   *Xbadoption.Range `json:"max_handshake_attempts,omitempty"`
+	RandomTrailers         bool              `json:"random_trailers,omitempty"`
+	DisableCookies         bool              `json:"disable_cookies,omitempty"`
 }
