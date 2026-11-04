@@ -168,7 +168,7 @@ func (f *defaultFactory) output(ctx context.Context, level Level, tag string, me
 		}
 		f.writer.Write([]byte(formatted))
 		if level == LevelFatal {
-			if f.writer.(*os.File) != os.Stderr { //karing
+			if file, ok := f.writer.(*os.File); !ok || file != os.Stderr { //karing
 				log.Fatal(message)
 			}
 			os.Exit(1)
