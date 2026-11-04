@@ -135,7 +135,8 @@ func DNSTransportRegistry() *dns.TransportRegistry {
 	transport.RegisterUDP(registry)
 	transport.RegisterTLS(registry)
 	transport.RegisterHTTPS(registry)
-	transport.RegisterBatch(registry) //karing
+	transport.RegisterBatch(registry)      //karing
+	transport.RegisterPredefined(registry) //karing
 	hosts.RegisterTransport(registry)
 	local.RegisterTransport(registry)
 	mdns.RegisterTransport(registry)
