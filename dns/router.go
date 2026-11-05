@@ -1055,7 +1055,13 @@ func (r *Router) lookupWithRulesType(ctx context.Context, rules []adapter.DNSRul
 		return "", nil, exchangeResult.err //karing
 	}
 	if exchangeResult.response.Rcode != mDNS.RcodeSuccess {
+		if exchangeResult.transport == nil { //karing
+			return "", nil, RcodeError(exchangeResult.response.Rcode)
+		}
 		return exchangeResult.transport.Tag(), nil, RcodeError(exchangeResult.response.Rcode) //karing
+	}
+	if exchangeResult.transport == nil { //karing
+		return "", filterAddressesByQueryType(MessageToAddresses(exchangeResult.response), qType), nil
 	}
 	return exchangeResult.transport.Tag(), filterAddressesByQueryType(MessageToAddresses(exchangeResult.response), qType), nil //karing
 }
