@@ -72,7 +72,8 @@ func (o *Outbound) Start(stage adapter.StartStage, scope *adapter.Scope) error {
 	}
 	config, err := buildMieruClientConfig(o.options, mieruDialer{dialer: o.dialer})
 	if err != nil {
-		return fmt.Errorf("failed to build mieru client config: %w", err)
+		o.SetParseErr(E.Cause(err, "failed to build mieru client config")) //karing
+		return nil                                                         //karing
 	}
 	if M.IsDomainName(o.options.Server) {
 		config.Resolver = mieruResolver{
@@ -82,10 +83,12 @@ func (o *Outbound) Start(stage adapter.StartStage, scope *adapter.Scope) error {
 	}
 	c := mieruclient.NewClient()
 	if err := c.Store(config); err != nil {
-		return fmt.Errorf("failed to store mieru client config: %w", err)
+		o.SetParseErr(E.Cause(err, "failed to store mieru client config")) //karing
+		return nil                                                         //karing
 	}
 	if err := c.Start(); err != nil {
-		return fmt.Errorf("failed to start mieru client: %w", err)
+		o.SetParseErr(E.Cause(err, "failed to start mieru client")) //karing
+		return nil                                                  //karing
 	}
 	o.logger.InfoContext(o.ctx, "mieru client is started") //karing
 	o.client = c

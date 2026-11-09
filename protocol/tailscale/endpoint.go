@@ -270,19 +270,29 @@ func (t *Endpoint) Start(stage adapter.StartStage, scope *adapter.Scope) error {
 	case adapter.StartStateInitialize:
 		mkdirErr := filemanager.MkdirAll(t.ctx, t.server.Dir, 0o700)
 		if mkdirErr != nil {
-			return E.Cause(mkdirErr, "create state directory")
+			t.SetParseErr(E.Cause(mkdirErr, "create state directory")) //karing
+			return nil                                                 //karing
 		}
 		if !version.IsAppleTV() {
 			mkdirErr = filemanager.MkdirAll(t.ctx, t.taildrop.directory, 0o700)
 			if mkdirErr != nil {
-				return E.Cause(mkdirErr, "create taildrop directory")
+				t.SetParseErr(E.Cause(mkdirErr, "create taildrop directory")) //karing
+				return nil                                                    //karing
 			}
 		}
 		t.server.PeerDNSQueryHandler = (*peerDNSQueryHandler)(t)
 	case adapter.StartStateStart:
-		return t.start(scope)
+		err := t.start(scope) //karing
+		if err != nil {       //karing
+			t.SetParseErr(E.Cause(err, "start tailscale endpoint"))
+			return nil
+		}
 	case adapter.StartStatePostStart:
-		return t.postStart(scope)
+		err := t.postStart(scope) //karing
+		if err != nil {           //karing
+			t.SetParseErr(E.Cause(err, "postStart tailscale endpoint"))
+			return nil
+		}
 	}
 	return nil
 }

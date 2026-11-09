@@ -237,7 +237,8 @@ func (h *Outbound) Start(stage adapter.StartStage, scope *adapter.Scope) error {
 	}
 	err := h.client.Start()
 	if err != nil {
-		return err
+		h.SetParseErr(E.Cause(err, "failed to start naive client: %w")) //karing
+		return nil                                                      //karing
 	}
 	scope.Add(h.client.Close)
 	h.logger.Info("NaiveProxy started, version: ", h.client.Engine().Version())

@@ -110,28 +110,34 @@ func (t *Outbound) Start(stage adapter.StartStage, scope *adapter.Scope) error {
 		}
 		err := filemanager.MkdirAll(t.ctx, t.startConf.DataDir, 0o755)
 		if err != nil {
-			return err
+			t.SetParseErr(E.Cause(err, "failed to mkdir data dir: %w")) //karing
+			return nil                                                  //karing
 		}
 		torrcInfo, err := filemanager.Stat(t.ctx, t.startConf.TorrcFile)
 		if os.IsNotExist(err) {
 			err = filemanager.WriteFile(t.ctx, t.startConf.TorrcFile, []byte(""), 0o600)
 			if err != nil {
-				return err
+				t.SetParseErr(E.Cause(err, "failed to write torrc file: %w")) //karing
+				return nil                                                    //karing
 			}
 		} else if err != nil {
-			return err
+			t.SetParseErr(E.Cause(err, "failed to stat file: %w")) //karing
+			return nil                                             //karing
 		} else if torrcInfo.IsDir() {
-			return E.New("Tor configuration path is a directory: ", t.startConf.TorrcFile)
+			t.SetParseErr(E.New("Tor configuration path is a directory: ", t.startConf.TorrcFile)) //karing                                                         //karing
+			return nil                                                                             //karing
 		}
 	case adapter.StartStateStart:
 		proxy, err := proxybridge.New(t.ctx, t.logger, "proxy", t.dialer)
 		if err != nil {
-			return err
+			t.SetParseErr(E.Cause(err, "failed to create proxy: %w")) //karing
+			return nil                                                //karing
 		}
 		t.proxy = proxy
 		err = proxy.Start()
 		if err != nil {
-			return err
+			t.SetParseErr(E.Cause(err, "failed to start proxy: %w")) //karing
+			return nil                                               //karing
 		}
 		scope.Add(proxy.Close)
 		return t.start(scope)
