@@ -18,6 +18,7 @@ import (
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/common/congestion"
 	"github.com/sagernet/sing-box/common/tls"
+	"github.com/sagernet/sing-box/common/vision"
 	"github.com/sagernet/sing-box/common/xray/buf"
 	"github.com/sagernet/sing-box/common/xray/net"
 	"github.com/sagernet/sing-box/common/xray/pipe"
@@ -312,7 +313,14 @@ func createHTTPClient(ctx context.Context, dest M.Socksaddr, dialer N.Dialer, op
 			return nil, err
 		}
 		if tlsConfig != nil && httpVersion != "3" {
-			return tls.ClientHandshake(ctxInner, conn, tlsConfig)
+			conn, err = tls.ClientHandshake(ctxInner, conn, tlsConfig) // https://github.com/starifly/sing-box
+			if err != nil {                                            // https://github.com/starifly/sing-box
+				return nil, err
+			}
+			hook, hasHook := vision.HookFromContext(ctxInner) // https://github.com/starifly/sing-box
+			if hasHook {                                      // https://github.com/starifly/sing-box
+				hook(conn)
+			}
 		}
 		return conn, nil
 	}

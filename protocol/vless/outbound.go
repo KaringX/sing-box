@@ -5,6 +5,7 @@ import (
 	stdtls "crypto/tls"
 	"encoding/base64"
 	"net"
+	"reflect"
 	"strings"
 	"sync"
 
@@ -435,6 +436,18 @@ func isVisionTLSConn(conn net.Conn) bool {
 	if _, ok := conn.(interface{ Handshake() error }); ok {
 		return true
 	}
+	// https://github.com/starifly/sing-box begin
+	connType := reflect.TypeOf(conn)
+	if connType == nil {
+		return false
+	}
+	if connType.Kind() == reflect.Ptr {
+		pkgPath := connType.Elem().PkgPath()
+		if pkgPath == "crypto/tls" || strings.Contains(pkgPath, "utls") || strings.Contains(pkgPath, "shadowtls") {
+			return true
+		}
+	}
+	// https://github.com/starifly/sing-box end
 	return false
 }
 
