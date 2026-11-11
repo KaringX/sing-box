@@ -137,8 +137,8 @@ func (t *Transport) Start(stage adapter.StartStage, scope *adapter.Scope) error 
 }
 
 func (t *Transport) Reset() {
-	t.refreshAccess.Lock()
-	defer t.refreshAccess.Unlock()
+	//t.refreshAccess.Lock() //karing
+	//defer t.refreshAccess.Unlock() //karing
 	state := t.savedState.Swap(nil)
 	if state != nil && state.serverScope != nil {
 		state.serverScope.Close()
@@ -235,8 +235,8 @@ func (t *Transport) fetch(ctx context.Context) error {
 			return nil
 		}
 	}
-	t.refreshAccess.Lock()
-	defer t.refreshAccess.Unlock()
+	//t.refreshAccess.Lock() //karing
+	//defer t.refreshAccess.Unlock() //karing
 	state = t.savedState.Load()
 	if state != nil {
 		if state.lastError != nil {

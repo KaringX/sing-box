@@ -246,6 +246,10 @@ func (s *RemoteRuleSet) updateOnce() {
 }
 
 func (s *RemoteRuleSet) fetch(ctx context.Context, isStart bool) error {
+	if ctx.Err() == context.Canceled { //karing
+		s.logger.Debug("updating rule-set canceled: ", s.tag)
+		return nil
+	}
 	cacheFile := service.FromContext[adapter.CacheFile](s.ctx) //karing
 	s.logger.Debug("updating rule-set ", s.tag, " from URL: ", s.url)
 	request, err := http.NewRequest("GET", s.url, nil)
@@ -359,6 +363,7 @@ func (s *RemoteRuleSet) resolveTransport() (adapter.HTTPTransport, error) {
 func (s *RemoteRuleSet) Close() error {
 	s.rules = nil
 	s.cancel()
+	s.logger.Debug("rule-set closed: ", s.tag) //karing
 	return nil
 }
 
