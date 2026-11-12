@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	M "github.com/sagernet/sing/common/metadata"
+
 	"github.com/sagernet/sing-box/adapter"
 	tf "github.com/sagernet/sing-box/common/tlsfragment"
 	"github.com/sagernet/sing-box/common/tlsspoof"
@@ -34,6 +36,7 @@ type STDClientConfig struct {
 	recordFragment        bool
 	spoof                 string
 	spoofMethod           tlsspoof.Method
+	tricks                *tlsTricks //H: tls_tricks (mixed-case SNI) //hiddify
 }
 
 func (c *STDClientConfig) ServerName() string {
@@ -82,6 +85,13 @@ func (c *STDClientConfig) Client(conn net.Conn) (Conn, error) {
 	if err != nil {
 		return nil, err
 	}
+	//hiddify begin
+	if c.tricks != nil && c.config.ServerName != "" { //H: a new case for each connection
+		config := c.config.Clone()                                 //H
+		config.ServerName = c.tricks.serverName(config.ServerName) //H
+		return tls.Client(conn, config), nil                       //H
+	} //H
+	//hiddify end
 	return tls.Client(conn, c.config), nil
 }
 
@@ -98,6 +108,7 @@ func (c *STDClientConfig) Clone() Config {
 		recordFragment:        c.recordFragment,
 		spoof:                 c.spoof,
 		spoofMethod:           c.spoofMethod,
+		tricks:                c.tricks, //H //hiddify
 	}
 	cloned.SetServerName(cloned.serverName)
 	return cloned
@@ -125,15 +136,17 @@ func newSTDClient(ctx context.Context, logger logger.ContextLogger, serverAddres
 	if serverName == "" && !options.Insecure && !allowEmptyServerName {
 		return nil, errMissingServerName
 	}
+	//hiddify
+	// H: an IP address is never sent as SNI, and the normal verification checks IP addresses, so
+	// disable_sni changes nothing then; skipping it keeps the standard verification, which QUIC
+	// parrots (no VerifyConnection support) need.
+	if options.DisableSNI && M.ParseAddr(serverName).IsValid() {
+		options.DisableSNI = false
+	}
 
 	var tlsConfig tls.Config
 	tlsConfig.Time = ntp.TimeFuncFromContext(ctx)
 	tlsConfig.RootCAs = adapter.RootPoolFromContext(ctx)
-	if !options.DisableSNI { //hiddify
-		if options.TLSTricks != nil && options.TLSTricks.MixedCaseSNI {
-			tlsConfig.ServerName = randomizeCase(tlsConfig.ServerName)
-		}
-	}
 	if options.Insecure {
 		tlsConfig.InsecureSkipVerify = options.Insecure
 	} else if options.DisableSNI {
@@ -236,6 +249,12 @@ func newSTDClient(ctx context.Context, logger logger.ContextLogger, serverAddres
 	if err != nil {
 		return nil, err
 	}
+	//hiddify bein
+	tricks, err := parseTLSTricks(logger, options.TLSTricks, false) //H
+	if err != nil {                                                 //H
+		return nil, err //H
+	} //H
+	//hiddify end
 	var config Config = &STDClientConfig{
 		ctx:                   ctx,
 		config:                &tlsConfig,
@@ -248,6 +267,7 @@ func newSTDClient(ctx context.Context, logger logger.ContextLogger, serverAddres
 		recordFragment:        options.RecordFragment,
 		spoof:                 spoof,
 		spoofMethod:           spoofMethod,
+		tricks:                tricks, //H //hiddify
 	}
 	config.SetServerName(serverName)
 	if options.ECH != nil && options.ECH.Enabled {
