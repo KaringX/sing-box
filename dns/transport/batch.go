@@ -106,6 +106,7 @@ func (t *BatchTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS
 		defer cancelTimeout()
 	}
 
+	t.logger.InfoContext(ctx, "exchange [", domain, "] queryType: ", question.Qtype)
 	count.Add(int64(len(transports)))
 	overloaded.Add(int64(len(transports)))
 	for _, transport := range transports {
@@ -141,10 +142,14 @@ func (t *BatchTransport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS
 						t.logger.InfoContext(ctx, "exchanged empty result ["+domain+"] by: ", trans.Tag(), " queryType: ", question.Qtype)
 					})
 				} else {
+					answer := ""
+					if ret != nil && len(ret.Answer) > 0 {
+						answer = ret.Answer[0].String()
+					}
 					if onceFlag.CompareAndSwap(false, true) {
 						once.Do(func() {
 							result = ret
-							t.logger.InfoContext(ctx, "exchanged ["+domain+"] by: ", trans.Tag(), " queryType: ", question.Qtype)
+							t.logger.InfoContext(ctx, "exchanged ["+domain+"] by: ", trans.Tag(), " queryType: ", question.Qtype, " answer[0]: ", answer)
 							select {
 							case done <- struct{}{}:
 							default:

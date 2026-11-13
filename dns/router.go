@@ -427,15 +427,23 @@ func (r *Router) resolveDNSRoute(server string, routeOptions R.RuleActionDNSRout
 	return transport, dnsRouteStatusResolved
 }
 
-func (r *Router) logRuleMatch(ctx context.Context, message *mDNS.Msg, ruleIndex int, currentRule adapter.DNSRule) { //karing
+func (r *Router) logRuleMatch(ctx context.Context, message *mDNS.Msg, allowFakeIP bool, ruleIndex int, currentRule adapter.DNSRule, options adapter.DNSQueryOptions) { //karing
+	switch action := currentRule.Action().(type) { //karing
+	case *R.RuleActionDNSRoute:
+		_, status := r.resolveDNSRoute(action.Server, action.RuleActionDNSRouteOptions, allowFakeIP, &options)
+		switch status {
+		case dnsRouteStatusSkipped:
+			return
+		}
+	}
 	domain := ""                                                                //karing
 	if message != nil && message.Question != nil && len(message.Question) > 0 { //karing
 		domain = message.Question[0].Name
 	}
 	if ruleDescription := currentRule.String(); ruleDescription != "" {
-		r.logger.DebugContext(ctx, domain, " match[", ruleIndex, "] ", currentRule, " => ", currentRule.Action()) //karing
+		r.logger.DebugContext(ctx, domain, ", allowFakeIP: ", allowFakeIP, ", match[", ruleIndex, "] ", currentRule, " => ", currentRule.Action()) //karing
 	} else {
-		r.logger.DebugContext(ctx, domain, " match[", ruleIndex, "] => ", currentRule.Action()) //karing
+		r.logger.DebugContext(ctx, domain, ", allowFakeIP: ", allowFakeIP, ", match[", ruleIndex, "] => ", currentRule.Action()) //karing
 	}
 }
 
@@ -668,7 +676,7 @@ func (r *Router) walkDNSRules(ctx context.Context, rules []adapter.DNSRule, mess
 		}
 		if state.lastLoggedIndex != state.ruleIndex {
 			state.lastLoggedIndex = state.ruleIndex
-			r.logRuleMatch(ctx, message, state.ruleIndex, currentRule) //karing
+			r.logRuleMatch(ctx, message, allowFakeIP, state.ruleIndex, currentRule, state.effectiveOptions) //karing
 		}
 		switch action := currentRule.Action().(type) {
 		case *R.RuleActionDNSRouteOptions:
@@ -876,7 +884,7 @@ func (r *Router) sweepArmedDNSRules(ctx context.Context, message *mDNS.Msg, stat
 		if !armed.rule.Match(metadata) {
 			continue
 		}
-		r.logRuleMatch(ctx, message, armed.ruleIndex, armed.rule) //karing
+		r.logRuleMatch(ctx, message, allowFakeIP, armed.ruleIndex, armed.rule, state.effectiveOptions) //karing
 		switch action := armed.rule.Action().(type) {
 		case *R.RuleActionRespond:
 			var (
@@ -1027,6 +1035,7 @@ func filterAddressesByQueryType(addresses []netip.Addr, qType uint16) []netip.Ad
 }
 
 func (r *Router) lookupWithRules(ctx context.Context, rules []adapter.DNSRule, domain string, options adapter.DNSQueryOptions, allowFakeIP bool) (string, []netip.Addr, error) { //karing
+	r.logger.DebugContext(ctx, "lookup domain ", domain, " allowFakeIP: ", allowFakeIP) //karing
 	strategy := r.resolveLookupStrategy(options)
 	lookupOptions := options
 	if strategy != C.DomainStrategyAsIS {
