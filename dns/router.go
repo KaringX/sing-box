@@ -427,11 +427,15 @@ func (r *Router) resolveDNSRoute(server string, routeOptions R.RuleActionDNSRout
 	return transport, dnsRouteStatusResolved
 }
 
-func (r *Router) logRuleMatch(ctx context.Context, ruleIndex int, currentRule adapter.DNSRule) {
+func (r *Router) logRuleMatch(ctx context.Context, message *mDNS.Msg, ruleIndex int, currentRule adapter.DNSRule) { //karing
+	domain := ""                                                                //karing
+	if message != nil && message.Question != nil && len(message.Question) > 0 { //karing
+		domain = message.Question[0].Name
+	}
 	if ruleDescription := currentRule.String(); ruleDescription != "" {
-		r.logger.DebugContext(ctx, "match[", ruleIndex, "] ", currentRule, " => ", currentRule.Action())
+		r.logger.DebugContext(ctx, domain, " match[", ruleIndex, "] ", currentRule, " => ", currentRule.Action()) //karing
 	} else {
-		r.logger.DebugContext(ctx, "match[", ruleIndex, "] => ", currentRule.Action())
+		r.logger.DebugContext(ctx, domain, " match[", ruleIndex, "] => ", currentRule.Action()) //karing
 	}
 }
 
@@ -439,6 +443,7 @@ type exchangeWithRulesResult struct {
 	response     *mDNS.Msg
 	transport    adapter.DNSTransport
 	rejectAction *R.RuleActionReject
+	rule         string //karing
 	err          error
 }
 
@@ -663,7 +668,7 @@ func (r *Router) walkDNSRules(ctx context.Context, rules []adapter.DNSRule, mess
 		}
 		if state.lastLoggedIndex != state.ruleIndex {
 			state.lastLoggedIndex = state.ruleIndex
-			r.logRuleMatch(ctx, state.ruleIndex, currentRule)
+			r.logRuleMatch(ctx, message, state.ruleIndex, currentRule) //karing
 		}
 		switch action := currentRule.Action().(type) {
 		case *R.RuleActionDNSRouteOptions:
@@ -678,7 +683,9 @@ func (r *Router) walkDNSRules(ctx context.Context, rules []adapter.DNSRule, mess
 				continue
 			}
 			if !action.Speculative && len(state.armedRules) > 0 {
-				return exchangeWithRulesResult{}, &dnsWalkSuspension{drain: true}
+				return exchangeWithRulesResult{
+					rule: currentRule.Name(), //karing
+				}, &dnsWalkSuspension{drain: true}
 			}
 			queryOptions := state.effectiveOptions
 			r.applyDNSRouteOptions(&queryOptions, action.RuleActionDNSRouteOptions)
@@ -693,32 +700,40 @@ func (r *Router) walkDNSRules(ctx context.Context, rules []adapter.DNSRule, mess
 			}
 		case *R.RuleActionRespond:
 			if len(state.armedRules) > 0 {
-				return exchangeWithRulesResult{}, &dnsWalkSuspension{drain: true}
+				return exchangeWithRulesResult{
+					rule: currentRule.Name(), //karing
+				}, &dnsWalkSuspension{drain: true}
 			}
 			if responseTag := currentRule.MatchResponseTag(); responseTag != "" {
 				namedResponse := state.namedResponses[responseTag]
 				if namedResponse == nil {
 					return exchangeWithRulesResult{
-						err: E.New(dnsRespondMissingResponseMessage),
+						rule: currentRule.Name(), //karing
+						err:  E.New(dnsRespondMissingResponseMessage),
 					}, nil
 				}
 				return exchangeWithRulesResult{
+					rule:      currentRule.Name(), //karing
 					response:  namedResponse,
 					transport: state.namedTransports[responseTag],
 				}, nil
 			}
 			if !hasBindings {
 				if future := state.anonymousFuture; future != nil && !future.resolved() {
-					return exchangeWithRulesResult{}, &dnsWalkSuspension{await: future}
+					return exchangeWithRulesResult{
+						rule: currentRule.Name(), //karing
+					}, &dnsWalkSuspension{await: future}
 				}
 			}
 			response := state.anonymousResponse()
 			if response == nil {
 				return exchangeWithRulesResult{
-					err: E.New(dnsRespondMissingResponseMessage),
+					rule: currentRule.Name(), //karing
+					err:  E.New(dnsRespondMissingResponseMessage),
 				}, nil
 			}
 			return exchangeWithRulesResult{
+				rule:      currentRule.Name(), //karing
 				response:  response,
 				transport: state.anonymousFuture.transport,
 			}, nil
@@ -739,33 +754,45 @@ func (r *Router) walkDNSRules(ctx context.Context, rules []adapter.DNSRule, mess
 					state.terminalFuture = future
 					state.terminalIndex = state.ruleIndex
 				}
-				return exchangeWithRulesResult{}, &dnsWalkSuspension{drain: true}
+				return exchangeWithRulesResult{
+					rule: currentRule.Name(), //karing
+				}, &dnsWalkSuspension{drain: true}
 			}
 			if state.terminalFuture != nil && state.terminalIndex == state.ruleIndex {
-				return exchangeWithRulesResult{}, &dnsWalkSuspension{pending: &dnsPendingExchange{transport: state.terminalFuture.transport, future: state.terminalFuture}}
+				return exchangeWithRulesResult{
+					rule: currentRule.Name(), //karing
+				}, &dnsWalkSuspension{pending: &dnsPendingExchange{transport: state.terminalFuture.transport, future: state.terminalFuture}}
 			}
-			return exchangeWithRulesResult{}, &dnsWalkSuspension{pending: &dnsPendingExchange{transport: transport, options: queryOptions}}
+			return exchangeWithRulesResult{
+				rule: currentRule.Name(), //karing
+			}, &dnsWalkSuspension{pending: &dnsPendingExchange{transport: transport, options: queryOptions}}
 		case *R.RuleActionReject:
 			if len(state.armedRules) > 0 {
-				return exchangeWithRulesResult{}, &dnsWalkSuspension{drain: true}
+				return exchangeWithRulesResult{
+					rule: currentRule.Name(), //karing
+				}, &dnsWalkSuspension{drain: true}
 			}
 			switch action.Method {
 			case C.RuleActionRejectMethodDefault:
 				return exchangeWithRulesResult{
+					rule:         currentRule.Name(), //karing
 					response:     dnsRefusedResponse(message),
 					rejectAction: action,
 				}, nil
 			case C.RuleActionRejectMethodDrop:
 				return exchangeWithRulesResult{
+					rule:         currentRule.Name(), //karing
 					rejectAction: action,
 					err:          R.ErrDrop,
 				}, nil
 			}
 		case *R.RuleActionPredefined:
 			if len(state.armedRules) > 0 {
-				return exchangeWithRulesResult{}, &dnsWalkSuspension{drain: true}
+				return exchangeWithRulesResult{rule: currentRule.Name()}, //karing
+					&dnsWalkSuspension{drain: true}
 			}
 			return exchangeWithRulesResult{
+				rule:     currentRule.Name(), //karing
 				response: action.Response(message),
 			}, nil
 		}
@@ -849,7 +876,7 @@ func (r *Router) sweepArmedDNSRules(ctx context.Context, message *mDNS.Msg, stat
 		if !armed.rule.Match(metadata) {
 			continue
 		}
-		r.logRuleMatch(ctx, armed.ruleIndex, armed.rule)
+		r.logRuleMatch(ctx, message, armed.ruleIndex, armed.rule) //karing
 		switch action := armed.rule.Action().(type) {
 		case *R.RuleActionRespond:
 			var (
@@ -1049,19 +1076,19 @@ func (r *Router) lookupWithRulesType(ctx context.Context, rules []adapter.DNSRul
 	}
 	exchangeResult := r.exchangeWithRules(withLookupQueryMetadata(ctx, qType), rules, request, options, false)
 	if exchangeResult.rejectAction != nil {
-		return "reject", nil, exchangeResult.rejectAction.Error(ctx) //karing
+		return exchangeResult.rule, nil, exchangeResult.rejectAction.Error(ctx) //karing
 	}
 	if exchangeResult.err != nil {
-		return "", nil, exchangeResult.err //karing
+		return exchangeResult.rule, nil, exchangeResult.err //karing
 	}
 	if exchangeResult.response.Rcode != mDNS.RcodeSuccess {
 		if exchangeResult.transport == nil { //karing
-			return "", nil, RcodeError(exchangeResult.response.Rcode)
+			return exchangeResult.rule, nil, RcodeError(exchangeResult.response.Rcode)
 		}
 		return exchangeResult.transport.Tag(), nil, RcodeError(exchangeResult.response.Rcode) //karing
 	}
 	if exchangeResult.transport == nil { //karing
-		return "", filterAddressesByQueryType(MessageToAddresses(exchangeResult.response), qType), nil
+		return exchangeResult.rule, filterAddressesByQueryType(MessageToAddresses(exchangeResult.response), qType), nil
 	}
 	return exchangeResult.transport.Tag(), filterAddressesByQueryType(MessageToAddresses(exchangeResult.response), qType), nil //karing
 }
