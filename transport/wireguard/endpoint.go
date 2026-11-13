@@ -107,6 +107,11 @@ func NewEndpoint(options EndpointOptions) (*Endpoint, error) {
 	if options.MTU == 0 {
 		options.MTU = 1408
 	}
+
+	if options.Workers == 0 || options.Workers > 4 { //karing
+		options.Workers = 4
+	}
+
 	deviceOptions := DeviceOptions{
 		Context:         options.Context,
 		Logger:          options.Logger,
