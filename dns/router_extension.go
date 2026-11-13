@@ -70,7 +70,7 @@ func (r *Router) LookupTag(ctx context.Context, domain string, options adapter.D
 		}
 		responseAddrs, err = r.client.Lookup(ctx, transport, domain, options, nil)
 	} else if !legacyDNSMode {
-		transportTag, responseAddrs, err = r.lookupWithRules(ctx, rules, domain, options) //karing
+		transportTag, responseAddrs, err = r.lookupWithRules(ctx, rules, domain, options, true) //karing
 	} else {
 		var (
 			transport adapter.DNSTransport

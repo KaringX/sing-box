@@ -1026,17 +1026,17 @@ func filterAddressesByQueryType(addresses []netip.Addr, qType uint16) []netip.Ad
 	}
 }
 
-func (r *Router) lookupWithRules(ctx context.Context, rules []adapter.DNSRule, domain string, options adapter.DNSQueryOptions) (string, []netip.Addr, error) { //karing
+func (r *Router) lookupWithRules(ctx context.Context, rules []adapter.DNSRule, domain string, options adapter.DNSQueryOptions, allowFakeIP bool) (string, []netip.Addr, error) { //karing
 	strategy := r.resolveLookupStrategy(options)
 	lookupOptions := options
 	if strategy != C.DomainStrategyAsIS {
 		lookupOptions.Strategy = strategy
 	}
 	if strategy == C.DomainStrategyIPv4Only {
-		return r.lookupWithRulesType(ctx, rules, domain, mDNS.TypeA, lookupOptions)
+		return r.lookupWithRulesType(ctx, rules, domain, mDNS.TypeA, lookupOptions, allowFakeIP) //karing
 	}
 	if strategy == C.DomainStrategyIPv6Only {
-		return r.lookupWithRulesType(ctx, rules, domain, mDNS.TypeAAAA, lookupOptions)
+		return r.lookupWithRulesType(ctx, rules, domain, mDNS.TypeAAAA, lookupOptions, allowFakeIP) //karing
 	}
 	var (
 		transportTag string //karing
@@ -1045,14 +1045,14 @@ func (r *Router) lookupWithRules(ctx context.Context, rules []adapter.DNSRule, d
 	)
 	var group task.Group
 	group.Append("exchange4", func(ctx context.Context) error {
-		tag, result, err := r.lookupWithRulesType(ctx, rules, domain, mDNS.TypeA, lookupOptions) //karing
-		transportTag = tag                                                                       //karing
+		tag, result, err := r.lookupWithRulesType(ctx, rules, domain, mDNS.TypeA, lookupOptions, allowFakeIP) //karing
+		transportTag = tag                                                                                    //karing
 		response4 = result
 		return err
 	})
 	group.Append("exchange6", func(ctx context.Context) error {
-		tag, result, err := r.lookupWithRulesType(ctx, rules, domain, mDNS.TypeAAAA, lookupOptions)
-		transportTag = tag //karing
+		tag, result, err := r.lookupWithRulesType(ctx, rules, domain, mDNS.TypeAAAA, lookupOptions, allowFakeIP) //karing
+		transportTag = tag                                                                                       //karing
 		response6 = result
 		return err
 	})
@@ -1063,7 +1063,7 @@ func (r *Router) lookupWithRules(ctx context.Context, rules []adapter.DNSRule, d
 	return transportTag, sortAddresses(response4, response6, strategy), nil //karing
 }
 
-func (r *Router) lookupWithRulesType(ctx context.Context, rules []adapter.DNSRule, domain string, qType uint16, options adapter.DNSQueryOptions) (string, []netip.Addr, error) { //karing
+func (r *Router) lookupWithRulesType(ctx context.Context, rules []adapter.DNSRule, domain string, qType uint16, options adapter.DNSQueryOptions, allowFakeIP bool) (string, []netip.Addr, error) { //karing
 	request := &mDNS.Msg{
 		MsgHdr: mDNS.MsgHdr{
 			RecursionDesired: true,
@@ -1074,7 +1074,7 @@ func (r *Router) lookupWithRulesType(ctx context.Context, rules []adapter.DNSRul
 			Qclass: mDNS.ClassINET,
 		}},
 	}
-	exchangeResult := r.exchangeWithRules(withLookupQueryMetadata(ctx, qType), rules, request, options, false)
+	exchangeResult := r.exchangeWithRules(withLookupQueryMetadata(ctx, qType), rules, request, options, allowFakeIP) //karing
 	if exchangeResult.rejectAction != nil {
 		return exchangeResult.rule, nil, exchangeResult.rejectAction.Error(ctx) //karing
 	}
@@ -1350,7 +1350,7 @@ func (r *Router) Lookup(ctx context.Context, domain string, options adapter.DNSQ
 		}
 		responseAddrs, err = r.client.Lookup(ctx, transport, domain, options, nil)
 	} else if !legacyDNSMode {
-		_, responseAddrs, err = r.lookupWithRules(ctx, rules, domain, options) //karing
+		_, responseAddrs, err = r.lookupWithRules(ctx, rules, domain, options, false) //karing
 	} else {
 		var (
 			transport adapter.DNSTransport
