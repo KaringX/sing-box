@@ -28,4 +28,6 @@ cache.db
 /*.log
 /.vscode
 /experimental/libbox/sentry_private.go
+/experimental/libbox/sentry_private_windows.go
+/experimental/libbox/sentry_private_stub.go
 karingService
