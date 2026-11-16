@@ -160,11 +160,19 @@ func (g *URLTestGroup) isProxyOutbound(outboundType string) bool {
 		return true
 	case C.TypeShadowsocks:
 		return true
+	case C.TypeSnell:
+		return true
 	case C.TypeVMess:
 		return true
 	case C.TypeTrojan:
 		return true
+	case C.TypeTrustTunnel:
+		return true
+	case C.TypeNaive:
+		return true
 	case C.TypeWireGuard:
+		return true
+	case C.TypeMASQUE:
 		return true
 	case C.TypeHysteria:
 		return true
@@ -174,9 +182,11 @@ func (g *URLTestGroup) isProxyOutbound(outboundType string) bool {
 		return true
 	case C.TypeShadowTLS:
 		return true
+	case C.TypeMieru:
+		return true
 	case C.TypeAnyTLS:
 		return true
-	case C.TypeMieru:
+	case C.TypeSudoku:
 		return true
 	case C.TypeShadowsocksR:
 		return true
@@ -185,6 +195,14 @@ func (g *URLTestGroup) isProxyOutbound(outboundType string) bool {
 	case C.TypeTUIC:
 		return true
 	case C.TypeHysteria2:
+		return true
+	case C.TypeOpenConnect:
+		return true
+	case C.TypeOpenVPNClient:
+		return true
+	case C.TypeVPNServer:
+		return true
+	case C.TypeVPNClient:
 		return true
 	case C.TypeTailscale:
 		return true
