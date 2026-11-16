@@ -471,6 +471,7 @@ func (g *URLTestGroup) urlTest(ctx context.Context, force bool) (map[string]adap
 	}
 	if g.skipTest { //karing
 		if g.testTimes != 0 {
+			g.checking.Store(false)
 			g.performUpdateCheck(false)
 			return make(map[string]adapter.URLTestResult), nil
 		}
