@@ -266,14 +266,14 @@ func realityClientFallback(ctx context.Context, logger logger.ContextLogger, uCo
 	request, err := http.NewRequest("GET", "https://"+host, nil)
 
 	if err != nil || request == nil { //karing
-		logger.WarnContext(ctx, "realityClientFallback request creation failed:%s, %v", serverName, err) //karing
+		logger.WarnContext(ctx, "realityClientFallback request creation failed:", serverName, " ", err) //karing
 		return
 	}
 	request.Header.Set("User-Agent", fingerprint.Client)
 	request.AddCookie(&http.Cookie{Name: "padding", Value: strings.Repeat("0", mRand.Intn(32)+30)})
 	response, err := client.Do(request)
 	if err != nil || response == nil { //karing
-		logger.WarnContext(ctx, "realityClientFallback response failed:%s, %v", serverName, err) //karing
+		logger.WarnContext(ctx, "realityClientFallback response failed:", serverName, " ", err) //karing
 		return
 	}
 	if response.Body != nil { //karing
