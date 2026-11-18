@@ -74,6 +74,12 @@ func createHttpServer() error {
 		})
 		r.Route("/clashiApiConnections", func(r chi.Router) {
 			r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+				if boxService == nil {
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(http.StatusOK)
+					w.Write([]byte(`{"err": "service not running"}`))
+					return
+				}
 				includeConnections := r.URL.Query().Get("includeConnections") == "true"
 				content := boxService.GetConnections(includeConnections)
 				w.Header().Set("Content-Type", "application/json")
