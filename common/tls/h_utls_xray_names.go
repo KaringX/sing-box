@@ -14,7 +14,7 @@ import (
 // v26.11.9, whose uTLS made it HelloChrome_Auto because TSPU does not target it yet
 // (XTLS/Xray-core#7259). The uTLS fork used here still has Chrome 133 as HelloChrome_Auto; its
 // Chrome 155 ClientHello is the same as upstream uTLS's.
-var hChromeFingerprint = utls.HelloChrome_133 //karing
+var hChromeFingerprint = utls.HelloChrome_133 //utls.HelloChrome_155 //karing
 
 // xrayFingerprints are Xray's fingerprint names for a fixed uTLS ClientHello (its
 // ModernFingerprints and OtherFingerprints), so an Xray link's fp= value works here too. The
