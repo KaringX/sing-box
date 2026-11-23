@@ -203,7 +203,7 @@ func (s *CommandServer) StartOrReloadService(configContent string, options *Over
 		AutoRedirect:   options.AutoRedirect,
 		IncludePackage: iteratorToArray(options.IncludePackage),
 		ExcludePackage: iteratorToArray(options.ExcludePackage),
-	})
+	}, nil, nil) //karing
 	if err != nil {
 		return E.Cause(err, "start or reload service")
 	}

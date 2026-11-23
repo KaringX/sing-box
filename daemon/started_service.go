@@ -19,7 +19,9 @@ import (
 	"github.com/sagernet/sing-box/experimental/deprecated"
 	"github.com/sagernet/sing-box/experimental/locale"
 	"github.com/sagernet/sing-box/log"
+	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing-box/protocol/group"
+	"github.com/sagernet/sing-box/protocol/tun"
 	"github.com/sagernet/sing-box/service/oomkiller"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/memory"
@@ -247,7 +249,7 @@ func (s *StartedService) followInstance(ctx context.Context, run func(ctx contex
 	}
 }
 
-func (s *StartedService) StartOrReloadService(ctx context.Context, profileContent string, options *OverrideOptions) error {
+func (s *StartedService) StartOrReloadService(ctx context.Context, profileContent string, options *OverrideOptions, preTunInbound *tun.Inbound, preTunOptions *option.TunInboundOptions) error { //karing
 	s.interruptStart()
 	s.lifecycleAccess.Lock()
 	defer s.lifecycleAccess.Unlock()
@@ -276,7 +278,7 @@ func (s *StartedService) StartOrReloadService(ctx context.Context, profileConten
 		s.resetLogs()
 	}
 	s.serviceAccess.Unlock()
-	instance, err := s.newInstance(ctx, profileContent, options, oldInstance != nil)
+	instance, err := s.newInstance(ctx, profileContent, options, oldInstance != nil, preTunInbound, preTunOptions) //karing
 	if err != nil {
 		s.serviceAccess.Lock()
 		s.updateStatusError(err)

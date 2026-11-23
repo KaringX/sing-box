@@ -113,7 +113,7 @@ func (s *BoxService) Start(configContent string) (err error) {
 		}
 	}()
 	//daemon.RegisterStartedServiceServer(s.ctx, s.instance)
-	err = s.instance.StartOrReloadService(s.ctx, configContent, nil)
+	err = s.instance.StartOrReloadService(s.ctx, configContent, nil, nil, nil) //karing
 	if err != nil {
 		SentryCaptureMessage(err, "start service")
 		return err

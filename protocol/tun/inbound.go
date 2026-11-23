@@ -440,17 +440,29 @@ func (t *Inbound) Start(stage adapter.StartStage, scope *adapter.Scope) error {
 			}
 		}
 		monitor.Start("open interface")
-		if t.usePlatformInterface {
-			tunInterface, err = t.platformInterface.OpenInterface(&tunOptions, t.platformOptions)
-		} else {
-			tunInterface, err = tun.New(tunOptions)
+		ti := t.get()  //karing
+		if ti != nil { //karing
+			tunInterface = ti
+		} else { //karing
+			if t.usePlatformInterface {
+				tunInterface, err = t.platformInterface.OpenInterface(&tunOptions, t.platformOptions)
+			} else {
+				tunInterface, err = tun.New(tunOptions)
+			}
 		}
 		monitor.Finish()
 		t.tunOptions.Name = tunOptions.Name
 		if err != nil {
 			return E.Cause(err, "configure tun interface")
 		}
-		scope.Add(tunInterface.Close)
+		//scope.Add(tunInterface.Close)//karing
+		scope.Add(func() error { //karing
+			if t.IsSuspended() {
+				return nil
+			}
+			tunInterface.Close()
+			return nil
+		})
 		t.logger.Trace("creating stack")
 		t.tunIf = tunInterface
 		if t.platformInterface != nil {
@@ -493,7 +505,10 @@ func (t *Inbound) Start(stage adapter.StartStage, scope *adapter.Scope) error {
 			return E.Cause(err, "starting tun stack")
 		}
 		monitor.Start("starting tun interface")
-		err = t.tunIf.Start()
+		ti := t.takeAndResume() //karing
+		if ti == nil {          //karing
+			err = t.tunIf.Start()
+		}
 		monitor.Finish()
 		if err != nil {
 			return E.Cause(err, "starting TUN interface")
@@ -522,6 +537,9 @@ func (t *Inbound) updateRouteAddressSet(it adapter.RuleSet) {
 }
 
 func (t *Inbound) InterfaceUpdated(ctx context.Context) {
+	if t.IsSuspended() { //karing
+		return
+	}
 	tunStack := t.tunStack
 	if tunStack != nil {
 		tunStack.ResetNetwork()
@@ -529,6 +547,9 @@ func (t *Inbound) InterfaceUpdated(ctx context.Context) {
 }
 
 func (t *Inbound) FlushSystemDNSCache() {
+	if t.IsSuspended() || t.tunIf == nil { //karing
+		return
+	}
 	linuxTUN, isLinuxTUN := t.tunIf.(tun.LinuxTUN)
 	if !isLinuxTUN {
 		return
@@ -543,6 +564,9 @@ func (t *Inbound) FlushSystemDNSCache() {
 }
 
 func (t *Inbound) JudgeFlow(network uint8, source netip.AddrPort, destination netip.AddrPort, firstPacket []byte) tun.FlowVerdict {
+	if t.IsSuspended() { //karing
+		return tun.FlowVerdict{Action: tun.ActionDrop}
+	}
 	if slices.Contains(t.dnsHijackAddress, destination.Addr()) {
 		if network == uint8(header.UDPProtocolNumber) {
 			return tun.FlowVerdict{Action: tun.ActionHijackDNS}
@@ -553,6 +577,9 @@ func (t *Inbound) JudgeFlow(network uint8, source netip.AddrPort, destination ne
 }
 
 func (t *Inbound) NewDNSPacket(payload []byte, source M.Socksaddr, destination M.Socksaddr, writer N.PacketWriter) {
+	if t.IsSuspended() { //karing
+		return
+	}
 	ctx := log.ContextWithNewID(t.ctx)
 	var metadata adapter.InboundContext
 	metadata.Inbound = t.tag
@@ -566,6 +593,9 @@ func (t *Inbound) NewDNSPacket(payload []byte, source M.Socksaddr, destination M
 }
 
 func (t *Inbound) NewConnectionEx(ctx context.Context, conn net.Conn, source M.Socksaddr, destination M.Socksaddr, onClose N.CloseHandlerFunc) {
+	if t.IsSuspended() { //karing
+		return
+	}
 	ctx = log.ContextWithNewID(ctx)
 	var metadata adapter.InboundContext
 	metadata.Inbound = t.tag
@@ -585,6 +615,9 @@ func (t *Inbound) NewConnectionEx(ctx context.Context, conn net.Conn, source M.S
 }
 
 func (t *Inbound) NewPacketConnectionEx(ctx context.Context, conn N.PacketConn, source M.Socksaddr, destination M.Socksaddr, onClose N.CloseHandlerFunc) {
+	if t.IsSuspended() { //karing
+		return
+	}
 	ctx = log.ContextWithNewID(ctx)
 	var metadata adapter.InboundContext
 	metadata.Inbound = t.tag
@@ -608,10 +641,16 @@ func (t *Inbound) NewPacketConnectionEx(ctx context.Context, conn N.PacketConn, 
 type autoRedirectHandler Inbound
 
 func (t *autoRedirectHandler) JudgeFlow(network uint8, source netip.AddrPort, destination netip.AddrPort, firstPacket []byte) tun.FlowVerdict {
+	if (*Inbound)(t).IsSuspended() { //karing
+		return tun.FlowVerdict{Action: tun.ActionDrop}
+	}
 	return (*Inbound)(t).JudgeFlow(network, source, destination, firstPacket)
 }
 
 func (t *autoRedirectHandler) NewConnectionEx(ctx context.Context, conn net.Conn, source M.Socksaddr, destination M.Socksaddr, onClose N.CloseHandlerFunc) {
+	if (*Inbound)(t).IsSuspended() { //karing
+		return
+	}
 	ctx = log.ContextWithNewID(ctx)
 	var metadata adapter.InboundContext
 	metadata.Inbound = t.tag
@@ -627,7 +666,7 @@ func (t *autoRedirectHandler) NewConnectionEx(ctx context.Context, conn net.Conn
 		t.logger.InfoContext(ctx, "inbound redirect DNS connection from ", metadata.Source)
 	} else {
 		t.logger.InfoContext(ctx, "inbound redirect connection from ", metadata.Source)
-		t.logger.InfoContext(ctx, "inbound connection to ", metadata.Destination)
+		t.logger.InfoContext(ctx, "inbound redirect connection to ", metadata.Destination) //karing
 	}
 	t.router.RouteConnectionEx(ctx, conn, metadata, onClose)
 }
@@ -637,5 +676,8 @@ func (t *autoRedirectHandler) NewPacketConnectionEx(ctx context.Context, conn N.
 }
 
 func (t *autoRedirectHandler) NewDNSPacket(payload []byte, source M.Socksaddr, destination M.Socksaddr, writer N.PacketWriter) {
+	if (*Inbound)(t).IsSuspended() { //karing
+		return
+	}
 	(*Inbound)(t).NewDNSPacket(payload, source, destination, writer)
 }

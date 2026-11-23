@@ -14,6 +14,7 @@ import (
 	"github.com/sagernet/sing-box/experimental/locale"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
+	"github.com/sagernet/sing-box/protocol/tun"
 	"github.com/sagernet/sing-box/service/powerreport"
 	"github.com/sagernet/sing/common"
 	E "github.com/sagernet/sing/common/exceptions"
@@ -82,7 +83,7 @@ type OverrideOptions struct {
 	ExcludePackage []string
 }
 
-func (s *StartedService) newInstance(ctx context.Context, profileContent string, overrideOptions *OverrideOptions, reloading bool) (*Instance, error) {
+func (s *StartedService) newInstance(ctx context.Context, profileContent string, overrideOptions *OverrideOptions, reloading bool, preTunInbound *tun.Inbound, preTunOptions *option.TunInboundOptions) (*Instance, error) { //karing
 	selectedLocale := locale.FromContext(ctx)
 	ctx, _ = locale.ContextWithLocale(s.ctx, selectedLocale.Locale)
 	ctx = service.ExtendContext(ctx)
@@ -103,6 +104,29 @@ func (s *StartedService) newInstance(ctx context.Context, profileContent string,
 			}
 		}
 	}
+	//karing begin
+	var tunOptions *option.TunInboundOptions
+	for _, inbound := range options.Inbounds {
+		if tunInboundOptions, isTUN := inbound.Options.(*option.TunInboundOptions); isTUN {
+			tunOptions = tunInboundOptions
+			break
+		}
+	}
+	if tunOptions == nil {
+		if preTunInbound != nil {
+			preTunInbound.Close()
+		}
+	} else {
+		if preTunOptions != nil && preTunInbound != nil {
+			s1, _ := json.Marshal(tunOptions)
+			s2, _ := json.Marshal(preTunOptions)
+			if string(s1) != string(s2) {
+				preTunInbound.Close()
+			}
+		}
+	}
+	//karing end
+
 	if s.oomKillerEnabled {
 		if !common.Any(options.Services, func(it option.Service) bool {
 			return it.Type == C.TypeOOMKiller

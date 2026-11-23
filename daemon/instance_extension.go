@@ -10,6 +10,8 @@ import (
 	D "github.com/sagernet/sing-box/common/debug"
 	"github.com/sagernet/sing-box/common/trafficcontrol"
 	C "github.com/sagernet/sing-box/constant"
+	"github.com/sagernet/sing-box/option"
+	"github.com/sagernet/sing-box/protocol/tun"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/service"
 )
@@ -17,6 +19,13 @@ import (
 type outboundUploadDownload struct {
 	upload   int64
 	download int64
+}
+
+func (s *Instance) InboundTunSuspend() (*tun.Inbound, *option.TunInboundOptions) {
+	if s.instance == nil {
+		return nil, nil
+	}
+	return s.instance.InboundTunSuspend()
 }
 
 func (i *Instance) close() error {

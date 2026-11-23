@@ -60,8 +60,10 @@ type Box struct {
 	httpClientService   adapter.LifecycleService
 	internalService     []adapter.LifecycleService
 	ntpService          *ntp.Service
-	scope               *adapter.Scope
-	done                chan struct{} //karing
+	scope               *adapter.Scope            //karing
+	tunTag              string                    //karing
+	tunInboundOptions   *option.TunInboundOptions //karing
+	done                chan struct{}             //karing
 }
 
 type Options struct {
@@ -304,14 +306,15 @@ func New(options Options) (box *Box, err error) { //karing
 		timeService = new(tls.TimeServiceWrapper)
 		service.MustRegister[ntp.TimeService](ctx, timeService)
 	}
+	var tunTag string                                 //karing
+	var tunInboundOptions *option.TunInboundOptions   //karing
 	for _, inboundOptions := range options.Inbounds { //karing
 		if inboundOptions.Type == C.TypeTun {
-			var options *option.TunInboundOptions
 			if inboundOptions.Options != nil {
-				options = inboundOptions.Options.(*option.TunInboundOptions)
+				tunTag = inboundOptions.Tag
+				tunInboundOptions = inboundOptions.Options.(*option.TunInboundOptions)
 			}
-
-			inboundManager.SetTunAddressPrefix(options.Address)
+			inboundManager.SetTunAddressPrefix(tunInboundOptions.Address)
 			break
 		}
 	}
@@ -544,6 +547,8 @@ func New(options Options) (box *Box, err error) { //karing
 		internalService:     internalServices,
 		ntpService:          ntpService,
 		scope:               scope,               //karing
+		tunTag:              tunTag,              //karing
+		tunInboundOptions:   tunInboundOptions,   //karing
 		done:                make(chan struct{}), //karing
 	}, nil
 }

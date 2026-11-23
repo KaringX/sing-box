@@ -237,7 +237,7 @@ func (d *Daemon) startServiceLocked(ctx context.Context, ownerUserID string, con
 			return err
 		}
 	}
-	err = d.startedService.StartOrReloadService(ctx, configContent, nil)
+	err = d.startedService.StartOrReloadService(ctx, configContent, nil, nil, nil) //karing
 	if err != nil && d.platform != nil {
 		return E.Errors(err, d.platform.ResetPlatformOptions())
 	}

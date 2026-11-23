@@ -44,6 +44,7 @@ func createHttpServer() error {
 		r := chi.NewMux()
 		r.Route("/reload", func(r chi.Router) {
 			r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+
 				extra, err := restartService()
 				if err == nil {
 					render.JSON(w, r, render.M{
@@ -65,7 +66,6 @@ func createHttpServer() error {
 		})
 		r.Route("/stop", func(r chi.Router) {
 			r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-				libbox.SetRestart(false)
 				quit <- struct{}{}
 				render.JSON(w, r, render.M{
 					"err": nil,
@@ -126,16 +126,33 @@ func restartService() (map[string]string, error) {
 	defer func() {
 		invokingError = nil
 	}()
-	libbox.SetRestart(true)
-	err := destroyService()
+	if boxService == nil {
+		return nil, errors.New("service is not running")
+	}
+	var err error
+	var closeErr bool
+	var configContent []byte
+	for _, path := range configPaths {
+		configContent, err = os.ReadFile(path)
+		if err != nil {
+			return nil, err
+		}
+		if len(configContent) == 0 {
+			return nil, E.New("file content is empty: ", path)
+		}
+		break
+	}
+	closeErr, err = boxService.Reload(string(configContent))
 	if err != nil {
-		var extra = make(map[string]string)
-		extra["is_close_error"] = "true"
-		return extra, err
+		if closeErr {
+			var extra = make(map[string]string)
+			extra["is_close_error"] = "true"
+			return extra, err
+		}
+		return nil, err
 	}
 	libbox.StderrCheckAndCapture()
-	err = createService()
-	return nil, err
+	return nil, nil
 }
 
 func destroyService() error {
