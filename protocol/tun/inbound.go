@@ -565,7 +565,7 @@ func (t *Inbound) FlushSystemDNSCache() {
 
 func (t *Inbound) JudgeFlow(network uint8, source netip.AddrPort, destination netip.AddrPort, firstPacket []byte) tun.FlowVerdict {
 	if t.IsSuspended() { //karing
-		return tun.FlowVerdict{Action: tun.ActionDrop}
+		return tun.FlowVerdict{Action: tun.ActionReject}
 	}
 	if slices.Contains(t.dnsHijackAddress, destination.Addr()) {
 		if network == uint8(header.UDPProtocolNumber) {
@@ -642,7 +642,7 @@ type autoRedirectHandler Inbound
 
 func (t *autoRedirectHandler) JudgeFlow(network uint8, source netip.AddrPort, destination netip.AddrPort, firstPacket []byte) tun.FlowVerdict {
 	if (*Inbound)(t).IsSuspended() { //karing
-		return tun.FlowVerdict{Action: tun.ActionDrop}
+		return tun.FlowVerdict{Action: tun.ActionReject}
 	}
 	return (*Inbound)(t).JudgeFlow(network, source, destination, firstPacket)
 }
