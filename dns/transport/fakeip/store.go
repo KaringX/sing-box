@@ -66,7 +66,7 @@ func (s *Store) Start() error {
 		storage = cacheFile
 	}
 	if storage == nil {
-		storage = NewMemoryStorage()
+		storage = NewSharedMemoryStorage() //karing for tun reuse
 	}
 	metadata := storage.FakeIPMetadata()
 	if metadata != nil && metadata.Inet4Range == s.inet4Range && metadata.Inet6Range == s.inet6Range {
@@ -80,6 +80,9 @@ func (s *Store) Start() error {
 			s.inet6Current = s.inet6Range.Addr().Next()
 		}
 		_ = storage.FakeIPReset()
+		if memoryStorage, isMemoryStorage := storage.(*SharedMemoryStorage); isMemoryStorage { //karing for tun reuse
+			memoryStorage.Resume()
+		}
 	}
 	s.storage = storage
 	return nil
@@ -142,6 +145,8 @@ func (s *Store) Create(domain string, isIPv6 bool) (netip.Addr, error) {
 	err := s.storage.FakeIPStore(address, domain)
 	if err != nil {
 		s.logger.Warn("save FakeIP cache: ", err)
+	} else {
+		s.logger.Warn("save cache: ", domain, " -> ", address.String()) //karing
 	}
 	s.storage.FakeIPSaveMetadataAsync(&adapter.FakeIPMetadata{
 		Inet4Range:   s.inet4Range,

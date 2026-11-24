@@ -2,31 +2,49 @@
 package tun
 
 import (
+	"sync"
+
 	tun "github.com/sagernet/sing-tun"
 )
 
-var tunIfSuspended tun.Tun
+var suspendedTunTransfer = struct {
+	sync.Mutex
+	tun tun.Tun
+}{}
 
 func (t *Inbound) Suspend() {
-	tunIfSuspended = t.tunIf
+	suspendedTunTransfer.Lock()
+	suspendedTunTransfer.tun = t.tunIf
+	suspendedTunTransfer.Unlock()
 }
 
 func (t *Inbound) IsSuspended() bool {
-	return tunIfSuspended != nil
+	suspendedTunTransfer.Lock()
+	suspended := suspendedTunTransfer.tun != nil
+	suspendedTunTransfer.Unlock()
+	return suspended
 }
 
 func (t *Inbound) get() tun.Tun {
-	return tunIfSuspended
+	suspendedTunTransfer.Lock()
+	tunInterface := suspendedTunTransfer.tun
+	suspendedTunTransfer.Unlock()
+	return tunInterface
 }
 
 func (t *Inbound) takeAndResume() tun.Tun {
-	tunInterface := tunIfSuspended
-	tunIfSuspended = nil
+	suspendedTunTransfer.Lock()
+	tunInterface := suspendedTunTransfer.tun
+	suspendedTunTransfer.tun = nil
+	suspendedTunTransfer.Unlock()
 	return tunInterface
 }
 
 func (t *Inbound) Close() {
-	tunInterface := t.takeAndResume()
+	suspendedTunTransfer.Lock()
+	tunInterface := suspendedTunTransfer.tun
+	suspendedTunTransfer.tun = nil
+	suspendedTunTransfer.Unlock()
 	if tunInterface != nil {
 		tunInterface.Close()
 	}
