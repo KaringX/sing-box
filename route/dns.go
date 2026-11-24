@@ -63,6 +63,7 @@ func (r *Router) HijackDNSPacket(ctx context.Context, payload []byte, writer N.P
 	r.searchProcessInfo(ctx, &metadata)
 	destination := metadata.Destination
 	metadata.Destination = M.Socksaddr{}
+	r.logger.DebugContext(ctx, "hijack DNS: ", dns.FormatQuestion(message.Question[0].String()), " from ", metadata.Source.Addr.String(), " port ", metadata.Source.Port) //karing
 	r.dns.ExchangeAsync(adapter.WithContext(ctx, &metadata), &message, adapter.DNSQueryOptions{}, func(response *mDNS.Msg, exchangeErr error) {
 		if exchangeErr == nil {
 			exchangeErr = r.writeDNSPacketResponse(&message, response, writer, destination)
