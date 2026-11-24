@@ -640,7 +640,7 @@ func (r *Router) prepareMatchMetadata(ctx context.Context, metadata *adapter.Inb
 				Port: metadata.Destination.Port,
 			}
 			metadata.FakeIP = true
-			r.logger.DebugContext(ctx, "found fakeip domain: ", domain)
+			r.logger.DebugContext(ctx, "found fakeip domain: ", metadata.OriginDestination.Addr.String(), " -> ", domain) //karing
 		}
 	} else if metadata.Domain == "" {
 		domain, loaded := r.dns.LookupReverseMapping(metadata.Destination.Addr)
