@@ -2,6 +2,7 @@ package tun
 
 import (
 	"context"
+	"errors"
 	"net"
 	"net/netip"
 	"os"
@@ -594,6 +595,9 @@ func (t *Inbound) NewDNSPacket(payload []byte, source M.Socksaddr, destination M
 
 func (t *Inbound) NewConnectionEx(ctx context.Context, conn net.Conn, source M.Socksaddr, destination M.Socksaddr, onClose N.CloseHandlerFunc) {
 	if t.IsSuspended() { //karing
+		if onClose != nil {
+			onClose(errors.New("tun inbound is suspended, NewConnectionEx rejected"))
+		}
 		return
 	}
 	ctx = log.ContextWithNewID(ctx)
@@ -616,6 +620,9 @@ func (t *Inbound) NewConnectionEx(ctx context.Context, conn net.Conn, source M.S
 
 func (t *Inbound) NewPacketConnectionEx(ctx context.Context, conn N.PacketConn, source M.Socksaddr, destination M.Socksaddr, onClose N.CloseHandlerFunc) {
 	if t.IsSuspended() { //karing
+		if onClose != nil {
+			onClose(errors.New("tun inbound is suspended, NewPacketConnectionEx rejected"))
+		}
 		return
 	}
 	ctx = log.ContextWithNewID(ctx)
@@ -649,6 +656,9 @@ func (t *autoRedirectHandler) JudgeFlow(network uint8, source netip.AddrPort, de
 
 func (t *autoRedirectHandler) NewConnectionEx(ctx context.Context, conn net.Conn, source M.Socksaddr, destination M.Socksaddr, onClose N.CloseHandlerFunc) {
 	if (*Inbound)(t).IsSuspended() { //karing
+		if onClose != nil {
+			onClose(errors.New("tun inbound is suspended, connection rejected"))
+		}
 		return
 	}
 	ctx = log.ContextWithNewID(ctx)
