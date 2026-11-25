@@ -37,7 +37,6 @@ type TunOptions interface {
 	GetHTTPProxyBypassDomain() StringIterator
 	GetHTTPProxyMatchDomain() StringIterator
 	GetAllowBypass() bool                    //karing
-	GetIncludeAllNetworks() bool             //karing
 	GetExcludeApns() bool                    //karing
 	GetAutoRouteUseSubRangesByDefault() bool //karing
 }
