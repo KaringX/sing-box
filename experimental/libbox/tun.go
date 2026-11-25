@@ -36,7 +36,10 @@ type TunOptions interface {
 	GetHTTPProxyServerPort() int32
 	GetHTTPProxyBypassDomain() StringIterator
 	GetHTTPProxyMatchDomain() StringIterator
-	GetAllowBypass() bool //karing
+	GetAllowBypass() bool                    //karing
+	GetIncludeAllNetworks() bool             //karing
+	GetExcludeApns() bool                    //karing
+	GetAutoRouteUseSubRangesByDefault() bool //karing
 }
 
 type RoutePrefix struct {
