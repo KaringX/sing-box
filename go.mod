@@ -127,7 +127,7 @@ replace github.com/sagernet/quic-go => github.com/KaringX/quic-go v0.49.0-beta.1
 
 //replace github.com/sagernet/quic-go => ../../KaringX/quic-go
 
-replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.20261102035939-ec5cb5a009cc //karing_v0.9.7
+replace github.com/sagernet/sing-tun => github.com/KaringX/sing-tun v0.6.2-0.20261125025909-c8af7e3bfa67 //karing_v0.9.7
 
 //replace github.com/sagernet/sing-tun => ../../KaringX/sing-tun
 

@@ -54,29 +54,29 @@ func (w *platformInterfaceWrapper) UsePlatformInterface() bool {
 	return true
 }
 
-func (w *platformInterfaceWrapper) OpenInterface(options *tun.Options, platformOptions option.TunPlatformOptions) (tun.Tun, int, error) { //karing
+func (w *platformInterfaceWrapper) OpenInterface(options *tun.Options, platformOptions option.TunPlatformOptions) (tun.Tun, error) {
 	if len(options.IncludeUID) > 0 || len(options.ExcludeUID) > 0 {
-		return nil, 0, E.New("platform: unsupported uid options") //karing
+		return nil, E.New("platform: unsupported uid options")
 	}
 	if len(options.IncludeAndroidUser) > 0 {
-		return nil, 0, E.New("platform: unsupported android_user option") //karing
+		return nil, E.New("platform: unsupported android_user option")
 	}
 	routeRanges, err := options.BuildAutoRouteRanges(true)
 	if err != nil {
-		return nil, 0, err //karing
+		return nil, err
 	}
 	tunFd, err := w.iif.OpenTun(&tunOptions{options, routeRanges, platformOptions})
 	if err != nil {
-		return nil, 0, E.Cause(err, "openTun") //karing
+		return nil, E.Cause(err, "openTun")
 	}
 	options.Name, err = getTunnelName(tunFd)
 	if err != nil {
-		return nil, 0, E.Cause(err, "query tun name") //karing
+		return nil, E.Cause(err, "query tun name")
 	}
 	options.InterfaceMonitor.RegisterMyInterface(options.Name)
 	dupFd, err := dup(int(tunFd))
 	if err != nil {
-		return nil, 0, E.Cause(err, "dup tun file descriptor") //karing
+		return nil, E.Cause(err, "dup tun file descriptor")
 	}
 	options.FileDescriptor = dupFd
 	w.myTunName = options.Name
@@ -84,9 +84,9 @@ func (w *platformInterfaceWrapper) OpenInterface(options *tun.Options, platformO
 	w.iif.RegisterMyInterface(options.Name)
 	tun, err := tun.New(*options) //karing
 	if err != nil {               //karing
-		return nil, 0, E.Cause(err, "tun.new")
+		return nil, E.Cause(err, "tun.new")
 	}
-	return tun, dupFd, nil //karing
+	return tun, nil
 }
 
 func (w *platformInterfaceWrapper) CloseInterfaceFileDescriptor(fd int) error { //karing

@@ -16,8 +16,8 @@ type PlatformInterface interface {
 	AutoDetectInterfaceControl(fd int) error
 
 	UsePlatformInterface() bool
-	OpenInterface(options *tun.Options, platformOptions option.TunPlatformOptions) (tun.Tun, int, error) //karing
-	CloseInterfaceFileDescriptor(fd int) error                                                           //karing
+	OpenInterface(options *tun.Options, platformOptions option.TunPlatformOptions) (tun.Tun, error)
+	CloseInterfaceFileDescriptor(fd int) error //karing
 	ProcessPlatformOptions(options option.TunPlatformOptions) error
 
 	UsePlatformDefaultInterfaceMonitor() bool

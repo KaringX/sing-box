@@ -55,8 +55,8 @@ func (p *linuxPlatformInterface) UsePlatformInterface() bool {
 	return false
 }
 
-func (p *linuxPlatformInterface) OpenInterface(options *tun.Options, platformOptions option.TunPlatformOptions) (tun.Tun, int, error) { //karing
-	return nil, 0, os.ErrInvalid //karing
+func (p *linuxPlatformInterface) OpenInterface(options *tun.Options, platformOptions option.TunPlatformOptions) (tun.Tun, error) {
+	return nil, os.ErrInvalid
 }
 
 func (p *linuxPlatformInterface) CloseInterfaceFileDescriptor(fd int) error { //karing

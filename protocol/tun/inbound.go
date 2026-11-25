@@ -418,7 +418,6 @@ func (t *Inbound) Start(stage adapter.StartStage, scope *adapter.Scope) error {
 			}
 		}
 		var tunInterface tun.Tun
-		var tunFileDescriptor int
 		monitor := taskmonitor.New(t.logger, C.StartTimeout)
 		tunOptions := t.tunOptions
 		if t.autoRedirect == nil {
@@ -447,7 +446,7 @@ func (t *Inbound) Start(stage adapter.StartStage, scope *adapter.Scope) error {
 			tunInterface = ti
 		} else { //karing
 			if t.usePlatformInterface {
-				tunInterface, tunFileDescriptor, err = t.platformInterface.OpenInterface(&tunOptions, t.platformOptions)
+				tunInterface, err = t.platformInterface.OpenInterface(&tunOptions, t.platformOptions)
 			} else {
 				tunInterface, err = tun.New(tunOptions)
 			}
@@ -458,16 +457,24 @@ func (t *Inbound) Start(stage adapter.StartStage, scope *adapter.Scope) error {
 			return E.Cause(err, "configure tun interface")
 		}
 		//scope.Add(tunInterface.Close)//karing
-		scope.Add(func() error { //karing
+		//karing begin
+		fd := tunInterface.GetOptions().FileDescriptor
+		scope.Add(func() error {
 			if t.IsSuspended() {
 				return nil
 			}
-			if tunFileDescriptor != 0 {
-				t.platformInterface.CloseInterfaceFileDescriptor(tunFileDescriptor)
+			if fd != 0 {
+				t.platformInterface.CloseInterfaceFileDescriptor(fd)
 			}
 			tunInterface.Close()
 			return nil
 		})
+		suspendedTunTransfer.closeFileDescriptor = func() {
+			if fd != 0 {
+				t.platformInterface.CloseInterfaceFileDescriptor(fd)
+			}
+		}
+		//karing end
 		t.logger.Trace("creating stack")
 		t.tunIf = tunInterface
 		if t.platformInterface != nil {

@@ -9,7 +9,8 @@ import (
 
 var suspendedTunTransfer = struct {
 	sync.Mutex
-	tun tun.Tun
+	tun                 tun.Tun
+	closeFileDescriptor func()
 }{}
 
 func (t *Inbound) Suspend() {
@@ -43,8 +44,13 @@ func (t *Inbound) takeAndResume() tun.Tun {
 func (t *Inbound) Close() {
 	suspendedTunTransfer.Lock()
 	tunInterface := suspendedTunTransfer.tun
+	closeFd := suspendedTunTransfer.closeFileDescriptor
 	suspendedTunTransfer.tun = nil
+	suspendedTunTransfer.closeFileDescriptor = nil
 	suspendedTunTransfer.Unlock()
+	if closeFd != nil {
+		closeFd()
+	}
 	if tunInterface != nil {
 		tunInterface.Close()
 	}
