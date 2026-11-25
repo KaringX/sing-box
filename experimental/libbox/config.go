@@ -85,8 +85,12 @@ func (s *platformInterfaceStub) UsePlatformInterface() bool {
 	return false
 }
 
-func (s *platformInterfaceStub) OpenInterface(options *tun.Options, platformOptions option.TunPlatformOptions) (tun.Tun, error) {
-	return nil, os.ErrInvalid
+func (s *platformInterfaceStub) OpenInterface(options *tun.Options, platformOptions option.TunPlatformOptions) (tun.Tun, int, error) { //karing
+	return nil, 0, os.ErrInvalid //karing
+}
+
+func (p *platformInterfaceStub) CloseInterfaceFileDescriptor(fd int) error { //karing
+	return os.ErrInvalid
 }
 
 func (s *platformInterfaceStub) ProcessPlatformOptions(options option.TunPlatformOptions) error {

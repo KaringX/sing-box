@@ -418,6 +418,7 @@ func (t *Inbound) Start(stage adapter.StartStage, scope *adapter.Scope) error {
 			}
 		}
 		var tunInterface tun.Tun
+		var tunFileDescriptor int
 		monitor := taskmonitor.New(t.logger, C.StartTimeout)
 		tunOptions := t.tunOptions
 		if t.autoRedirect == nil {
@@ -446,7 +447,7 @@ func (t *Inbound) Start(stage adapter.StartStage, scope *adapter.Scope) error {
 			tunInterface = ti
 		} else { //karing
 			if t.usePlatformInterface {
-				tunInterface, err = t.platformInterface.OpenInterface(&tunOptions, t.platformOptions)
+				tunInterface, tunFileDescriptor, err = t.platformInterface.OpenInterface(&tunOptions, t.platformOptions)
 			} else {
 				tunInterface, err = tun.New(tunOptions)
 			}
@@ -460,6 +461,9 @@ func (t *Inbound) Start(stage adapter.StartStage, scope *adapter.Scope) error {
 		scope.Add(func() error { //karing
 			if t.IsSuspended() {
 				return nil
+			}
+			if tunFileDescriptor != 0 {
+				t.platformInterface.CloseInterfaceFileDescriptor(tunFileDescriptor)
 			}
 			tunInterface.Close()
 			return nil

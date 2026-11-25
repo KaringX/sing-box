@@ -17,7 +17,7 @@ import (
 	"github.com/sagernet/sing-box/common/settings"
 	"github.com/sagernet/sing-box/daemon"
 	"github.com/sagernet/sing-box/option"
-	"github.com/sagernet/sing-tun"
+	tun "github.com/sagernet/sing-tun"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/logger"
 	M "github.com/sagernet/sing/common/metadata"
@@ -55,8 +55,12 @@ func (p *linuxPlatformInterface) UsePlatformInterface() bool {
 	return false
 }
 
-func (p *linuxPlatformInterface) OpenInterface(options *tun.Options, platformOptions option.TunPlatformOptions) (tun.Tun, error) {
-	return nil, os.ErrInvalid
+func (p *linuxPlatformInterface) OpenInterface(options *tun.Options, platformOptions option.TunPlatformOptions) (tun.Tun, int, error) { //karing
+	return nil, 0, os.ErrInvalid //karing
+}
+
+func (p *linuxPlatformInterface) CloseInterfaceFileDescriptor(fd int) error { //karing
+	return os.ErrInvalid
 }
 
 func (p *linuxPlatformInterface) ProcessPlatformOptions(options option.TunPlatformOptions) error {

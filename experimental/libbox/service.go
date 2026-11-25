@@ -54,29 +54,29 @@ func (w *platformInterfaceWrapper) UsePlatformInterface() bool {
 	return true
 }
 
-func (w *platformInterfaceWrapper) OpenInterface(options *tun.Options, platformOptions option.TunPlatformOptions) (tun.Tun, error) {
+func (w *platformInterfaceWrapper) OpenInterface(options *tun.Options, platformOptions option.TunPlatformOptions) (tun.Tun, int, error) { //karing
 	if len(options.IncludeUID) > 0 || len(options.ExcludeUID) > 0 {
-		return nil, E.New("platform: unsupported uid options")
+		return nil, 0, E.New("platform: unsupported uid options") //karing
 	}
 	if len(options.IncludeAndroidUser) > 0 {
-		return nil, E.New("platform: unsupported android_user option")
+		return nil, 0, E.New("platform: unsupported android_user option") //karing
 	}
 	routeRanges, err := options.BuildAutoRouteRanges(true)
 	if err != nil {
-		return nil, err
+		return nil, 0, err //karing
 	}
 	tunFd, err := w.iif.OpenTun(&tunOptions{options, routeRanges, platformOptions})
 	if err != nil {
-		return nil, E.Cause(err, "openTun") //karing
+		return nil, 0, E.Cause(err, "openTun") //karing
 	}
 	options.Name, err = getTunnelName(tunFd)
 	if err != nil {
-		return nil, E.Cause(err, "query tun name")
+		return nil, 0, E.Cause(err, "query tun name") //karing
 	}
 	options.InterfaceMonitor.RegisterMyInterface(options.Name)
 	dupFd, err := dup(int(tunFd))
 	if err != nil {
-		return nil, E.Cause(err, "dup tun file descriptor")
+		return nil, 0, E.Cause(err, "dup tun file descriptor") //karing
 	}
 	options.FileDescriptor = dupFd
 	w.myTunName = options.Name
@@ -84,9 +84,13 @@ func (w *platformInterfaceWrapper) OpenInterface(options *tun.Options, platformO
 	w.iif.RegisterMyInterface(options.Name)
 	tun, err := tun.New(*options) //karing
 	if err != nil {               //karing
-		return nil, E.Cause(err, "tun.new")
+		return nil, 0, E.Cause(err, "tun.new")
 	}
-	return tun, nil //karing
+	return tun, dupFd, nil //karing
+}
+
+func (w *platformInterfaceWrapper) CloseInterfaceFileDescriptor(fd int) error { //karing
+	return w.iif.CloseTun(int32(fd))
 }
 
 func (w *platformInterfaceWrapper) ProcessPlatformOptions(options option.TunPlatformOptions) error {

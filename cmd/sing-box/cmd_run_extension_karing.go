@@ -249,6 +249,10 @@ func (w *platformInterfaceWrapperImpl) OpenTun(options libbox.TunOptions) (int32
 	return 0, nil
 }
 
+func (w *platformInterfaceWrapperImpl) CloseTun(fd int32) error {
+	return nil
+}
+
 func (w *platformInterfaceWrapperImpl) UseProcFS() bool {
 	return false
 }
