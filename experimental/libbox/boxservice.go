@@ -43,7 +43,6 @@ type BoxServiceHandler interface {
 }
 
 func NewService(handler BoxServiceHandler, platformInterface PlatformInterface) (boxService *BoxService, err error) {
-	SentryBoxServiceLaunch()
 	defer func() {
 		if e := recover(); e != nil {
 			panicErrMessage := fmt.Sprintf("%v", e)

@@ -7,13 +7,11 @@ import (
 	"strings"
 )
 
-type SentryBoxServiceLaunchCallbackFunc func()
 type SentryInitCallbackFunc func(configPath string) ([]byte, error)
 type SentryCaptureMessageCallbackFunc func(panicErr error, attachMessage string) bool
 type SentryCaptureExceptionCallbackFunc func(panicErrMessage string, attachMessage string, stack string) bool
 
 var (
-	SentryBoxServiceLaunchCallback    SentryBoxServiceLaunchCallbackFunc
 	SentryInitCallback                SentryInitCallbackFunc
 	SentryCaptureMessageCallback      SentryCaptureMessageCallbackFunc
 	SentryCapturePanicMessageCallback SentryCaptureExceptionCallbackFunc
@@ -32,12 +30,6 @@ func SentryGetDid() string {
 
 func SentryGetRelease() string {
 	return SentryRelease
-}
-
-func SentryBoxServiceLaunch() {
-	if SentryBoxServiceLaunchCallback != nil {
-		SentryBoxServiceLaunchCallback()
-	}
 }
 
 func SentryInit(configPath string) ([]byte, error) {
