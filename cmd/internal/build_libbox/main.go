@@ -247,7 +247,7 @@ func buildApple() {
 	if platform != "" {
 		bindTarget = platform
 	} else if debugEnabled {
-		bindTarget = "ios"
+		bindTarget = "ios,iossimulator,tvos,tvossimulator,macos" //karing
 	} else {
 		bindTarget = "ios,iossimulator,tvos,tvossimulator,macos"
 	}
